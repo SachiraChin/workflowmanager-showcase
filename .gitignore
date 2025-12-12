@@ -12,3 +12,4 @@ models.txt
 *.log
 nul
 server-logs
+.DS_Store
