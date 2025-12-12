@@ -17,11 +17,14 @@ A modular workflow execution engine for orchestrating AI-powered content generat
 ```
 architecture/               # All architectural documents for any module (contracts/tui/server/analysis) 
                             # goes here. Do not create any markdown inside module folder, create here instead.
+                            # When creating new document here, always append creation date in yyyy_MM_dd format 
+                            # to filename.
 
 scripts/                    # All scripts which are directly not part of a given module goes here. Ex: database 
                             # migration scripts, test script written to test change you made, find and replace 
                             # scripts, folder structure change scripts, etc. Simply, if the file you create is 
-                            # not a runtime requirement of any module, it goes here.
+                            # not a runtime requirement of any module, it goes here. When creating new script 
+                            # here, always append creation date in yyyy_MM_dd format to filename.
 
 contracts/                  # Shared interfaces and DTOs
 ├── __init__.py                 # Package exports
