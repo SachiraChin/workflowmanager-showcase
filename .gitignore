@@ -1,0 +1,14 @@
+OPENAI_API_KEY.txt
+/test*
+.claude
+__pycache__
+.hypothesis
+ai_config.json
+ai_config_4o.json
+ai_config_r.json
+ai_config_r_4o.json
+models.txt
+.pytest_cache
+*.log
+nul
+server-logs
