@@ -2,6 +2,34 @@
 
 A modular workflow execution engine for orchestrating AI-powered content generation pipelines. Uses FastAPI REST API with SSE streaming, MongoDB event sourcing, and pluggable LLM providers.
 
+## Critical Claude Tooling Instructions
+
+**IMPORTANT: These instructions address known tool behavior issues that MUST be followed to avoid failures.**
+
+### File Editing - Read and Edit in Same Message
+
+When editing files, the Read and Edit tools MUST be called together in the same message block. Calling them in separate messages causes state loss and results in:
+- Edit failing with "File has been unexpectedly modified"
+- Write failing with "File has not been read yet"
+
+**CORRECT - Both tools in same message:**
+```
+Message 1:
+  [Read file_path="/path/to/file"]
+  [Edit file_path="/path/to/file" old_string="..." new_string="..."]
+```
+
+**INCORRECT - Tools in separate messages:**
+```
+Message 1:
+  [Read file_path="/path/to/file"]
+
+Message 2:
+  [Edit file_path="/path/to/file" ...]  <- WILL FAIL
+```
+
+This applies to both Edit and Write tools. Always read and modify files in a single response.
+
 ## Critical Rules For Project
 
 - When operator (developer) ask you a question, carefully understand what operator trying to convey, if question is unclear, do not jump to conclusions, always ask followback questions.
