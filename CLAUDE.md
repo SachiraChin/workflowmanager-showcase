@@ -11,6 +11,7 @@ A modular workflow execution engine for orchestrating AI-powered content generat
 - Always honor the current folder structure, places new files in correct place. If you are unsure of where a new file belong, ask operator what to do.
 - When you are making a significant alteration to any logic, ask operator if backwards compatibility has to be maintained. Do not assume one way or another, always ask.
 - When running migration script or making any change to the databases (workflow_db, workflow_prod_db), always create a backup of original database. Before running any database migration script or run inline script which contains database changes, show operator what you are going to do and ask for confirmation.
+- After making file changes, commit with a meaningful message describing what was changed and why. When you see "[REMINDER] Uncommitted changes detected" from the Stop hook, check and commit any pending changes before continuing.
 
 ## Project Structure
 

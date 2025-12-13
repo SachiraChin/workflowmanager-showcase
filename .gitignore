@@ -1,6 +1,6 @@
 OPENAI_API_KEY.txt
 /test*
-.claude
+.claude/settings.local.json
 __pycache__
 .hypothesis
 ai_config.json
