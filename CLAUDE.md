@@ -39,7 +39,15 @@ This applies to both Edit and Write tools. Always read and modify files in a sin
 - Always honor the current folder structure, places new files in correct place. If you are unsure of where a new file belong, ask operator what to do.
 - When you are making a significant alteration to any logic, ask operator if backwards compatibility has to be maintained. Do not assume one way or another, always ask.
 - When running migration script or making any change to the databases (workflow_db, workflow_prod_db), always create a backup of original database. Before running any database migration script or run inline script which contains database changes, show operator what you are going to do and ask for confirmation.
-- After making file changes, commit with a meaningful message describing what was changed and why. When you see "[REMINDER] Uncommitted changes detected" from the Stop hook, check and commit any pending changes before continuing.
+- **Commit frequently and proactively.** Do NOT wait for operator to remind you. Commit at these checkpoints:
+  - After completing a bug fix (even if operator might test it next)
+  - After adding a new feature or capability
+  - After refactoring or restructuring files
+  - After updating configuration or prompts
+  - Before moving on to a different task or file
+  - When you've made 3+ related file changes
+  - If you're about to ask operator to test something, commit first
+  When you see "[REMINDER] Uncommitted changes detected" from the Stop hook, immediately commit before continuing. Use meaningful commit messages describing what was changed and why.
 - Never create modules that are specific to a single workflow. Modules must be generic, reusable, and workflow-agnostic. All workflow-specific logic should be handled through module configuration (inputs), not hardcoded in module code. If a complex scenario requires new functionality, design a generic module that can handle similar patterns across different workflows.
 
 ## Project Structure
