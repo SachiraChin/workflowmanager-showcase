@@ -39,6 +39,7 @@ This applies to both Edit and Write tools. Always read and modify files in a sin
 - Always honor the current folder structure, places new files in correct place. If you are unsure of where a new file belong, ask operator what to do.
 - When you are making a significant alteration to any logic, ask operator if backwards compatibility has to be maintained. Do not assume one way or another, always ask.
 - When running migration script or making any change to the databases (workflow_db, workflow_prod_db), always create a backup of original database. Before running any database migration script or run inline script which contains database changes, show operator what you are going to do and ask for confirmation.
+- **Never update the stable branch without confirmation.** Do not rebase, merge, or push changes to the current stable branch unless operator explicitly asks you to do so. Always ask for confirmation before updating stable branch with changes from dev or other branches.
 - **Commit frequently and proactively.** Do NOT wait for operator to remind you. Commit at these checkpoints:
   - After completing a bug fix (even if operator might test it next)
   - After adding a new feature or capability
