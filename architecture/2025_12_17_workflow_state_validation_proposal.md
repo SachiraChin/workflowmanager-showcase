@@ -1,5 +1,11 @@
 # Workflow State Validation Proposal
 
+## Status: REVISED - Aligned with Database Redesign
+
+This document has been updated to align with `2025_12_11_server_client_redesign.md` and `2025_12_13_database_redesign_proposal.md`. Version tracking is now handled by the workflow versioning system, not custom fingerprinting.
+
+---
+
 ## Problem Statement
 
 When a workflow is modified (modules added/removed/reordered) between runs, resuming from a saved position can cause issues:
@@ -8,56 +14,111 @@ When a workflow is modified (modules added/removed/reordered) between runs, resu
 2. **Silent Template Failures**: Jinja2 templates (display_format, module inputs) reference non-existent state keys and fail silently
 3. **Broken Dependencies**: Modules depend on outputs from other modules that never ran
 
-## Proposed Solution: Multi-Layer Validation
+---
 
-### Layer 1: Workflow Structure Fingerprinting
+## Architecture Overview
 
-**Concept**: Generate a fingerprint/hash of the workflow structure and compare on resume.
-
-```python
-# In workflow_processor.py
-def _generate_workflow_fingerprint(self, workflow_def: Dict) -> str:
-    """
-    Generate a fingerprint of workflow structure.
-
-    Captures:
-    - Module sequence (module_id + name for each module)
-    - outputs_to_state mappings
-    - Step boundaries
-
-    Does NOT capture:
-    - Prompt text changes
-    - Display schema changes
-    - Non-structural config changes
-    """
-    import hashlib
-
-    structure = []
-    for step in workflow_def.get('steps', []):
-        step_modules = []
-        for module in step.get('modules', []):
-            module_sig = {
-                'module_id': module.get('module_id'),
-                'name': module.get('name'),
-                'outputs_to_state': module.get('outputs_to_state', {})
-            }
-            step_modules.append(module_sig)
-        structure.append({
-            'step_id': step.get('step_id'),
-            'modules': step_modules
-        })
-
-    return hashlib.sha256(json.dumps(structure, sort_keys=True).encode()).hexdigest()[:16]
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ VERSION TRACKING (from database redesign)                       │
+│                                                                 │
+│  workflow_versions.content_hash  →  Detects workflow changes    │
+│  workflow_runs.current_version_id →  Tracks active version      │
+│  events.workflow_version_id      →  Per-event version tracking  │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+              VERSION_MISMATCH on resume?
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ STATE VALIDATION (this proposal)                                │
+│                                                                 │
+│  StateDependencyAnalyzer  →  What state keys are missing?       │
+│  validate_resume_state()  →  Can we safely resume?              │
+│  TemplateValidator        →  Will templates render correctly?   │
+│  Graceful fallback        →  Better error messages              │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-**Storage**: Store fingerprint in workflow document on creation.
+**Division of Responsibility:**
+- **Version Tracking**: Detects IF workflow changed (handled by database redesign)
+- **State Validation**: Analyzes WHAT is broken/missing (this proposal)
 
-**On Resume**: Compare fingerprints. If different, warn user and optionally:
-- Show what changed
-- Offer to start fresh
-- Offer to continue with validation
+---
 
-### Layer 2: State Dependency Graph
+## Version Tracking (From Database Redesign)
+
+### Content Hash Handling
+
+The `content_hash` in `workflow_versions` identifies workflow structure:
+
+| Submission Type | Hash Source | Stored Content |
+|-----------------|-------------|----------------|
+| `.zip` file | Hash of entire zip file | Resolved JSON (all $ref expanded) |
+| `.json` file | Hash of JSON file | JSON as-is |
+
+```python
+# workflow_versions table
+{
+    "workflow_version_id": "ver_xxxxxxxxxxxx",
+    "workflow_template_id": "tpl_xxxxxxxxxxxx",
+    "content_hash": "sha256:abc123...",      # Hash of submitted zip/json
+    "source_type": "zip",                     # "zip" | "json"
+    "resolved_workflow": {...},               # Full resolved JSON
+    "created_at": datetime
+}
+
+# workflow_runs table (renamed from workflows)
+{
+    "workflow_run_id": "run_xxxxxxxxxxxx",
+    "initial_version_id": "ver_xxxxxxxxxxxx",   # Version that started this run
+    "current_version_id": "ver_xxxxxxxxxxxx",   # Version currently in use
+    ...
+}
+
+# events table
+{
+    "event_id": "evt_xxxxxxxxxxxx",
+    "workflow_run_id": "run_xxxxxxxxxxxx",
+    "workflow_version_id": "ver_xxxxxxxxxxxx",  # Version this event executed under
+    ...
+}
+```
+
+### Resume with Version Mismatch
+
+When client submits workflow for resume:
+
+```
+CLIENT: POST /workflow/{run_id}/resume
+Body: { workflow: <zip/json> }
+                              ↓
+SERVER:
+1. Compute content_hash of submitted workflow
+2. Compare with workflow_run.current_version_id
+                              ↓
+              ┌───────────────┴───────────────┐
+              │                               │
+        SAME VERSION                   DIFFERENT VERSION
+              │                               │
+              ↓                               ↓
+    Continue normally              Return: VERSION_MISMATCH
+                                   {
+                                     current_version: "ver_xxx",
+                                     submitted_version: "ver_yyy",
+                                     options: [
+                                       "continue_with_new",
+                                       "continue_with_original",
+                                       "start_fresh"
+                                     ],
+                                     state_validation: {...}  // NEW
+                                   }
+```
+
+---
+
+## State Validation Layers
+
+### Layer 1: State Dependency Graph
 
 **Concept**: Build a graph of what state keys each module produces and consumes.
 
@@ -78,7 +139,7 @@ class StateDependencyAnalyzer:
             },
             'consumers': {
                 'selected_core_aesthetic': [
-                    {'type': 'display_format', 'location': 'step_2/midjourney_display_schema.json', 'template': '{{ state.selected_core_aesthetic.art_style_prefix }}'},
+                    {'type': 'display_format', 'location': 'step_2/display_schema', 'template': '{{ state.selected_core_aesthetic.art_style_prefix }}'},
                     {'type': 'module_input', 'step': 'step_3', 'module': 'some_module', 'input': 'aesthetic'},
                 ]
             },
@@ -100,13 +161,12 @@ class StateDependencyAnalyzer:
             '{{ state.foo }} and {{ state.bar.baz }}' -> ['foo', 'bar']
         """
         import re
-        # Match state.KEY or state.KEY.subkey patterns
         pattern = r'\{\{[^}]*state\.([a-zA-Z_][a-zA-Z0-9_]*)'
         matches = re.findall(pattern, template)
         return list(set(matches))
 ```
 
-### Layer 3: Resume Validation
+### Layer 2: Resume State Validation
 
 **Concept**: On resume, validate that required state exists for remaining modules.
 
@@ -150,7 +210,6 @@ def validate_resume_state(
         if not self._is_before_position(module_info, current_position):
             for consumed_key in module_info['consumes']:
                 if consumed_key not in current_state and consumed_key not in [m['key'] for m in missing_keys]:
-                    # Check if a future module will produce it
                     producer = deps['producers'].get(consumed_key)
                     if not producer or self._is_before_position(producer, module_info):
                         warnings.append(f"Module {module_info['module']} needs '{consumed_key}' which may not exist")
@@ -163,13 +222,11 @@ def validate_resume_state(
     )
 ```
 
-### Layer 4: Jinja2 Template Pre-Validation
+### Layer 3: Jinja2 Template Pre-Validation
 
 **Concept**: Before rendering any Jinja2 template, validate all referenced variables exist.
 
 ```python
-# In jinja2_resolver.py or a new template_validator.py
-
 class TemplateValidator:
     """
     Validates Jinja2 templates against available context.
@@ -183,15 +240,13 @@ class TemplateValidator:
     ) -> TemplateValidationResult:
         """
         Check if template can be rendered with given context.
-
         Returns details about missing variables rather than failing silently.
         """
-        from jinja2 import Environment, meta, UndefinedError
+        from jinja2 import Environment, meta
 
         env = Environment()
         try:
             ast = env.parse(template)
-            # Get all referenced variables
             referenced = meta.find_undeclared_variables(ast)
         except Exception as e:
             return TemplateValidationResult(
@@ -200,13 +255,11 @@ class TemplateValidator:
                 location=location
             )
 
-        # Check each referenced variable
         missing = []
         for var in referenced:
             if var not in context:
                 missing.append(var)
             elif var == 'state':
-                # Deep check state references
                 state_refs = self._extract_deep_refs(template, 'state')
                 for ref in state_refs:
                     if not self._resolve_path(context.get('state', {}), ref):
@@ -222,8 +275,7 @@ class TemplateValidator:
         """Extract deep references like 'state.foo.bar.baz'"""
         import re
         pattern = rf'{root}\.([a-zA-Z_][a-zA-Z0-9_.]*)'
-        matches = re.findall(pattern, template)
-        return matches
+        return re.findall(pattern, template)
 
     def _resolve_path(self, obj: Any, path: str) -> bool:
         """Check if path exists in object"""
@@ -239,18 +291,15 @@ class TemplateValidator:
         return True
 ```
 
-### Layer 5: Graceful Fallback for Display Format
+### Layer 4: Graceful Fallback for Display Format
 
 **Concept**: When display_format rendering fails, show useful error instead of raw data.
 
 ```python
-# In mixins.py - update _format_display_string
-
 def _format_display_string(self, display_format: str, item: Any) -> str:
     """Render display_format with graceful error handling."""
     from jinja2 import Template, UndefinedError
 
-    # Build context
     context = {}
     if isinstance(item, dict):
         context.update(item)
@@ -258,18 +307,13 @@ def _format_display_string(self, display_format: str, item: Any) -> str:
         context['value'] = item
 
     # Add state to context
-    try:
-        from tui.state_manager import get_current_state
-        context['state'] = get_current_state()
-    except ImportError:
-        context['state'] = {}
+    context['state'] = self._get_current_state()
 
     # Validate before rendering
     validator = TemplateValidator()
     validation = validator.validate_template(display_format, context)
 
     if not validation.valid:
-        # Return informative error instead of failing silently
         missing = ', '.join(validation.missing_variables)
         return f"[TEMPLATE ERROR: Missing {missing}] Raw: {item}"
 
@@ -282,115 +326,235 @@ def _format_display_string(self, display_format: str, item: Any) -> str:
         return f"[ERROR: {e}] Raw: {item}"
 ```
 
+---
+
 ## Implementation Phases
 
-### Phase 1: Immediate Safeguards (Quick Win)
-1. Add graceful fallback in display_format rendering (show error instead of raw data)
+Each phase leaves the system in a stable, usable state.
+
+### Phase 1: Graceful Template Fallback (Quick Win)
+
+**Goal**: Stop silent failures, show useful errors.
+
+**Changes**:
+1. Update `_format_display_string` in mixins.py with graceful error handling
 2. Add logging when Jinja2 template references missing state keys
+3. Show `[TEMPLATE ERROR: Missing X]` instead of raw JSON or silent failure
 
-### Phase 2: Workflow Fingerprinting
-1. Generate and store workflow fingerprint on creation
-2. Compare on resume and warn if changed
-3. Add `--ignore-workflow-changes` flag to bypass warning
+**Stable State**: System works as before, but shows helpful errors instead of failing silently.
 
-### Phase 3: State Dependency Analysis
-1. Build dependency analyzer
-2. Run validation on resume
-3. Show detailed report of missing state keys and affected templates/modules
+**No database changes required.**
 
-### Phase 4: Pre-Execution Validation
-1. Validate all Jinja2 templates before workflow execution
-2. Option to run in "dry-run" mode to check all templates
-3. Add to workflow start response: `validation_warnings: []`
+---
 
-## Database Changes
+### Phase 2: Workflow Version Tracking
 
-Add to `workflows` collection:
-```javascript
+**Goal**: Detect when workflow changed between runs.
+
+**Changes**:
+1. Add `workflow_versions` collection with `content_hash` and `resolved_workflow`
+2. Add `workflow_version_id` to `workflow_runs` (initial + current)
+3. Add `workflow_version_id` to events
+4. On start: create version record, link to run
+5. On resume: compare submitted hash with current version hash
+
+**Stable State**: System detects version changes on resume. Existing workflows continue to work (backfill version records on first access).
+
+**Database Changes**:
+```python
+# New collection: workflow_versions
 {
-    // ... existing fields ...
-    "workflow_fingerprint": "a1b2c3d4e5f6g7h8",  // Structure hash
-    "workflow_version": {
-        "template_path": "/path/to/workflow.json",
-        "loaded_at": ISODate("..."),
-        "fingerprint": "a1b2c3d4e5f6g7h8"
-    }
+    "workflow_version_id": "ver_xxxxxxxxxxxx",
+    "workflow_template_id": "tpl_xxxxxxxxxxxx",
+    "content_hash": "sha256:...",
+    "source_type": "zip" | "json",
+    "resolved_workflow": {...},
+    "created_at": datetime
+}
+
+# Modified: workflow_runs (add fields)
+{
+    "initial_version_id": "ver_xxxxxxxxxxxx",
+    "current_version_id": "ver_xxxxxxxxxxxx"
+}
+
+# Modified: events (add field)
+{
+    "workflow_version_id": "ver_xxxxxxxxxxxx"
 }
 ```
+
+**Migration**: Existing workflows get version record created on next access. Events without version_id are assumed to be from initial version.
+
+---
+
+### Phase 3: Version Mismatch Handling
+
+**Goal**: Give user options when workflow changed.
+
+**Changes**:
+1. Detect VERSION_MISMATCH on resume
+2. Return options: continue_with_new, continue_with_original, start_fresh
+3. Client UI shows options to user
+4. Server updates current_version_id based on choice
+
+**Stable State**: Users can safely resume with modified workflows by choosing how to proceed.
+
+**No additional database changes.**
+
+---
+
+### Phase 4: State Dependency Analysis
+
+**Goal**: Know exactly what state is missing and why.
+
+**Changes**:
+1. Implement `StateDependencyAnalyzer`
+2. Implement `validate_resume_state()`
+3. Include `state_validation` in VERSION_MISMATCH response
+4. Show detailed report: missing keys, affected modules/templates
+
+**Stable State**: On version mismatch, user sees exactly what state is missing and what will break.
+
+**No database changes.**
+
+---
+
+### Phase 5: Pre-Execution Template Validation
+
+**Goal**: Catch all template errors before workflow runs.
+
+**Changes**:
+1. Implement `TemplateValidator`
+2. Validate all Jinja2 templates at workflow start
+3. Add "dry-run" mode to check templates without executing
+4. Return `validation_warnings` in start/resume response
+
+**Stable State**: All template issues caught upfront, not mid-execution.
+
+**No database changes.**
+
+---
 
 ## API Changes
 
 ### Resume Response Enhancement
 
 ```python
-class WorkflowResponse:
-    # ... existing fields ...
-    validation_warnings: List[str] = []
-    workflow_changed: bool = False
-    missing_state_keys: List[str] = []
+# VERSION_MISMATCH response
+{
+    "status": "version_mismatch",
+    "current_version": {
+        "version_id": "ver_xxx",
+        "content_hash": "sha256:...",
+        "created_at": "..."
+    },
+    "submitted_version": {
+        "version_id": "ver_yyy",  # May be new
+        "content_hash": "sha256:...",
+        "is_new": true
+    },
+    "options": [
+        "continue_with_new",
+        "continue_with_original",
+        "start_fresh"
+    ],
+    "state_validation": {  # Phase 4+
+        "is_valid": false,
+        "missing_keys": [
+            {
+                "key": "selected_core_aesthetic",
+                "producer": {"step": "step_1", "module": "store_selected_concept"},
+                "consumers": [{"type": "display_format", "step": "step_2"}]
+            }
+        ],
+        "warnings": ["Module X needs 'Y' which may not exist"]
+    }
+}
 ```
 
-### New Endpoint: Validate Workflow Resume
+### Confirm Resume Choice
 
 ```
-GET /workflow/{id}/validate-resume
+POST /workflow/{run_id}/resume/confirm
+Body: { "choice": "continue_with_new" }
 ```
 
-Returns detailed validation report before actually resuming.
+---
 
 ## User Experience
 
-### On Resume with Changes Detected
+### On Resume with Version Mismatch (Phase 3+)
 
 ```
-⚠️  Workflow structure changed since last run
+⚠️  Workflow has changed since last run
 
-Changes detected:
-  + Added module: store_selected_concept (step_1, position 16)
-  ~ Modified outputs_to_state in: select_concept
-
-Missing state keys:
-  - selected_core_aesthetic (needed by: display_format in step_2)
-  - selected_aesthetic (needed by: display_format in step_2)
+Current version:  ver_abc123 (created 2024-01-01)
+Submitted version: ver_def456 (new)
 
 Options:
-  [1] Continue anyway (may cause errors)
-  [2] Start fresh workflow
-  [3] Show detailed diff
+  [1] Continue with NEW version
+      - New modules will run from current position
+      - May have missing state from skipped modules
+  [2] Continue with ORIGINAL version
+      - Use the version from when workflow started
+      - Ignores your local changes
+  [3] Start FRESH
+      - Create new workflow run from beginning
 ```
 
-### Template Error Display (Phase 1)
+### With State Validation (Phase 4+)
 
-Instead of showing raw JSON:
 ```
-Prompt A (Weighted):
-  [TEMPLATE ERROR: Missing state.selected_core_aesthetic]
-  Tip: This state key is produced by 'store_selected_concept' module.
-  The module may not have run. Consider starting a fresh workflow.
+⚠️  Workflow has changed since last run
+
+Missing state keys (will cause errors):
+  - selected_core_aesthetic
+    Producer: store_selected_concept (step_1)
+    Needed by: display_format in step_2, step_3
+  - selected_aesthetic
+    Producer: store_selected_concept (step_1)
+    Needed by: module input in step_4
+
+Recommendation: Start fresh to ensure all state is populated.
+
+Options:
+  [1] Continue anyway (errors likely)
+  [2] Start fresh (recommended)
 ```
+
+---
 
 ## Configuration
 
 ```json
-// In workflow config
 {
     "validation": {
-        "strict_mode": false,  // Fail on any validation error
-        "warn_on_structure_change": true,
+        "strict_mode": false,
+        "warn_on_version_change": true,
         "validate_templates_on_start": true,
         "allow_missing_state_keys": false
     }
 }
 ```
 
+---
+
 ## Summary
 
-This proposal provides:
+| Phase | Deliverable | Stable After? |
+|-------|-------------|---------------|
+| 1 | Graceful template errors | Yes |
+| 2 | Version tracking in DB | Yes |
+| 3 | Version mismatch UI flow | Yes |
+| 4 | State dependency analysis | Yes |
+| 5 | Pre-execution validation | Yes |
 
-1. **Detection**: Know when workflow structure changed
-2. **Analysis**: Understand what state is missing and why
-3. **Prevention**: Validate templates before they fail
-4. **Graceful Handling**: Show useful errors instead of broken output
-5. **User Control**: Options to continue, restart, or investigate
+**Key Principle**: Version tracking (Phases 2-3) handles "did it change?". State validation (Phases 4-5) handles "what's broken?".
 
-The phased approach allows quick wins (Phase 1) while building toward comprehensive validation.
+---
+
+## Related Documents
+
+- `2025_12_11_server_client_redesign.md` - Full remote server architecture
+- `2025_12_13_database_redesign_proposal.md` - Multi-tenant database schema
