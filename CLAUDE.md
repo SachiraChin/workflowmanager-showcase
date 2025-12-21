@@ -51,6 +51,36 @@ This applies to both Edit and Write tools. Always read and modify files in a sin
   When you see "[REMINDER] Uncommitted changes detected" from the Stop hook, immediately commit before continuing. Use meaningful commit messages describing what was changed and why.
 - Never create modules that are specific to a single workflow. Modules must be generic, reusable, and workflow-agnostic. All workflow-specific logic should be handled through module configuration (inputs), not hardcoded in module code. If a complex scenario requires new functionality, design a generic module that can handle similar patterns across different workflows.
 
+## Debugging and Verification Rules
+
+**CRITICAL: These rules exist because of repeated failures. Follow them exactly.**
+
+### When Writing New Code (Scripts, Modules, Functions)
+
+1. **Enumerate ALL cases before coding.** Before writing code that handles multiple types/cases (e.g., event types, file types, error conditions), explicitly list every case that needs handling. Ask operator to confirm the list is complete.
+
+2. **Trace through with concrete data.** After writing code, trace through it with real example data to verify it works. Don't just claim "this should work" - prove it with a specific example.
+
+3. **When operator says "make sure X is handled"** - Don't just say "yes it's handled." Show the specific line of code that handles X, or admit it's not handled and add it.
+
+### When Debugging Issues
+
+1. **Assume YOUR code is wrong first.** When something breaks after you made changes, the bug is most likely in YOUR new code, not in existing code that was working before. Investigate your changes first.
+
+2. **Don't blame existing code without proof.** Before suggesting fixes to existing code, verify with concrete data that the existing code is actually the problem. Query the database, trace through the logic, show the actual values.
+
+3. **Fix root causes, not symptoms.** If you find yourself making a "fix" that works around an issue, stop and ask: "What is the actual root cause?" The first fix that comes to mind is often treating a symptom.
+
+4. **When a fix doesn't work, question your diagnosis.** If your fix didn't solve the problem, your understanding of the problem is wrong. Go back to investigation, don't keep adding more fixes.
+
+### Verification Checkpoints
+
+Before saying "this is complete" or "this should work":
+- [ ] Have I enumerated all cases/types this code needs to handle?
+- [ ] Have I traced through with real data showing it works?
+- [ ] If this deletes/modifies data, have I shown exactly what will be affected?
+- [ ] Have I tested the failure modes, not just the happy path?
+
 ## Project Structure
 
 ```
