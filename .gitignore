@@ -13,3 +13,4 @@ models.txt
 nul
 server-logs
 .DS_Store
+.venv
