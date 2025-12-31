@@ -14,3 +14,6 @@ nul
 server-logs
 .DS_Store
 .venv
+*.zip
+.env
+**/.env
