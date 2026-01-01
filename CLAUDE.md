@@ -38,6 +38,13 @@ Message 2:
 
 This applies to both Edit and Write tools. Always read and modify files in a single response.
 
+### Edit Popup Scrolling Issue
+
+The Edit permission popup has a scrolling bug that makes reviewing large changes difficult. Due to this:
+- **Operator may cancel edits and provide feedback as a chat message instead.** Do not interpret this as rejection - read the feedback and adjust accordingly.
+- **Keep changes small.** Prefer <100 lines of changes at any given time. Break larger changes into multiple smaller edits.
+- If a change requires more than 100 lines, discuss the approach first and split into logical chunks.
+
 ## Critical Rules For Project
 
 - When operator (developer) ask you a question, carefully understand what operator trying to convey, if question is unclear, do not jump to conclusions, always ask followback questions.
