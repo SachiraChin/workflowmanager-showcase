@@ -1,0 +1,1680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schema-Driven UI Architecture - Complete Data Flow</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.5;
+        }
+        h1, h2, h3, h4 { color: #00d4ff; margin-top: 1.5em; }
+        h1 { border-bottom: 2px solid #00d4ff; padding-bottom: 10px; }
+
+        .container { max-width: 1400px; margin: 0 auto; }
+
+        /* Flow diagram styles */
+        .flow-section {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .flow-row {
+            display: flex;
+            gap: 20px;
+            align-items: stretch;
+            margin: 15px 0;
+        }
+
+        .flow-box {
+            background: #1f4068;
+            border: 2px solid #00d4ff;
+            border-radius: 8px;
+            padding: 15px;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .flow-box.server { border-color: #ff6b6b; }
+        .flow-box.server h4 { color: #ff6b6b; }
+
+        .flow-box.webui { border-color: #4ade80; }
+        .flow-box.webui h4 { color: #4ade80; }
+
+        .flow-box.workflow { border-color: #fbbf24; }
+        .flow-box.workflow h4 { color: #fbbf24; }
+
+        .arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #666;
+            min-width: 40px;
+        }
+
+        /* Code blocks */
+        pre {
+            background: #0f0f23;
+            border-radius: 6px;
+            padding: 12px;
+            overflow-x: auto;
+            font-size: 12px;
+            border: 1px solid #333;
+        }
+
+        code {
+            font-family: 'Fira Code', 'Consolas', monospace;
+            color: #a0e0a0;
+        }
+
+        .highlight { color: #ffcc00; }
+        .keyword { color: #ff79c6; }
+        .string { color: #50fa7b; }
+        .comment { color: #6272a4; }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+
+        th, td {
+            border: 1px solid #333;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background: #1f4068;
+            color: #00d4ff;
+        }
+
+        tr:nth-child(even) { background: #16213e; }
+
+        /* Tree structure */
+        .tree {
+            font-family: 'Fira Code', monospace;
+            font-size: 13px;
+            background: #0f0f23;
+            padding: 15px;
+            border-radius: 6px;
+            white-space: pre;
+            overflow-x: auto;
+        }
+
+        .tree .file { color: #fbbf24; }
+        .tree .component { color: #4ade80; }
+        .tree .function { color: #ff79c6; }
+        .tree .note { color: #6272a4; font-style: italic; }
+
+        /* Naming clarification */
+        .naming-table {
+            margin: 20px 0;
+        }
+
+        .naming-table td:first-child {
+            font-family: monospace;
+            color: #ff79c6;
+            white-space: nowrap;
+        }
+
+        .toc {
+            background: #16213e;
+            padding: 15px 25px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .toc ul { margin: 0; padding-left: 20px; }
+        .toc a { color: #00d4ff; text-decoration: none; }
+        .toc a:hover { text-decoration: underline; }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+        .badge.server { background: #ff6b6b; color: #000; }
+        .badge.webui { background: #4ade80; color: #000; }
+        .badge.workflow { background: #fbbf24; color: #000; }
+
+        /* Line numbers gutter */
+        .container {
+            position: relative;
+            padding-left: 50px;
+        }
+
+        .line-numbers {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 45px;
+            background: #0f0f1a;
+            border-right: 1px solid #333;
+            padding-top: 20px;
+            font-family: 'Fira Code', monospace;
+            font-size: 11px;
+            color: #555;
+            text-align: right;
+            padding-right: 8px;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .line-numbers div {
+            height: 21px;
+            line-height: 21px;
+        }
+
+        .line-numbers div:hover {
+            color: #00d4ff;
+            cursor: pointer;
+        }
+
+        /* Highlight line on hover */
+        .line-wrapper {
+            display: block;
+            min-height: 21px;
+        }
+
+        .line-wrapper:hover {
+            background: rgba(0, 212, 255, 0.05);
+        }
+
+        .line-wrapper:target {
+            background: rgba(255, 204, 0, 0.15);
+        }
+    </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const container = document.querySelector('.container');
+
+            // Create line numbers gutter
+            const gutter = document.createElement('div');
+            gutter.className = 'line-numbers';
+            document.body.insertBefore(gutter, document.body.firstChild);
+
+            // Get all block-level content and wrap in line-wrapper
+            let lineNum = 1;
+            const elements = container.querySelectorAll('h1, h2, h3, h4, p, li, tr, pre, .tree, .flow-box, .arrow, table, hr');
+
+            elements.forEach(function(el) {
+                // Add line number to gutter
+                const lineDiv = document.createElement('div');
+                lineDiv.textContent = lineNum;
+                lineDiv.id = 'L' + lineNum;
+                lineDiv.onclick = function() {
+                    window.location.hash = 'line-' + lineNum;
+                };
+                gutter.appendChild(lineDiv);
+
+                // Add id to element for linking
+                if (!el.id) {
+                    el.id = 'line-' + lineNum;
+                }
+                el.setAttribute('data-line', lineNum);
+
+                lineNum++;
+
+                // For pre/tree blocks, count internal lines
+                if (el.tagName === 'PRE' || el.classList.contains('tree')) {
+                    const lines = el.textContent.split('\n').length - 1;
+                    for (let i = 0; i < lines; i++) {
+                        const extraLine = document.createElement('div');
+                        extraLine.textContent = lineNum + i;
+                        gutter.appendChild(extraLine);
+                    }
+                    lineNum += lines;
+                }
+            });
+
+            // Sync scroll
+            window.addEventListener('scroll', function() {
+                gutter.scrollTop = window.scrollY;
+            });
+        });
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Schema-Driven UI Architecture</h1>
+        <p>Complete data flow from workflow JSON → server modules → webui components</p>
+
+        <div class="toc">
+            <h3 style="margin-top:0">Contents</h3>
+            <ul>
+                <li><a href="#end-to-end">End-to-End Transformation (Workflow → Server → WebUI)</a></li>
+                <li><a href="#interaction-types">All Interaction Types</a></li>
+                <li><a href="#full-flow">Complete Data Flow</a></li>
+                <li><a href="#module-mapping">Workflow Module → Interaction Type Mapping</a></li>
+                <li><a href="#component-hierarchy">WebUI Component Hierarchy (All Components)</a></li>
+                <li><a href="#parse-schema-data">Deep Dive: parseSchemaData (groups vs flatItems)</a></li>
+                <li><a href="#schema-properties">Schema Property Naming Clarification</a></li>
+                <li><a href="#rendering-flow">Field Rendering Flow</a></li>
+                <li><a href="#summary">Summary: What Needs to Change</a></li>
+            </ul>
+            <p style="font-size:12px;color:#666;margin-top:10px;">Line numbers shown on left. Click to jump, or reference as L1, L50, etc.</p>
+        </div>
+
+        <!-- ============================================= -->
+        <h2 id="end-to-end">End-to-End Transformation</h2>
+        <!-- ============================================= -->
+
+        <div class="flow-section">
+            <p>This section shows exactly what transforms at each stage from workflow JSON to rendered component.</p>
+
+            <h3>Stage 1: Workflow JSON (Static Definition)</h3>
+            <div class="flow-box workflow" style="max-width: 100%;">
+                <h4>📄 What you write in step.json</h4>
+<pre><code>{
+  <span class="highlight">"module_id"</span>: <span class="string">"user.select"</span>,         <span class="comment">// ← Determines which Python class to load</span>
+  <span class="string">"name"</span>: <span class="string">"review_elevenlabs"</span>,
+  <span class="string">"inputs"</span>: {
+    <span class="highlight">"mode"</span>: <span class="string">"review"</span>,                  <span class="comment">// ← KEY: This determines InteractionType</span>
+    <span class="highlight">"data"</span>: <span class="string">"{{ state.elevenlabs_prompts_response }}"</span>,  <span class="comment">// ← Jinja2 template</span>
+    <span class="highlight">"schema"</span>: {                         <span class="comment">// ← Passed through to webui</span>
+      <span class="string">"type"</span>: <span class="string">"object"</span>,
+      <span class="string">"display_mode"</span>: <span class="string">"review"</span>,
+      <span class="string">"properties"</span>: {
+        <span class="string">"track_title"</span>: { <span class="string">"type"</span>: <span class="string">"string"</span>, <span class="string">"display"</span>: <span class="keyword">true</span>, <span class="string">"display_label"</span>: <span class="string">"Track Title"</span> }
+      }
+    },
+    <span class="string">"prompt"</span>: <span class="string">"Review ElevenLabs prompts"</span>
+  }
+}</code></pre>
+                <p style="margin-top:10px;color:#fbbf24;"><strong>Key fields that matter:</strong></p>
+                <ul style="color:#e0e0e0;">
+                    <li><code>module_id</code> → Which Python module class to instantiate</li>
+                    <li><code>inputs.mode</code> → Determines InteractionType (for user.select)</li>
+                    <li><code>inputs.data</code> → Jinja2 template, resolved by server</li>
+                    <li><code>inputs.schema</code> → Passed through to webui unchanged</li>
+                </ul>
+            </div>
+
+            <div class="arrow" style="font-size:32px;margin:20px 0;">⬇️</div>
+
+            <h3>Stage 2: Server Transformations</h3>
+            <div class="flow-box server" style="max-width: 100%;">
+                <h4>🐍 What server does (workflow_processor.py + module)</h4>
+
+                <p><strong>Step 2a: Load module class</strong></p>
+<pre><code><span class="comment"># workflow_processor.py loads module by module_id</span>
+module = ModuleRegistry.create(<span class="string">"user.select"</span>)  <span class="comment">→ SelectModule instance</span></code></pre>
+
+                <p><strong>Step 2b: Resolve Jinja2 templates in inputs</strong></p>
+<pre><code><span class="comment"># Jinja2Resolver replaces templates with actual values from state</span>
+inputs[<span class="string">"data"</span>] = <span class="string">"{{ state.elevenlabs_prompts_response }}"</span>
+        ⬇️ <span class="comment">resolved to</span>
+inputs[<span class="string">"data"</span>] = {
+  <span class="string">"track_title"</span>: <span class="string">"Starwell Reverie"</span>,
+  <span class="string">"elevenlabs_prompt_precise"</span>: <span class="string">"Delicate nostalgic..."</span>
+}</code></pre>
+
+                <p><strong>Step 2c: Module creates InteractionRequest</strong></p>
+<pre><code><span class="comment"># server/modules/user/select.py:172-195</span>
+<span class="keyword">def</span> <span class="function">get_interaction_request</span>(self, inputs, context):
+    mode = inputs.get(<span class="string">'mode'</span>)   <span class="comment"># "review"</span>
+
+    <span class="comment"># THIS IS THE KEY TRANSFORMATION:</span>
+    <span class="keyword">if</span> mode == <span class="string">"review"</span>:
+        interaction_type = <span class="highlight">InteractionType.REVIEW_GROUPED</span>
+    <span class="keyword">else</span>:
+        interaction_type = <span class="highlight">InteractionType.SELECT_FROM_STRUCTURED</span>
+
+    <span class="keyword">return</span> InteractionRequest(
+        <span class="highlight">interaction_type</span>=interaction_type,  <span class="comment"># ← Created here, not in workflow JSON!</span>
+        interaction_id=<span class="string">"select_12345"</span>,
+        prompt=inputs[<span class="string">"prompt"</span>],
+        <span class="highlight">display_data</span>={                       <span class="comment"># ← Bundled for webui</span>
+            <span class="string">"data"</span>: inputs[<span class="string">"data"</span>],          <span class="comment"># Resolved values</span>
+            <span class="string">"schema"</span>: inputs[<span class="string">"schema"</span>],      <span class="comment"># Passed through</span>
+            <span class="string">"mode"</span>: mode,
+            <span class="string">"retryable"</span>: context.retryable
+        }
+    )</code></pre>
+
+                <p style="margin-top:10px;color:#ff6b6b;"><strong>Server transformations:</strong></p>
+                <ul style="color:#e0e0e0;">
+                    <li><code>module_id</code> → Python class instance</li>
+                    <li><code>inputs.data</code> (Jinja2) → resolved actual values</li>
+                    <li><code>inputs.mode</code> → <code>interaction_type</code> enum</li>
+                    <li>Everything bundled into <code>InteractionRequest</code> object</li>
+                </ul>
+            </div>
+
+            <div class="arrow" style="font-size:32px;margin:20px 0;">⬇️</div>
+
+            <h3>Stage 3: API Response (JSON over HTTP)</h3>
+            <div class="flow-box" style="max-width: 100%; border-color: #a78bfa;">
+                <h4 style="color:#a78bfa;">📡 What API sends to WebUI</h4>
+<pre><code>{
+  <span class="string">"workflow_run_id"</span>: <span class="string">"abc123"</span>,
+  <span class="string">"status"</span>: <span class="string">"awaiting_input"</span>,
+  <span class="string">"interaction_request"</span>: {
+    <span class="highlight">"interaction_type"</span>: <span class="string">"review_grouped"</span>,   <span class="comment">// ← Routes to component</span>
+    <span class="string">"interaction_id"</span>: <span class="string">"select_12345"</span>,
+    <span class="string">"prompt"</span>: <span class="string">"Review ElevenLabs prompts"</span>,
+    <span class="highlight">"display_data"</span>: {
+      <span class="string">"data"</span>: {                              <span class="comment">// ← Resolved values</span>
+        <span class="string">"track_title"</span>: <span class="string">"Starwell Reverie"</span>,
+        <span class="string">"elevenlabs_prompt_precise"</span>: <span class="string">"Delicate nostalgic..."</span>
+      },
+      <span class="string">"schema"</span>: {                            <span class="comment">// ← Unchanged from workflow</span>
+        <span class="string">"type"</span>: <span class="string">"object"</span>,
+        <span class="string">"display_mode"</span>: <span class="string">"review"</span>,
+        <span class="string">"properties"</span>: {
+          <span class="string">"track_title"</span>: { <span class="string">"type"</span>: <span class="string">"string"</span>, <span class="string">"display"</span>: <span class="keyword">true</span>, ... }
+        }
+      },
+      <span class="string">"mode"</span>: <span class="string">"review"</span>,
+      <span class="string">"retryable"</span>: { ... }
+    }
+  }
+}</code></pre>
+            </div>
+
+            <div class="arrow" style="font-size:32px;margin:20px 0;">⬇️</div>
+
+            <h3>Stage 4: WebUI Component Routing</h3>
+            <div class="flow-box webui" style="max-width: 100%;">
+                <h4>⚛️ InteractionHost routes by interaction_type</h4>
+<pre><code><span class="comment">// InteractionHost.tsx:1704-1787</span>
+<span class="keyword">function</span> <span class="function">InteractionHost</span>({ request }) {
+  <span class="keyword">switch</span> (request.<span class="highlight">interaction_type</span>) {       <span class="comment">// ← Uses the enum value</span>
+    <span class="keyword">case</span> <span class="string">"review_grouped"</span>:
+      <span class="keyword">return</span> &lt;<span class="component">ReviewGroupedHost</span> request={request} /&gt;;
+      <span class="comment">//       ↓</span>
+      <span class="comment">//  ReviewGroupedHost reads request.display_data.schema</span>
+      <span class="comment">//  and request.display_data.data to render</span>
+  }
+}</code></pre>
+
+                <p><strong>Component receives:</strong></p>
+<pre><code>request = {
+  interaction_type: <span class="string">"review_grouped"</span>,
+  display_data: {
+    data: { track_title: <span class="string">"Starwell Reverie"</span>, ... },
+    schema: { type: <span class="string">"object"</span>, properties: { ... } }
+  }
+}</code></pre>
+            </div>
+
+            <h3 style="margin-top: 30px;">Complete Hierarchy: All Workflow Modules → All WebUI Components</h3>
+            <div class="tree">
+<span class="file">step.json</span> (any workflow step)
+│
+└── <span class="highlight">module_id</span> → <span class="note">[SERVER: ModuleRegistry]</span> → <span class="note">[MODULE: get_interaction_request()]</span> → <span class="note">[API]</span> → <span class="note">[WEBUI: InteractionHost]</span>
+    │
+    │
+    ├── <span class="highlight">"user.select"</span>
+    │   │
+    │   └── <span class="note">[SERVER: server/modules/user/select.py]</span>
+    │       │
+    │       ├── inputs.mode == "select" (default)
+    │       │   │
+    │       │   └── interaction_type = <span class="highlight">SELECT_FROM_STRUCTURED</span>
+    │       │       │
+    │       │       └── <span class="note">[WEBUI: InteractionHost.tsx:1704 switch]</span>
+    │       │           │
+    │       │           └── <span class="component">StructuredSelectHost</span> <span class="note">(line 852)</span>
+    │       │               ├── State: StructuredSelectState
+    │       │               ├── Variants: [cards, list]
+    │       │               │
+    │       │               ├── <span class="component">StructuredSelectCardsControlled</span>
+    │       │               │   ├── Props: request, state, onStateChange
+    │       │               │   ├── <span class="function">parseSchemaData(data, schema)</span> <span class="note">← schema-utils.ts:63</span>
+    │       │               │   │   └── Returns: { groups: SelectableGroup[], flatItems: SelectableItem[] }
+    │       │               │   │
+    │       │               │   └── For each group → For each item:
+    │       │               │       └── <span class="component">SchemaFields</span> <span class="note">← schema-renderer.tsx:39</span>
+    │       │               │           ├── Reads: schema.properties
+    │       │               │           ├── Filters: display === true
+    │       │               │           │
+    │       │               │           └── For each displayable field:
+    │       │               │               └── <span class="component">SchemaField</span> <span class="note">← schema-renderer.tsx:217</span>
+    │       │               │                   ├── type="array" → <span class="component">ArrayField</span>
+    │       │               │                   │   └── Renders array items
+    │       │               │                   ├── type="object" → recurse <span class="component">SchemaFields</span>
+    │       │               │                   └── primitive → &lt;span&gt;{value}&lt;/span&gt;
+    │       │               │
+    │       │               └── <span class="component">StructuredSelectListControlled</span>
+    │       │                   ├── Props: request, state, onStateChange
+    │       │                   ├── <span class="function">parseSchemaData(data, schema)</span> <span class="note">← schema-utils.ts:63</span>
+    │       │                   │   └── Returns: { groups: SelectableGroup[], flatItems: SelectableItem[] }
+    │       │                   │
+    │       │                   ├── <span class="component">GroupSection</span>
+    │       │                   │   ├── Shows group header with label
+    │       │                   │   └── <span class="component">SchemaFields</span> for parentData
+    │       │                   │
+    │       │                   └── <span class="component">SelectableListItem</span>
+    │       │                       ├── <span class="component">DisplayComponents</span> <span class="note">← if schema.display_components present</span>
+    │       │                       │   └── <span class="component">DisplayComponentItem</span>
+    │       │                       │       ├── type="color" → <span class="component">ColorSwatch</span>
+    │       │                       │       ├── type="image" → &lt;span&gt;
+    │       │                       │       ├── type="url" → &lt;a href&gt;
+    │       │                       │       └── default → &lt;span&gt;{value}&lt;/span&gt;
+    │       │                       │
+    │       │                       ├── OR: <span class="function">renderTemplate(displayFormat)</span> <span class="note">← if schema.display_format present</span>
+    │       │                       │
+    │       │                       └── OR: <span class="component">SchemaFields</span> <span class="note">← fallback to display:true fields</span>
+    │       │                           └── (same as above)
+    │       │
+    │       └── inputs.mode == "review"
+    │           │
+    │           └── interaction_type = <span class="highlight">REVIEW_GROUPED</span>
+    │               │
+    │               └── <span class="note">[WEBUI: InteractionHost.tsx:1704 switch]</span>
+    │                   │
+    │                   └── <span class="component">ReviewGroupedHost</span> <span class="note">(line 1126)</span>
+    │                       ├── State: ReviewGroupedState (feedbackByGroup, retryGroups)
+    │                       ├── Variants: [cards, list]
+    │                       │
+    │                       ├── <span class="component">ReviewGroupedCardsControlled</span>
+    │                       │   ├── Props: request, state, onStateChange
+    │                       │   ├── <span class="function">parseGroups(data, schema)</span> <span class="note">← LOCAL function line 42-84</span>
+    │                       │   │   └── Returns: GroupData[]
+    │                       │   │
+    │                       │   └── For each group:
+    │                       │       ├── <span class="component">Card</span>
+    │                       │       │   ├── <span class="component">CardHeader</span> with group.label
+    │                       │       │   └── <span class="component">CardContent</span>
+    │                       │       │       └── <span class="component">SchemaFields</span>(group.data, group.schema)
+    │                       │       │           └── (same as above)
+    │                       │       │
+    │                       │       └── Feedback section (if retryable.feedback.per_group)
+    │                       │           ├── <span class="component">Textarea</span> for feedback
+    │                       │           └── Save/Cancel buttons
+    │                       │
+    │                       └── <span class="component">ReviewGroupedListControlled</span>
+    │                           ├── Props: request, state, onStateChange
+    │                           ├── <span class="function">parseGroups(data, schema)</span> <span class="note">← LOCAL function line 38-78</span>
+    │                           │   └── Returns: GroupData[]
+    │                           │
+    │                           └── For each group:
+    │                               ├── <span class="component">Separator</span> (if not first)
+    │                               ├── Group header with group.label
+    │                               ├── <span class="component">SchemaFields</span>(group.data, group.schema)
+    │                               │   └── (same as above)
+    │                               │
+    │                               └── Feedback section (if retryable.feedback.per_group)
+    │                                   ├── <span class="component">Textarea</span> for feedback
+    │                                   └── Save/Cancel buttons
+    │
+    │
+    ├── <span class="highlight">"user.text_input"</span>
+    │   │
+    │   └── <span class="note">[SERVER: server/modules/user/text_input.py]</span>
+    │       │
+    │       └── interaction_type = <span class="highlight">TEXT_INPUT</span>
+    │           │
+    │           └── <span class="note">[WEBUI: InteractionHost.tsx:1704 switch]</span>
+    │               │
+    │               └── <span class="component">TextInputHost</span> <span class="note">(line 344)</span>
+    │                   ├── State: TextInputState
+    │                   ├── Variants: [simple, enhanced]
+    │                   │
+    │                   ├── <span class="component">TextInputSimpleControlled</span>
+    │                   │   ├── Props: request, state, onStateChange
+    │                   │   ├── Uses: request.default_value, request.allow_empty, request.multiline
+    │                   │   ├── Renders: &lt;Textarea&gt; or &lt;Input&gt;
+    │                   │   └── Submit button
+    │                   │
+    │                   └── <span class="component">TextInputEnhancedControlled</span>
+    │                       ├── Props: request, state, onStateChange
+    │                       ├── Uses: request.default_value, request.allow_empty
+    │                       ├── Renders: &lt;Input&gt; with history/suggestions
+    │                       └── Submit button
+    │
+    │
+    ├── <span class="highlight">"user.pause"</span>
+    │   │
+    │   └── <span class="note">[SERVER: server/modules/user/pause.py]</span>
+    │       │
+    │       └── interaction_type = <span class="highlight">TEXT_INPUT</span> (with allow_empty=true)
+    │           │
+    │           └── <span class="note">[WEBUI: InteractionHost.tsx:1704 switch]</span>
+    │               │
+    │               └── <span class="component">TextInputHost</span> <span class="note">(same as user.text_input)</span>
+    │                   └── (same hierarchy as above)
+    │
+    │
+    ├── <span class="highlight">"user.file_input"</span>
+    │   │
+    │   └── <span class="note">[SERVER: server/modules/user/file_input.py]</span>
+    │       │
+    │       └── interaction_type = <span class="highlight">FILE_INPUT</span>
+    │           │
+    │           └── <span class="note">[WEBUI: InteractionHost.tsx:1704 switch]</span>
+    │               │
+    │               └── <span class="component">FileInputHost</span> <span class="note">(line 1391)</span>
+    │                   ├── State: FileInputState
+    │                   ├── Variants: [dropzone, text]
+    │                   │
+    │                   ├── <span class="component">FileInputDropzoneControlled</span>
+    │                   │   ├── Props: request, state, onStateChange
+    │                   │   ├── Uses: request.accepted_types, request.multiple_files
+    │                   │   └── Renders: drag-drop zone with file preview
+    │                   │
+    │                   └── <span class="component">FileInputTextControlled</span>
+    │                       ├── Props: request, state, onStateChange
+    │                       ├── Uses: request.base_path
+    │                       └── Renders: text input for file path
+    │
+    │
+    ├── <span class="highlight">"io.client_write"</span>
+    │   │
+    │   └── <span class="note">[SERVER: server/modules/io/client_write.py]</span>
+    │       │
+    │       └── interaction_type = <span class="highlight">FILE_DOWNLOAD</span>
+    │           │
+    │           └── <span class="note">[WEBUI: InteractionHost.tsx:1704 switch]</span>
+    │               │
+    │               └── <span class="component">FileDownloadHost</span> <span class="note">(line 1633)</span>
+    │                   ├── State: FileDownloadState
+    │                   │
+    │                   └── <span class="component">FileDownloadControlled</span>
+    │                       ├── Props: request, state, onStateChange
+    │                       ├── Uses: request.file_content, request.file_name, request.file_content_type
+    │                       ├── Auto-writes file to project folder
+    │                       └── Shows confirmation or error
+    │
+    │
+    └── <span class="note">(unused interaction types - defined but no module creates them)</span>
+        │
+        ├── <span class="highlight">CONFIRM</span>
+        │   │
+        │   └── <span class="note">[WEBUI: InteractionHost.tsx:1704 switch]</span>
+        │       │
+        │       └── <span class="component">ConfirmHost</span> <span class="note">(line 599)</span>
+        │           ├── State: ConfirmState
+        │           ├── Variants: [buttons, cards]
+        │           │
+        │           ├── <span class="component">ConfirmButtonsControlled</span>
+        │           │   ├── Props: request, state, onStateChange
+        │           │   ├── Uses: request.yes_label, request.no_label, request.default_confirm
+        │           │   └── Renders: Yes/No buttons
+        │           │
+        │           └── <span class="component">ConfirmCardsControlled</span>
+        │               ├── Props: request, state, onStateChange
+        │               ├── Uses: request.yes_label, request.no_label
+        │               └── Renders: clickable cards for Yes/No
+        │
+        └── <span class="highlight">SELECT_FROM_LIST</span>
+            │
+            └── <span class="note">[WEBUI: InteractionHost.tsx:1704 switch]</span>
+                │
+                └── <span class="component">SelectListHost</span> <span class="note">(line 104)</span>
+                    ├── State: SelectListState
+                    ├── Variants: [checkbox, cards, chips, dropdown]
+                    │
+                    ├── <span class="component">SelectListCheckboxControlled</span>
+                    │   ├── Props: request, state, onStateChange
+                    │   ├── Uses: request.options[] <span class="note">(NOT schema - just SelectOption[])</span>
+                    │   └── Renders: checkbox list of options
+                    │
+                    ├── <span class="component">SelectListCardsControlled</span>
+                    │   ├── Props: request, state, onStateChange
+                    │   ├── Uses: request.options[]
+                    │   └── Renders: card grid of options
+                    │
+                    ├── <span class="component">SelectListChipsControlled</span>
+                    │   ├── Props: request, state, onStateChange
+                    │   ├── Uses: request.options[]
+                    │   └── Renders: chip/badge list
+                    │
+                    └── <span class="component">SelectListDropdownControlled</span>
+                        ├── Props: request, state, onStateChange
+                        ├── Uses: request.options[]
+                        └── Renders: dropdown/combobox
+            </div>
+
+            <h3 style="margin-top: 30px;">Data Flow for Schema-Based Interactions</h3>
+            <div class="tree">
+<span class="file">step.json inputs</span>
+│
+├── <span class="highlight">data</span>: "{{ state.some_response }}" <span class="note">(Jinja2 template)</span>
+│   │
+│   └── <span class="note">[SERVER: Jinja2Resolver in workflow_processor.py]</span>
+│       │
+│       └── Resolved to actual values from workflow state
+│           │
+│           └── <span class="note">[API: response.interaction_request.display_data.data]</span>
+│               │
+│               └── <span class="note">[WEBUI: request.display_data.data]</span>
+│                   │
+│                   ├── StructuredSelect: → <span class="function">parseSchemaData(data, schema)</span>
+│                   │   └── Extracts selectable items based on schema.selectable
+│                   │
+│                   └── ReviewGrouped: → <span class="function">parseGroups(data, schema)</span>
+│                       └── Extracts groups (currently only handles nested objects)
+│
+├── <span class="highlight">schema</span>: { type, properties, display, display_label, ... }
+│   │
+│   └── <span class="note">[SERVER: Passed through unchanged]</span>
+│       │
+│       └── <span class="note">[API: response.interaction_request.display_data.schema]</span>
+│           │
+│           └── <span class="note">[WEBUI: request.display_data.schema]</span>
+│               │
+│               └── <span class="component">SchemaFields</span>
+│                   │
+│                   ├── Reads: schema.properties
+│                   ├── Filters: propSchema.display === true
+│                   ├── Sorts by: propSchema.display_order (if present)
+│                   │
+│                   └── For each displayable property:
+│                       │
+│                       └── <span class="component">SchemaField</span>(key, value, propSchema)
+│                           │
+│                           ├── propSchema.type === "array"
+│                           │   └── <span class="component">ArrayField</span>
+│                           │       └── Maps items, renders each
+│                           │
+│                           ├── propSchema.type === "object"
+│                           │   └── Recurse: <span class="component">SchemaFields</span>(value, propSchema)
+│                           │
+│                           └── primitive (string, number, boolean)
+│                               │
+│                               ├── If propSchema.display_format:
+│                               │   └── <span class="function">renderTemplate(display_format, {value, ...})</span>
+│                               │
+│                               └── Else:
+│                                   └── &lt;span&gt;{String(value)}&lt;/span&gt;
+│
+├── <span class="highlight">prompt</span>: "Select an option"
+│   │
+│   └── <span class="note">[SERVER: Passed through]</span>
+│       └── <span class="note">[API: response.interaction_request.prompt]</span>
+│           └── <span class="note">[WEBUI: request.prompt]</span>
+│               └── Rendered as &lt;h3&gt; or &lt;p&gt; heading in component
+│
+└── <span class="highlight">retryable</span>: { options: [...], default_option: "..." } <span class="note">(from step.json module config)</span>
+    │
+    └── <span class="note">[SERVER: Added by workflow_processor from module_config.get('retryable')]</span>
+        └── <span class="note">[API: response.interaction_request.display_data.retryable]</span>
+            └── <span class="note">[WEBUI: request.display_data.retryable]</span>
+                └── Renders action buttons based on options[].mode
+            </div>
+
+            <h3 style="margin-top: 30px;">Retryable Options: Response Flow (Continue / Retry / Jump)</h3>
+            <div class="tree">
+<span class="file">step.json module config</span>
+│
+└── <span class="highlight">retryable</span>: {
+    │   default_option: "continue",
+    │   options: [...]
+    │ }
+    │
+    └── options[] - each option has a <span class="highlight">mode</span> that determines behavior
+        │
+        │
+        ├── <span class="highlight">mode: "continue"</span>
+        │   │
+        │   ├── <span class="note">[WORKFLOW JSON]</span>
+        │   │   {
+        │   │     "id": "continue",
+        │   │     "mode": "continue",
+        │   │     "label": "Accept and continue"
+        │   │   }
+        │   │
+        │   ├── <span class="note">[WEBUI: User clicks Continue button]</span>
+        │   │   └── Sends response with selected option
+        │   │
+        │   └── <span class="note">[SERVER: workflow_processor.py]</span>
+        │       └── Normal flow - stores outputs, continues to next module
+        │
+        │
+        ├── <span class="highlight">mode: "retry"</span>
+        │   │
+        │   ├── <span class="note">[WORKFLOW JSON]</span>
+        │   │   {
+        │   │     "id": "retry",
+        │   │     "mode": "retry",
+        │   │     "label": "Regenerate prompts",
+        │   │     "shortcut": "r",
+        │   │     "target_module": "generate_prompts_api",  <span class="note">← Module to re-run</span>
+        │   │     "feedback": {
+        │   │       "enabled": true,
+        │   │       "per_group": true,                      <span class="note">← Per-group feedback in ReviewGrouped</span>
+        │   │       "prompt": "What to change?",
+        │   │       "default_message": "..."
+        │   │     }
+        │   │   }
+        │   │
+        │   ├── <span class="note">[WEBUI: User clicks Retry button]</span>
+        │   │   │
+        │   │   ├── ReviewGroupedHost: May include per-group feedback
+        │   │   │   └── state.feedbackByGroup: { group_key: "feedback text" }
+        │   │   │
+        │   │   └── Sends response:
+        │   │       {
+        │   │         retry_requested: true,
+        │   │         retry_groups: ["group1", "group2"],
+        │   │         retry_feedback: "combined feedback"
+        │   │       }
+        │   │
+        │   └── <span class="note">[SERVER: workflow_processor.py:908-928]</span>
+        │       │
+        │       ├── Checks: outputs.get('retry_requested')
+        │       │
+        │       ├── Finds target_module from retryable.options where mode == 'retry'
+        │       │
+        │       ├── Stores feedback in state (for LLM to use)
+        │       │
+        │       └── Calls: <span class="function">self.retry(workflow_run_id, target_module, feedback)</span>
+        │           │
+        │           └── <span class="note">[database_provider.py]</span>
+        │               ├── Creates new branch
+        │               ├── Stores RETRY_REQUESTED event
+        │               └── Re-executes from target_module
+        │
+        │
+        └── <span class="highlight">mode: "jump"</span>
+            │
+            ├── <span class="note">[WORKFLOW JSON]</span>
+            │   {
+            │     "id": "restart_aesthetic",
+            │     "mode": "jump",
+            │     "label": "Go back to aesthetic selection",
+            │     "target_step": "user_input",              <span class="note">← Step to jump to</span>
+            │     "target_module": "select_concept"         <span class="note">← Module within step</span>
+            │   }
+            │
+            ├── <span class="note">[WEBUI: User clicks Jump button]</span>
+            │   │
+            │   └── Sends response:
+            │       {
+            │         jump_back_requested: true,
+            │         jump_back_target: "select_concept"    <span class="note">← target_module value</span>
+            │       }
+            │
+            └── <span class="note">[SERVER: workflow_processor.py:931-952]</span>
+                │
+                ├── Checks: outputs.get('jump_back_requested')
+                │
+                ├── Finds matching option in retryable.options where:
+                │   - opt.mode == 'jump'
+                │   - opt.target_module == jump_back_target
+                │
+                ├── Extracts: target_step, target_module
+                │
+                └── Calls: <span class="function">self.jump(workflow_run_id, target_step, target_module)</span>
+                    │
+                    └── <span class="note">[database_provider.py]</span>
+                        ├── Creates new branch
+                        ├── Stores JUMP_REQUESTED event
+                        └── Re-executes from target_step/target_module
+            </div>
+
+            <h3 style="margin-top: 30px;">Retryable in WebUI Components</h3>
+            <div class="tree">
+<span class="component">ReviewGroupedListControlled</span> / <span class="component">ReviewGroupedCardsControlled</span>
+│
+├── Receives: request.display_data.retryable
+│   {
+│     options: [
+│       { id: "continue", mode: "continue", label: "Accept" },
+│       { id: "retry", mode: "retry", label: "Regenerate", feedback: { per_group: true } },
+│       { id: "jump_1", mode: "jump", label: "Go back to X" }
+│     ]
+│   }
+│
+├── State: ReviewGroupedState
+│   {
+│     feedbackByGroup: { [groupKey]: string },  <span class="note">← Per-group feedback text</span>
+│     retryGroups: string[],                    <span class="note">← Groups marked for retry</span>
+│     isDirty: boolean,
+│     isValid: boolean
+│   }
+│
+├── Renders per-group feedback UI (if retryable.options[].feedback.per_group)
+│   │
+│   └── For each group:
+│       ├── "Add feedback" button
+│       ├── <span class="component">Textarea</span> for feedback text
+│       └── Save/Cancel buttons
+│       └── Updates state.feedbackByGroup[group.key]
+│
+└── Renders action buttons
+    │
+    └── For each option in retryable.options:
+        │
+        ├── mode == "continue"
+        │   └── <span class="component">Button</span> variant="default"
+        │       └── onClick: onSubmit() with normal response
+        │
+        ├── mode == "retry"
+        │   └── <span class="component">Button</span> variant="outline" (highlighted if has feedback)
+        │       └── onClick: onSubmit() with { retry_requested: true, ... }
+        │
+        └── mode == "jump"
+            └── <span class="component">Button</span> variant="outline"
+                └── onClick: onSubmit() with { jump_back_requested: true, jump_back_target: option.target_module }
+            </div>
+        </div>
+
+        <!-- ============================================= -->
+        <h2 id="interaction-types">All Interaction Types</h2>
+        <!-- ============================================= -->
+
+        <div class="flow-section">
+            <p>Defined in <code>contracts/interactions.py:16-28</code></p>
+
+            <table>
+                <tr>
+                    <th>InteractionType</th>
+                    <th>Created By Module</th>
+                    <th>WebUI Host</th>
+                    <th>Uses Schema?</th>
+                </tr>
+                <tr>
+                    <td><code>text_input</code></td>
+                    <td>user.text_input, user.pause</td>
+                    <td>TextInputHost</td>
+                    <td>No</td>
+                </tr>
+                <tr>
+                    <td><code>confirm</code></td>
+                    <td>(not used by modules currently)</td>
+                    <td>ConfirmHost</td>
+                    <td>No</td>
+                </tr>
+                <tr>
+                    <td><code>select_from_list</code></td>
+                    <td>(not used - use select_from_structured)</td>
+                    <td>SelectListHost</td>
+                    <td>No (uses options[])</td>
+                </tr>
+                <tr>
+                    <td><code>select_from_structured</code></td>
+                    <td>user.select (mode="select")</td>
+                    <td>StructuredSelectHost</td>
+                    <td><strong>Yes</strong></td>
+                </tr>
+                <tr>
+                    <td><code>review_grouped</code></td>
+                    <td>user.select (mode="review")</td>
+                    <td>ReviewGroupedHost</td>
+                    <td><strong>Yes (broken)</strong></td>
+                </tr>
+                <tr>
+                    <td><code>file_input</code></td>
+                    <td>user.file_input</td>
+                    <td>FileInputHost</td>
+                    <td>No</td>
+                </tr>
+                <tr>
+                    <td><code>file_download</code></td>
+                    <td>io.client_write</td>
+                    <td>FileDownloadHost</td>
+                    <td>No</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- ============================================= -->
+        <h2 id="full-flow">Complete Data Flow</h2>
+        <!-- ============================================= -->
+
+        <div class="flow-section">
+            <h3>Step 1: Workflow JSON defines module with inputs</h3>
+            <div class="flow-row">
+                <div class="flow-box workflow">
+                    <h4>📄 workflows/oms/steps/8_music_generation/step.json</h4>
+<pre><code>{
+  <span class="string">"module_id"</span>: <span class="string">"user.select"</span>,       <span class="comment">// ← Which module to use</span>
+  <span class="string">"inputs"</span>: {
+    <span class="string">"data"</span>: <span class="string">"{{ state.elevenlabs_prompts_response }}"</span>,
+    <span class="string">"schema"</span>: {
+      <span class="string">"type"</span>: <span class="string">"object"</span>,
+      <span class="string">"display_mode"</span>: <span class="string">"review"</span>,        <span class="comment">// ← Hint for webui layout</span>
+      <span class="string">"properties"</span>: {
+        <span class="string">"track_title"</span>: {
+          <span class="string">"type"</span>: <span class="string">"string"</span>,           <span class="comment">// ← JSON Schema type</span>
+          <span class="string">"display"</span>: <span class="keyword">true</span>,            <span class="comment">// ← Show this field</span>
+          <span class="string">"display_label"</span>: <span class="string">"Track Title"</span>  <span class="comment">// ← Label to display</span>
+        }
+      }
+    },
+    <span class="string">"mode"</span>: <span class="string">"review"</span>                 <span class="comment">// ← Determines InteractionType</span>
+  }
+}</code></pre>
+                </div>
+            </div>
+
+            <h3>Step 2: Server module creates InteractionRequest</h3>
+            <div class="flow-row">
+                <div class="flow-box server">
+                    <h4>🐍 server/modules/user/select.py:150-195</h4>
+<pre><code><span class="keyword">def</span> <span class="function">get_interaction_request</span>(self, inputs, context):
+    mode = inputs.get(<span class="string">'mode'</span>)
+
+    <span class="comment"># Mode determines InteractionType</span>
+    <span class="keyword">if</span> mode == <span class="string">"review"</span>:
+        interaction_type = <span class="highlight">InteractionType.REVIEW_GROUPED</span>
+    <span class="keyword">else</span>:
+        interaction_type = <span class="highlight">InteractionType.SELECT_FROM_STRUCTURED</span>
+
+    <span class="keyword">return</span> InteractionRequest(
+        interaction_type=interaction_type,
+        <span class="highlight">display_data</span>={
+            <span class="string">"data"</span>: data,      <span class="comment"># Raw data from workflow</span>
+            <span class="string">"schema"</span>: schema,  <span class="comment"># Schema from workflow</span>
+            <span class="string">"mode"</span>: mode,
+            <span class="string">"retryable"</span>: retryable
+        }
+    )</code></pre>
+                </div>
+            </div>
+
+            <h3>Step 3: WebUI receives InteractionRequest via API</h3>
+            <div class="flow-row">
+                <div class="flow-box webui">
+                    <h4>📡 API Response (JSON over HTTP)</h4>
+<pre><code>{
+  <span class="string">"interaction_request"</span>: {
+    <span class="string">"interaction_type"</span>: <span class="string">"review_grouped"</span>,  <span class="comment">// ← Routes to component</span>
+    <span class="string">"interaction_id"</span>: <span class="string">"select_12345"</span>,
+    <span class="string">"prompt"</span>: <span class="string">"Review ElevenLabs prompts"</span>,
+    <span class="string">"display_data"</span>: {
+      <span class="string">"data"</span>: { <span class="comment">/* actual values */</span> },
+      <span class="string">"schema"</span>: { <span class="comment">/* with display: true fields */</span> },
+      <span class="string">"mode"</span>: <span class="string">"review"</span>
+    }
+  }
+}</code></pre>
+                </div>
+            </div>
+
+            <h3>Step 4: InteractionHost routes to specific Host</h3>
+            <div class="flow-row">
+                <div class="flow-box webui">
+                    <h4>⚛️ webui/src/components/workflow/interactions/InteractionHost.tsx:1704-1787</h4>
+<pre><code><span class="keyword">function</span> <span class="function">InteractionHost</span>({ request, onSubmit }) {
+  <span class="keyword">switch</span> (request.<span class="highlight">interaction_type</span>) {
+    <span class="keyword">case</span> <span class="string">"select_from_list"</span>:
+      <span class="keyword">return</span> &lt;<span class="component">SelectListHost</span> .../&gt;;
+
+    <span class="keyword">case</span> <span class="string">"text_input"</span>:
+      <span class="keyword">return</span> &lt;<span class="component">TextInputHost</span> .../&gt;;
+
+    <span class="keyword">case</span> <span class="string">"confirm"</span>:
+      <span class="keyword">return</span> &lt;<span class="component">ConfirmHost</span> .../&gt;;
+
+    <span class="keyword">case</span> <span class="string">"select_from_structured"</span>:
+      <span class="keyword">return</span> &lt;<span class="component">StructuredSelectHost</span> .../&gt;;  <span class="comment">// ← Uses schema</span>
+
+    <span class="keyword">case</span> <span class="string">"review_grouped"</span>:
+      <span class="keyword">return</span> &lt;<span class="component">ReviewGroupedHost</span> .../&gt;;      <span class="comment">// ← Uses schema (broken)</span>
+
+    <span class="keyword">case</span> <span class="string">"file_input"</span>:
+      <span class="keyword">return</span> &lt;<span class="component">FileInputHost</span> .../&gt;;
+
+    <span class="keyword">case</span> <span class="string">"file_download"</span>:
+      <span class="keyword">return</span> &lt;<span class="component">FileDownloadHost</span> .../&gt;;
+  }
+}</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================= -->
+        <h2 id="module-mapping">Workflow Module → InteractionType Mapping</h2>
+        <!-- ============================================= -->
+
+        <div class="flow-section">
+            <table>
+                <tr>
+                    <th>Workflow module_id</th>
+                    <th>Input that controls type</th>
+                    <th>Resulting InteractionType</th>
+                </tr>
+                <tr>
+                    <td><code>user.select</code></td>
+                    <td><code>mode: "select"</code> (default)</td>
+                    <td><code>select_from_structured</code></td>
+                </tr>
+                <tr>
+                    <td><code>user.select</code></td>
+                    <td><code>mode: "review"</code></td>
+                    <td><code>review_grouped</code></td>
+                </tr>
+                <tr>
+                    <td><code>user.text_input</code></td>
+                    <td>(always)</td>
+                    <td><code>text_input</code></td>
+                </tr>
+                <tr>
+                    <td><code>user.pause</code></td>
+                    <td>(always)</td>
+                    <td><code>text_input</code> (with allow_empty=true)</td>
+                </tr>
+                <tr>
+                    <td><code>user.file_input</code></td>
+                    <td>(always)</td>
+                    <td><code>file_input</code></td>
+                </tr>
+                <tr>
+                    <td><code>io.client_write</code></td>
+                    <td>(always)</td>
+                    <td><code>file_download</code></td>
+                </tr>
+            </table>
+
+            <p><strong>Note:</strong> <code>confirm</code> and <code>select_from_list</code> types exist in contracts but are not currently used by any server module.</p>
+        </div>
+
+        <!-- ============================================= -->
+        <h2 id="component-hierarchy">WebUI Component Hierarchy (All Components)</h2>
+        <!-- ============================================= -->
+
+        <div class="flow-section">
+            <div class="tree">
+<span class="component">InteractionHost</span> <span class="note">(router at InteractionHost.tsx:1704)</span>
+│
+├── interaction_type=<span class="string">"select_from_list"</span>
+│   └── <span class="component">SelectListHost</span> <span class="note">(line 104)</span>
+│       ├── State: SelectListState
+│       ├── Variants: [checkbox, cards, chips, dropdown]
+│       │
+│       ├── <span class="component">SelectListCheckboxControlled</span>
+│       │   ├── Props: request, state, onStateChange
+│       │   ├── Uses: request.options[] <span class="note">(NOT schema)</span>
+│       │   └── Renders: checkbox list of options
+│       │
+│       ├── <span class="component">SelectListCardsControlled</span>
+│       │   ├── Props: request, state, onStateChange
+│       │   ├── Uses: request.options[]
+│       │   └── Renders: card grid of options
+│       │
+│       ├── <span class="component">SelectListChipsControlled</span>
+│       │   ├── Props: request, state, onStateChange
+│       │   ├── Uses: request.options[]
+│       │   └── Renders: chip/badge list
+│       │
+│       └── <span class="component">SelectListDropdownControlled</span>
+│           ├── Props: request, state, onStateChange
+│           ├── Uses: request.options[]
+│           └── Renders: dropdown/combobox
+│
+├── interaction_type=<span class="string">"text_input"</span>
+│   └── <span class="component">TextInputHost</span> <span class="note">(line 344)</span>
+│       ├── State: TextInputState
+│       ├── Variants: [simple, enhanced]
+│       │
+│       ├── <span class="component">TextInputSimpleControlled</span>
+│       │   ├── Props: request, state, onStateChange
+│       │   ├── Uses: request.default_value, request.allow_empty
+│       │   └── Renders: textarea or input
+│       │
+│       └── <span class="component">TextInputEnhancedControlled</span>
+│           ├── Props: request, state, onStateChange
+│           └── Renders: input with history/suggestions
+│
+├── interaction_type=<span class="string">"confirm"</span>
+│   └── <span class="component">ConfirmHost</span> <span class="note">(line 599)</span>
+│       ├── State: ConfirmState
+│       ├── Variants: [buttons, cards]
+│       │
+│       ├── <span class="component">ConfirmButtonsControlled</span>
+│       │   ├── Props: request, state, onStateChange
+│       │   ├── Uses: request.yes_label, request.no_label
+│       │   └── Renders: Yes/No buttons
+│       │
+│       └── <span class="component">ConfirmCardsControlled</span>
+│           ├── Props: request, state, onStateChange
+│           └── Renders: clickable cards for Yes/No
+│
+├── interaction_type=<span class="string">"select_from_structured"</span>
+│   └── <span class="component">StructuredSelectHost</span> <span class="note">(line 852)</span>
+│       ├── State: StructuredSelectState
+│       ├── Variants: [cards, list]
+│       │
+│       ├── <span class="component">StructuredSelectCardsControlled</span>
+│       │   ├── Props: request, state, onStateChange
+│       │   ├── <span class="function">parseSchemaData(data, schema)</span> <span class="note">← schema-utils.ts:63</span>
+│       │   │   └── Returns: { groups[], flatItems[] }
+│       │   │
+│       │   └── For each item:
+│       │       └── <span class="component">SchemaFields</span> <span class="note">← schema-renderer.tsx:39</span>
+│       │           ├── Checks: schema.properties[key].display === true
+│       │           └── <span class="component">SchemaField</span> <span class="note">← schema-renderer.tsx:217</span>
+│       │               ├── type="array" → <span class="component">ArrayField</span>
+│       │               ├── type="object" → recurse <span class="component">SchemaFields</span>
+│       │               └── primitive → &lt;span&gt;{value}&lt;/span&gt;
+│       │
+│       └── <span class="component">StructuredSelectListControlled</span>
+│           ├── Props: request, state, onStateChange
+│           ├── <span class="function">parseSchemaData(data, schema)</span> <span class="note">← same utility</span>
+│           │   └── Returns: { groups[], flatItems[] }
+│           │
+│           ├── <span class="component">GroupSection</span>
+│           │   ├── Shows group header with label
+│           │   └── <span class="component">SchemaFields</span> for parentData
+│           │
+│           └── <span class="component">SelectableListItem</span>
+│               ├── <span class="component">DisplayComponents</span> <span class="note">← if display_components present</span>
+│               │   └── <span class="component">DisplayComponentItem</span>
+│               │       ├── type="color" → <span class="component">ColorSwatch</span>
+│               │       ├── type="url" → &lt;a href&gt;
+│               │       └── default → &lt;span&gt;
+│               │
+│               ├── OR: renderTemplate(displayFormat) <span class="note">← if display_format present</span>
+│               │
+│               └── OR: <span class="component">SchemaFields</span> <span class="note">← fallback to display:true fields</span>
+│
+├── interaction_type=<span class="string">"review_grouped"</span>
+│   └── <span class="component">ReviewGroupedHost</span> <span class="note">(line 1126)</span>
+│       ├── State: ReviewGroupedState
+│       ├── Variants: [cards, list]
+│       │
+│       ├── <span class="component">ReviewGroupedCardsControlled</span>
+│       │   ├── Props: request, state, onStateChange
+│       │   ├── <span class="function">parseGroups(data, schema)</span> <span class="note">← LOCAL function line 42-84</span>
+│       │   │   └── <span style="color:#ff6b6b">⚠️ PROBLEM: Only handles nested objects!</span>
+│       │   │       <span style="color:#ff6b6b">Line 71: if (typeof value !== "object") continue;</span>
+│       │   │
+│       │   └── For each group:
+│       │       └── <span class="component">SchemaFields</span> <span class="note">← Never reached for flat data</span>
+│       │
+│       └── <span class="component">ReviewGroupedListControlled</span>
+│           ├── Props: request, state, onStateChange
+│           ├── <span class="function">parseGroups(data, schema)</span> <span class="note">← LOCAL function line 38-78</span>
+│           │   └── <span style="color:#ff6b6b">⚠️ SAME PROBLEM</span>
+│           │       <span style="color:#ff6b6b">Line 65: if (typeof value !== "object") continue;</span>
+│           │
+│           └── For each group:
+│               └── <span class="component">SchemaFields</span>
+│
+├── interaction_type=<span class="string">"file_input"</span>
+│   └── <span class="component">FileInputHost</span> <span class="note">(line 1391)</span>
+│       ├── State: FileInputState
+│       ├── Variants: [dropzone, text]
+│       │
+│       ├── <span class="component">FileInputDropzoneControlled</span>
+│       │   ├── Props: request, state, onStateChange
+│       │   └── Renders: drag-drop zone
+│       │
+│       └── <span class="component">FileInputTextControlled</span>
+│           ├── Props: request, state, onStateChange
+│           └── Renders: text input for path
+│
+└── interaction_type=<span class="string">"file_download"</span>
+    └── <span class="component">FileDownloadHost</span> <span class="note">(line 1633)</span>
+        ├── State: FileDownloadState
+        │
+        └── <span class="component">FileDownloadControlled</span>
+            ├── Props: request, state, onStateChange
+            ├── Uses: request.file_content, request.file_name
+            └── Auto-writes file and confirms
+            </div>
+        </div>
+
+        <!-- ============================================= -->
+        <h2 id="parse-schema-data">Deep Dive: parseSchemaData (groups vs flatItems)</h2>
+        <!-- ============================================= -->
+
+        <div class="flow-section">
+            <h3>The Question</h3>
+            <p>Both <code>StructuredSelectCardsControlled</code> and <code>StructuredSelectListControlled</code> call:</p>
+<pre><code><span class="keyword">const</span> { groups, flatItems } = <span class="function">parseSchemaData</span>(data, schema);</code></pre>
+            <p>What are <code>groups</code> vs <code>flatItems</code>? Are they hierarchy vs data?</p>
+
+            <h3>The Answer: They're the SAME Data, Different Formats</h3>
+            <div class="flow-box" style="border-color: #ff79c6; max-width: 100%;">
+                <h4 style="color:#ff79c6;">Key Insight</h4>
+                <p><code>flatItems</code> is NOT separate data from groups. Looking at schema-utils.ts:</p>
+<pre><code><span class="comment">// schema-utils.ts:99-110</span>
+groups.push({
+  key: <span class="string">"_root"</span>,
+  label: displayLabel,
+  items: groupItems,     <span class="comment">// ← items are in the group</span>
+  ...
+});
+
+flatItems.push(...groupItems);  <span class="comment">// ← SAME items also pushed to flatItems!</span></code></pre>
+                <p><strong>They point to the same SelectableItem objects.</strong></p>
+            </div>
+
+            <h3>What Each Represents</h3>
+            <table>
+                <tr>
+                    <th>Property</th>
+                    <th>Type</th>
+                    <th>Purpose</th>
+                    <th>Used For</th>
+                </tr>
+                <tr>
+                    <td><code>groups</code></td>
+                    <td><code>SelectableGroup[]</code></td>
+                    <td>Logical groupings based on schema structure</td>
+                    <td>Rendering collapsible cards, section headers</td>
+                </tr>
+                <tr>
+                    <td><code>flatItems</code></td>
+                    <td><code>SelectableItem[]</code></td>
+                    <td>All items flattened for convenience</td>
+                    <td>Total count, "no items found" check</td>
+                </tr>
+            </table>
+
+            <h3>Where Schema Drives Grouping</h3>
+            <p>Schema determines groups through these patterns:</p>
+            <div class="tree">
+<span class="function">parseSchemaData(data, schema)</span>
+│
+├── <span class="highlight">Case 1: Root-level array</span>
+│   │
+│   │   schema = { type: "array", selectable: true, items: {...} }
+│   │   data = [item1, item2, item3]
+│   │
+│   └── Creates: 1 group named "_root" containing all array items
+│       groups = [{ key: "_root", items: [item1, item2, item3] }]
+│       flatItems = [item1, item2, item3]
+│
+├── <span class="highlight">Case 2: Object with selectable additionalProperties</span>
+│   │
+│   │   schema = { type: "object", selectable: true, additionalProperties: {...} }
+│   │   data = { key1: {...}, key2: {...} }
+│   │
+│   └── Creates: 1 group named "_root" with each key as an item
+│       groups = [{ key: "_root", items: [key1Item, key2Item] }]
+│       flatItems = [key1Item, key2Item]
+│
+├── <span class="highlight">Case 3a: Object with selectable array properties</span>
+│   │
+│   │   schema = { type: "object", properties: { ideas: { type: "array", selectable: true } } }
+│   │   data = { ideas: [idea1, idea2] }
+│   │
+│   └── Creates: 1 group per selectable array property
+│       groups = [{ key: "ideas", label: "Ideas", items: [idea1, idea2] }]
+│       flatItems = [idea1, idea2]
+│
+└── <span class="highlight">Case 3b: Nested - parent array with selectable child arrays</span>
+    │
+    │   schema = {
+    │     type: "object",
+    │     properties: {
+    │       aesthetics: {
+    │         type: "array",
+    │         items: {
+    │           type: "object",
+    │           properties: {
+    │             ideas: { type: "array", <span class="highlight">selectable: true</span> }  <span class="note">← nested selectable</span>
+    │           }
+    │         }
+    │       }
+    │     }
+    │   }
+    │   data = {
+    │     aesthetics: [
+    │       { name: "Aesthetic 1", ideas: [idea1, idea2] },
+    │       { name: "Aesthetic 2", ideas: [idea3, idea4] }
+    │     ]
+    │   }
+    │
+    └── Creates: 1 group per PARENT item (aesthetic), items are the CHILD array
+        groups = [
+          { key: "aesthetics[0]", label: "Aesthetic 1", parentData: {...}, items: [idea1, idea2] },
+          { key: "aesthetics[1]", label: "Aesthetic 2", parentData: {...}, items: [idea3, idea4] }
+        ]
+        flatItems = [idea1, idea2, idea3, idea4]
+            </div>
+
+            <h3>TUI vs WebUI: Why Different Approaches?</h3>
+            <div class="flow-row">
+                <div class="flow-box server" style="flex: 1;">
+                    <h4>TUI (_display_schema_data in mixins.py)</h4>
+<pre><code><span class="comment"># TUI returns just a flat list</span>
+selectable_items = []
+
+<span class="comment"># TUI renders groups INLINE while iterating</span>
+<span class="keyword">for</span> key, prop_schema <span class="keyword">in</span> properties.items():
+    <span class="keyword">if</span> prop_schema[<span class="string">'selectable'</span>]:
+        <span class="comment"># Print group header</span>
+        self._log(f"── {display_label} ──")
+
+        <span class="comment"># Print each item and collect</span>
+        <span class="keyword">for</span> idx, item <span class="keyword">in</span> enumerate(array_data):
+            self._log(f"{len(selectable_items) + 1}.")
+            self._display_schema_fields(item, ...)
+            selectable_items.append({...})
+
+<span class="keyword">return</span> selectable_items  <span class="comment"># Just flat list</span></code></pre>
+                    <p style="color:#ff6b6b;">TUI is <strong>sequential/imperative</strong> - print as you go.</p>
+                </div>
+                <div class="flow-box webui" style="flex: 1;">
+                    <h4>WebUI (parseSchemaData in schema-utils.ts)</h4>
+<pre><code><span class="comment">// WebUI needs structure UPFRONT for React</span>
+<span class="keyword">const</span> groups: SelectableGroup[] = [];
+<span class="keyword">const</span> flatItems: SelectableItem[] = [];
+
+<span class="comment">// Build structure first, render later</span>
+<span class="keyword">for</span> (<span class="keyword">const</span> [key, propSchema] <span class="keyword">of</span> entries(properties)) {
+  <span class="keyword">if</span> (propSchema.selectable) {
+    <span class="keyword">const</span> groupItems = items.map((item, idx) => ({
+      indices: [key, idx],
+      data: item,
+      ...
+    }));
+
+    groups.push({
+      key,
+      label: displayLabel,
+      items: groupItems,  <span class="comment">// Store structure</span>
+    });
+
+    flatItems.push(...groupItems);
+  }
+}
+
+<span class="keyword">return</span> { groups, flatItems };  <span class="comment">// Both</span></code></pre>
+                    <p style="color:#4ade80;">WebUI is <strong>declarative</strong> - need structure before rendering.</p>
+                </div>
+            </div>
+
+            <h3>Should WebUI Follow TUI Pattern?</h3>
+            <div class="flow-box" style="border-color: #fbbf24; max-width: 100%;">
+                <h4 style="color:#fbbf24;">Analysis</h4>
+                <p><strong>Why WebUI uses groups + flatItems:</strong></p>
+                <ul>
+                    <li>React requires knowing structure before rendering (declarative)</li>
+                    <li><code>groups</code> enables collapsible cards, section headers, parent context</li>
+                    <li><code>flatItems</code> is just a convenience (could compute with <code>groups.flatMap(g => g.items)</code>)</li>
+                </ul>
+
+                <p><strong>Is this the right pattern?</strong> Yes, but with caveats:</p>
+                <ul>
+                    <li>✅ <code>groups</code> structure is necessary for UI organization</li>
+                    <li>⚠️ <code>flatItems</code> is redundant - could be computed when needed</li>
+                    <li>⚠️ <code>ReviewGrouped</code> doesn't use <code>parseSchemaData</code> - has its own broken <code>parseGroups</code></li>
+                </ul>
+
+                <p><strong>Recommendation:</strong></p>
+                <ol>
+                    <li>Keep <code>groups</code> structure - it's essential for WebUI</li>
+                    <li>Consider removing <code>flatItems</code> from return value (compute when needed)</li>
+                    <li>Make <code>ReviewGrouped</code> use shared <code>parseSchemaData</code> or extract a common utility</li>
+                </ol>
+            </div>
+
+            <h3>Data Structures</h3>
+            <div class="flow-row">
+                <div class="flow-box" style="flex: 1;">
+                    <h4>SelectableGroup</h4>
+<pre><code><span class="keyword">interface</span> SelectableGroup {
+  key: <span class="string">string</span>;              <span class="comment">// "_root" or "propertyName[index]"</span>
+  label: <span class="string">string</span>;            <span class="comment">// Display name from schema</span>
+  description?: <span class="string">string</span>;     <span class="comment">// Optional description</span>
+  schema: SchemaProperty;   <span class="comment">// Schema for items in this group</span>
+  parentData?: Record;      <span class="comment">// Parent object data (for nested)</span>
+  parentSchema?: Schema;    <span class="comment">// Parent schema (for nested)</span>
+  items: SelectableItem[];  <span class="comment">// The selectable items</span>
+  highlight?: <span class="keyword">boolean</span>;      <span class="comment">// Highlight header</span>
+  highlightColor?: <span class="string">string</span>;  <span class="comment">// Custom highlight color</span>
+}</code></pre>
+                </div>
+                <div class="flow-box" style="flex: 1;">
+                    <h4>SelectableItem</h4>
+<pre><code><span class="keyword">interface</span> SelectableItem {
+  indices: StructuredIndex;   <span class="comment">// [key, idx] or [key, parentIdx, childIdx]</span>
+  data: Record;               <span class="comment">// The actual item data</span>
+  schema: SchemaProperty;     <span class="comment">// Schema for this item</span>
+  groupKey: <span class="string">string</span>;           <span class="comment">// Which group this belongs to</span>
+  groupLabel: <span class="string">string</span>;         <span class="comment">// Group's display label</span>
+  parentData?: Record;        <span class="comment">// Parent object (for nested)</span>
+  parentSchema?: Schema;      <span class="comment">// Parent schema (for nested)</span>
+  displayFormat?: <span class="string">string</span>;     <span class="comment">// Jinja2 template override</span>
+  displayComponents?: [];     <span class="comment">// Structured render instructions</span>
+}</code></pre>
+                </div>
+            </div>
+
+            <h3>Visual: How Components Use groups vs flatItems</h3>
+            <div class="tree">
+<span class="component">StructuredSelectCardsControlled</span>
+│
+├── <span class="function">parseSchemaData(data, schema)</span>
+│   └── Returns: { <span class="highlight">groups</span>, flatItems }
+│
+├── Uses <span class="highlight">groups</span> for rendering:
+│   │
+│   └── {groups.map(group => (
+│         &lt;<span class="component">GroupCard</span> key={group.key}&gt;
+│           &lt;CardHeader&gt;{group.label}&lt;/CardHeader&gt;  <span class="note">← group.label</span>
+│           {group.parentData && &lt;<span class="component">SchemaFields</span>&gt;}  <span class="note">← group.parentData</span>
+│           {group.items.map(item => (             <span class="note">← group.items</span>
+│             &lt;<span class="component">SelectableItemCard</span> item={item} /&gt;
+│           ))}
+│         &lt;/GroupCard&gt;
+│       ))}
+│
+└── Uses flatItems only for:
+    │
+    ├── Checking if any items exist:
+    │   │
+    │   └── {groups.length === 0 && flatItems.length === 0 && (
+    │         <span class="note">"No selectable items found"</span>
+    │       )}
+    │
+    └── <span class="note">(Could be computed: groups.flatMap(g => g.items).length === 0)</span>
+            </div>
+        </div>
+
+        <!-- ============================================= -->
+        <h2 id="schema-properties">Schema Property Naming Clarification</h2>
+        <!-- ============================================= -->
+
+        <div class="flow-section">
+            <h3>The Confusion: format vs display_format</h3>
+            <p>There are two different concepts that need clear naming:</p>
+
+            <table class="naming-table">
+                <tr>
+                    <th>Property</th>
+                    <th>Source</th>
+                    <th>Purpose</th>
+                    <th>Example</th>
+                </tr>
+                <tr>
+                    <td><code>type</code></td>
+                    <td>JSON Schema standard</td>
+                    <td>Data type of the value</td>
+                    <td><code>"string"</code>, <code>"array"</code>, <code>"object"</code></td>
+                </tr>
+                <tr>
+                    <td><code>format</code></td>
+                    <td>JSON Schema standard</td>
+                    <td>Semantic subtype for validation/rendering</td>
+                    <td><code>"uri"</code>, <code>"date-time"</code>, <code>"email"</code>, or custom: <code>"color"</code></td>
+                </tr>
+                <tr>
+                    <td><code>display</code></td>
+                    <td>Our extension</td>
+                    <td>Whether to show this field</td>
+                    <td><code>true</code> / <code>false</code></td>
+                </tr>
+                <tr>
+                    <td><code>display_label</code></td>
+                    <td>Our extension</td>
+                    <td>Human-readable label for field</td>
+                    <td><code>"Track Title"</code></td>
+                </tr>
+                <tr>
+                    <td><code>display_format</code></td>
+                    <td>Our extension</td>
+                    <td>Nunjucks/Jinja2 template for custom rendering</td>
+                    <td><code>"{{ name }} ({{ count }} items)"</code></td>
+                </tr>
+                <tr>
+                    <td><code>display_mode</code></td>
+                    <td>Our extension</td>
+                    <td>Layout mode hint for entire schema</td>
+                    <td><code>"review"</code>, <code>"select"</code>, <code>"cards"</code></td>
+                </tr>
+                <tr>
+                    <td><code>display_components</code></td>
+                    <td>Our extension</td>
+                    <td>Array of structured render instructions</td>
+                    <td><code>[{field: "color", type: "color"}]</code></td>
+                </tr>
+            </table>
+
+            <h3>Proposed Naming Convention</h3>
+            <table>
+                <tr>
+                    <th>Prefix</th>
+                    <th>Meaning</th>
+                </tr>
+                <tr>
+                    <td>(no prefix)</td>
+                    <td>JSON Schema standard: <code>type</code>, <code>format</code>, <code>properties</code>, <code>items</code></td>
+                </tr>
+                <tr>
+                    <td><code>display_*</code></td>
+                    <td>Our extensions for UI rendering hints</td>
+                </tr>
+                <tr>
+                    <td><code>selectable</code></td>
+                    <td>Our extension: marks arrays/objects as selection sources</td>
+                </tr>
+            </table>
+
+            <h3>Example Schema with Clear Naming</h3>
+<pre><code>{
+  <span class="string">"type"</span>: <span class="string">"object"</span>,              <span class="comment">// JSON Schema: data structure</span>
+  <span class="string">"display_mode"</span>: <span class="string">"review"</span>,      <span class="comment">// Ours: layout hint</span>
+  <span class="string">"properties"</span>: {
+    <span class="string">"primary_color"</span>: {
+      <span class="string">"type"</span>: <span class="string">"string"</span>,          <span class="comment">// JSON Schema: it's a string</span>
+      <span class="string">"format"</span>: <span class="string">"color"</span>,         <span class="comment">// JSON Schema: semantic type → render as ColorSwatch</span>
+      <span class="string">"display"</span>: <span class="keyword">true</span>,           <span class="comment">// Ours: show this field</span>
+      <span class="string">"display_label"</span>: <span class="string">"Primary Color"</span>  <span class="comment">// Ours: label text</span>
+    },
+    <span class="string">"description"</span>: {
+      <span class="string">"type"</span>: <span class="string">"string"</span>,
+      <span class="string">"display"</span>: <span class="keyword">true</span>,
+      <span class="string">"display_label"</span>: <span class="string">"Description"</span>,
+      <span class="string">"display_format"</span>: <span class="string">"{{ value | truncate(100) }}"</span>  <span class="comment">// Ours: Nunjucks template</span>
+    },
+    <span class="string">"ideas"</span>: {
+      <span class="string">"type"</span>: <span class="string">"array"</span>,
+      <span class="string">"selectable"</span>: <span class="keyword">true</span>,         <span class="comment">// Ours: can select from this array</span>
+      <span class="string">"items"</span>: {
+        <span class="string">"type"</span>: <span class="string">"object"</span>,
+        <span class="string">"display_components"</span>: [   <span class="comment">// Ours: structured render instructions</span>
+          { <span class="string">"field"</span>: <span class="string">"name"</span>, <span class="string">"type"</span>: <span class="string">"heading"</span> },
+          { <span class="string">"field"</span>: <span class="string">"color"</span>, <span class="string">"type"</span>: <span class="string">"color"</span> }
+        ]
+      }
+    }
+  }
+}</code></pre>
+        </div>
+
+        <!-- ============================================= -->
+        <h2 id="rendering-flow">Field Rendering Flow</h2>
+        <!-- ============================================= -->
+
+        <div class="flow-section">
+            <h3>Priority Order (in SelectableListItem)</h3>
+            <ol>
+                <li><code>display_components[]</code> → Use DisplayComponentItem for each</li>
+                <li><code>display_format</code> (template string) → Render with Nunjucks</li>
+                <li><code>display: true</code> fields → Use SchemaFields/SchemaField</li>
+            </ol>
+
+            <h3>SchemaField Rendering Logic (schema-renderer.tsx:217-299)</h3>
+<pre><code><span class="keyword">function</span> <span class="function">SchemaField</span>({ fieldKey, schema, value, context }) {
+  <span class="comment">// 1. Handle arrays</span>
+  <span class="keyword">if</span> (schema.type === <span class="string">"array"</span>) {
+    <span class="keyword">return</span> &lt;ArrayField .../&gt;;
+  }
+
+  <span class="comment">// 2. Handle nested objects</span>
+  <span class="keyword">if</span> (schema.type === <span class="string">"object"</span>) {
+    <span class="keyword">if</span> (schema.display_format) {
+      <span class="comment">// Use template</span>
+      <span class="keyword">return</span> renderTemplate(schema.display_format, value);
+    }
+    <span class="comment">// Recurse</span>
+    <span class="keyword">return</span> &lt;SchemaFields data={value} schema={schema} /&gt;;
+  }
+
+  <span class="comment">// 3. Handle primitives</span>
+  <span class="keyword">let</span> displayValue = String(value);
+  <span class="keyword">if</span> (schema.display_format) {
+    displayValue = renderTemplate(schema.display_format, { value, ...context });
+  }
+
+  <span class="keyword">return</span> &lt;span&gt;{displayValue}&lt;/span&gt;;
+}
+</code></pre>
+
+            <h3>What's Missing: format-aware rendering</h3>
+            <p>Currently SchemaField doesn't check <code>schema.format</code>. To add:</p>
+<pre><code><span class="keyword">function</span> <span class="function">SchemaField</span>({ fieldKey, schema, value }) {
+  <span class="comment">// NEW: Check format for semantic rendering</span>
+  <span class="keyword">if</span> (schema.type === <span class="string">"string"</span>) {
+    <span class="keyword">switch</span> (schema.format) {
+      <span class="keyword">case</span> <span class="string">"color"</span>:
+        <span class="keyword">return</span> &lt;ColorSwatch color={value} showHex /&gt;;
+      <span class="keyword">case</span> <span class="string">"uri"</span>:
+        <span class="keyword">return</span> &lt;a href={value}&gt;{value}&lt;/a&gt;;
+      <span class="keyword">case</span> <span class="string">"date-time"</span>:
+        <span class="keyword">return</span> &lt;FormattedDate value={value} /&gt;;
+    }
+  }
+  <span class="comment">// ... rest of existing logic</span>
+}</code></pre>
+        </div>
+
+        <!-- ============================================= -->
+        <h2 id="summary">Summary: What Needs to Change</h2>
+        <!-- ============================================= -->
+
+        <div class="flow-section">
+            <table>
+                <tr>
+                    <th>Issue</th>
+                    <th>File</th>
+                    <th>Fix</th>
+                </tr>
+                <tr>
+                    <td>parseGroups ignores flat data</td>
+                    <td>ReviewGroupedListControlled.tsx:38-78<br>ReviewGroupedCardsControlled.tsx:42-84</td>
+                    <td>Check for display:true fields first, create single "_root" group</td>
+                </tr>
+                <tr>
+                    <td>No format-aware rendering</td>
+                    <td>schema-renderer.tsx:217</td>
+                    <td>Add switch on schema.format for color, uri, date-time</td>
+                </tr>
+                <tr>
+                    <td>Duplicate parseGroups logic</td>
+                    <td>Both ReviewGrouped variants</td>
+                    <td>Extract to schema-utils.ts as getDisplayGroups()</td>
+                </tr>
+            </table>
+        </div>
+
+        <hr>
+        <p style="color:#666;text-align:center;">Generated 2026-01-01 | Schema-Driven UI Architecture</p>
+    </div>
+</body>
+</html>

@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schema-Driven UI Architecture v2</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1, h2, h3 { color: #00d4ff; margin-top: 1.5em; }
+        h1 { border-bottom: 2px solid #00d4ff; padding-bottom: 10px; }
+        h2 { border-bottom: 1px solid #333; padding-bottom: 5px; }
+
+        .container { max-width: 1200px; margin: 0 auto; }
+
+        .section {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        pre {
+            background: #0f0f23;
+            border-radius: 6px;
+            padding: 15px;
+            overflow-x: auto;
+            font-size: 13px;
+            border: 1px solid #333;
+        }
+
+        code {
+            font-family: 'Fira Code', 'Consolas', monospace;
+            color: #a0e0a0;
+        }
+
+        .highlight { color: #ffcc00; }
+        .keyword { color: #ff79c6; }
+        .string { color: #50fa7b; }
+        .comment { color: #6272a4; }
+        .number { color: #bd93f9; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+
+        th, td {
+            border: 1px solid #333;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th { background: #1f4068; color: #00d4ff; }
+        tr:nth-child(even) { background: #16213e; }
+
+        .tree {
+            font-family: 'Fira Code', monospace;
+            font-size: 13px;
+            background: #0f0f23;
+            padding: 15px;
+            border-radius: 6px;
+            white-space: pre;
+            overflow-x: auto;
+        }
+
+        .tree .component { color: #4ade80; }
+        .tree .note { color: #6272a4; font-style: italic; }
+
+        .toc {
+            background: #16213e;
+            padding: 15px 25px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .toc ul { margin: 0; padding-left: 20px; }
+        .toc a { color: #00d4ff; text-decoration: none; }
+        .toc a:hover { text-decoration: underline; }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .badge.new { background: #4ade80; color: #000; }
+        .badge.removed { background: #ff6b6b; color: #000; }
+        .badge.changed { background: #fbbf24; color: #000; }
+
+        .decision-box {
+            border: 2px solid #4ade80;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            background: rgba(74, 222, 128, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Schema-Driven UI Architecture v2</h1>
+        <p>Final architecture decisions from discussion (2026-01-01)</p>
+        <p>Reference: <code>architecture/2026_01_01_schema_component_deep_dive.md</code></p>
+
+        <div class="toc">
+            <h3 style="margin-top:0">Contents</h3>
+            <ul>
+                <li><a href="#decisions">Key Decisions</a></li>
+                <li><a href="#end-to-end">End-to-End Flow (Workflow → Server → WebUI)</a></li>
+                <li><a href="#interaction-types">Interaction Types & Module Mapping</a></li>
+                <li><a href="#full-hierarchy">Complete Hierarchy: All Modules → WebUI</a></li>
+                <li><a href="#schema">New Schema Structure</a></li>
+                <li><a href="#render-as">render_as Types</a></li>
+                <li><a href="#nudges">Nudges</a></li>
+                <li><a href="#computed">Computed Fields</a></li>
+                <li><a href="#selectable">Selectable Behavior</a></li>
+                <li><a href="#components">Component Hierarchy</a></li>
+                <li><a href="#errors">Error Handling</a></li>
+                <li><a href="#removed">What Gets Removed</a></li>
+                <li><a href="#implementation">Implementation Tasks</a></li>
+            </ul>
+        </div>
+
+        <!-- ============================================= -->
+        <h2 id="decisions">Key Decisions</h2>
+        <!-- ============================================= -->
+
+        <div class="section">
+            <table>
+                <tr>
+                    <th>Topic</th>
+                    <th>Decision</th>
+                </tr>
+                <tr>
+                    <td><code>selectable</code></td>
+                    <td>Single code path. Prop toggles selection UI only. Visual richness identical.</td>
+                </tr>
+                <tr>
+                    <td><code>render_as</code></td>
+                    <td><span class="badge new">NEW</span> Explicit rendering type. Replaces <code>format</code> for WebUI.</td>
+                </tr>
+                <tr>
+                    <td><code>nudges</code></td>
+                    <td><span class="badge new">NEW</span> UI enhancements array. Declared in schema at field level.</td>
+                </tr>
+                <tr>
+                    <td><code>computed</code></td>
+                    <td><span class="badge new">NEW</span> Virtual fields section. Replaces <code>display_components</code>.</td>
+                </tr>
+                <tr>
+                    <td><code>display_order</code></td>
+                    <td>Sorts ALL fields (properties + computed) together.</td>
+                </tr>
+                <tr>
+                    <td>Assumptions</td>
+                    <td><strong>NONE.</strong> Missing instructions = error, not fallback.</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- ============================================= -->
+        <h2 id="end-to-end">End-to-End Flow (Workflow → Server → WebUI)</h2>
+        <!-- ============================================= -->
+
+        <div class="section">
+            <h3>Complete Data Flow</h3>
+            <div class="tree">
+<span class="component">1. WORKFLOW JSON</span>
+│   workflows/oms/steps/1_user_input/select_aesthetic.json
+│
+│   {
+│     "module": "user.select",
+│     "inputs": {
+│       "schema": { ... },              <span class="note">← display hints live here</span>
+│       "options": "{{ aesthetics }}",  <span class="note">← Jinja template</span>
+│       "multi_select": false
+│     }
+│   }
+│
+▼
+<span class="component">2. SERVER (workflow_processor.py)</span>
+│
+│   ┌─────────────────────────────────────────────────────────────┐
+│   │ Module Registry → Load user.select module                   │
+│   │ Jinja2 Resolver → Resolve {{ aesthetics }} from context     │
+│   │ Module Execute  → Returns InteractionRequest                │
+│   └─────────────────────────────────────────────────────────────┘
+│
+│   InteractionRequest {
+│     type: "SELECT_FROM_STRUCTURED",
+│     schema: { properties, computed, selectable, ... },
+│     options: [ { id: "1", name: "Minimalist", ... }, ... ],
+│     multi_select: false
+│   }
+│
+▼
+<span class="component">3. API RESPONSE (SSE/REST)</span>
+│
+│   event: interaction_requested
+│   data: { request: InteractionRequest }
+│
+▼
+<span class="component">4. WEBUI ROUTING</span>
+│
+│   InteractionHost
+│   └── switch(request.type):
+│       ├── TEXT_INPUT        → TextInputHandler
+│       ├── CONFIRM           → ConfirmHandler
+│       ├── SELECT_FROM_LIST  → SelectListHandler
+│       ├── SELECT_FROM_STRUCTURED → StructuredSelectHost
+│       └── ...
+│
+▼
+<span class="component">5. STRUCTURED SELECT (current focus)</span>
+│
+│   StructuredSelectHost
+│   │
+│   ├── Props: { request, schema, options }
+│   │
+│   └── Determines layout:
+│       ├── Has groups?      → GroupedLayout
+│       └── Flat items only? → FlatLayout
+│       │
+│       └── Both use: <span class="component">UnifiedItemRenderer</span>
+│
+▼
+<span class="component">6. UNIFIED ITEM RENDERER</span>
+│
+│   For each item:
+│   │
+│   ├── Collect displayable fields:
+│   │   ├── schema.properties (display: true)
+│   │   └── schema.computed (display: true)
+│   │
+│   ├── Sort by display_order
+│   │
+│   └── For each field → <span class="component">TerminalRenderer</span>
+│       │
+│       └── render_as → specific renderer
+│
+▼
+<span class="component">7. TERMINAL RENDERERS</span>
+
+   ┌─────────────────────────────────────────────────────────────┐
+   │ render_as: "text"     → TextRenderer     + nudges           │
+   │ render_as: "color"    → ColorRenderer    + nudges           │
+   │ render_as: "url"      → UrlRenderer      + nudges           │
+   │ render_as: "datetime" → DateTimeRenderer + nudges           │
+   │ render_as: "number"   → NumberRenderer   + nudges           │
+   │ render_as: "image"    → ImageRenderer    + nudges           │
+   │ (missing/unknown)     → ErrorRenderer                       │
+   └─────────────────────────────────────────────────────────────┘
+            </div>
+
+            <h3>Key Files</h3>
+            <table>
+                <tr>
+                    <th>Layer</th>
+                    <th>File(s)</th>
+                    <th>Responsibility</th>
+                </tr>
+                <tr>
+                    <td>Workflow</td>
+                    <td><code>workflows/**/*.json</code></td>
+                    <td>Step definitions with module config</td>
+                </tr>
+                <tr>
+                    <td>Server</td>
+                    <td><code>server/api/workflow_processor.py</code></td>
+                    <td>Orchestrates module execution</td>
+                </tr>
+                <tr>
+                    <td>Server</td>
+                    <td><code>server/modules/user/select.py</code></td>
+                    <td>Creates InteractionRequest</td>
+                </tr>
+                <tr>
+                    <td>Contracts</td>
+                    <td><code>contracts/interactions.py</code></td>
+                    <td>InteractionType, InteractionRequest</td>
+                </tr>
+                <tr>
+                    <td>WebUI</td>
+                    <td><code>webui/src/components/workflow/interactions/</code></td>
+                    <td>Interaction handlers</td>
+                </tr>
+                <tr>
+                    <td>WebUI</td>
+                    <td><code>webui/.../structured-select/</code></td>
+                    <td>Structured selection components</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- ============================================= -->
+        <h2 id="interaction-types">Interaction Types & Module Mapping</h2>
+        <!-- ============================================= -->
+
+        <div class="section">
+            <h3>Module → InteractionType</h3>
+            <table>
+                <tr>
+                    <th>Module</th>
+                    <th>InteractionType</th>
+                    <th>WebUI Handler</th>
+                </tr>
+                <tr>
+                    <td><code>user.text_input</code></td>
+                    <td>TEXT_INPUT</td>
+                    <td>TextInputHandler</td>
+                </tr>
+                <tr>
+                    <td><code>user.confirm</code></td>
+                    <td>CONFIRM</td>
+                    <td>ConfirmHandler</td>
+                </tr>
+                <tr>
+                    <td><code>user.select</code> (simple list)</td>
+                    <td>SELECT_FROM_LIST</td>
+                    <td>SelectListHandler</td>
+                </tr>
+                <tr>
+                    <td><code>user.select</code> (with schema)</td>
+                    <td>SELECT_FROM_STRUCTURED</td>
+                    <td>StructuredSelectHost</td>
+                </tr>
+                <tr>
+                    <td><code>user.file_input</code></td>
+                    <td>FILE_INPUT</td>
+                    <td>FileInputHandler</td>
+                </tr>
+                <tr>
+                    <td><code>prompt.build_grouped_prompt</code></td>
+                    <td>REVIEW_GROUPED</td>
+                    <td>ReviewGroupedHandler</td>
+                </tr>
+            </table>
+
+            <h3>InteractionType Enum</h3>
+<pre><code><span class="comment"># contracts/interactions.py</span>
+<span class="keyword">class</span> <span class="component">InteractionType</span>(Enum):
+    TEXT_INPUT = <span class="string">"text_input"</span>
+    CONFIRM = <span class="string">"confirm"</span>
+    SELECT_FROM_LIST = <span class="string">"select_from_list"</span>
+    SELECT_FROM_STRUCTURED = <span class="string">"select_from_structured"</span>
+    FILE_INPUT = <span class="string">"file_input"</span>
+    REVIEW_GROUPED = <span class="string">"review_grouped"</span>
+    RETRY_OPTIONS = <span class="string">"retry_options"</span>
+    RESUME_CHOICE = <span class="string">"resume_choice"</span></code></pre>
+
+            <h3>StructuredSelectHost Internal Flow</h3>
+            <div class="tree">
+<span class="component">StructuredSelectHost</span>
+│
+├── Receives: InteractionRequest
+│   └── { type, schema, options, multi_select }
+│
+├── Transforms options:
+│   │
+│   ├── If options have "group" field:
+│   │   └── Group by → groups: { [groupName]: items[] }
+│   │
+│   └── If no groups:
+│       └── flatItems: items[]
+│
+├── Layout selection:
+│   │
+│   ├── groups exist → <span class="component">GroupedLayout</span>
+│   │   └── For each group:
+│   │       └── For each item: <span class="component">UnifiedItemRenderer</span>
+│   │
+│   └── flatItems only → <span class="component">FlatLayout</span>
+│       └── For each item: <span class="component">UnifiedItemRenderer</span>
+│
+└── Selection handling:
+    ├── multi_select=true  → checkboxes, multiple allowed
+    └── multi_select=false → radio, single selection
+            </div>
+
+            <h3>Schema Location in Request</h3>
+<pre><code><span class="comment">// InteractionRequest for SELECT_FROM_STRUCTURED</span>
+{
+  <span class="string">"type"</span>: <span class="string">"select_from_structured"</span>,
+  <span class="string">"prompt"</span>: <span class="string">"Select an aesthetic:"</span>,
+
+  <span class="highlight">"schema"</span>: {                    <span class="comment">// ← rendering instructions here</span>
+    <span class="string">"type"</span>: <span class="string">"object"</span>,
+    <span class="string">"selectable"</span>: <span class="keyword">true</span>,
+    <span class="string">"properties"</span>: {
+      <span class="string">"name"</span>: { <span class="string">"display"</span>: <span class="keyword">true</span>, <span class="string">"render_as"</span>: <span class="string">"text"</span> },
+      <span class="string">"color"</span>: { <span class="string">"display"</span>: <span class="keyword">true</span>, <span class="string">"render_as"</span>: <span class="string">"color"</span> }
+    },
+    <span class="string">"computed"</span>: { ... }
+  },
+
+  <span class="string">"options"</span>: [                   <span class="comment">// ← actual data here</span>
+    { <span class="string">"id"</span>: <span class="string">"1"</span>, <span class="string">"name"</span>: <span class="string">"Minimalist"</span>, <span class="string">"color"</span>: <span class="string">"#FFFFFF"</span> },
+    { <span class="string">"id"</span>: <span class="string">"2"</span>, <span class="string">"name"</span>: <span class="string">"Cyberpunk"</span>, <span class="string">"color"</span>: <span class="string">"#FF00FF"</span> }
+  ],
+
+  <span class="string">"multi_select"</span>: <span class="keyword">false</span>
+}</code></pre>
+        </div>
+
+        <!-- ============================================= -->
+        <h2 id="full-hierarchy">Complete Hierarchy: All Modules → WebUI</h2>
+        <!-- ============================================= -->
+
+        <div class="section">
+            <p>Every workflow module that creates user interactions, mapped to its WebUI components.</p>
+
+            <div class="tree">
+<span class="file">step.json</span> (any workflow step)
+│
+└── <span class="highlight">module_id</span> → <span class="note">[SERVER: ModuleRegistry]</span> → <span class="note">[MODULE: get_interaction_request()]</span> → <span class="note">[API]</span> → <span class="note">[WEBUI: InteractionHost]</span>
+    │
+    │
+    ├── <span class="highlight">"user.select"</span>
+    │   │
+    │   └── <span class="note">[SERVER: server/modules/user/select.py]</span>
+    │       │
+    │       ├── inputs.mode == "select" (default)
+    │       │   │
+    │       │   └── interaction_type = <span class="highlight">SELECT_FROM_STRUCTURED</span>
+    │       │       │
+    │       │       └── <span class="note">[WEBUI: InteractionHost switch]</span>
+    │       │           │
+    │       │           └── <span class="component">StructuredSelectHost</span>
+    │       │               ├── State: StructuredSelectState
+    │       │               ├── Variants: [cards, list]
+    │       │               │
+    │       │               ├── <span class="component">StructuredSelectCardsControlled</span>
+    │       │               │   ├── Props: request, state, onStateChange
+    │       │               │   ├── <span class="function">parseSchemaData(data, schema)</span>
+    │       │               │   │   └── Returns: { groups, flatItems }
+    │       │               │   │
+    │       │               │   └── For each group → For each item:
+    │       │               │       └── <span class="component">UnifiedItemRenderer</span> <span class="note">← NEW</span>
+    │       │               │           ├── Collects: properties + computed (display: true)
+    │       │               │           ├── Sorts by: display_order
+    │       │               │           │
+    │       │               │           └── For each field:
+    │       │               │               └── <span class="component">TerminalRenderer</span>
+    │       │               │                   ├── render_as: "text"   → <span class="component">TextRenderer</span>
+    │       │               │                   ├── render_as: "color"  → <span class="component">ColorRenderer</span>
+    │       │               │                   ├── render_as: "url"    → <span class="component">UrlRenderer</span>
+    │       │               │                   ├── render_as: "image"  → <span class="component">ImageRenderer</span>
+    │       │               │                   └── (missing)           → <span class="component">ErrorRenderer</span>
+    │       │               │
+    │       │               └── <span class="component">StructuredSelectListControlled</span>
+    │       │                   ├── Props: request, state, onStateChange
+    │       │                   ├── <span class="function">parseSchemaData(data, schema)</span>
+    │       │                   │
+    │       │                   ├── <span class="component">GroupSection</span>
+    │       │                   │   └── Shows group header with label
+    │       │                   │
+    │       │                   └── <span class="component">SelectableListItem</span>
+    │       │                       └── <span class="component">UnifiedItemRenderer</span> <span class="note">← same as cards</span>
+    │       │
+    │       └── inputs.mode == "review"
+    │           │
+    │           └── interaction_type = <span class="highlight">REVIEW_GROUPED</span>
+    │               │
+    │               └── <span class="note">[WEBUI: InteractionHost switch]</span>
+    │                   │
+    │                   └── <span class="component">ReviewGroupedHost</span>
+    │                       ├── State: ReviewGroupedState
+    │                       ├── Variants: [cards, list]
+    │                       │
+    │                       ├── <span class="component">ReviewGroupedCardsControlled</span>
+    │                       │   ├── <span class="function">parseGroups(data, schema)</span>
+    │                       │   │
+    │                       │   └── For each group:
+    │                       │       ├── <span class="component">Card</span>
+    │                       │       │   └── <span class="component">UnifiedItemRenderer</span>(group.data, group.schema)
+    │                       │       │
+    │                       │       └── Feedback section (if retryable)
+    │                       │
+    │                       └── <span class="component">ReviewGroupedListControlled</span>
+    │                           └── (same structure, different layout)
+    │
+    │
+    ├── <span class="highlight">"user.text_input"</span>
+    │   │
+    │   └── <span class="note">[SERVER: server/modules/user/text_input.py]</span>
+    │       │
+    │       └── interaction_type = <span class="highlight">TEXT_INPUT</span>
+    │           │
+    │           └── <span class="note">[WEBUI: InteractionHost switch]</span>
+    │               │
+    │               └── <span class="component">TextInputHost</span>
+    │                   ├── State: TextInputState
+    │                   ├── Variants: [simple, enhanced]
+    │                   │
+    │                   ├── <span class="component">TextInputSimpleControlled</span>
+    │                   │   ├── Uses: request.default_value, request.multiline
+    │                   │   └── Renders: &lt;Textarea&gt; or &lt;Input&gt;
+    │                   │
+    │                   └── <span class="component">TextInputEnhancedControlled</span>
+    │                       ├── Uses: request.default_value, history/suggestions
+    │                       └── Renders: &lt;Input&gt; with autocomplete
+    │
+    │
+    ├── <span class="highlight">"user.pause"</span>
+    │   │
+    │   └── <span class="note">[SERVER: server/modules/user/pause.py]</span>
+    │       │
+    │       └── interaction_type = <span class="highlight">TEXT_INPUT</span> (allow_empty=true)
+    │           │
+    │           └── <span class="component">TextInputHost</span> <span class="note">(same as user.text_input)</span>
+    │
+    │
+    ├── <span class="highlight">"user.file_input"</span>
+    │   │
+    │   └── <span class="note">[SERVER: server/modules/user/file_input.py]</span>
+    │       │
+    │       └── interaction_type = <span class="highlight">FILE_INPUT</span>
+    │           │
+    │           └── <span class="note">[WEBUI: InteractionHost switch]</span>
+    │               │
+    │               └── <span class="component">FileInputHost</span>
+    │                   ├── State: FileInputState
+    │                   ├── Variants: [dropzone, text]
+    │                   │
+    │                   ├── <span class="component">FileInputDropzoneControlled</span>
+    │                   │   ├── Uses: request.accepted_types, request.multiple_files
+    │                   │   └── Renders: drag-drop zone with file preview
+    │                   │
+    │                   └── <span class="component">FileInputTextControlled</span>
+    │                       ├── Uses: request.base_path
+    │                       └── Renders: text input for file path
+    │
+    │
+    ├── <span class="highlight">"io.client_write"</span>
+    │   │
+    │   └── <span class="note">[SERVER: server/modules/io/client_write.py]</span>
+    │       │
+    │       └── interaction_type = <span class="highlight">FILE_DOWNLOAD</span>
+    │           │
+    │           └── <span class="note">[WEBUI: InteractionHost switch]</span>
+    │               │
+    │               └── <span class="component">FileDownloadHost</span>
+    │                   ├── State: FileDownloadState
+    │                   │
+    │                   └── <span class="component">FileDownloadControlled</span>
+    │                       ├── Uses: request.file_content, request.file_name
+    │                       ├── Auto-writes file to project folder
+    │                       └── Shows confirmation or error
+    │
+    │
+    └── <span class="note">(defined but no module currently creates these)</span>
+        │
+        ├── <span class="highlight">CONFIRM</span>
+        │   │
+        │   └── <span class="component">ConfirmHost</span>
+        │       ├── State: ConfirmState
+        │       ├── Variants: [buttons, cards]
+        │       │
+        │       ├── <span class="component">ConfirmButtonsControlled</span>
+        │       │   └── Renders: Yes/No buttons
+        │       │
+        │       └── <span class="component">ConfirmCardsControlled</span>
+        │           └── Renders: clickable cards for Yes/No
+        │
+        └── <span class="highlight">SELECT_FROM_LIST</span>
+            │
+            └── <span class="component">SelectListHost</span>
+                ├── State: SelectListState
+                ├── Variants: [checkbox, cards, chips, dropdown]
+                │
+                ├── <span class="component">SelectListCheckboxControlled</span>
+                │   └── Uses: request.options[] <span class="note">(simple list, no schema)</span>
+                │
+                ├── <span class="component">SelectListCardsControlled</span>
+                ├── <span class="component">SelectListChipsControlled</span>
+                └── <span class="component">SelectListDropdownControlled</span>
+            </div>
+
+            <h3>Schema-Driven Rendering (NEW Architecture)</h3>
+            <div class="tree">
+<span class="component">UnifiedItemRenderer</span> <span class="note">← replaces SchemaFields, DisplayComponents, ArrayField leaf logic</span>
+│
+├── Input: (data, schema, selectable)
+│
+├── Step 1: Collect displayable fields
+│   ├── From schema.properties where display: true
+│   └── From schema.computed where display: true
+│
+├── Step 2: Sort by display_order
+│
+├── Step 3: For each field, evaluate value
+│   ├── Property field → value = data[field_key]
+│   └── Computed field → value = renderTemplate(display_format, data)
+│
+└── Step 4: Render each field
+    │
+    └── <span class="component">TerminalRenderer</span>(value, field.render_as, field.nudges)
+        │
+        ├── render_as: "text"     → <span class="component">TextRenderer</span>
+        │   └── nudges: [copy] → CopyButton
+        │
+        ├── render_as: "color"    → <span class="component">ColorRenderer</span>
+        │   └── nudges: [swatch, copy] → ColorSwatch + CopyButton
+        │
+        ├── render_as: "url"      → <span class="component">UrlRenderer</span>
+        │   └── nudges: [external-link, copy] → ExternalLink + CopyButton
+        │
+        ├── render_as: "datetime" → <span class="component">DateTimeRenderer</span>
+        │   └── nudges: [copy] → Formatted date + CopyButton
+        │
+        ├── render_as: "number"   → <span class="component">NumberRenderer</span>
+        │   └── nudges: [copy] → Formatted number + CopyButton
+        │
+        ├── render_as: "image"    → <span class="component">ImageRenderer</span>
+        │   └── nudges: [preview, download] → Thumbnail + actions
+        │
+        └── (missing/unknown)     → <span class="component">ErrorRenderer</span>
+            └── Shows: "Field X has no rendering instructions"
+            </div>
+        </div>
+
+        <!-- ============================================= -->
+        <h2 id="schema">New Schema Structure</h2>
+        <!-- ============================================= -->
+
+        <div class="section">
+            <h3>Complete Example</h3>
+<pre><code>{
+  <span class="string">"type"</span>: <span class="string">"object"</span>,
+  <span class="highlight">"selectable"</span>: <span class="keyword">true</span>,  <span class="comment">// toggles selection UI, NOT visual richness</span>
+
+  <span class="string">"properties"</span>: {
+    <span class="string">"name"</span>: {
+      <span class="string">"type"</span>: <span class="string">"string"</span>,
+      <span class="string">"display"</span>: <span class="keyword">true</span>,
+      <span class="string">"display_order"</span>: <span class="number">1</span>,
+      <span class="string">"display_label"</span>: <span class="string">"Name"</span>,
+      <span class="highlight">"render_as"</span>: <span class="string">"text"</span>,
+      <span class="highlight">"nudges"</span>: [<span class="string">"copy"</span>]
+    },
+    <span class="string">"hex_color"</span>: {
+      <span class="string">"type"</span>: <span class="string">"string"</span>,
+      <span class="string">"display"</span>: <span class="keyword">true</span>,
+      <span class="string">"display_order"</span>: <span class="number">3</span>,
+      <span class="highlight">"render_as"</span>: <span class="string">"color"</span>,
+      <span class="highlight">"nudges"</span>: [<span class="string">"copy"</span>, <span class="string">"swatch"</span>]
+    },
+    <span class="string">"website"</span>: {
+      <span class="string">"type"</span>: <span class="string">"string"</span>,
+      <span class="string">"display"</span>: <span class="keyword">true</span>,
+      <span class="string">"display_order"</span>: <span class="number">4</span>,
+      <span class="highlight">"render_as"</span>: <span class="string">"url"</span>,
+      <span class="highlight">"nudges"</span>: [<span class="string">"external-link"</span>, <span class="string">"copy"</span>]
+    }
+  },
+
+  <span class="highlight">"computed"</span>: {
+    <span class="string">"_summary"</span>: {
+      <span class="string">"display"</span>: <span class="keyword">true</span>,
+      <span class="string">"display_order"</span>: <span class="number">2</span>,
+      <span class="string">"display_format"</span>: <span class="string">"{{ name }} ({{ hex_color }})"</span>,
+      <span class="string">"render_as"</span>: <span class="string">"text"</span>,
+      <span class="string">"nudges"</span>: [<span class="string">"copy"</span>]
+    }
+  }
+}</code></pre>
+
+            <h3>Field-Level Properties</h3>
+            <table>
+                <tr>
+                    <th>Property</th>
+                    <th>Type</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td><code>display</code></td>
+                    <td>boolean</td>
+                    <td>Show this field?</td>
+                </tr>
+                <tr>
+                    <td><code>display_order</code></td>
+                    <td>number</td>
+                    <td>Sort position (works across properties + computed)</td>
+                </tr>
+                <tr>
+                    <td><code>display_label</code></td>
+                    <td>string</td>
+                    <td>Human-readable label</td>
+                </tr>
+                <tr>
+                    <td><code>display_format</code></td>
+                    <td>string</td>
+                    <td>Jinja template (required for computed, optional for properties)</td>
+                </tr>
+                <tr>
+                    <td><code>render_as</code> <span class="badge new">NEW</span></td>
+                    <td>string</td>
+                    <td>How to render: text, color, url, datetime, number, image</td>
+                </tr>
+                <tr>
+                    <td><code>nudges</code> <span class="badge new">NEW</span></td>
+                    <td>string[]</td>
+                    <td>UI enhancements: copy, swatch, external-link, preview, etc.</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- ============================================= -->
+        <h2 id="render-as">render_as Types</h2>
+        <!-- ============================================= -->
+
+        <div class="section">
+            <p><code>render_as</code> explicitly declares how to render a value. No assumptions - if missing, show error.</p>
+
+            <table>
+                <tr>
+                    <th>Value</th>
+                    <th>Renders As</th>
+                    <th>Compatible Nudges</th>
+                </tr>
+                <tr>
+                    <td><code>text</code></td>
+                    <td>Plain text</td>
+                    <td>copy</td>
+                </tr>
+                <tr>
+                    <td><code>color</code></td>
+                    <td>Color swatch + hex value</td>
+                    <td>copy, swatch</td>
+                </tr>
+                <tr>
+                    <td><code>url</code></td>
+                    <td>Clickable link</td>
+                    <td>copy, external-link</td>
+                </tr>
+                <tr>
+                    <td><code>datetime</code></td>
+                    <td>Formatted date/time</td>
+                    <td>copy</td>
+                </tr>
+                <tr>
+                    <td><code>number</code></td>
+                    <td>Formatted number</td>
+                    <td>copy</td>
+                </tr>
+                <tr>
+                    <td><code>image</code></td>
+                    <td>Thumbnail/preview</td>
+                    <td>preview, download</td>
+                </tr>
+            </table>
+
+            <h3>Extensibility</h3>
+            <p>New <code>render_as</code> types can be added. Implementation should be separately managed for easy extension.</p>
+
+            <h3>Migration: format vs render_as</h3>
+            <table>
+                <tr>
+                    <th>Component</th>
+                    <th>Uses</th>
+                </tr>
+                <tr>
+                    <td>TUI (current)</td>
+                    <td><code>format</code></td>
+                </tr>
+                <tr>
+                    <td>WebUI (new)</td>
+                    <td><code>render_as</code></td>
+                </tr>
+            </table>
+            <p>TUI migration to <code>render_as</code> is in backlog. For now, both coexist.</p>
+        </div>
+
+        <!-- ============================================= -->
+        <h2 id="nudges">Nudges</h2>
+        <!-- ============================================= -->
+
+        <div class="section">
+            <p>Nudges are UI enhancements applied to rendered values.</p>
+
+            <table>
+                <tr>
+                    <th>Nudge</th>
+                    <th>Description</th>
+                    <th>Applies To</th>
+                </tr>
+                <tr>
+                    <td><code>copy</code></td>
+                    <td>Copy to clipboard button</td>
+                    <td>All types</td>
+                </tr>
+                <tr>
+                    <td><code>swatch</code></td>
+                    <td>Show color swatch</td>
+                    <td>color</td>
+                </tr>
+                <tr>
+                    <td><code>external-link</code></td>
+                    <td>Open in new tab icon</td>
+                    <td>url</td>
+                </tr>
+                <tr>
+                    <td><code>preview</code></td>
+                    <td>Show preview/thumbnail</td>
+                    <td>image, url</td>
+                </tr>
+                <tr>
+                    <td><code>download</code></td>
+                    <td>Download button</td>
+                    <td>image, url</td>
+                </tr>
+            </table>
+
+            <p>Nudges are declared in schema, not assumed from type. New nudges can be added as needed.</p>
+        </div>
+
+        <!-- ============================================= -->
+        <h2 id="computed">Computed Fields</h2>
+        <!-- ============================================= -->
+
+        <div class="section">
+            <p><code>computed</code> is a sibling to <code>properties</code>. Contains virtual fields that don't exist in data.</p>
+
+            <h3>Structure</h3>
+<pre><code>{
+  <span class="string">"properties"</span>: { ... },
+
+  <span class="highlight">"computed"</span>: {
+    <span class="string">"_field_name"</span>: {
+      <span class="string">"display"</span>: <span class="keyword">true</span>,
+      <span class="string">"display_order"</span>: <span class="number">2</span>,
+      <span class="string">"display_format"</span>: <span class="string">"{{ prop1 }} - {{ prop2 }}"</span>,  <span class="comment">// required</span>
+      <span class="string">"render_as"</span>: <span class="string">"text"</span>,
+      <span class="string">"nudges"</span>: [<span class="string">"copy"</span>]
+    }
+  }
+}</code></pre>
+
+            <h3>Rules</h3>
+            <ul>
+                <li><code>display_format</code> is <strong>required</strong> for computed fields</li>
+                <li>Template context: sibling properties from same object</li>
+                <li>Computed fields can reference real properties only (not other computed)</li>
+                <li><code>display_order</code> works across properties + computed</li>
+            </ul>
+
+            <h3>Rendering Order</h3>
+            <p>All displayable fields (properties + computed) sorted by <code>display_order</code>:</p>
+            <div class="tree">
+Given: properties.name (order: 1), computed._summary (order: 2), properties.color (order: 3)
+
+Renders as:
+1. name        <span class="note">← from properties</span>
+2. _summary    <span class="note">← from computed (interleaved!)</span>
+3. color       <span class="note">← from properties</span>
+            </div>
+        </div>
+
+        <!-- ============================================= -->
+        <h2 id="selectable">Selectable Behavior</h2>
+        <!-- ============================================= -->
+
+        <div class="section">
+            <div class="decision-box">
+                <strong>Key Decision:</strong> <code>selectable</code> is a UI toggle, NOT a code path router.
+            </div>
+
+            <h3>Problem (Current)</h3>
+            <div class="tree">
+selectable=true  → StructuredSelectCards (rich UI)
+selectable=false → SchemaFields (basic UI)
+
+Same data, completely different visual experience!
+            </div>
+
+            <h3>Solution (New)</h3>
+            <div class="tree">
+selectable=true  → Same rich UI + checkboxes/radio
+selectable=false → Same rich UI - checkboxes/radio
+
+Visual richness is IDENTICAL. Only interaction capability changes.
+            </div>
+
+            <h3>Implementation</h3>
+            <p><code>selectable</code> flows down as a prop. Leaf renderers ignore it. Only item-level components use it for selection UI.</p>
+<pre><code><span class="component">InteractionHost</span>
+  └── props: { request, <span class="highlight">selectable</span> }
+        │
+        └── <span class="component">UnifiedItemRenderer</span>
+              └── props: { data, schema, <span class="highlight">selectable</span> }
+                    │
+                    ├── selectable=true: show checkbox
+                    └── selectable=false: no checkbox
+                    │
+                    └── (both render fields identically)</code></pre>
+        </div>
+
+        <!-- ============================================= -->
+        <h2 id="components">Component Hierarchy</h2>
+        <!-- ============================================= -->
+
+        <div class="section">
+            <h3>Unified Renderer (New)</h3>
+            <div class="tree">
+<span class="component">UnifiedItemRenderer</span>
+│
+├── Collects fields from:
+│   ├── schema.properties (where display: true)
+│   └── schema.computed (where display: true)
+│
+├── Sorts by display_order
+│
+└── For each field:
+    │
+    └── <span class="component">TerminalRenderer</span>
+        │
+        ├── render_as: "text"     → <span class="component">TextRenderer</span>
+        ├── render_as: "color"    → <span class="component">ColorRenderer</span>
+        ├── render_as: "url"      → <span class="component">UrlRenderer</span>
+        ├── render_as: "datetime" → <span class="component">DateTimeRenderer</span>
+        ├── render_as: "number"   → <span class="component">NumberRenderer</span>
+        ├── render_as: "image"    → <span class="component">ImageRenderer</span>
+        └── (missing/unknown)     → <span class="component">ErrorRenderer</span>
+            </div>
+
+            <h3>ArrayField (Revised)</h3>
+            <div class="tree">
+<span class="component">ArrayField</span>
+│
+├── Props: { items, schema, selectable }
+│
+└── For each item:
+    └── <span class="component">UnifiedItemRenderer</span>(item, schema.items, selectable)
+
+<span class="note">ArrayField is a wrapper/orchestrator, not a leaf renderer.</span>
+<span class="note">It recursively renders items using the unified renderer.</span>
+            </div>
+
+            <h3>Terminal Renderers</h3>
+            <p>All rendering paths end at terminal renderers. Each handles one type + its nudges.</p>
+<pre><code><span class="comment">// Example: ColorRenderer</span>
+<span class="keyword">function</span> <span class="component">ColorRenderer</span>({ value, nudges }) {
+  <span class="keyword">return</span> (
+    &lt;div&gt;
+      {nudges.includes(<span class="string">"swatch"</span>) && &lt;ColorSwatch color={value} /&gt;}
+      &lt;span&gt;{value}&lt;/span&gt;
+      {nudges.includes(<span class="string">"copy"</span>) && &lt;CopyButton value={value} /&gt;}
+    &lt;/div&gt;
+  );
+}</code></pre>
+        </div>
+
+        <!-- ============================================= -->
+        <h2 id="errors">Error Handling</h2>
+        <!-- ============================================= -->
+
+        <div class="section">
+            <div class="decision-box">
+                <strong>Principle:</strong> No assumptions. Missing instructions = error, not fallback.
+            </div>
+
+            <h3>Error Types</h3>
+            <table>
+                <tr>
+                    <th>Error</th>
+                    <th>Display</th>
+                    <th>Blocks?</th>
+                </tr>
+                <tr>
+                    <td>Missing <code>render_as</code></td>
+                    <td>Inline + sidebar</td>
+                    <td>No</td>
+                </tr>
+                <tr>
+                    <td>Unknown <code>render_as</code> type</td>
+                    <td>Inline + sidebar</td>
+                    <td>No</td>
+                </tr>
+                <tr>
+                    <td>Computed template fails</td>
+                    <td>Inline + sidebar</td>
+                    <td>No</td>
+                </tr>
+                <tr>
+                    <td>Critical render failure</td>
+                    <td>Popup</td>
+                    <td>Yes</td>
+                </tr>
+            </table>
+
+            <h3>Error Message Example</h3>
+<pre><code>⚠️ Field "variations" has no rendering instructions.
+
+   Add: "render_as": "text" (or color, url, datetime, number, image)
+
+   Location: workflow/step_3/schema.properties.variations</code></pre>
+        </div>
+
+        <!-- ============================================= -->
+        <h2 id="removed">What Gets Removed</h2>
+        <!-- ============================================= -->
+
+        <div class="section">
+            <table>
+                <tr>
+                    <th>Remove</th>
+                    <th>Replace With</th>
+                </tr>
+                <tr>
+                    <td><code>display_components</code> <span class="badge removed">REMOVED</span></td>
+                    <td><code>computed</code> fields in schema</td>
+                </tr>
+                <tr>
+                    <td><code>format</code> for rendering (WebUI) <span class="badge changed">CHANGED</span></td>
+                    <td><code>render_as</code></td>
+                </tr>
+                <tr>
+                    <td><code>display_format: "join"</code> magic <span class="badge removed">REMOVED</span></td>
+                    <td>Jinja: <code>{{ items | join(' ') }}</code></td>
+                </tr>
+                <tr>
+                    <td>Separate selectable/non-selectable paths <span class="badge removed">REMOVED</span></td>
+                    <td>Single unified renderer with <code>selectable</code> prop</td>
+                </tr>
+                <tr>
+                    <td>Implicit <code>String(value)</code> fallback <span class="badge removed">REMOVED</span></td>
+                    <td>Explicit <code>render_as</code> required, else error</td>
+                </tr>
+                <tr>
+                    <td><code>[1] item</code> numbered list style <span class="badge removed">REMOVED</span></td>
+                    <td>Proper list component</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- ============================================= -->
+        <h2 id="implementation">Implementation Tasks</h2>
+        <!-- ============================================= -->
+
+        <div class="section">
+            <h3>New Features</h3>
+            <table>
+                <tr>
+                    <th>Task</th>
+                    <th>Details</th>
+                </tr>
+                <tr>
+                    <td>Add <code>computed</code> field support</td>
+                    <td>Parse schema.computed, merge with properties, sort by display_order</td>
+                </tr>
+                <tr>
+                    <td>Implement <code>render_as</code></td>
+                    <td>Create terminal renderers: TextRenderer, ColorRenderer, UrlRenderer, etc.</td>
+                </tr>
+                <tr>
+                    <td>Implement <code>nudges</code></td>
+                    <td>Add nudge props to terminal renderers</td>
+                </tr>
+                <tr>
+                    <td>Unify selectable/non-selectable</td>
+                    <td>Single component tree, <code>selectable</code> prop controls UI only</td>
+                </tr>
+                <tr>
+                    <td>Add ErrorRenderer</td>
+                    <td>Show errors for missing/invalid render_as, failed templates</td>
+                </tr>
+            </table>
+
+            <h3>Removals</h3>
+            <table>
+                <tr>
+                    <th>Task</th>
+                    <th>Details</th>
+                </tr>
+                <tr>
+                    <td>Remove DisplayComponents</td>
+                    <td>Delete DisplayComponents renderer</td>
+                </tr>
+                <tr>
+                    <td>Remove "join" magic</td>
+                    <td>Delete special case in ArrayField</td>
+                </tr>
+                <tr>
+                    <td>Remove implicit fallbacks</td>
+                    <td>No more String(value) default</td>
+                </tr>
+            </table>
+
+            <h3>Backlog</h3>
+            <ul>
+                <li>TUI: Migrate from <code>format</code> to <code>render_as</code></li>
+                <li>Computed→computed field references</li>
+                <li>Additional render_as types as needed</li>
+                <li>Additional nudges as needed</li>
+            </ul>
+        </div>
+
+        <hr>
+        <p style="color:#666;text-align:center;">Schema-Driven UI Architecture v2 | 2026-01-01</p>
+    </div>
+</body>
+</html>
