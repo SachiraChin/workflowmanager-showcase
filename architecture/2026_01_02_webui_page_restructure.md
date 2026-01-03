@@ -733,52 +733,50 @@ The original proposal said InteractionPanel would do this, but it also said Inte
 | runner/index.ts | ✅ Done | |
 | WorkflowRunnerPage.tsx | ✅ Done | Uses callback instead of router |
 
-### Phase 3: Interactions 🔄 IN PROGRESS (SIMPLIFIED)
+### Phase 3: Interactions ✅ COMPLETE
 
-**New plan:** Remove host layer entirely. Route directly to controlled components.
+**Final approach:** Simplified InteractionHost to ~370 lines with InteractionContext for state management.
 
 | Task | Status | Notes |
 |------|--------|-------|
-| **Delete unused files:** | | |
-| Delete VariantSettingsPanel.tsx | ⏳ Pending | No longer needed |
-| Delete useVariantSettings.ts | ⏳ Pending | No longer needed |
-| Delete InteractionRouter.tsx | ⏳ Pending | InteractionHost does routing |
-| Delete TextInputSimpleControlled.tsx | ⏳ Pending | Keep only Enhanced variant |
-| Delete TextInputSimple/Area/Card.tsx | ⏳ Pending | Legacy uncontrolled variants |
-| Delete FileInputTextControlled.tsx | ⏳ Pending | Keep only Dropzone variant |
-| **Create new folders:** | | |
-| Create structured-select/ folder | ⏳ Pending | |
-| Create structured-select/StructuredSelect.tsx | ⏳ Pending | Thin wrapper → SchemaInteractionHost |
-| Create structured-select/index.ts | ⏳ Pending | |
-| Create review-grouped/ folder | ⏳ Pending | |
-| Create review-grouped/ReviewGroupedHost.tsx | ⏳ Pending | Thin wrapper → SchemaInteractionHost |
-| Create review-grouped/index.ts | ⏳ Pending | |
-| **Refactor InteractionHost.tsx:** | | |
-| Remove TextInputHost | ⏳ Pending | Route directly to TextInputEnhancedControlled |
-| Remove FileInputHost | ⏳ Pending | Route directly to FileInputDropzoneControlled |
-| Remove FileDownloadHost | ⏳ Pending | Route directly to FileDownloadControlled |
-| Move StructuredSelectHost | ⏳ Pending | Move to structured-select/ |
-| Move ReviewGroupedHost | ⏳ Pending | Move to review-grouped/ |
-| **Move state management to InteractionPanel:** | | |
-| Add state creation in InteractionPanel | ⏳ Pending | useState for each interaction type |
-| Add state → response conversion | ⏳ Pending | On submit button click |
-| Add submit/cancel buttons | ⏳ Pending | Move from hosts |
-| **Update exports:** | | |
-| Update text-input/index.ts | ⏳ Pending | Remove deleted variants |
-| Update file-input/index.ts | ⏳ Pending | Remove deleted variants |
-| Update interactions/index.ts | ⏳ Pending | Update exports |
+| **Deleted unused files:** | | |
+| Delete VariantSettingsPanel.tsx | ✅ Done | Removed |
+| Delete useVariantSettings.ts | ✅ Done | Removed |
+| Delete InteractionRouter.tsx | ✅ Done | InteractionHost does routing |
+| Delete TextInputSimpleControlled.tsx | ✅ Done | Keep only Enhanced variant |
+| Delete TextInputSimple/Area/Card.tsx | ✅ Done | Legacy uncontrolled variants |
+| Delete FileInputTextControlled.tsx | ✅ Done | Keep only Dropzone variant |
+| Delete select-list/ folder | ✅ Done | Variant system removed |
+| Delete confirm/ folder | ✅ Done | Interaction type removed |
+| **Created new folders:** | | |
+| Create structured-select/ folder | ✅ Done | |
+| Create structured-select/StructuredSelect.tsx | ✅ Done | Thin wrapper → SchemaInteractionHost |
+| Create structured-select/index.ts | ✅ Done | |
+| Create review-grouped/ folder | ✅ Done | |
+| Create review-grouped/ReviewGrouped.tsx | ✅ Done | Thin wrapper → SchemaInteractionHost |
+| Create review-grouped/index.ts | ✅ Done | |
+| **Refactored InteractionHost.tsx:** | | |
+| Remove TextInputHost | ✅ Done | Route directly to TextInputEnhanced |
+| Remove FileInputHost | ✅ Done | Route directly to FileInputDropzone |
+| Remove FileDownloadHost | ✅ Done | Route directly to FileDownload |
+| Simplify to ~370 lines | ✅ Done | Down from 834-1386 lines |
+| **State via InteractionContext:** | | |
+| InteractionProvider wraps content | ✅ Done | Provides state to children |
+| Children use useInteraction hook | ✅ Done | Access request, updateProvider, etc. |
+| Action buttons in InteractionFooter | ✅ Done | Continue, Retry All, Retry Selected |
 | **Verify:** | | |
-| Build passes | ⏳ Pending | npm run build |
+| Build passes | ✅ Done | npm run build |
 
-### Phase 4: Routing ⏳ PENDING
+### Phase 4: Routing ✅ COMPLETE
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Install react-router-dom | ⏳ Pending | |
-| Update App.tsx | ⏳ Pending | |
-| Delete old files | ⏳ Pending | |
-| Update imports | ⏳ Pending | |
-| Final build/test | ⏳ Pending | |
+| Install react-router-dom | ✅ Done | Added to dependencies |
+| Update App.tsx | ✅ Done | BrowserRouter with Routes |
+| Route "/" → WorkflowStartPage | ✅ Done | StartPageRoute wrapper |
+| Route "/run/:runId" → WorkflowRunnerPage | ✅ Done | RunnerPageRoute wrapper with resume logic |
+| Delete WorkflowExecutionPage.tsx | ✅ Done | Orphaned code removed |
+| Final build/test | ✅ Done | Build passes |
 
 ---
 
