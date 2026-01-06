@@ -2,9 +2,53 @@
 
 You are a senior developer who understands the use of Python in various use cases and understands how other AI-based APIs work and how to integrate with them. You always do your research before making changes, whether it's a simple one-line change or a larger change. You always know better than to assume things - you always thoroughly look into the existing codebase before coming to assumptions.
 
-You know better than a junior engineer to avoid making code changes which can break everything. For example, you would never blindly run a script to replace a variable name across the whole codebase without understanding the impact. When you are working with database interactions, you make sure that changes won't break existing usages of collections/fields.
+## Cross-Module Awareness (server, tui, webui, workflows)
 
-If you make any update to the database - whether it's a change of field, migration, or anything else outside of the main codebase - you write the script inside the `scripts/` folder and thoroughly test it before running the script on production data.
+This project has four tightly coupled modules that share contracts and data structures. Before any coding session, you must understand:
+
+1. **server/** - Backend workflow engine
+2. **tui/** - Terminal UI client
+3. **webui/** - Web UI client (React/TypeScript)
+4. **workflows/** - Workflow JSON definitions
+
+**Rules for editing any of these modules:**
+
+1. **Before editing any file in these folders**, read related files in OTHER modules to understand dependencies. Never assume a change is isolated.
+
+2. **When modifying server/**:
+   - Check if tui/ has strategies or handlers that depend on this change
+   - Check if webui/ has types or components that mirror this data structure
+   - Check if workflows/ JSON schemas depend on this behavior
+
+3. **When modifying tui/**:
+   - Verify the corresponding server module produces compatible data
+   - Check contracts/ for shared interfaces being used
+   - Ensure strategies handle all InteractionType values
+
+4. **When modifying webui/**:
+   - Verify webui/src/lib/types.ts matches server/api/models.py
+   - Check if SSE event handling matches server streaming behavior
+   - Ensure interaction components handle all server response shapes
+
+5. **When modifying workflows/**:
+   - Verify server/engine/ handles any schema changes
+   - Check that TUI/WebUI can render new display schemas
+   - Test $ref resolution and Jinja2 template syntax
+
+6. **After completing any change**, trace through the data flow across all affected modules to verify no breaking changes were introduced.
+
+## Architecture Document Revision Rules
+
+When creating architecture documents in the `architecture/` folder:
+
+1. **Naming convention**: `{date}_{feature_name}_r{revision}.md` (e.g., `2026_01_05_scrollable_history_r1.md`)
+2. **First revision**: Always start with `_r1.md`
+3. **After operator feedback**: That revision is **locked** - do not edit it
+4. **New revisions**: Create a new file `_r{n+1}.md` incorporating feedback
+5. **Never edit locked revisions**: Once feedback is given, previous revision files are read-only historical records
+6. **Each revision is standalone**: New revision should be complete, not just a diff
+
+This allows tracking the evolution of design decisions and preserving the discussion history.
 
 # Project: Modular Workflow Engine
 
@@ -96,275 +140,3 @@ Before saying "this is complete" or "this should work":
 - [ ] Have I traced through with real data showing it works?
 - [ ] If this deletes/modifies data, have I shown exactly what will be affected?
 - [ ] Have I tested the failure modes, not just the happy path?
-
-## Project Structure
-
-```
-architecture/               # All architectural documents for any module (contracts/tui/server/analysis) 
-                            # goes here. Do not create any markdown inside module folder, create here instead.
-                            # When creating new document here, always prefix creation date in yyyy_MM_dd format 
-                            # to filename.
-
-scripts/                    # All scripts which are directly not part of a given module goes here. Ex: database 
-                            # migration scripts, test script written to test change you made, find and replace 
-                            # scripts, folder structure change scripts, etc. Simply, if the file you create is 
-                            # not a runtime requirement of any module, it goes here. When creating new script 
-                            # here, always prefix creation date in yyyy_MM_dd format to filename.
-
-contracts/                  # Shared interfaces and DTOs
-├── __init__.py                 # Package exports
-├── interactions.py             # InteractionType, SelectOption, InteractionRequest/Response
-├── events.py                   # EventType, MessageLevel, WorkflowEvent
-└── handlers.py                 # InteractionHandler interface
-
-tui/                        # Terminal User Interface (CLI client)
-├── workflow_runner.py          # CLI and HTTP workflow runners
-├── handler.py                  # CLIInteractionHandler (Strategy pattern)
-├── api_handler.py              # HTTP API interaction handler
-├── event_renderer.py           # Event rendering for console
-├── colors.py                   # Color definitions and MessageLevel colors
-├── console_router.py           # Console output routing
-└── strategies/                 # Interaction strategy implementations
-    ├── base.py                     # Base strategy class
-    ├── text_input.py               # Text input handling
-    ├── confirm.py                  # Yes/No confirmation
-    ├── select_list.py              # List selection
-    ├── select_structured.py        # Nested/structured selection
-    ├── review_grouped.py           # Grouped prompt review
-    ├── file_input.py               # File path input
-    ├── resume_choice.py            # Resume workflow choice
-    ├── retry_options.py            # Retry/jump options
-    └── mixins.py                   # Shared functionality (InputMixin, ColorMixin, etc.)
-
-status/                     # Status Server (multi-project monitoring)
-├── status_server_textual.py    # Textual TUI status dashboard
-├── status_protocol.py          # TCP socket protocol messages
-├── run_status_server.py        # Status server entry point
-├── check_server.py             # Server health check
-└── diagnose.py                 # Diagnostic utilities
-
-analysis/                   # Codebase Analysis Tools
-├── analyzer.py                 # Class relationship analyzer (AST-based)
-├── server.py                   # D3.js visualization web server
-└── check_tui_deps.py           # TUI dependency checker
-
-server/                     # Main server code (renamed from modular/)
-├── api/                    # Core API and database components
-│   ├── workflow_api.py         # FastAPI REST endpoints
-│   ├── workflow_processor.py   # Main workflow execution engine
-│   ├── workflow_streaming.py   # SSE streaming support
-│   ├── workflow_context.py     # Execution context for modules
-│   ├── models.py               # Pydantic models (requests, responses, SSE events)
-│   ├── database_provider.py    # MongoDB event store (main provider)
-│   ├── database_history.py     # History operations mixin (keywords, options)
-│   ├── database_config.py      # Config/schema operations mixin
-│   └── database_migrations.py  # Migration operations mixin
-├── engine/                 # Engine components
-│   ├── jinja2_resolver.py      # Jinja2 template resolution for parameters
-│   ├── module_interface.py     # Base ExecutableModule interface
-│   ├── module_registry.py      # Module discovery and registration
-│   ├── state_manager.py        # Workflow state management
-│   ├── context_utils.py        # Context helper functions
-│   └── interaction_handler.py  # User interaction handling
-├── modules/                # Executable modules
-│   ├── api/                    # LLM API modules
-│   │   ├── llm_call.py             # api.llm - unified LLM interface
-│   │   ├── base.py                 # LLMProviderBase, Message classes
-│   │   ├── registry.py             # Provider registration (@register decorator)
-│   │   ├── call_logger.py          # API call logging
-│   │   └── providers/              # Provider implementations
-│   │       ├── openai/provider.py      # OpenAI (GPT-4, GPT-5, O1, O3)
-│   │       └── anthropic/provider.py   # Anthropic (Claude)
-│   ├── db/                     # Database modules
-│   │   └── query.py                # db.query - secure MongoDB queries
-│   ├── history/                # History tracking
-│   │   └── keyword_history.py      # history.keyword_history
-│   ├── user/                   # User interaction modules
-│   │   ├── select.py               # user.select - structured selection
-│   │   ├── pause.py                # user.pause - pause execution
-│   │   ├── text_input.py           # user.text_input
-│   │   └── file_input.py           # user.file_input
-│   ├── io/                     # File I/O modules
-│   │   ├── load_json.py            # io.load_json
-│   │   ├── save_json.py            # io.save_json
-│   │   ├── write_text.py           # io.write_text
-│   │   └── render_template.py      # io.render_template
-│   ├── transform/              # Data transformation modules
-│   │   ├── concat_arrays.py        # transform.concat_arrays
-│   │   ├── conditional_text.py     # transform.conditional_text
-│   │   └── build_dynamic_schema.py # transform.build_dynamic_schema
-│   ├── prompt/                 # Prompt building
-│   │   └── build_grouped_prompt.py # prompt.build_grouped_prompt
-│   └── addons/                 # Optional addons
-│       └── usage_history.py        # Usage tracking
-└── tests/                  # Unit tests
-    └── unit/
-
-workflows/              # Workflow definitions
-└── oms/                    # OMS Video Generation workflow
-    ├── workflow_v3.json        # Main workflow (config, status_display, steps)
-    └── steps/                  # Step definitions
-        ├── 1_user_input/           # User preferences, aesthetic generation
-        ├── 2_prompt_generation/    # Image prompt generation
-        ├── 3_image_analysis/       # Analyze generated images
-        ├── 4_video_prompt_generation/  # Video/motion prompts
-        ├── 5_text_overlays/        # Text overlay generation
-        ├── 6_titles_descriptions/  # Titles and descriptions
-        ├── 7_text_colors/          # Color scheme generation
-        ├── 8_music_generation/     # Music prompt generation
-        └── 9_workflow_summary/     # Final summary
-```
-
-## Database (MongoDB)
-
-**Event Sourcing Architecture:**
-- All state changes stored as immutable events
-- Current state derived by replaying events
-- Full audit trail for debugging
-
-**Databases:**
-- `workflow_db` - Development
-- `workflow_prod_db` - Production
-
-**Collections:**
-| Collection | Purpose |
-|------------|---------|
-| `workflows` | Workflow metadata (id, project_path, status) |
-| `branches` | Branch metadata for retry/jump |
-| `events` | Immutable event log |
-| `tokens` | Token usage per API call |
-| `workflow_templates` | Workflow template definitions |
-| `workflow_versions` | Workflow version tracking |
-| `keyword_history` | Keyword usage tracking |
-| `option_usage` | Option/selection history |
-| `table_schemas` | Schema definitions for db.query validation |
-| `config` | Application configuration |
-
-**DbEventType enum:**
-- Workflow: `workflow_created`, `workflow_resumed`, `workflow_completed`, `workflow_error`
-- Execution: `step_started`, `step_completed`, `module_started`, `module_completed`, `module_error`
-- Interaction: `interaction_requested`, `interaction_response`
-- Navigation: `retry_requested`, `jump_requested`
-- Data: `output_stored`
-
-## Contracts Package
-
-Shared interfaces and DTOs that both server and TUI depend on. Enables clean separation - both depend on contracts, not on each other.
-
-**Key Types:**
-```python
-from contracts import (
-    # Interactions
-    InteractionType,      # Enum: TEXT_INPUT, CONFIRM, SELECT_FROM_LIST, etc.
-    SelectOption,         # Option in selection list
-    InteractionRequest,   # Request for user input
-    InteractionResponse,  # User's response
-
-    # Events
-    EventType,            # Enum: STEP_STARTED, MODULE_COMPLETED, etc.
-    MessageLevel,         # Enum: INFO, WARNING, ERROR, SUCCESS, DEBUG
-    WorkflowEvent,        # Event from workflow execution
-
-    # Handlers
-    InteractionHandler,   # Abstract interface for handling interactions
-)
-```
-
-## TUI (Terminal User Interface)
-
-CLI client for running workflows with interactive prompts.
-
-**Architecture:**
-- Uses **Strategy pattern** for interaction handling
-- Each interaction type has its own strategy class
-- Mixins provide shared functionality (input, colors, schema rendering)
-
-**Running workflows:**
-```python
-from tui.workflow_runner import run_workflow_cli, run_workflow_http
-
-# Direct CLI execution
-run_workflow_cli(
-    workflow_path="server/workflows/oms/workflow_v3.json",
-    project_folder="./output",
-    ai_config_path="server/ai_config.json",
-    status_port=9000  # Optional: connect to status server
-)
-
-# Via HTTP API
-run_workflow_http(
-    server_url="http://localhost:8000",
-    workflow_path="server/workflows/oms/workflow_v3.json",
-    project_folder="./output"
-)
-```
-
-**Interaction Strategies:**
-| Strategy | Handles |
-|----------|---------|
-| `TextInputStrategy` | Free text input |
-| `ConfirmStrategy` | Yes/No confirmation |
-| `SelectFromListStrategy` | Simple list selection |
-| `SelectFromStructuredStrategy` | Nested selection (aesthetics/ideas) |
-| `ReviewGroupedStrategy` | Grouped prompt review with retry |
-| `FileInputStrategy` | File path input with validation |
-| `ResumeChoiceStrategy` | Resume existing workflow |
-| `RetryOptionsStrategy` | Retry/jump options |
-
-**Mixins:**
-- `InputMixin` - Input handling utilities
-- `ColorMixin` - Colored output
-- `SchemaRenderMixin` - Render data from display schemas
-- `RetryableMixin` - Retry/jump option handling
-
-## Status Server
-
-Multi-project status monitoring dashboard using Textual TUI.
-
-**Features:**
-- Polls workflow API for status updates
-- Displays multiple workflows in unified dashboard
-- Shows dynamic status fields from workflow config
-- Tracks token usage per API call
-
-**Running:**
-```bash
-python status/run_status_server.py --server-url http://localhost:8000
-```
-
-**Protocol (TCP socket, JSON newline-delimited):**
-| Message | Direction | Purpose |
-|---------|-----------|---------|
-| `register` | Client → Server | Register new project |
-| `registered` | Server → Client | Registration successful |
-| `update` | Client → Server | Status update |
-| `ping/pong` | Bidirectional | Keep-alive |
-| `disconnect` | Client → Server | Client disconnecting |
-
-**ProjectState fields:**
-- `workflow_id`, `project_folder`, `workflow_name`
-- `status`, `current_step`
-- `display_fields` - Dynamic fields from workflow config
-- `token_records` - Per-call token usage
-
-## Analysis Tools
-
-Codebase analysis and visualization utilities.
-
-**Class Relationship Analyzer (`analyzer.py`):**
-- AST-based Python class analysis
-- Detects static relationships (inheritance, type hints)
-- Detects dynamic patterns (factories, singletons, registries)
-- Groups classes by module/package
-
-**Visualization Server (`server.py`):**
-```bash
-python analysis/server.py --port 8080
-# Open http://localhost:8080 for D3.js visualization
-```
-
-Features:
-- Interactive force-directed graph
-- Classes grouped by package with auto-resizing boxes
-- Click to highlight relationships
-- Real-time codebase analysis on refresh
