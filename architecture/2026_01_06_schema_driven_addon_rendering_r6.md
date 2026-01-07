@@ -360,8 +360,9 @@ interface Decorator {
   "name": "Chord Progression A",
   "_metadata": {
     "addons": {
-      "usage_history": {"last_used": "2025-01-05T10:30:00", "color": "#7CFFB2"},
-      "compatibility": {"score": 85, "color": "#00FF00"}
+      "last_used": "2025-01-05T10:30:00",
+      "score": 85,
+      "color": "#00FF00"
     },
     "decorators": [
       {"type": "border", "color": "#7CFFB2", "priority": 10, "source": "usage_history"},
@@ -372,6 +373,9 @@ interface Decorator {
   }
 }
 ```
+
+Note: `_metadata.addons` is a flat merged dict (same structure as legacy `_addon`).
+Later addons override earlier ones for conflicting keys (e.g., `color`).
 
 ---
 
