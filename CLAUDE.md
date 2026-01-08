@@ -59,18 +59,65 @@ This project has four tightly coupled modules that share contracts and data stru
 
 6. **After completing any change**, trace through the data flow across all affected modules to verify no breaking changes were introduced.
 
-## Architecture Document Revision Rules
+## Architecture and Issues Document Rules
 
-When creating architecture documents in the `architecture/` folder:
+Both `architecture/` and `issues/` folders follow the same structure and revision rules:
 
-1. **Naming convention**: `{date}_{feature_name}_r{revision}.md` (e.g., `2026_01_05_scrollable_history_r1.md`)
-2. **First revision**: Always start with `_r1.md`
-3. **After operator feedback**: That revision is **locked** - do not edit it
-4. **New revisions**: Create a new file `_r{n+1}.md` incorporating feedback
-5. **Never edit locked revisions**: Once feedback is given, previous revision files are read-only historical records
-6. **Each revision is standalone**: New revision should be complete, not just a diff
+### Folder Structure
+
+```
+architecture/{date}_{feature_name}/
+    r1.md
+    r2.md
+    ...
+
+issues/{date}_{issue_name}/
+    r1.md
+    r2.md
+    ...
+```
+
+### Revision Rules
+
+1. **Folder naming**: `{date}_{descriptive_name}/` (e.g., `2026_01_08_form_output_format/`)
+2. **File naming**: `r{revision}.md` inside the folder (e.g., `r1.md`, `r2.md`)
+3. **First revision**: Always start with `r1.md`
+4. **After operator feedback**: That revision is **locked** - do not edit it
+5. **New revisions**: Create a new file `r{n+1}.md` incorporating feedback
+6. **Never edit locked revisions**: Once feedback is given, previous revision files are read-only historical records
+7. **Each revision is standalone**: New revision should be complete, not just a diff
 
 This allows tracking the evolution of design decisions and preserving the discussion history.
+
+### Architecture Document Content
+
+Architecture documents should include:
+- **Summary**: What problem this solves
+- **Design Decisions**: Key choices and rationale
+- **Technical Specification**: Implementation details
+- **Database Schema**: If applicable
+- **API Contracts**: If applicable
+- **Questions for Review**: Open items for operator feedback
+
+### Issue Document Content
+
+Issue documents must contain comprehensive analysis:
+- **Summary**: Brief description of the issue
+- **Architecture Reference**: Which architecture document(s) specify the expected behavior
+- **Expected Behavior**: What the architecture document specifies
+- **Actual Behavior**: What the current implementation does
+- **Root Cause Analysis**: Why the discrepancy exists
+- **Impact**: What functionality is affected
+- **Proposed Solution(s)**: One or more approaches to resolve the issue
+- **Files Affected**: List of files that need to be modified
+- **Priority**: Critical / High / Medium / Low with justification
+
+### Issue Lifecycle
+
+1. **Open issue**: Folder named `{date}_{issue_name}/`
+2. **Fixed issue**: Rename folder to `fixed_{date}_{issue_name}/`
+
+This makes it easy to see which issues are resolved vs still open.
 
 ## Critical Rules For Project
 
