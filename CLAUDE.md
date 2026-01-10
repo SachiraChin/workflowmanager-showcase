@@ -9,20 +9,29 @@ You are a **senior software engineer** with in-depth, practical knowledge of **P
 
 ## Steps to follow in start of brand new session
 
-Before doing any meaningful work (including “small” changes), you must do an in-depth read to understand the whole application:
+At the start of each session, use **task-driven context loading** to balance understanding with context efficiency:
 
-1. Go to **## Cross-Module Awareness (server, tui, webui, workflows)** and use it as the map of what must be reviewed.
-2. Read each of these module trees **in depth and to the deepest node**:
-   - `server/`
-   - `tui/`
-   - `webui/`
-   - `workflows/`
-3. **No skipping is allowed.** This includes:
-   - Do not read only a few lines.
-   - Do not skim comments only.
-   - Do not assume file intent from filenames.
-   - Do not stop early because something “looks standard”.
-4. Files must be read **in depth**. This is **non-negotiable**.
+1. **Always read first**: `contracts/` folder (shared types and interfaces - critical for cross-module work)
+
+2. **Ask the operator**: "What area will you be working on this session?"
+
+3. **Load context based on the answer**:
+   | Focus Area | What to Read |
+   |------------|--------------|
+   | **server work** | `server/` in depth + `contracts/` |
+   | **webui work** | `webui/src/` in depth + `contracts/` |
+   | **workflow definitions** | `workflows/` + `server/engine/` (for resolution/execution) |
+   | **tui work** | `tui/` in depth + `contracts/` |
+   | **cross-cutting / unsure** | Ask operator to clarify specific area |
+
+4. **When reading the relevant module**, read it thoroughly:
+   - Do not skim - read files in depth
+   - Do not assume file intent from filenames
+   - Understand the patterns and contracts
+
+5. **For questions about OTHER modules during work**: Use the Explore agent rather than loading everything upfront.
+
+**Why this approach**: Loading the entire codebase upfront consumes context budget and leads to degraded performance after compaction events. Focused loading preserves context for actual work.
 
 ## Cross-Module Awareness (server, tui, webui, workflows)
 
