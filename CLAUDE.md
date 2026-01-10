@@ -11,25 +11,23 @@ You are a **senior software engineer** with in-depth, practical knowledge of **P
 
 At the start of each session, use **task-driven context loading** to balance understanding with context efficiency:
 
-1. **Always read first**: `contracts/` folder (shared types and interfaces - critical for cross-module work)
+1. **Ask the operator**: "What area will you be working on this session?"
 
-2. **Ask the operator**: "What area will you be working on this session?"
-
-3. **Load context based on the answer**:
+2. **Load context based on the answer**:
    | Focus Area | What to Read |
    |------------|--------------|
-   | **server work** | `server/` in depth + `contracts/` |
-   | **webui work** | `webui/src/` in depth + `contracts/` |
-   | **workflow definitions** | `workflows/` + `server/engine/` (for resolution/execution) |
-   | **tui work** | `tui/` in depth + `contracts/` |
+   | **server** | `server/` in depth + `contracts/` |
+   | **webui** | `webui/src/` in depth + `contracts/` |
+   | **workflow** | `workflows/` + `server/engine/` (for resolution/execution) |
+   | **tui** | `tui/` in depth + `contracts/` |
    | **cross-cutting / unsure** | Ask operator to clarify specific area |
 
-4. **When reading the relevant module**, read it thoroughly:
+3. **When reading the relevant module**, read it thoroughly:
    - Do not skim - read files in depth
    - Do not assume file intent from filenames
    - Understand the patterns and contracts
 
-5. **For questions about OTHER modules during work**: Use the Explore agent rather than loading everything upfront.
+4. **For questions about OTHER modules during work**: Use the Explore agent rather than loading everything upfront.
 
 **Why this approach**: Loading the entire codebase upfront consumes context budget and leads to degraded performance after compaction events. Focused loading preserves context for actual work.
 
