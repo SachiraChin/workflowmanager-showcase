@@ -6,6 +6,12 @@
     {
       "module_id": "user.select",
       "inputs": {
+        "resolver_schema": {
+          "type": "object",
+          "properties": {
+            "data": { "resolver": "server" }
+          }
+        },
         "prompt": "What type of pet is this video for?",
         "data": [
           {
@@ -40,6 +46,12 @@
     {
       "module_id": "user.select",
       "inputs": {
+        "resolver_schema": {
+          "type": "object",
+          "properties": {
+            "data": { "resolver": "server" }
+          }
+        },
         "prompt": "Choose the story aesthetic for your video",
         "data": {
           "$ref": "core_aesthetics.json",
@@ -61,6 +73,12 @@
     {
       "module_id": "user.select",
       "inputs": {
+        "resolver_schema": {
+          "type": "object",
+          "properties": {
+            "data": { "resolver": "server" }
+          }
+        },
         "prompt": "Select video duration",
         "data": [
           {
