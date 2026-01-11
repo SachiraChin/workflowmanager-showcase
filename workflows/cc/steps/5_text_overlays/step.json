@@ -10,7 +10,8 @@
           "type": "object",
           "properties": {
             "input": { "resolver": "server" },
-            "system": { "resolver": "server" }
+            "system": { "resolver": "server" },
+            "metadata": { "resolver": "server" }
           }
         },
         "ai_config": {},
@@ -21,6 +22,9 @@
         "output_schema": {
           "$ref": "schemas/cc_text_overlays_schema.json",
           "type": "json"
+        },
+        "metadata": {
+          "step_id": "{{ step.step_id }}"
         },
         "system": [
           {
