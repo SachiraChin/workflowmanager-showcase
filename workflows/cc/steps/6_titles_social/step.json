@@ -1,0 +1,117 @@
+{
+  "step_id": "titles_descriptions",
+  "name": "Step {step_number}: Titles and Descriptions",
+  "description": "Generate publishing titles and descriptions for the video",
+  "modules": [
+    {
+      "module_id": "api.llm",
+      "inputs": {
+        "resolver_schema": {
+          "type": "object",
+          "properties": {
+            "input": { "resolver": "server" },
+            "metadata": { "resolver": "server" },
+            "system": { "resolver": "server" }
+          }
+        },
+        "input": [
+          {
+            "$ref": "prompts/captions_titles_descriptions_user.txt",
+            "type": "jinja2"
+          }
+        ],
+        "output_schema": {
+          "$ref": "schemas/titles_descriptions_schema.json",
+          "type": "json"
+        },
+        "metadata": {
+          "step_id": "{{ step.step_id }}"
+        },
+        "system": [
+          {
+            "$ref": "prompts/role_social_media_strategist.txt",
+            "type": "text",
+            "cache_ttl": 10800
+          },
+          {
+            "$ref": "prompts/captions_titles_descriptions_system.txt",
+            "type": "text",
+            "cache_ttl": 10800
+          },
+          {
+            "$ref": "prompts/project_context.txt",
+            "type": "jinja2"
+          }
+        ],
+        "provider": "openai"
+      },
+      "outputs_to_state": {
+        "response": "titles_descriptions_response"
+      },
+      "name": "generate_titles_descriptions"
+    },
+    {
+      "module_id": "user.select",
+      "inputs": {
+        "resolver_schema": {
+          "type": "object",
+          "properties": {
+            "data": { "resolver": "server" }
+          }
+        },
+        "data": "{{ state.titles_descriptions_response.titles }}",
+        "schema": {
+          "$ref": "schemas/titles_display_schema.json",
+          "type": "json"
+        },
+        "prompt": "Generated Titles (select one to use):",
+        "multi_select": false,
+        "mode": "select"
+      },
+      "outputs_to_state": {
+        "selected_indices": "selected_title_indices"
+      },
+      "name": "review_titles"
+    },
+    {
+      "module_id": "user.select",
+      "inputs": {
+        "resolver_schema": {
+          "type": "object",
+          "properties": {
+            "data": { "resolver": "server" }
+          }
+        },
+        "data": "{{ state.titles_descriptions_response }}",
+        "schema": {
+          "$ref": "schemas/descriptions_display_schema.json",
+          "type": "json"
+        },
+        "prompt": "Generated Descriptions (select one to use):",
+        "multi_select": false,
+        "mode": "select"
+      },
+      "outputs_to_state": {
+        "selected_indices": "selected_description_indices"
+      },
+      "name": "review_descriptions"
+    },
+    {
+      "module_id": "io.save_json",
+      "inputs": {
+        "resolver_schema": {
+          "type": "object",
+          "properties": {
+            "data": { "resolver": "server" }
+          }
+        },
+        "data": {
+          "titles": "{{ state.titles_descriptions_response.titles }}",
+          "descriptions": "{{ state.titles_descriptions_response.descriptions }}"
+        },
+        "file_path": "titles_descriptions.json"
+      },
+      "name": "save_titles_descriptions"
+    }
+  ]
+}

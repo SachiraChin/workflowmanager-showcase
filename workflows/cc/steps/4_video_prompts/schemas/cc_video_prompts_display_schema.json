@@ -1,0 +1,87 @@
+{
+  "type": "object",
+  "properties": {
+    "scene_title": {
+      "type": "string",
+      "display": true,
+      "render_as": "section-title"
+    },
+    "motion_summary": {
+      "type": "string",
+      "display": true,
+      "display_label": "Motion Summary",
+      "highlight": true
+    },
+    "prompts": {
+      "type": "object",
+      "display": true,
+      "render_as": "section-list",
+      "properties": {
+        "motion_2_0": {
+          "type": "object",
+          "display": true,
+          "display_label": "Motion 2.0",
+          "render_as": "card-stack",
+          "properties": {
+            "positive_prompt": {
+              "type": "string",
+              "display": true,
+              "display_label": "Positive Prompt"
+            },
+            "negative_prompt": {
+              "type": "string",
+              "display": true,
+              "display_label": "Negative Prompt",
+              "highlight": true,
+              "highlight_color": "#FF6B6B"
+            },
+            "motion_strength": {
+              "type": "string",
+              "display": true,
+              "display_label": "Strength",
+              "highlight": true,
+              "highlight_color": "#4ECDC4"
+            },
+            "motion_notes": {
+              "type": "string",
+              "display": true,
+              "display_label": "Notes"
+            }
+          }
+        },
+        "midjourney_animate": {
+          "type": "object",
+          "display": true,
+          "display_label": "Midjourney Animate",
+          "render_as": "card-stack",
+          "properties": {
+            "prompt_a": {
+              "type": "string",
+              "display": true,
+              "display_label": "Prompt A (Start)"
+            },
+            "prompt_b": {
+              "type": "string",
+              "display": true,
+              "display_label": "Prompt B (End)"
+            },
+            "negative_prompt": {
+              "type": "string",
+              "display": true,
+              "display_label": "Negative Prompt",
+              "highlight": true,
+              "highlight_color": "#FF6B6B"
+            },
+            "transition_notes": {
+              "type": "string",
+              "display": true,
+              "display_label": "Transition",
+              "highlight": true,
+              "highlight_color": "#7B68EE"
+            }
+          }
+        }
+      }
+    }
+  }
+}

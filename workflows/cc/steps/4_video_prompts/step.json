@@ -1,0 +1,94 @@
+{
+  "step_id": "video_prompts",
+  "name": "Step {step_number}: Generate Video/Motion Prompts",
+  "description": "Generate motion prompts for Motion 2.0 and Midjourney Animate with negative prompts",
+  "modules": [
+    {
+      "module_id": "api.llm",
+      "inputs": {
+        "resolver_schema": {
+          "type": "object",
+          "properties": {
+            "input": { "resolver": "server" },
+            "system": { "resolver": "server" }
+          }
+        },
+        "ai_config": {},
+        "input": {
+          "$ref": "prompts/cc_video_prompts_user.txt",
+          "type": "jinja2"
+        },
+        "output_schema": {
+          "$ref": "schemas/cc_video_prompts_schema.json",
+          "type": "json"
+        },
+        "system": [
+          {
+            "$ref": "prompts/cc_role_motion_engineer.txt",
+            "type": "text",
+            "cache_ttl": 10800
+          },
+          {
+            "$ref": "prompts/cc_video_prompts_system.txt",
+            "type": "text",
+            "cache_ttl": 10800
+          }
+        ],
+        "provider": "openai"
+      },
+      "outputs_to_state": {
+        "response": "video_prompts"
+      },
+      "name": "generate_video_prompts"
+    },
+    {
+      "module_id": "user.select",
+      "inputs": {
+        "resolver_schema": {
+          "type": "object",
+          "properties": {
+            "data": { "resolver": "server" }
+          }
+        },
+        "prompt": "Review generated video/motion prompts",
+        "data": "{{ state.video_prompts }}",
+        "schema": {
+          "$ref": "schemas/cc_video_prompts_display_schema.json",
+          "type": "json"
+        },
+        "mode": "review"
+      },
+      "outputs_to_state": {},
+      "retryable": {
+        "default_option": "continue",
+        "options": [
+          {
+            "id": "continue",
+            "mode": "continue",
+            "label": "Accept and continue"
+          },
+          {
+            "id": "retry",
+            "mode": "retry",
+            "label": "Regenerate video prompts",
+            "shortcut": "r",
+            "target_module": "generate_video_prompts",
+            "feedback": {
+              "enabled": true,
+              "prompt": "What should be different?",
+              "default_message": "Please generate different video prompts with improved motion descriptions. Ensure negative prompts are comprehensive."
+            }
+          },
+          {
+            "id": "change_image_prompts",
+            "mode": "jump",
+            "label": "Go back to image prompts",
+            "target_step": "image_prompts",
+            "target_module": "review_image_prompts"
+          }
+        ]
+      },
+      "name": "review_video_prompts"
+    }
+  ]
+}

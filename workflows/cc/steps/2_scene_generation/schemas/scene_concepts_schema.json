@@ -1,0 +1,52 @@
+{
+  "type": "object",
+  "properties": {
+    "scenes": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "A short, evocative title for the scene (3-6 words)"
+          },
+          "hook": {
+            "type": "string",
+            "description": "One sentence that captures the emotional core of this scene"
+          },
+          "narrative": {
+            "type": "string",
+            "description": "A 2-3 sentence description of what happens in the scene, written as a mini story"
+          },
+          "visual_moments": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 3,
+            "maxItems": 5,
+            "description": "Key visual moments or shots that would appear in the video"
+          },
+          "pet_behavior": {
+            "type": "string",
+            "description": "The specific pet behavior or expression that anchors this scene"
+          },
+          "emotional_arc": {
+            "type": "string",
+            "description": "How the emotion builds or shifts during the scene (e.g., 'anticipation → joy', 'calm → playful surprise')"
+          },
+          "setting": {
+            "type": "string",
+            "description": "Where the scene takes place (be specific)"
+          }
+        },
+        "required": ["title", "hook", "narrative", "visual_moments", "pet_behavior", "emotional_arc", "setting"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["scenes"],
+  "additionalProperties": false
+}

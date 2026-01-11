@@ -1,0 +1,69 @@
+{
+  "type": "object",
+  "properties": {
+    "scene_title": {
+      "type": "string",
+      "description": "The scene this video prompt is for"
+    },
+    "motion_summary": {
+      "type": "string",
+      "description": "Brief description of the primary motion/movement in this video"
+    },
+    "prompts": {
+      "type": "object",
+      "properties": {
+        "motion_2_0": {
+          "type": "object",
+          "properties": {
+            "positive_prompt": {
+              "type": "string",
+              "description": "Main motion prompt describing what should happen - primary motion, secondary motion, camera, atmosphere"
+            },
+            "negative_prompt": {
+              "type": "string",
+              "description": "REQUIRED: Comprehensive list of artifacts and unwanted elements to avoid - morphing, deformation, extra limbs, flickering, etc."
+            },
+            "motion_strength": {
+              "type": "string",
+              "enum": ["subtle", "moderate", "dynamic"],
+              "description": "Recommended motion intensity level"
+            },
+            "motion_notes": {
+              "type": "string",
+              "description": "Brief notes on what motion elements are emphasized"
+            }
+          },
+          "required": ["positive_prompt", "negative_prompt", "motion_strength", "motion_notes"],
+          "additionalProperties": false
+        },
+        "midjourney_animate": {
+          "type": "object",
+          "properties": {
+            "prompt_a": {
+              "type": "string",
+              "description": "Start state - describes the opening frame/moment"
+            },
+            "prompt_b": {
+              "type": "string",
+              "description": "End state - describes where the motion leads to"
+            },
+            "negative_prompt": {
+              "type": "string",
+              "description": "REQUIRED: Elements to avoid throughout the animation - morphing, artifacts, anatomical errors"
+            },
+            "transition_notes": {
+              "type": "string",
+              "description": "Brief description of how A transitions to B"
+            }
+          },
+          "required": ["prompt_a", "prompt_b", "negative_prompt", "transition_notes"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["motion_2_0", "midjourney_animate"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["scene_title", "motion_summary", "prompts"],
+  "additionalProperties": false
+}

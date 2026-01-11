@@ -1,0 +1,69 @@
+{% set idx = state.selected_concept_indices %}
+{% set concept = state.aesthetic_concepts_response[idx[0]][idx[1]] %}
+{% set idea = concept.ideas[idx[2]] %}
+{% set scene = state.scene_summary.scene_summary %}
+Project Context:
+
+- Sentences per paragraph: {{ state.duration_selection.paragraph_line_count }}
+- Tone: [{% for t in state.tone_selection %}'{{ t.label }}'{% if not loop.last %}, {% endif %}{% endfor %}], impact to the video: [{% for t in state.tone_selection %}'{{ t.description }}'{% if not loop.last %}, {% endif %}{% endfor %}]
+- Theme: {{ state.theme_selection.label }}, impact to the video: {{ state.theme_selection.description }}
+- Clarifiers
+-- Brightness level: {{ state.brightness_level.label }}, impact to the video: {{ state.brightness_level.description }}
+-- Visual style: {{ state.visual_style.label }}, impact to the video: {{ state.visual_style.description }}
+-- Motion strength: {{ state.motion_strength.label }}, impact to the video: {{ state.motion_strength.description }}
+- Aesthetic
+-- Title: {{ concept.aesthetic_title }}
+-- Visual description: {{ concept.aesthetic_description }}
+-- Emotional summary: {{ concept.aesthetic_emotional_summary }}
+- Idea
+-- Title: {{ idea.title }}
+-- Visual description: {{ idea.visual_description }}
+-- Emotional summary: {{ idea.emotional_summary }}
+-- Subject framing: {{ idea.idea_subject_framing }}
+-- Camera framing: {{ idea.camera_framing }}
+-- Lighting pallete: {{ idea.lighting_palette }}
+-- Motion emphasis: {{ idea.motion_emphasis }}
+
+Image and motion plan,
+
+- Environment: {{ scene.visual_scene_plan.environment_type }}
+- Subject Overview: {{ scene.visual_scene_plan.subject_description }}
+- Subject Details: {{ scene.visual_scene_plan.subject_details }}
+- Camera: {{ scene.visual_scene_plan.camera_framing }}
+- Lighting: {{ scene.visual_scene_plan.light_direction }}
+- Color Tone: {{ scene.visual_scene_plan.emotional_color_tone }}
+- Objects: {{ scene.visual_scene_plan.object_placement }}
+- Contrast: {{ scene.visual_scene_plan.visual_contrast }}
+- Motion Anchors:
+{% for anchor in scene.animation_plan %}
+-- Layer {{ loop.index }}:
+--- Element: {{ anchor.element }}
+--- Motion: {{ anchor.motion }}
+--- Speed: {{ anchor.speed }}
+{% endfor %}
+
+Actual Image Analysis (from the generated image):
+{% set img = state.image_analysis %}
+{% set env = img.environment %}
+{% set audio = img.audio_atmosphere %}
+
+Visual Environment:
+- Setting: {{ env.setting }}
+- Time of Day: {{ env.time_of_day }}
+- Weather: {{ env.weather }}
+- Location Type: {{ env.location_type }}
+- Key Subjects: {{ env.key_subjects | join(', ') }}
+- Dominant Colors: {{ env.dominant_colors | join(', ') }}
+- Atmosphere: {{ env.atmosphere }}
+- Lighting: {{ env.lighting }}
+
+Audio & Music Characteristics (extracted from visual analysis):
+- Implied Sounds: {{ audio.implied_sounds | join(', ') }}
+- Silence Level: {{ audio.silence_level }}
+- Emotional Intensity: {{ audio.emotional_intensity }}
+- Temporal Feel: {{ audio.temporal_feel }}
+- Warmth: {{ audio.warmth }}
+- Era Feel: {{ audio.era_feel }}
+- Cultural Context: {{ audio.cultural_context }}
+- Suggested Music Genres: {{ audio.suggested_music_genres | join(', ') }}
+- Musical Texture: {{ audio.musical_texture }}

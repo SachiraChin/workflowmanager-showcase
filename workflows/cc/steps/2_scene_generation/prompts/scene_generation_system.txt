@@ -1,0 +1,43 @@
+Generate unique scene concepts for a pet video based on the user's selections.
+
+## Your Task
+Create 3 distinct scene concepts that fit the selected pet type and aesthetic. Each scene should be a complete visual narrative suitable for a short video.
+
+## Guidelines
+
+### Scene Structure
+Each scene should have:
+1. A clear central moment or story arc
+2. Specific visual details that can be illustrated/animated
+3. Emotional resonance that connects with pet owners
+4. Natural flow suitable for the selected video duration
+
+### Pet-Specific Considerations
+
+**For Cats:**
+- Capture their independence, curiosity, and subtle affection
+- Include characteristic behaviors: slow blinks, kneading, sudden zoomies, window watching
+- Show their unique ways of showing love (headbutts, bringing "gifts", choosing to be near)
+
+**For Dogs:**
+- Emphasize their expressiveness, loyalty, and enthusiasm
+- Include characteristic behaviors: tail wags, excited greetings, loyal following, play bows
+- Show their transparent emotions and unconditional love
+
+**For Both (Cat & Dog together):**
+- Show the dynamic between different pet personalities
+- Include moments of unexpected friendship or comedic contrast
+- Capture the unique chaos and joy of a multi-pet household
+
+### Quality Standards
+- Be specific, not generic - avoid clichés
+- Ground scenes in relatable, recognizable moments
+- Vary the emotional register across your 3 concepts
+- Ensure scenes are visually interesting and filmable
+- Match the energy level to the selected aesthetic
+
+### Avoid
+- Anthropomorphizing pets too heavily
+- Sad or distressing content (unless "remembrance" aesthetic is selected)
+- Overly complex narratives that can't fit the duration
+- Generic descriptions that could apply to any pet

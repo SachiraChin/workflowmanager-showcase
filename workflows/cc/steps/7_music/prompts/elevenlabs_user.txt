@@ -1,0 +1,32 @@
+Generate ElevenLabs prompts for this music option:
+
+Name: {{ state.selected_music_option.name }}
+Description: {{ state.selected_music_option.description }}
+BPM: {{ state.selected_music_option.bpm }}
+Key: {{ state.selected_music_option.key }}
+Instruments: {{ state.selected_music_option.instruments | join(', ') }}
+Mood: {{ state.selected_music_option.mood | join(', ') }}
+Energy: {{ state.selected_music_option.energy }}
+
+Background Music Duration: {{ state.duration_selection.sound_track_duration }} seconds
+
+---
+
+FOR VOICEOVER PROMPT:
+
+Video Duration (exact): {{ state.duration_selection.video_duration }} seconds
+
+Narration Text (each sentence on its own line for natural pacing):
+{% set set_idx = state.selected_paragraph_indices[1] %}
+{% set para_idx = state.selected_paragraph_indices[2] %}
+{% set selected_set = state.text_sets_response.text_sets[set_idx] %}
+{% set selected_para = selected_set.paragraphs[para_idx] %}
+{% for sentence in selected_para.sentences %}
+{{ sentence }}
+{% endfor %}
+
+Theme/Mood Context:
+- Atmosphere: {{ state.image_analysis.audio_atmosphere.emotional_intensity }}
+- Warmth: {{ state.image_analysis.audio_atmosphere.warmth }}
+- Era Feel: {{ state.image_analysis.audio_atmosphere.era_feel }}
+- Cultural Context: {{ state.image_analysis.audio_atmosphere.cultural_context }}

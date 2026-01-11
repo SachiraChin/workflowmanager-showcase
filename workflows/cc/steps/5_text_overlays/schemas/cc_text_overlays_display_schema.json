@@ -1,0 +1,45 @@
+{
+  "type": "object",
+  "properties": {
+    "text_sets": {
+      "type": "array",
+      "render_as": "section-list",
+      "items": {
+        "type": "object",
+        "properties": {
+          "set_id": {
+            "type": "string",
+            "display": true,
+            "render_as": "section-title"
+          },
+          "set_description": {
+            "type": "string",
+            "display": true,
+            "render_as": "section-summary",
+            "highlight": true
+          },
+          "paragraphs": {
+            "type": "array",
+            "render_as": "card-stack",
+            "items": {
+              "type": "object",
+              "selectable": true,
+              "properties": {
+                "paragraph_id": {
+                  "type": "integer",
+                  "display": false
+                },
+                "sentences": {
+                  "type": "array",
+                  "display": true,
+                  "display_label": "Text",
+                  "display_format": "{{ value | join('\n') }}"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

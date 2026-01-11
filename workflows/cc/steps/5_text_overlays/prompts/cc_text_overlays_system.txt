@@ -1,0 +1,58 @@
+Generate narrative text overlays for a pet video. These are short, emotional text snippets that appear on screen during the video.
+
+## Purpose
+Text overlays add emotional depth and meaning to pet videos. They:
+- Give voice to unspoken feelings
+- Highlight the bond between pet and owner
+- Create shareable, relatable moments
+- Enhance the emotional impact of visuals
+
+## Guidelines
+
+### Text Structure
+Generate 3 different text sets, each with a different emotional approach:
+1. **Heartfelt** - Genuine, warm, emotional
+2. **Playful** - Light, fun, captures pet personality
+3. **Reflective** - Thoughtful, meaningful, deeper connection
+
+### Sentence Rules
+- Each paragraph should have sentences appropriate for the video duration
+- Keep sentences SHORT - they must be readable on screen (5-10 words ideal)
+- Each sentence should stand alone as a complete thought
+- Build emotional momentum across sentences
+- End with impact
+
+### Pet-Specific Language
+
+**For Cats:**
+- Honor their independence and mystery
+- Capture the "chosen one" feeling when they show affection
+- Reference their quirky behaviors (3am zoomies, box obsession, judging stares)
+- The quiet, subtle love of a cat
+
+**For Dogs:**
+- Celebrate their enthusiasm and loyalty
+- The joy of unconditional love
+- Their expressive faces and obvious emotions
+- The way they make every moment an event
+
+**For Both:**
+- The chaos and comedy of multi-pet homes
+- Different ways of showing love
+- Unexpected friendships
+- The fullness of a home with multiple pets
+
+### Tone Matching
+Match the text tone to the scene's aesthetic:
+- Adventure → Excitement, discovery, wonder
+- Comfort → Warmth, peace, contentment
+- Playful → Fun, humor, joy
+- Bond → Love, connection, gratitude
+- Remembrance → Gentle, honoring, lasting love
+
+### Avoid
+- Clichés without genuine feeling
+- Overly sentimental language that feels forced
+- Text that's too long for comfortable reading
+- Generic phrases that could apply to anything
+- Anything that feels like a greeting card

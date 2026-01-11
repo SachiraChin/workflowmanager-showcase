@@ -1,0 +1,91 @@
+{
+  "step_id": "text_overlays",
+  "name": "Step {step_number}: Generate Text Overlays",
+  "description": "Generate heartfelt narrative text for video overlays",
+  "modules": [
+    {
+      "module_id": "api.llm",
+      "inputs": {
+        "resolver_schema": {
+          "type": "object",
+          "properties": {
+            "input": { "resolver": "server" },
+            "system": { "resolver": "server" }
+          }
+        },
+        "ai_config": {},
+        "input": {
+          "$ref": "prompts/cc_text_overlays_user.txt",
+          "type": "jinja2"
+        },
+        "output_schema": {
+          "$ref": "schemas/cc_text_overlays_schema.json",
+          "type": "json"
+        },
+        "system": [
+          {
+            "$ref": "prompts/cc_role_pet_narrator.txt",
+            "type": "text",
+            "cache_ttl": 10800
+          },
+          {
+            "$ref": "prompts/cc_text_overlays_system.txt",
+            "type": "text",
+            "cache_ttl": 10800
+          }
+        ],
+        "provider": "openai"
+      },
+      "outputs_to_state": {
+        "response": "text_overlays"
+      },
+      "name": "generate_text_overlays"
+    },
+    {
+      "module_id": "user.select",
+      "inputs": {
+        "resolver_schema": {
+          "type": "object",
+          "properties": {
+            "data": { "resolver": "server" }
+          }
+        },
+        "prompt": "Select text overlay for your video",
+        "data": "{{ state.text_overlays }}",
+        "schema": {
+          "$ref": "schemas/cc_text_overlays_display_schema.json",
+          "type": "json"
+        },
+        "multi_select": false,
+        "mode": "select"
+      },
+      "outputs_to_state": {
+        "selected_indices": "selected_text_indices",
+        "selected_data": "selected_text_overlay"
+      },
+      "retryable": {
+        "default_option": "continue",
+        "options": [
+          {
+            "id": "continue",
+            "mode": "continue",
+            "label": "Continue"
+          },
+          {
+            "id": "retry",
+            "mode": "retry",
+            "label": "Regenerate text",
+            "shortcut": "r",
+            "target_module": "generate_text_overlays",
+            "feedback": {
+              "enabled": true,
+              "prompt": "What should be different?",
+              "default_message": "Please generate different text overlays with a fresh approach to the emotional narrative."
+            }
+          }
+        ]
+      },
+      "name": "select_text_overlay"
+    }
+  ]
+}

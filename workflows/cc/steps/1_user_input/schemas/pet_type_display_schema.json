@@ -1,0 +1,24 @@
+{
+  "type": "array",
+  "render_as": "card-stack",
+  "items": {
+    "type": "object",
+    "selectable": true,
+    "properties": {
+      "id": {
+        "type": "string",
+        "display": false
+      },
+      "label": {
+        "type": "string",
+        "display": true,
+        "render_as": "card-title"
+      },
+      "description": {
+        "type": "string",
+        "display": true,
+        "render_as": "card-subtitle"
+      }
+    }
+  }
+}

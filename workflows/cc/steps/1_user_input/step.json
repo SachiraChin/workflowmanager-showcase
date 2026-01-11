@@ -1,0 +1,116 @@
+{
+  "step_id": "user_input",
+  "name": "Step {step_number}: Choose Your Pet Story",
+  "description": "Select pet type, story aesthetic, and video duration",
+  "modules": [
+    {
+      "module_id": "user.select",
+      "inputs": {
+        "prompt": "What type of pet is this video for?",
+        "data": [
+          {
+            "id": "cat",
+            "label": "Cat",
+            "description": "Feline friends - independent, curious, and endlessly entertaining"
+          },
+          {
+            "id": "dog",
+            "label": "Dog",
+            "description": "Canine companions - loyal, playful, and always happy to see you"
+          },
+          {
+            "id": "both",
+            "label": "Cat & Dog",
+            "description": "Multi-pet household - the chaos and love of furry siblings"
+          }
+        ],
+        "schema": {
+          "$ref": "schemas/pet_type_display_schema.json",
+          "type": "json"
+        },
+        "multi_select": false,
+        "mode": "select"
+      },
+      "outputs_to_state": {
+        "selected_indices": "pet_type_indices",
+        "selected_data": "pet_type_selection"
+      },
+      "name": "select_pet_type"
+    },
+    {
+      "module_id": "user.select",
+      "inputs": {
+        "prompt": "Choose the story aesthetic for your video",
+        "data": {
+          "$ref": "core_aesthetics.json",
+          "type": "json"
+        },
+        "schema": {
+          "$ref": "schemas/cc_aesthetic_display_schema.json",
+          "type": "json"
+        },
+        "multi_select": false,
+        "mode": "select"
+      },
+      "outputs_to_state": {
+        "selected_indices": "aesthetic_indices",
+        "selected_data": "aesthetic_selection"
+      },
+      "name": "select_aesthetic"
+    },
+    {
+      "module_id": "user.select",
+      "inputs": {
+        "prompt": "Select video duration",
+        "data": [
+          {
+            "id": 1,
+            "label": "15 seconds",
+            "description": "Quick clip - perfect for social media reels",
+            "video_duration": 15,
+            "paragraph_line_count": 3,
+            "sound_track_duration": 20
+          },
+          {
+            "id": 2,
+            "label": "30 seconds",
+            "description": "Short story - enough time for a heartfelt moment",
+            "video_duration": 30,
+            "paragraph_line_count": 4,
+            "sound_track_duration": 40
+          },
+          {
+            "id": 3,
+            "label": "60 seconds",
+            "description": "Full story - room to tell a complete narrative",
+            "video_duration": 60,
+            "paragraph_line_count": 5,
+            "sound_track_duration": 70
+          }
+        ],
+        "schema": {
+          "$ref": "schemas/cc_duration_display_schema.json",
+          "type": "json"
+        },
+        "multi_select": false,
+        "mode": "select"
+      },
+      "outputs_to_state": {
+        "selected_indices": "duration_indices",
+        "selected_data": "duration_selection"
+      },
+      "name": "select_duration"
+    },
+    {
+      "module_id": "user.text_input",
+      "inputs": {
+        "prompt": "Optional: Any specific direction for your pet video? (pet name, specific scenario, mood, etc.)",
+        "allow_empty": true
+      },
+      "outputs_to_state": {
+        "value": "user_direction"
+      },
+      "name": "get_user_direction"
+    }
+  ]
+}

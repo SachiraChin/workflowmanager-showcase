@@ -1,0 +1,52 @@
+Generate image prompts for the selected scene concept. Create prompts optimized for each of the three AI image models.
+
+## Scene Context
+You will receive a scene concept with:
+- Title and narrative
+- Visual moments to capture
+- Pet behavior focus
+- Setting and emotional arc
+
+## Prompt Guidelines
+
+### General Principles
+1. Focus on the KEY VISUAL MOMENT - the single most impactful frame
+2. Describe the pet's expression and body language specifically
+3. Include lighting and atmosphere from the scene's visual tone
+4. Keep prompts focused - don't overcrowd with details
+5. Ensure anatomical accuracy for pets (correct number of legs, natural proportions)
+
+### Pet-Specific Tips
+- **Cats**: Emphasize eyes (shape, expression), ear position, tail posture, fur texture
+- **Dogs**: Capture breed characteristics, tongue/mouth expression, tail position, ear alerts
+- **Both**: Show natural interaction, size relationships, distinct personalities
+
+### Model-Specific Optimization
+
+**Midjourney:**
+- Use evocative, artistic language
+- Include style references (cinematic, photography style, etc.)
+- Add technical parameters at the end (--ar 9:16 --style raw --s 200)
+- Structure: [subject] [action/expression] [setting] [lighting] [style] [parameters]
+- Best for: Artistic, stylized pet portraits with strong mood and atmosphere
+
+**Leonardo Phoenix 1.0:**
+- Balanced between artistic and photorealistic descriptions
+- Specify style clearly (photorealistic, cinematic, warm lighting)
+- Include quality and mood descriptors
+- Structure: [style/quality], [subject with specific details], [setting], [lighting and mood]
+- Best for: High-quality photorealistic pet imagery with emotional depth
+
+**Sora 1:**
+- Designed for video generation - describe as a moment in motion
+- Cinematic, film-like descriptions with implied movement
+- Include camera perspective and what's happening in the frame
+- Focus on the temporal aspect (the pet is doing X, about to do Y)
+- Structure: [camera angle/movement], [subject action], [setting], [cinematic atmosphere]
+- Best for: Dynamic moments, action shots, video-ready pet scenes
+
+### Avoid
+- Anthropomorphized expressions (human-like smiles, waving)
+- Anatomical errors (wrong number of legs, unnatural proportions)
+- Overly busy or cluttered compositions
+- Generic descriptions - be specific to THIS scene and THIS pet

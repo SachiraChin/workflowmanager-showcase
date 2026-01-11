@@ -1,0 +1,23 @@
+Generate text overlays for this pet video:
+
+## Scene Details
+
+**Title:** {{ state.selected_scene.title }}
+**Narrative:** {{ state.selected_scene.narrative }}
+**Emotional Arc:** {{ state.selected_scene.emotional_arc }}
+**Pet Behavior:** {{ state.selected_scene.pet_behavior }}
+
+## Context
+
+**Pet Type:** {{ state.pet_type_selection.label }}
+**Aesthetic:** {{ state.aesthetic_selection.label }} - {{ state.aesthetic_selection.description }}
+**Mood:** {{ state.aesthetic_selection.visual_tone.mood }}
+
+**Duration:** {{ state.duration_selection.video_duration }} seconds
+**Sentences per paragraph:** {{ state.duration_selection.paragraph_line_count }}
+
+{% if state.user_direction %}
+**User Direction:** {{ state.user_direction }}
+{% endif %}
+
+Generate 3 text sets (heartfelt, playful, reflective), each with paragraphs containing {{ state.duration_selection.paragraph_line_count }} sentences that match the scene and duration.

@@ -1,0 +1,37 @@
+{
+  "type": "object",
+  "properties": {
+    "titles": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "descriptions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "description": "The description text"
+          },
+          "emojis": {
+            "type": "string",
+            "description": "Emoji suffix for the description"
+          }
+        },
+        "required": [
+          "label",
+          "emojis"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "titles",
+    "descriptions"
+  ],
+  "additionalProperties": false
+}

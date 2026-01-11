@@ -1,0 +1,64 @@
+{
+  "type": "array",
+  "display_label": "Music Options",
+  "render_as": "table",
+  "items": {
+    "type": "object",
+    "selectable": true,
+    "properties": {
+      "name": {
+        "type": "string",
+        "display": true,
+        "display_label": "Style",
+        "display_order": 1,
+        "render_as": "column"
+      },
+      "bpm": {
+        "type": "integer",
+        "display": true,
+        "display_label": "BPM",
+        "display_order": 2,
+        "render_as": "column"
+      },
+      "key": {
+        "type": "string",
+        "display": true,
+        "display_label": "Key",
+        "display_order": 3,
+        "render_as": "column"
+      },
+      "energy": {
+        "type": "string",
+        "display": true,
+        "display_label": "Energy",
+        "display_order": 6,
+        "render_as": "column"
+      },
+      "description": {
+        "type": "string"
+      },
+      "instruments": {
+        "type": "array"
+      },
+      "mood": {
+        "type": "array"
+      }
+    },
+    "computed": {
+      "mood_display": {
+        "display": true,
+        "display_label": "Mood",
+        "display_order": 4,
+        "display_format": "{{ mood | join(', ') }}",
+        "render_as": "column"
+      },
+      "instruments_display": {
+        "display": true,
+        "display_label": "Instruments",
+        "display_order": 5,
+        "display_format": "{{ instruments | join(', ') }}",
+        "render_as": "column"
+      }
+    }
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "step_id": "image_prompts",
+  "name": "Step {step_number}: Generate Image Prompts",
+  "description": "Generate optimized prompts for Midjourney, Leonardo Phoenix, and Sora",
+  "modules": [
+    {
+      "module_id": "api.llm",
+      "inputs": {
+        "resolver_schema": {
+          "type": "object",
+          "properties": {
+            "input": { "resolver": "server" },
+            "system": { "resolver": "server" }
+          }
+        },
+        "ai_config": {},
+        "input": {
+          "$ref": "prompts/cc_image_prompts_user.txt",
+          "type": "jinja2"
+        },
+        "output_schema": {
+          "$ref": "schemas/cc_image_prompts_schema.json",
+          "type": "json"
+        },
+        "system": [
+          {
+            "$ref": "prompts/cc_role_prompt_engineer.txt",
+            "type": "text",
+            "cache_ttl": 10800
+          },
+          {
+            "$ref": "prompts/cc_image_prompts_system.txt",
+            "type": "text",
+            "cache_ttl": 10800
+          }
+        ],
+        "provider": "openai"
+      },
+      "outputs_to_state": {
+        "response": "image_prompts"
+      },
+      "name": "generate_image_prompts"
+    },
+    {
+      "module_id": "user.select",
+      "inputs": {
+        "resolver_schema": {
+          "type": "object",
+          "properties": {
+            "data": { "resolver": "server" }
+          }
+        },
+        "prompt": "Review generated image prompts",
+        "data": "{{ state.image_prompts }}",
+        "schema": {
+          "$ref": "schemas/cc_image_prompts_display_schema.json",
+          "type": "json"
+        },
+        "mode": "review"
+      },
+      "outputs_to_state": {},
+      "retryable": {
+        "default_option": "continue",
+        "options": [
+          {
+            "id": "continue",
+            "mode": "continue",
+            "label": "Accept and continue"
+          },
+          {
+            "id": "retry",
+            "mode": "retry",
+            "label": "Regenerate prompts",
+            "shortcut": "r",
+            "target_module": "generate_image_prompts",
+            "feedback": {
+              "enabled": true,
+              "prompt": "What should be different?",
+              "default_message": "Please generate different image prompts with more variety in composition and mood."
+            }
+          },
+          {
+            "id": "change_scene",
+            "mode": "jump",
+            "label": "Choose different scene",
+            "target_step": "scene_generation",
+            "target_module": "select_scene"
+          }
+        ]
+      },
+      "name": "review_image_prompts"
+    }
+  ]
+}

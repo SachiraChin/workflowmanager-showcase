@@ -1,0 +1,35 @@
+Generate image prompts based on this scene concept:
+
+## Scene Details
+
+**Title:** {{ state.selected_scene.title }}
+
+**Hook:** {{ state.selected_scene.hook }}
+
+**Narrative:** {{ state.selected_scene.narrative }}
+
+**Key Visual Moments:**
+{% for moment in state.selected_scene.visual_moments %}
+- {{ moment }}
+{% endfor %}
+
+**Pet Behavior Focus:** {{ state.selected_scene.pet_behavior }}
+
+**Setting:** {{ state.selected_scene.setting }}
+
+**Emotional Arc:** {{ state.selected_scene.emotional_arc }}
+
+## Context from User Selections
+
+**Pet Type:** {{ state.pet_type_selection.label }}
+
+**Visual Tone:**
+- Mood: {{ state.aesthetic_selection.visual_tone.mood }}
+- Lighting: {{ state.aesthetic_selection.visual_tone.lighting }}
+- Energy: {{ state.aesthetic_selection.visual_tone.energy }}
+
+{% if state.user_direction %}
+**User Direction:** {{ state.user_direction }}
+{% endif %}
+
+Generate prompts for each of the following models. Focus on capturing the most impactful visual moment from this scene.

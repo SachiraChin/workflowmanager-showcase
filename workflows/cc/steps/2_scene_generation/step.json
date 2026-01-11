@@ -1,0 +1,107 @@
+{
+  "step_id": "scene_generation",
+  "name": "Step {step_number}: Generate Scene Concepts",
+  "description": "Generate and select a scene concept for your pet video",
+  "modules": [
+    {
+      "module_id": "api.llm",
+      "inputs": {
+        "resolver_schema": {
+          "type": "object",
+          "properties": {
+            "input": { "resolver": "server" },
+            "system": { "resolver": "server" }
+          }
+        },
+        "ai_config": {},
+        "input": {
+          "$ref": "prompts/scene_generation_user.txt",
+          "type": "jinja2"
+        },
+        "output_schema": {
+          "$ref": "schemas/scene_concepts_schema.json",
+          "type": "json"
+        },
+        "system": [
+          {
+            "$ref": "prompts/role_pet_storyteller.txt",
+            "type": "text",
+            "cache_ttl": 10800
+          },
+          {
+            "$ref": "prompts/scene_generation_system.txt",
+            "type": "text",
+            "cache_ttl": 10800
+          }
+        ],
+        "provider": "openai"
+      },
+      "outputs_to_state": {
+        "response": "scene_concepts"
+      },
+      "name": "generate_scenes"
+    },
+    {
+      "module_id": "user.select",
+      "inputs": {
+        "resolver_schema": {
+          "type": "object",
+          "properties": {
+            "data": { "resolver": "server" }
+          }
+        },
+        "prompt": "Select a scene concept for your video",
+        "data": "{{ state.scene_concepts }}",
+        "schema": {
+          "$ref": "schemas/scene_display_schema.json",
+          "type": "json"
+        },
+        "multi_select": false,
+        "mode": "select"
+      },
+      "outputs_to_state": {
+        "selected_indices": "selected_scene_indices",
+        "selected_data": "selected_scene"
+      },
+      "retryable": {
+        "default_option": "continue",
+        "options": [
+          {
+            "id": "continue",
+            "mode": "continue",
+            "label": "Continue"
+          },
+          {
+            "id": "retry",
+            "mode": "retry",
+            "label": "Generate new scenes",
+            "shortcut": "r",
+            "target_module": "generate_scenes",
+            "feedback": {
+              "enabled": true,
+              "prompt": "What would you like different in the new scenes?",
+              "default_message": "Please generate 3 completely different scene concepts. Avoid similar themes or settings to the previous options."
+            }
+          }
+        ]
+      },
+      "name": "select_scene"
+    },
+    {
+      "module_id": "transform.extract",
+      "inputs": {
+        "resolver_schema": {
+          "type": "object",
+          "properties": {
+            "scene": { "resolver": "server" }
+          }
+        },
+        "scene": "{{ state.scene_concepts.scenes[state.selected_scene_indices[0]] }}"
+      },
+      "outputs_to_state": {
+        "scene": "selected_scene"
+      },
+      "name": "store_selected_scene"
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "type": "object",
+  "properties": {
+    "scenes": {
+      "type": "array",
+      "render_as": "card-stack",
+      "items": {
+        "type": "object",
+        "selectable": true,
+        "properties": {
+          "title": {
+            "type": "string",
+            "display": true,
+            "render_as": "card-title"
+          },
+          "hook": {
+            "type": "string",
+            "display": true,
+            "render_as": "card-subtitle",
+            "highlight": true
+          },
+          "narrative": {
+            "type": "string",
+            "display": true,
+            "display_label": "Story"
+          },
+          "visual_moments": {
+            "type": "array",
+            "display": true,
+            "display_label": "Key Moments",
+            "display_format": "{{ value | join(' → ') }}"
+          },
+          "pet_behavior": {
+            "type": "string",
+            "display": true,
+            "display_label": "Pet Focus",
+            "highlight": true,
+            "highlight_color": "#FFB347"
+          },
+          "emotional_arc": {
+            "type": "string",
+            "display": true,
+            "display_label": "Emotional Arc"
+          },
+          "setting": {
+            "type": "string",
+            "display": true,
+            "display_label": "Setting"
+          }
+        }
+      }
+    }
+  }
+}

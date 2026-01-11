@@ -1,0 +1,26 @@
+Generate 3 scene concepts for a {{ state.duration_selection.video_duration }}-second pet video.
+
+## User Selections
+
+**Pet Type:** {{ state.pet_type_selection.label }}
+{{ state.pet_type_selection.description }}
+
+**Story Aesthetic:** {{ state.aesthetic_selection.label }}
+{{ state.aesthetic_selection.description }}
+
+**Visual Tone:**
+- Mood: {{ state.aesthetic_selection.visual_tone.mood }}
+- Lighting: {{ state.aesthetic_selection.visual_tone.lighting }}
+- Energy: {{ state.aesthetic_selection.visual_tone.energy }}
+
+**Story Angles to Consider:**
+{% for angle in state.aesthetic_selection.story_angles %}
+- {{ angle }}
+{% endfor %}
+
+{% if state.user_direction %}
+**User's Specific Direction:**
+{{ state.user_direction }}
+{% endif %}
+
+Generate 3 unique scene concepts that match these parameters. Each concept should be distinct and offer a different take on the aesthetic.

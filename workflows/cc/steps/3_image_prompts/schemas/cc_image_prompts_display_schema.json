@@ -1,0 +1,83 @@
+{
+  "type": "object",
+  "properties": {
+    "scene_title": {
+      "type": "string",
+      "display": true,
+      "render_as": "section-title"
+    },
+    "key_moment": {
+      "type": "string",
+      "display": true,
+      "display_label": "Key Moment",
+      "highlight": true
+    },
+    "prompts": {
+      "type": "object",
+      "display": true,
+      "render_as": "section-list",
+      "properties": {
+        "midjourney": {
+          "type": "object",
+          "display": true,
+          "display_label": "Midjourney",
+          "render_as": "card-stack",
+          "properties": {
+            "prompt": {
+              "type": "string",
+              "display": true,
+              "display_label": "Prompt"
+            },
+            "style_notes": {
+              "type": "string",
+              "display": true,
+              "display_label": "Style",
+              "highlight": true,
+              "highlight_color": "#7B68EE"
+            }
+          }
+        },
+        "leonardo_phoenix": {
+          "type": "object",
+          "display": true,
+          "display_label": "Leonardo Phoenix 1.0",
+          "render_as": "card-stack",
+          "properties": {
+            "prompt": {
+              "type": "string",
+              "display": true,
+              "display_label": "Prompt"
+            },
+            "style_notes": {
+              "type": "string",
+              "display": true,
+              "display_label": "Style",
+              "highlight": true,
+              "highlight_color": "#FF6B6B"
+            }
+          }
+        },
+        "sora": {
+          "type": "object",
+          "display": true,
+          "display_label": "Sora 1",
+          "render_as": "card-stack",
+          "properties": {
+            "prompt": {
+              "type": "string",
+              "display": true,
+              "display_label": "Prompt"
+            },
+            "camera_notes": {
+              "type": "string",
+              "display": true,
+              "display_label": "Camera",
+              "highlight": true,
+              "highlight_color": "#4ECDC4"
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,124 @@
+You are generating titles and descriptions for final video publishing on social media platforms.
+
+CRITICAL: SOCIAL MEDIA OPTIMIZATION
+These titles and descriptions must ENGAGE viewers, not describe the artwork.
+Social media users scroll quickly - you need emotional hooks, not scene descriptions.
+
+=== TITLES - HOOK FIRST APPROACH ===
+
+TITLE PURPOSE:
+• Titles appear in feeds, search results, and recommendations
+• They are the FIRST thing viewers see - before even watching
+• A weak title means viewers scroll past without clicking
+• Titles must create immediate emotional recognition or curiosity
+
+TITLE PSYCHOLOGY (apply these principles):
+• RECOGNITION: Speak to a feeling the viewer already has but hasn't articulated
+• CURIOSITY: Create an open loop that makes them want to know more
+• RELEVANCE: Make it feel personally applicable to the viewer's life
+• EMOTIONAL HOOK: Lead with feeling, not description
+
+WHAT MAKES TITLES FAIL:
+• Too generic - could apply to anything
+• Literal scene descriptions - tells what's IN the video, not why to watch
+• Vague poetic fragments - sounds nice but creates no emotional pull
+• Movie-title style - sounds like a label, not a connection
+
+TITLE REQUIREMENTS (10 total):
+• 20-35 characters each (strict limit)
+• Sentence case (capitalize only first word and proper nouns)
+• Must trigger emotional response - viewer should feel "this is for me"
+• Punctuation: Use commas where grammar requires. Periods optional. Match the calm, reflective tone.
+• Ground each title in the PROJECT CONTEXT theme - not generic calm content
+
+=== DESCRIPTIONS - COMMUNITY INVITATION STRUCTURE ===
+
+DESCRIPTION PURPOSE:
+• Descriptions are often read AFTER viewing - they influence follow/save decisions
+• They extend the emotional experience beyond the video
+• They invite viewers into a community, not just broadcast content
+• They help with discoverability through natural keyword inclusion
+
+DESCRIPTION STRUCTURE (3 parts):
+
+PART 1 - WELCOMING INVITATION:
+Open by inviting the viewer into a shared moment. Use welcoming language that creates belonging ("Join us", "Welcome to", "Step into"). Connect the scene/setting to the project's emotional theme. This isn't scene description - it's framing the experience.
+
+PART 2 - VALUE & RESONANCE:
+Offer what this moment provides - motivation, permission, reflection, peace. Include keywords naturally that relate to the theme (personal growth, mindfulness, self-care, focus, calm, etc.). Speak to what the viewer gains from this experience. Make them feel the content understands their needs.
+
+PART 3 - AFFIRMING CLOSE:
+End with an affirmation that validates the viewer's experience. Acknowledge the quiet strength in simple moments. Connect back to the specific action or state shown. Leave them feeling seen and understood.
+
+DESCRIPTION REQUIREMENTS (15 total):
+• Follow the 3-part structure: Invitation → Value → Affirmation
+• 3-4 complete sentences with proper punctuation
+• Include theme-relevant keywords naturally woven in
+• Create sense of community and shared experience
+• End text with '....' (4 dots)
+• Separate "emojis" field with exactly 3 emojis
+
+DESCRIPTIONS (15 total):
+Each description has two fields: "text" and "emojis" (separate)
+
+PRIORITY 1 - CRITICAL (never compromise these):
+• PROPER PUNCTUATION: Use correct grammar with ALL necessary punctuation marks.
+  - Every sentence MUST end with a period.
+  - Commas are REQUIRED where grammar demands (after introductory phrases, between clauses, in compound sentences).
+  - Missing commas destroy readability: "When you let go even the smallest step feels lighter" is WRONG.
+  - Correct: "When you let go, even the smallest step feels lighter."
+  - Write 3-5 complete sentences, NOT one long run-on sentence.
+• COMPLETE IDEAS: Each description must convey a meaningful, coherent message. Clarity over density.
+• READABLE FLOW: Must read naturally when spoken aloud. If it sounds like a breathless ramble, fix the punctuation.
+
+PRIORITY 2 - REQUIRED:
+• ASCII ONLY: Use straight apostrophes (') not curly ones ('). Use straight quotes (") not curly ones (""). No unicode characters except emojis in the emojis field.
+• TEXT field must end with '....' (4 dots)
+• EMOJIS field: exactly 3 emojis as a string (e.g., "🌅💭✨")
+
+PRIORITY 3 - PREFERRED (nice to have, but never override Priority 1 or 2):
+• Character length: AIM for 240-300 characters, but this is a SUGGESTION not a requirement
+• If proper punctuation makes the text shorter (e.g., 200 chars), that is FINE
+• If proper punctuation makes the text longer (e.g., 320 chars), that is also FINE
+• NEVER sacrifice periods or punctuation to hit a character count
+
+CONTENT REQUIREMENTS:
+• Written in second person ("you") or universal voice
+• Lead with EMOTION, use scene elements as supporting metaphor
+• Each description should feel like a gentle message TO the viewer
+• Scannable - not dense literary prose
+
+EMOJI RULES:
+• 3 emojis per description in the separate "emojis" field
+• Match the emotional tone of that specific description
+• Vary emoji selection across descriptions
+• Use cross-platform safe emojis
+
+=== SOURCE MATERIAL USAGE ===
+
+From IMAGE ENVIRONMENT: Use setting elements as METAPHORS only
+From PROJECT CONTEXT: Extract the core emotional theme to speak to viewers
+
+Example transformation:
+- Scene shows: child releasing paper boats in pond
+
+BAD - Scene description:
+"A child releases paper boats into calm water as dusk settles...."
+
+BAD - Missing commas, run-on sentence, curly apostrophe:
+"Some things aren't meant to be held forever when you're ready to let go even the smallest release can feel like breathing again...."
+(Problems: Missing period after "forever", missing comma after "let go", curly apostrophe)
+
+GOOD - Proper punctuation throughout:
+"Some things aren't meant to be held forever. When you're ready to let go, even the smallest release can feel like breathing again. This is your permission to open your hands...."
+(Note the comma after "let go" - this is required grammar)
+
+VALIDATION CHECKLIST:
+□ Every title: 20-35 characters, relatable emotional hook
+□ Every description: Multiple complete sentences with periods (3-5 sentences typical)
+□ Every description: Commas used correctly (after introductory phrases, between clauses)
+□ Every description: Ends with '....' followed by 3 emojis in separate field
+□ Every description: ASCII characters only (straight apostrophes ', straight quotes ")
+□ Every description: Reads naturally aloud without feeling rushed or breathless
+□ No scene-literal descriptions - everything filtered through viewer connection
+□ Character count ~240-300 is nice but NEVER at the expense of proper punctuation

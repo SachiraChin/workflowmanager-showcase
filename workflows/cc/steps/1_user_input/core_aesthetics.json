@@ -1,0 +1,302 @@
+[
+  {
+    "id": "adventure",
+    "label": "Adventure & Exploration",
+    "description": "Pets discovering the world with curiosity and wonder - outdoor journeys, new experiences, and the joy of exploration.",
+    "visual_tone": {
+      "mood": "bright, expansive, dynamic",
+      "lighting": "natural outdoor light, golden hour, dappled sunlight",
+      "energy": "high",
+      "warmth": "warm"
+    },
+    "story_angles": [
+      "First time at the beach/park/mountains",
+      "Chasing butterflies or leaves",
+      "Exploring a new hiking trail",
+      "Road trip companion moments",
+      "Discovering snow for the first time",
+      "Garden adventures and bug hunting"
+    ],
+    "visual_elements": [
+      "Wide outdoor spaces",
+      "Nature backgrounds (forests, beaches, fields)",
+      "Movement and action",
+      "Curious expressions and alert ears",
+      "Paw prints, trails, pathways"
+    ],
+    "prompting_keywords": {
+      "positive": ["exploring", "adventure", "curious", "outdoor", "discovery", "journey", "wandering", "trail"],
+      "negative": ["indoor", "sleeping", "stationary", "confined", "sad"]
+    }
+  },
+  {
+    "id": "comfort",
+    "label": "Comfort & Sanctuary",
+    "description": "The warmth of home life - cozy moments, safe spaces, and the comfort pets find in their favorite spots.",
+    "visual_tone": {
+      "mood": "warm, soft, intimate",
+      "lighting": "soft indoor light, warm lamps, window light",
+      "energy": "low",
+      "warmth": "very warm"
+    },
+    "story_angles": [
+      "Curled up in their favorite bed",
+      "Sunbeam napping",
+      "Rainy day cuddles",
+      "Blanket burrowing",
+      "Claiming the warmest spot in the house",
+      "Peaceful sleep moments"
+    ],
+    "visual_elements": [
+      "Soft blankets and pet beds",
+      "Warm interior lighting",
+      "Cozy corners and nooks",
+      "Relaxed body language",
+      "Home environment details"
+    ],
+    "prompting_keywords": {
+      "positive": ["cozy", "warm", "soft", "comfortable", "peaceful", "home", "relaxed", "snuggled"],
+      "negative": ["cold", "outdoor", "active", "harsh light", "anxious"]
+    }
+  },
+  {
+    "id": "playful",
+    "label": "Playful Chaos",
+    "description": "The hilarious, energetic side of pet life - zoomies, mischief, toys everywhere, and pure unbridled joy.",
+    "visual_tone": {
+      "mood": "energetic, bright, fun",
+      "lighting": "bright, clear, dynamic",
+      "energy": "very high",
+      "warmth": "warm"
+    },
+    "story_angles": [
+      "Zoomies around the house",
+      "Toy destruction aftermath",
+      "Failed jump attempts",
+      "Playing with unlikely objects",
+      "Stealing socks or shoes",
+      "Bath time chaos"
+    ],
+    "visual_elements": [
+      "Motion blur and action",
+      "Scattered toys",
+      "Playful expressions",
+      "Mid-action freeze frames",
+      "Colorful toys and accessories"
+    ],
+    "prompting_keywords": {
+      "positive": ["playful", "energetic", "funny", "chaotic", "zoomies", "silly", "mischief", "bouncing"],
+      "negative": ["calm", "still", "serious", "sad", "sleeping"]
+    }
+  },
+  {
+    "id": "bond",
+    "label": "Unconditional Love",
+    "description": "The deep connection between pets and their humans - loyalty, companionship, and moments that show why they're family.",
+    "visual_tone": {
+      "mood": "warm, emotional, intimate",
+      "lighting": "soft, warm, golden hour",
+      "energy": "gentle",
+      "warmth": "very warm"
+    },
+    "story_angles": [
+      "Greeting at the door",
+      "Leaning into their human",
+      "Following from room to room",
+      "Protective moments",
+      "Shared quiet time",
+      "The look of trust and love"
+    ],
+    "visual_elements": [
+      "Close-up emotional moments",
+      "Human-pet interaction",
+      "Eye contact and soft gazes",
+      "Physical closeness",
+      "Gentle touches"
+    ],
+    "prompting_keywords": {
+      "positive": ["love", "bond", "together", "loyal", "companion", "trust", "family", "devotion"],
+      "negative": ["alone", "separated", "distant", "cold"]
+    }
+  },
+  {
+    "id": "growth",
+    "label": "Growth Journey",
+    "description": "The passage of time with our pets - from tiny puppy or kitten to beloved adult, milestones, learning, and growing together.",
+    "visual_tone": {
+      "mood": "nostalgic, hopeful, progressive",
+      "lighting": "soft, varied by life stage",
+      "energy": "varied",
+      "warmth": "warm"
+    },
+    "story_angles": [
+      "First day home memories",
+      "Learning to climb stairs",
+      "Growing into their paws",
+      "Training milestones",
+      "Before and after moments",
+      "Anniversary celebrations"
+    ],
+    "visual_elements": [
+      "Size comparison elements",
+      "Milestone markers",
+      "Photo album aesthetic",
+      "Time progression cues",
+      "Familiar objects at different scales"
+    ],
+    "prompting_keywords": {
+      "positive": ["growing", "learning", "milestone", "journey", "progress", "first time", "memory", "becoming"],
+      "negative": ["stagnant", "unchanging"]
+    }
+  },
+  {
+    "id": "quiet",
+    "label": "Quiet Companionship",
+    "description": "The peaceful presence of a pet - silent understanding, shared stillness, and the comfort of just being together.",
+    "visual_tone": {
+      "mood": "calm, peaceful, meditative",
+      "lighting": "soft, muted, gentle",
+      "energy": "very low",
+      "warmth": "neutral to warm"
+    },
+    "story_angles": [
+      "Reading together in silence",
+      "Working from home companion",
+      "Watching the world through a window",
+      "Evening wind-down together",
+      "Peaceful coexistence",
+      "The comfort of presence"
+    ],
+    "visual_elements": [
+      "Still compositions",
+      "Soft focus backgrounds",
+      "Quiet domestic scenes",
+      "Parallel positioning (both doing their thing)",
+      "Window light and shadows"
+    ],
+    "prompting_keywords": {
+      "positive": ["peaceful", "quiet", "calm", "still", "serene", "gentle", "presence", "together"],
+      "negative": ["loud", "chaotic", "active", "busy"]
+    }
+  },
+  {
+    "id": "rescue",
+    "label": "Rescue & Second Chance",
+    "description": "Stories of transformation - adoption journeys, shelter to home, healing, and the beautiful new beginnings pets deserve.",
+    "visual_tone": {
+      "mood": "emotional arc from uncertain to hopeful",
+      "lighting": "progresses from muted to warm",
+      "energy": "builds from low to moderate",
+      "warmth": "builds to very warm"
+    },
+    "story_angles": [
+      "Shelter to home transformation",
+      "First real bed moment",
+      "Learning to trust again",
+      "Finding their person",
+      "Before and after glow-up",
+      "The moment they knew they were safe"
+    ],
+    "visual_elements": [
+      "Transformation contrast",
+      "Safe space imagery",
+      "Emotional expressions",
+      "New beginnings symbols",
+      "Home welcoming elements"
+    ],
+    "prompting_keywords": {
+      "positive": ["rescued", "adopted", "second chance", "transformation", "safe", "home", "healing", "hope"],
+      "negative": ["abandoned", "neglected", "sad ending"]
+    }
+  },
+  {
+    "id": "seasons",
+    "label": "Seasonal Life",
+    "description": "Pets experiencing the changing seasons - holiday moments, weather reactions, and the rhythm of the year.",
+    "visual_tone": {
+      "mood": "varied by season, thematic",
+      "lighting": "season-appropriate",
+      "energy": "moderate",
+      "warmth": "varies with season"
+    },
+    "story_angles": [
+      "First snow excitement or confusion",
+      "Autumn leaf piles",
+      "Summer beach days",
+      "Spring awakening and new smells",
+      "Holiday photo attempts",
+      "Seasonal coat changes"
+    ],
+    "visual_elements": [
+      "Seasonal color palettes",
+      "Weather elements (snow, rain, sun)",
+      "Holiday decorations",
+      "Seasonal activities",
+      "Nature in different states"
+    ],
+    "prompting_keywords": {
+      "positive": ["seasonal", "winter", "spring", "summer", "autumn", "holiday", "weather", "nature"],
+      "negative": ["timeless", "generic", "indoor only"]
+    }
+  },
+  {
+    "id": "rituals",
+    "label": "Daily Rituals",
+    "description": "The beloved routines of pet life - feeding time excitement, walk anticipation, and the rhythms that define their day.",
+    "visual_tone": {
+      "mood": "familiar, rhythmic, authentic",
+      "lighting": "natural, time-of-day appropriate",
+      "energy": "moderate to high",
+      "warmth": "warm"
+    },
+    "story_angles": [
+      "The 6am wake-up call",
+      "Dinner time dance",
+      "Walk anticipation excitement",
+      "Post-walk exhaustion",
+      "Treat negotiation tactics",
+      "Bedtime routine"
+    ],
+    "visual_elements": [
+      "Food bowls and feeding areas",
+      "Leashes and walk gear",
+      "Time-of-day lighting",
+      "Expectant expressions",
+      "Routine action sequences"
+    ],
+    "prompting_keywords": {
+      "positive": ["routine", "daily", "ritual", "feeding", "walk", "morning", "evening", "anticipation"],
+      "negative": ["unusual", "rare", "one-time"]
+    }
+  },
+  {
+    "id": "remembrance",
+    "label": "Loss & Remembrance",
+    "description": "Honoring pets who have crossed the rainbow bridge - cherished memories, tribute, and the love that never fades.",
+    "visual_tone": {
+      "mood": "soft, nostalgic, bittersweet",
+      "lighting": "gentle, dreamy, soft focus",
+      "energy": "very low",
+      "warmth": "warm but muted"
+    },
+    "story_angles": [
+      "Favorite memory montage",
+      "The spot they loved most",
+      "Their unique quirks we miss",
+      "Rainbow bridge imagery",
+      "Forever in our hearts",
+      "The pawprint they left behind"
+    ],
+    "visual_elements": [
+      "Soft, dreamy quality",
+      "Memory-like aesthetics",
+      "Empty spaces with meaning",
+      "Symbolic elements (rainbows, stars)",
+      "Photo-within-photo frames"
+    ],
+    "prompting_keywords": {
+      "positive": ["memory", "remembrance", "tribute", "forever", "rainbow bridge", "cherished", "beloved", "miss"],
+      "negative": ["graphic", "disturbing", "clinical"]
+    }
+  }
+]

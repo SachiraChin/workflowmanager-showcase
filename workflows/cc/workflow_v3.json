@@ -1,0 +1,88 @@
+{
+  "workflow_id": "cuddle_crew",
+  "name": "Cuddle Crew - Pet Video Generator",
+  "description": "Create heartfelt pet videos celebrating cats, dogs, and the bond with their owners",
+  "version": "1.0",
+  "initial_state": {
+    "workflow_name": "Cuddle Crew"
+  },
+  "config": {
+    "llm_providers": {
+      "default": "openai",
+      "providers": {
+        "openai": {
+          "default_model": "gpt-5.2",
+          "models_config": "providers/openai/models.json"
+        },
+        "anthropic": {
+          "default_model": "claude-sonnet-4-20250514",
+          "models_config": "providers/anthropic/models.json"
+        }
+      }
+    }
+  },
+  "status_display": {
+    "fields": [
+      {
+        "id": "pet_type",
+        "label": "Pet",
+        "value": "{{ state.pet_type_selection.label }}"
+      },
+      {
+        "id": "aesthetic",
+        "label": "Aesthetic",
+        "value": "{{ state.aesthetic_selection.label }}"
+      },
+      {
+        "id": "duration",
+        "label": "Duration",
+        "value": "{{ state.duration_selection.video_duration }}s"
+      },
+      {
+        "id": "scene",
+        "label": "Scene",
+        "value": "{% if state.selected_scene %}{{ state.selected_scene.title }}{% endif %}"
+      },
+      {
+        "id": "step",
+        "label": "Step",
+        "value": "{{ current_step_name }}"
+      }
+    ],
+    "layout": [
+      ["pet_type", "aesthetic", "duration"],
+      ["scene"],
+      ["step"]
+    ]
+  },
+  "steps": [
+    {
+      "$ref": "steps/1_user_input/step.json",
+      "type": "json"
+    },
+    {
+      "$ref": "steps/2_scene_generation/step.json",
+      "type": "json"
+    },
+    {
+      "$ref": "steps/3_image_prompts/step.json",
+      "type": "json"
+    },
+    {
+      "$ref": "steps/4_video_prompts/step.json",
+      "type": "json"
+    },
+    {
+      "$ref": "steps/5_text_overlays/step.json",
+      "type": "json"
+    },
+    {
+      "$ref": "steps/6_titles_social/step.json",
+      "type": "json"
+    },
+    {
+      "$ref": "steps/7_music/step.json",
+      "type": "json"
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "type": "object",
+  "properties": {
+    "text_sets": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "properties": {
+          "set_id": {
+            "type": "string",
+            "enum": ["heartfelt", "playful", "reflective"],
+            "description": "The emotional approach of this text set"
+          },
+          "set_description": {
+            "type": "string",
+            "description": "Brief description of this set's tone and feel"
+          },
+          "paragraphs": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 2,
+            "items": {
+              "type": "object",
+              "properties": {
+                "paragraph_id": {
+                  "type": "integer",
+                  "description": "Sequential ID starting from 1"
+                },
+                "sentences": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "Short, impactful sentence (5-10 words ideal)"
+                  },
+                  "description": "Sentences that build emotional momentum"
+                }
+              },
+              "required": ["paragraph_id", "sentences"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["set_id", "set_description", "paragraphs"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["text_sets"],
+  "additionalProperties": false
+}

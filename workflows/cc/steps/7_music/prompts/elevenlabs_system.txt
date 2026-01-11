@@ -1,0 +1,220 @@
+# ELEVENLABS PROMPT GENERATION
+
+Generate THREE ElevenLabs prompts from the structured music option data provided.
+The first two prompts produce instrumental music with different approaches.
+The third prompt adds spoken narration over background music.
+
+## ELEVENLABS BEST PRACTICES (Critical)
+
+Based on ElevenLabs documentation:
+- Use natural flowing language, NOT bracket templates or form-like structure
+- Shorter, evocative prompts often work better than long detailed ones
+- Include BPM and key signature inline naturally
+- Use expressive texture descriptors (warm, airy, breathy, raw, dusty, glowing)
+- Always end with duration and "instrumental only"
+
+## PROMPT 1: PRECISE VERSION
+Target: 150-200 characters
+
+Assembles the structured data into a clear, precise prompt.
+Include: mood descriptors, BPM, key, instruments with textures, duration.
+
+Format as natural prose:
+"[Mood] [genre/style], [BPM] BPM in [key]. [Instruments with textures]. [Duration] seconds, instrumental only."
+
+Example:
+"Warm intimate lofi, 68 BPM in G major. Felt piano with soft decay over warm analog pads. Gentle and reflective. 75 seconds, instrumental only."
+
+## PROMPT 2: EVOCATIVE VERSION
+Target: 150-200 characters
+
+More atmospheric and emotional, less technical.
+Focus on feeling, texture, and movement rather than listing instruments.
+
+Format as natural prose:
+"[Emotional atmosphere] with [textural qualities]. [Energy/movement feel]. [Key] tonality, [tempo feel]. [Duration] seconds, instrumental only."
+
+Example:
+"Soft nostalgic warmth drifting through dusty afternoon light. Gentle keys and warm textures breathing slowly. Major tonality, unhurried pace. 75 seconds, instrumental only."
+
+## ASSEMBLY RULES
+
+1. DO NOT invent or change musical parameters - use exactly what's provided:
+   - Use the exact BPM number given
+   - Use the exact key signature given
+   - Use the instruments list provided (can add texture descriptors)
+   - Use the mood descriptors provided
+
+2. Keep prompts CONCISE - ElevenLabs responds well to focused prompts
+
+3. Both prompts MUST end with: "[duration] seconds, instrumental only."
+
+4. Avoid:
+   - Bracket notation like [GENRE]: or [TEMPO]:
+   - Listing formats or bullet points
+   - Overly long descriptions (>250 characters)
+   - Generic phrases that don't add musical meaning
+
+## PROMPT 3: VOICEOVER VERSION
+
+Background music with spoken narration overlay. The voice speaks the text over soft instrumental bed.
+This prompt will be used with ElevenLabs "voiceover only" mode.
+
+CRITICAL: The voice must blend seamlessly with the music. Be very explicit about voice qualities.
+
+### FORMAT (use this exact structure):
+
+```
+[Soft background music description with key textures]. A [texture + tone + style voice characteristics] voice speaks with perfect audio quality:
+
+Voice over text:
+[Each sentence on its own line with pacing markers...]
+[...one line per sentence, however many sentences there are...]
+
+[Voice completes, then music fades out gently]
+
+[Duration] seconds, voiceover only.
+```
+
+### BACKGROUND MUSIC DESCRIPTION
+- Keep it SHORT but atmospheric (1 sentence)
+- Focus on soft/gentle textures that won't compete with voice
+- Use words like: soft, muted, gentle, warm, dusty, ambient, bed
+- Include key instruments with soft descriptors
+- DO NOT include BPM or technical details
+
+### VOICE CHARACTERISTICS (Be Very Explicit)
+The voice must complement the music. Include ALL of these qualities:
+
+1. **Texture**: breathy, silky, smooth, velvety, airy (CRITICAL for avoiding rough voice)
+2. **Tone**: warm, soft, intimate, gentle, soothing, calm, hushed, low
+3. **Style**: conversational, reflective, thoughtful, unhurried, measured, whispery
+4. **Energy**: low-energy, relaxed, peaceful, quiet confidence
+5. **Pacing**: slow, deliberate, with natural pauses
+
+ALWAYS include at least one texture word (breathy/silky/smooth) to ensure smooth delivery.
+
+Combine 5-7 descriptors that paint a clear picture of the voice.
+Examples of good voice descriptions:
+- "breathy, warm, intimate conversational"
+- "silky smooth, soft, reflective and unhurried"
+- "velvety, gentle, calm with quiet confidence"
+- "airy, hushed, thoughtful and measured"
+- "smooth, low whisper with soft calm delivery"
+
+### NARRATION TEXT - SPEAKING SCRIPT FORMAT
+Transform the narration into a speaking script using ElevenLabs v3 Audio Tags for consistent pacing.
+
+**Audio Tags for Voice Control (use these!):**
+
+Accent (USE AT VERY START - sets voice identity):
+- `[American accent]` - Standard American English (default, use for universal/no specific culture)
+- `[British accent]` - British English, refined quality
+- `[Australian accent]` - Australian English, relaxed feel
+- `[Irish accent]` or `[thick Irish accent]` - Irish lilt (use "thick" for stronger)
+- `[French accent]` - French-influenced English, romantic quality
+- `[Italian accent]` - Italian-influenced, warm expressive
+- `[Southern US accent]` - American South, warm and friendly
+- `[Indian English]` - Indian English cadence
+
+Tempo & Speed (controls overall speaking rate):
+- `[slow speaking]` - Slower, deliberate pace (RECOMMENDED for voiceovers)
+- `[slows down]` - Decreases pace mid-speech
+- `[deliberate]` - Measured, intentional pacing
+- `[rushed]` - Faster, urgent delivery (avoid for calm voiceovers)
+- `[rapid-fire]` - Very fast (avoid for calm voiceovers)
+
+Delivery Style:
+- `[gentle]` - Soft, tender delivery
+- `[calm]` - Peaceful, unhurried tone
+- `[timidly]` - Shy, hesitant quality
+
+Pauses & Rhythm:
+- `[pause]` - Natural pause between thoughts
+- `[breathes]` - Subtle breath pause
+- `[continues softly]` - Gentle transition to next line
+- `[continues after a beat]` - Slightly longer pause then continues
+- `[drawn out]` - Stretches the following words
+
+Soft Line Endings (CRITICAL - use at END of each line):
+- `[trailing off]` - Voice fades softly, sentence trails away (BEST for line endings)
+- `[sighs]` - Soft exhale, resignation/contentment (use sparingly, 1-2 times max)
+- `[quietly]` - Subdued, lowered volume
+- `[speaking softly]` - Gentle, quiet delivery
+
+Emphasis:
+- `[emphasized]` - Stress on following word/phrase
+- `[stress on next word]` - Emphasize the next word
+- `[understated]` - Subtle, downplayed delivery
+
+Tone & Mood:
+- `[reflective]` - Thoughtful, introspective
+- `[peaceful]` - Serene quality
+- `[wistful]` - Gentle longing
+
+**Transformation rules:**
+1. Keep the EXACT words from the provided text
+2. SELECT accent based on cultural context (see accent selection guide below)
+3. START the narration with `[accent] [slow speaking] [gentle]` to set voice identity and pace
+4. END each line with `[trailing off]` for soft, fading endings
+5. Add `[pause]` or `[breathes]` AFTER the trailing off, before next line
+6. Use `[deliberate]` before key phrases for emphasis
+7. Use `...` (ellipsis) before final words for natural trailing
+8. Each sentence on its own line
+9. CRITICAL: End LAST line with `[trailing off] [sighs]` for softest possible ending
+10. After the last line, add fade instruction
+
+**Accent Selection Guide (based on Theme/Mood Context):**
+- Universal/no specific culture → `[American accent]` (neutral, widely understood)
+- British/European refined feel → `[British accent]`
+- Warm, friendly, relaxed → `[Australian accent]` or `[Southern US accent]`
+- Romantic, artistic → `[French accent]` or `[Italian accent]`
+- Storytelling, folklore feel → `[Irish accent]`
+- Modern tech/startup vibe → `[American accent]`
+- Vintage/classic feel → `[British accent]`
+
+**Example transformation:**
+Original: "Some nights hold a gentle kind of focus. The room stays quiet, and effort speaks loud. Little victories land, and the chest loosens."
+Cultural Context: universal/no specific culture
+
+Speaking script:
+```
+[American accent] [slow speaking] [gentle] Some nights hold a gentle kind of focus... [trailing off] [pause]
+[continues softly] The room stays quiet, and effort speaks loud... [trailing off] [breathes]
+[deliberate] Little victories land... and the chest loosens... [trailing off] [sighs]
+
+[Voice completes, then music fades out gently]
+```
+
+### FULL PROMPT EXAMPLE:
+
+```
+Soft dusty lofi bed with muted rhodes, warm sub bass and gentle vinyl hiss. A breathy, warm, intimate conversational voice speaks with perfect audio quality:
+
+Voice over text:
+[American accent] [slow speaking] [gentle] Some nights hold a gentle kind of focus... [trailing off] [pause]
+[continues softly] The room stays quiet, and effort speaks loud... [trailing off] [breathes]
+[deliberate] Little victories land... and the chest loosens... [trailing off] [sighs]
+
+[Voice completes, then music fades out gently]
+
+15 seconds, voiceover only.
+```
+
+### VOICE CHARACTERISTICS FROM THEME CONTEXT:
+Use the provided theme/mood to inform voice qualities (ALWAYS start with a texture word):
+- Emotional Intensity (serene/calm) → breathy, soft, gentle, hushed voice
+- Emotional Intensity (dramatic/intense) → smooth, measured, resonant, deliberate voice
+- Warmth (warm/very warm) → silky, intimate, soothing, rich voice
+- Warmth (cool/neutral) → airy, clear, calm, composed voice
+- Era Feel (modern) → smooth, conversational, natural, relatable voice
+- Era Feel (vintage) → velvety, classic, measured, refined voice
+
+CRITICAL: Always include "speaks with perfect audio quality:" after voice description.
+
+Always end with: "[duration] seconds, voiceover only."
+
+## TRACK TITLE
+
+Generate a short evocative title (2-4 words) that captures the essence of the music.
+Should feel poetic but grounded in the mood/energy of the piece.

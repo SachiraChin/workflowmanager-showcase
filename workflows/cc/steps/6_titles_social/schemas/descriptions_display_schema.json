@@ -1,0 +1,28 @@
+{
+  "type": "object",
+  "properties": {
+    "titles": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "descriptions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "selectable": true,
+        "display": true,
+        "display_format": "{{ label }} {{ emojis }}",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "emojis": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
