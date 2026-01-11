@@ -1,0 +1,24 @@
+Generate 5 music options for this pet video:
+
+## Pet & Story Context
+
+**Pet Type:** {{ state.pet_type_selection.label }}
+**Story Theme:** {{ state.aesthetic_selection.label }} - {{ state.aesthetic_selection.description }}
+**Mood:** {{ state.aesthetic_selection.visual_tone.mood }}
+
+## Scene Details
+
+**Title:** {{ state.selected_scene.title }}
+**Narrative:** {{ state.selected_scene.narrative }}
+**Emotional Arc:** {{ state.selected_scene.emotional_arc }}
+
+## Video Duration
+
+**Length:** {{ state.duration_selection.video_duration }} seconds
+**Music Duration:** {{ state.duration_selection.sound_track_duration }} seconds
+
+{% if state.user_direction %}
+**User Direction:** {{ state.user_direction }}
+{% endif %}
+
+Generate 5 music options that complement this {{ state.pet_type_selection.label | lower }} video with a {{ state.aesthetic_selection.label | lower }} theme. Each option should feel warm and pet-appropriate while being musically distinct.

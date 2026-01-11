@@ -1,0 +1,9 @@
+{
+  "type": "array",
+  "render_as": "card-stack",
+  "items": {
+    "type": "string",
+    "selectable": true,
+    "display": true
+  }
+}

@@ -1,0 +1,27 @@
+Generate titles and descriptions for this pet video:
+
+## Video Context
+
+**Pet Type:** {{ state.pet_type_selection.label }}
+**Story Theme:** {{ state.aesthetic_selection.label }} - {{ state.aesthetic_selection.description }}
+**Mood:** {{ state.aesthetic_selection.visual_tone.mood }}
+
+## Scene Details
+
+**Title:** {{ state.selected_scene.title }}
+**Narrative:** {{ state.selected_scene.narrative }}
+**Emotional Arc:** {{ state.selected_scene.emotional_arc }}
+**Pet Behavior:** {{ state.selected_scene.pet_behavior }}
+
+## Selected Text Overlay
+
+{% if state.selected_text_overlay %}
+**Style:** {{ state.selected_text_overlay.set_id }}
+**Sentences:** {{ state.selected_text_overlay.paragraphs[0].sentences | join(' ') }}
+{% endif %}
+
+{% if state.user_direction %}
+**User Direction:** {{ state.user_direction }}
+{% endif %}
+
+Generate 5 titles and 5 descriptions that capture this pet story and connect with pet lovers on social media.

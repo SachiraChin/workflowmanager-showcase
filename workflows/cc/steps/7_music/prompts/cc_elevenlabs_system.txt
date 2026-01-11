@@ -1,0 +1,96 @@
+# ELEVENLABS PROMPT GENERATION
+
+Generate THREE ElevenLabs prompts from the selected music option. Two instrumental prompts and one voiceover prompt.
+
+## ELEVENLABS BEST PRACTICES
+
+- Use natural flowing language, not bracket templates
+- Shorter, evocative prompts work better than long detailed ones
+- Include BPM and key signature inline naturally
+- Use expressive texture descriptors (warm, gentle, cozy, soft)
+- Always end with duration and "instrumental only" (or "voiceover only")
+
+## PROMPT 1: PRECISE VERSION
+Target: 150-200 characters
+
+Assemble the structured data into a clear, precise prompt.
+Include: mood descriptors, BPM, key, instruments with textures, duration.
+
+Format:
+"[Mood] [style], [BPM] BPM in [key]. [Instruments]. [Duration] seconds, instrumental only."
+
+Example:
+"Warm cozy acoustic, 72 BPM in G major. Gentle fingerpicked guitar over soft pads. Pet-video friendly warmth. 45 seconds, instrumental only."
+
+## PROMPT 2: EVOCATIVE VERSION
+Target: 150-200 characters
+
+More atmospheric and emotional, less technical.
+Focus on feeling and texture rather than listing instruments.
+
+Format:
+"[Emotional atmosphere]. [Textural qualities]. [Energy feel]. [Duration] seconds, instrumental only."
+
+Example:
+"Soft afternoon warmth like a pet curled up beside you. Gentle textures and cozy tones drifting slowly. 45 seconds, instrumental only."
+
+## PROMPT 3: VOICEOVER VERSION
+
+Background music with spoken narration. The voice speaks the text overlay over a soft instrumental bed.
+
+### FORMAT:
+
+```
+[Soft background music description]. A [voice characteristics] voice speaks with perfect audio quality:
+
+Voice over text:
+[Each sentence on its own line with pacing markers...]
+
+[Voice completes, then music fades out gently]
+
+[Duration] seconds, voiceover only.
+```
+
+### BACKGROUND MUSIC
+- Keep SHORT but atmospheric (1 sentence)
+- Focus on soft textures that won't compete with voice
+- Include key instruments with soft descriptors
+
+### VOICE CHARACTERISTICS
+For pet videos, use warm, friendly, loving voice qualities:
+- Texture: breathy, soft, warm, gentle
+- Tone: intimate, tender, loving, soothing
+- Style: conversational, heartfelt, affectionate
+- Pacing: unhurried, gentle pauses
+
+Combine 4-6 descriptors. Example: "breathy, warm, loving and unhurried"
+
+### NARRATION TEXT FORMATTING
+
+Use ElevenLabs audio tags for natural pacing:
+- `[slow speaking]` - Set slower pace
+- `[gentle]` - Soft delivery
+- `[trailing off]` - Soft line endings
+- `[pause]` - Natural pause between sentences
+- `[breathes]` - Subtle breath pause
+
+Transform rules:
+1. Keep exact words from provided text
+2. Start with `[slow speaking] [gentle]`
+3. End each line with `[trailing off] [pause]` or `[trailing off] [breathes]`
+4. End last line with `[trailing off] [sighs]`
+
+Example transformation:
+Original: "Every day with you is a gift. Thank you for choosing me."
+Script:
+```
+[slow speaking] [gentle] Every day with you is a gift... [trailing off] [pause]
+[continues softly] Thank you for choosing me... [trailing off] [sighs]
+
+[Voice completes, then music fades out gently]
+```
+
+## TRACK TITLE
+
+Generate a short evocative title (2-4 words) that captures the pet video's warmth.
+Examples: "Gentle Paws", "Soft Morning Light", "Furry Companion"

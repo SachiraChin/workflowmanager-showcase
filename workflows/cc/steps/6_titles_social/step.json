@@ -1,7 +1,7 @@
 {
-  "step_id": "titles_descriptions",
-  "name": "Step {step_number}: Titles and Descriptions",
-  "description": "Generate publishing titles and descriptions for the video",
+  "step_id": "titles_social",
+  "name": "Step {step_number}: Titles & Social",
+  "description": "Generate engaging titles and descriptions for social media publishing",
   "modules": [
     {
       "module_id": "api.llm",
@@ -10,45 +10,36 @@
           "type": "object",
           "properties": {
             "input": { "resolver": "server" },
-            "metadata": { "resolver": "server" },
             "system": { "resolver": "server" }
           }
         },
-        "input": [
-          {
-            "$ref": "prompts/captions_titles_descriptions_user.txt",
-            "type": "jinja2"
-          }
-        ],
-        "output_schema": {
-          "$ref": "schemas/titles_descriptions_schema.json",
-          "type": "json"
+        "ai_config": {},
+        "input": {
+          "$ref": "prompts/cc_titles_social_user.txt",
+          "type": "jinja2"
         },
-        "metadata": {
-          "step_id": "{{ step.step_id }}"
+        "output_schema": {
+          "$ref": "schemas/cc_titles_social_schema.json",
+          "type": "json"
         },
         "system": [
           {
-            "$ref": "prompts/role_social_media_strategist.txt",
+            "$ref": "prompts/cc_role_pet_social_strategist.txt",
             "type": "text",
             "cache_ttl": 10800
           },
           {
-            "$ref": "prompts/captions_titles_descriptions_system.txt",
+            "$ref": "prompts/cc_titles_social_system.txt",
             "type": "text",
             "cache_ttl": 10800
-          },
-          {
-            "$ref": "prompts/project_context.txt",
-            "type": "jinja2"
           }
         ],
         "provider": "openai"
       },
       "outputs_to_state": {
-        "response": "titles_descriptions_response"
+        "response": "titles_social_response"
       },
-      "name": "generate_titles_descriptions"
+      "name": "generate_titles_social"
     },
     {
       "module_id": "user.select",
@@ -59,19 +50,20 @@
             "data": { "resolver": "server" }
           }
         },
-        "data": "{{ state.titles_descriptions_response.titles }}",
+        "prompt": "Select a title for your pet video",
+        "data": "{{ state.titles_social_response.titles }}",
         "schema": {
-          "$ref": "schemas/titles_display_schema.json",
+          "$ref": "schemas/cc_titles_display_schema.json",
           "type": "json"
         },
-        "prompt": "Generated Titles (select one to use):",
         "multi_select": false,
         "mode": "select"
       },
       "outputs_to_state": {
-        "selected_indices": "selected_title_indices"
+        "selected_indices": "selected_title_indices",
+        "selected_data": "selected_title"
       },
-      "name": "review_titles"
+      "name": "select_title"
     },
     {
       "module_id": "user.select",
@@ -82,36 +74,42 @@
             "data": { "resolver": "server" }
           }
         },
-        "data": "{{ state.titles_descriptions_response }}",
+        "prompt": "Select a description for your pet video",
+        "data": "{{ state.titles_social_response.descriptions }}",
         "schema": {
-          "$ref": "schemas/descriptions_display_schema.json",
+          "$ref": "schemas/cc_descriptions_display_schema.json",
           "type": "json"
         },
-        "prompt": "Generated Descriptions (select one to use):",
         "multi_select": false,
         "mode": "select"
       },
       "outputs_to_state": {
-        "selected_indices": "selected_description_indices"
+        "selected_indices": "selected_description_indices",
+        "selected_data": "selected_description"
       },
-      "name": "review_descriptions"
-    },
-    {
-      "module_id": "io.save_json",
-      "inputs": {
-        "resolver_schema": {
-          "type": "object",
-          "properties": {
-            "data": { "resolver": "server" }
+      "retryable": {
+        "default_option": "continue",
+        "options": [
+          {
+            "id": "continue",
+            "mode": "continue",
+            "label": "Continue"
+          },
+          {
+            "id": "retry",
+            "mode": "retry",
+            "label": "Regenerate titles & descriptions",
+            "shortcut": "r",
+            "target_module": "generate_titles_social",
+            "feedback": {
+              "enabled": true,
+              "prompt": "What should be different?",
+              "default_message": "Please generate different titles and descriptions with a fresh approach."
+            }
           }
-        },
-        "data": {
-          "titles": "{{ state.titles_descriptions_response.titles }}",
-          "descriptions": "{{ state.titles_descriptions_response.descriptions }}"
-        },
-        "file_path": "titles_descriptions.json"
+        ]
       },
-      "name": "save_titles_descriptions"
+      "name": "select_description"
     }
   ]
 }

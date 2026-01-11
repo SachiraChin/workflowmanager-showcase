@@ -1,0 +1,20 @@
+{
+  "type": "array",
+  "render_as": "card-stack",
+  "items": {
+    "type": "object",
+    "selectable": true,
+    "properties": {
+      "text": {
+        "type": "string",
+        "display": true,
+        "display_label": "Description"
+      },
+      "emojis": {
+        "type": "string",
+        "display": true,
+        "display_label": "Emojis"
+      }
+    }
+  }
+}

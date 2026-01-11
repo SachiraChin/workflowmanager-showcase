@@ -1,0 +1,53 @@
+# MUSIC OPTIONS FOR PET VIDEOS
+
+Generate 5 unique music options for a pet video. Each option should complement the emotional tone of pet content - warm, loving, and engaging.
+
+## OUTPUT STRUCTURE (for each option)
+
+```json
+{
+  "name": "2-3 word evocative name",
+  "description": "15-25 word summary of the sound and feel",
+  "bpm": 72,
+  "key": "G major",
+  "instruments": ["felt piano", "warm pad", "soft acoustic guitar"],
+  "mood": ["warm", "gentle", "loving"],
+  "energy": "steady and cozy"
+}
+```
+
+## FIELD GUIDELINES
+
+**bpm**: Tune to the pet video's mood:
+- Cozy/peaceful scenes: 55-70
+- Playful/joyful scenes: 70-90
+- Emotional/reflective scenes: 60-75
+- Energetic/fun scenes: 85-105
+
+**key**: Match the emotional tone:
+- Warm/happy: G major, C major, D major
+- Gentle/tender: A major, F major
+- Reflective/bittersweet: A minor, D minor, E minor
+- Playful: Bb major, Eb major
+
+**instruments**: 2-4 instruments WITH texture descriptors:
+- Good: "felt piano with soft decay", "warm acoustic guitar", "gentle strings"
+- Bad: "piano", "guitar", "synth"
+
+**mood**: 2-3 descriptors that match pet video vibes:
+- Examples: warm, cozy, gentle, playful, loving, tender, joyful, peaceful, heartfelt
+
+**energy**: How the track feels:
+- Examples: "steady and cozy", "gently bouncing", "softly flowing", "warm pulse"
+
+## FIVE OPTION STYLES
+
+Generate these 5 distinct styles:
+
+1. **Cozy Acoustic** - Warm guitar, gentle textures
+2. **Soft Piano** - Felt piano, pads, intimate feel
+3. **Playful Bounce** - Light, fun, slightly upbeat
+4. **Heartfelt Strings** - Cello, violin, emotional depth
+5. **Lofi Warmth** - Vinyl textures, muted keys, nostalgic
+
+Tune each to match the specific pet type and aesthetic provided in the prompt.

@@ -3,8 +3,8 @@
   "properties": {
     "options": {
       "type": "array",
-      "minItems": 15,
-      "maxItems": 15,
+      "minItems": 5,
+      "maxItems": 5,
       "items": {
         "type": "object",
         "properties": {
@@ -18,17 +18,17 @@
           },
           "bpm": {
             "type": "integer",
-            "description": "Specific tempo in beats per minute (50-120 range typical)",
-            "minimum": 40,
-            "maximum": 140
+            "description": "Tempo in beats per minute",
+            "minimum": 50,
+            "maximum": 120
           },
           "key": {
             "type": "string",
-            "description": "Musical key signature (e.g., 'C major', 'A minor', 'F# minor')"
+            "description": "Musical key signature (e.g., 'G major', 'A minor')"
           },
           "instruments": {
             "type": "array",
-            "description": "2-4 specific instruments with texture descriptors",
+            "description": "2-4 instruments with texture descriptors",
             "items": {
               "type": "string"
             },
@@ -37,7 +37,7 @@
           },
           "mood": {
             "type": "array",
-            "description": "2-3 expressive mood/texture descriptors (e.g., 'warm', 'airy', 'intimate', 'raw')",
+            "description": "2-3 mood descriptors",
             "items": {
               "type": "string"
             },
@@ -46,24 +46,14 @@
           },
           "energy": {
             "type": "string",
-            "description": "Energy arc or movement feel (e.g., 'steady gentle', 'slowly building', 'drifting', 'minimal pulse')"
+            "description": "Energy arc or movement feel"
           }
         },
-        "required": [
-          "name",
-          "description",
-          "bpm",
-          "key",
-          "instruments",
-          "mood",
-          "energy"
-        ],
+        "required": ["name", "description", "bpm", "key", "instruments", "mood", "energy"],
         "additionalProperties": false
       }
     }
   },
-  "required": [
-    "options"
-  ],
+  "required": ["options"],
   "additionalProperties": false
 }

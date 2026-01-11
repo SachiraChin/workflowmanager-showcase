@@ -1,8 +1,0 @@
-Generate all 15 music options based on the project context provided.
-
-Options 1-5: Use the anchored names exactly, but tune all musical parameters (BPM, key, mood, energy) to match this project's context.
-Options 6-10: Create context-aligned options that complement the project's tone and visual style.
-Options 11-15: Create diverse exploration options using unexpected instruments.
-
-Ensure all options are musically distinct enough that a non-musician can meaningfully understand the differences.
-All BPM, key, and mood choices should be appropriate for this specific project's emotional direction.

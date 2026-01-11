@@ -15,14 +15,9 @@
     },
     "elevenlabs_prompt_voiceover": {
       "type": "string",
-      "description": "Voiceover version: soft background music bed + detailed voice characteristics + narration text (each sentence on its own line) + duration. Ends with 'voiceover only'."
+      "description": "Voiceover version: soft background music + voice characteristics + narration text. Ends with 'voiceover only'."
     }
   },
-  "required": [
-    "track_title",
-    "elevenlabs_prompt_precise",
-    "elevenlabs_prompt_evocative",
-    "elevenlabs_prompt_voiceover"
-  ],
+  "required": ["track_title", "elevenlabs_prompt_precise", "elevenlabs_prompt_evocative", "elevenlabs_prompt_voiceover"],
   "additionalProperties": false
 }

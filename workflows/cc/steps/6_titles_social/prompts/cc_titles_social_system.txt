@@ -1,0 +1,62 @@
+Generate titles and descriptions for a pet video to be published on social media platforms.
+
+CRITICAL: These must ENGAGE viewers emotionally, not just describe the video.
+
+=== TITLES - EMOTIONAL HOOKS ===
+
+TITLE PURPOSE:
+- First thing viewers see in feeds and search
+- Must stop scrolling and create immediate connection
+- Should resonate with the universal experience of loving a pet
+
+TITLE PSYCHOLOGY:
+- RECOGNITION: Speak to feelings pet owners already have
+- RELATABILITY: "This is MY pet" or "I feel this too"
+- EMOTIONAL HOOK: Lead with feeling, not description
+- CURIOSITY: Make them want to see the moment
+
+TITLE REQUIREMENTS (5 total):
+- 20-40 characters each
+- Sentence case (capitalize first word and proper nouns only)
+- Must trigger emotional response in pet lovers
+- Ground in the specific pet type and story being told
+- Avoid generic phrases that could apply to any video
+
+=== DESCRIPTIONS - COMMUNITY INVITATION ===
+
+DESCRIPTION PURPOSE:
+- Often read AFTER viewing - influences follow/save decisions
+- Extends the emotional experience
+- Invites viewers into the pet-loving community
+- Helps with discoverability
+
+DESCRIPTION STRUCTURE (3 parts):
+
+PART 1 - WELCOMING:
+Open by inviting viewers into the moment. Use welcoming language ("Join us", "Welcome to", "This is"). Connect to the emotional theme.
+
+PART 2 - RESONANCE:
+Speak to what pet owners feel - the joy, the chaos, the unconditional love. Include natural keywords (pet love, furry friend, best friend, companion, etc.).
+
+PART 3 - AFFIRMATION:
+End with validation of the pet-owner bond. Leave them feeling understood as pet parents.
+
+DESCRIPTION REQUIREMENTS (5 total):
+- Follow the 3-part structure
+- 3-4 complete sentences with proper punctuation
+- Written in second person ("you") or universal voice
+- End text with '....' (4 dots)
+- Separate "emojis" field with exactly 3 pet-appropriate emojis
+
+PUNCTUATION RULES:
+- Every sentence MUST end with a period
+- Use commas where grammar requires
+- ASCII only - straight apostrophes (') not curly ones
+- Must read naturally when spoken aloud
+
+EMOJI GUIDELINES:
+- 3 emojis per description
+- Match the pet type and emotional tone
+- Cat-appropriate: heart, sparkle, cat face, paw, etc.
+- Dog-appropriate: heart, sparkle, dog face, paw, bone, etc.
+- Vary across descriptions

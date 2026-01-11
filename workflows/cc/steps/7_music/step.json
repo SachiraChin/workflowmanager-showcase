@@ -1,7 +1,7 @@
 {
-  "step_id": "music_generation",
+  "step_id": "music",
   "name": "Step {step_number}: Music Generation",
-  "description": "Generate music options and ElevenLabs prompts for soundtrack",
+  "description": "Generate music options and ElevenLabs prompts for your pet video",
   "modules": [
     {
       "module_id": "api.llm",
@@ -9,40 +9,29 @@
         "resolver_schema": {
           "type": "object",
           "properties": {
-            "metadata": { "resolver": "server" },
+            "input": { "resolver": "server" },
             "system": { "resolver": "server" }
           }
         },
-        "ai_config": {
-          "model": "gpt-5.1"
+        "ai_config": {},
+        "input": {
+          "$ref": "prompts/cc_music_user.txt",
+          "type": "jinja2"
         },
-        "input": [
-          {
-            "$ref": "prompts/music_dynamic_options_user.txt",
-            "type": "text"
-          }
-        ],
         "output_schema": {
-          "$ref": "schemas/music_options_schema.json",
+          "$ref": "schemas/cc_music_options_schema.json",
           "type": "json"
-        },
-        "metadata": {
-          "step_id": "{{ step.step_id }}"
         },
         "system": [
           {
-            "$ref": "prompts/role_music_director.txt",
+            "$ref": "prompts/cc_role_pet_music_director.txt",
             "type": "text",
             "cache_ttl": 10800
           },
           {
-            "$ref": "prompts/music_dynamic_options_system.txt",
+            "$ref": "prompts/cc_music_system.txt",
             "type": "text",
             "cache_ttl": 10800
-          },
-          {
-            "$ref": "prompts/project_context.txt",
-            "type": "jinja2"
           }
         ],
         "provider": "openai"
@@ -61,12 +50,12 @@
             "data": { "resolver": "server" }
           }
         },
+        "prompt": "Select a music style for your pet video",
         "data": "{{ state.music_options_response.options }}",
         "schema": {
-          "$ref": "schemas/music_options_display_schema.json",
+          "$ref": "schemas/cc_music_options_display_schema.json",
           "type": "json"
         },
-        "prompt": "Select a music option:",
         "multi_select": false,
         "mode": "select"
       },
@@ -83,40 +72,28 @@
           "type": "object",
           "properties": {
             "input": { "resolver": "server" },
-            "metadata": { "resolver": "server" },
             "system": { "resolver": "server" }
           }
         },
-        "ai_config": {
-          "model": "gpt-5.1"
+        "ai_config": {},
+        "input": {
+          "$ref": "prompts/cc_elevenlabs_user.txt",
+          "type": "jinja2"
         },
-        "input": [
-          {
-            "$ref": "prompts/elevenlabs_user.txt",
-            "type": "jinja2"
-          }
-        ],
         "output_schema": {
-          "$ref": "schemas/elevenlabs_schemas_schema.json",
+          "$ref": "schemas/cc_elevenlabs_schema.json",
           "type": "json"
-        },
-        "metadata": {
-          "step_id": "{{ step.step_id }}"
         },
         "system": [
           {
-            "$ref": "prompts/role_music_prompt_engineer.txt",
+            "$ref": "prompts/cc_role_pet_music_director.txt",
             "type": "text",
             "cache_ttl": 10800
           },
           {
-            "$ref": "prompts/elevenlabs_system.txt",
+            "$ref": "prompts/cc_elevenlabs_system.txt",
             "type": "text",
             "cache_ttl": 10800
-          },
-          {
-            "$ref": "prompts/project_context.txt",
-            "type": "jinja2"
           }
         ],
         "provider": "openai"
@@ -124,7 +101,7 @@
       "outputs_to_state": {
         "response": "elevenlabs_prompts_response"
       },
-      "name": "elevenlabs_api"
+      "name": "generate_elevenlabs_prompts"
     },
     {
       "module_id": "user.select",
@@ -135,6 +112,7 @@
             "data": { "resolver": "server" }
           }
         },
+        "prompt": "Review ElevenLabs prompts for your pet video soundtrack",
         "data": "{{ state.elevenlabs_prompts_response }}",
         "schema": {
           "type": "object",
@@ -164,12 +142,10 @@
             }
           }
         },
-        "prompt": "Review ElevenLabs prompts",
         "mode": "review"
       },
       "outputs_to_state": {
-        "retry_requested": "elevenlabs_retry_requested",
-        "retry_groups": "elevenlabs_retry_groups"
+        "retry_requested": "elevenlabs_retry_requested"
       },
       "retryable": {
         "default_option": "continue",
@@ -184,45 +160,23 @@
             "mode": "retry",
             "label": "Regenerate prompts",
             "shortcut": "r",
-            "target_module": "elevenlabs_api",
+            "target_module": "generate_elevenlabs_prompts",
             "feedback": {
               "enabled": true,
-              "prompt": "Provide feedback for regeneration:",
-              "default_message": "The previous music prompts were not satisfactory. Please generate completely new and different music generation prompts with improved variety."
+              "prompt": "What should be different?",
+              "default_message": "Please generate different music prompts with a fresh approach."
             }
           },
           {
-            "id": "restart_music",
+            "id": "change_style",
             "mode": "jump",
-            "label": "Go back to music selection",
-            "target_step": "music_generation",
+            "label": "Choose different music style",
+            "target_step": "music",
             "target_module": "select_music_option"
           }
         ]
       },
-      "name": "review_elevenlabs"
-    },
-    {
-      "module_id": "io.save_json",
-      "inputs": {
-        "resolver_schema": {
-          "type": "object",
-          "properties": {
-            "data": { "resolver": "server" }
-          }
-        },
-        "data": {
-          "all_options": "{{ state.music_options_response.options }}",
-          "selected_option_index": "{{ state.selected_music_option_indices[0] }}",
-          "selected_option": "{{ state.selected_music_option }}",
-          "track_title": "{{ state.elevenlabs_prompts_response.track_title }}",
-          "elevenlabs_prompt_precise": "{{ state.elevenlabs_prompts_response.elevenlabs_prompt_precise }}",
-          "elevenlabs_prompt_evocative": "{{ state.elevenlabs_prompts_response.elevenlabs_prompt_evocative }}",
-          "elevenlabs_prompt_voiceover": "{{ state.elevenlabs_prompts_response.elevenlabs_prompt_voiceover }}"
-        },
-        "file_path": "music_generation.json"
-      },
-      "name": "save_music_generation"
+      "name": "review_elevenlabs_prompts"
     }
   ]
 }

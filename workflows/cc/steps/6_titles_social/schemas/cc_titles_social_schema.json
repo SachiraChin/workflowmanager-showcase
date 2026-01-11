@@ -1,0 +1,38 @@
+{
+  "type": "object",
+  "properties": {
+    "titles": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": {
+        "type": "string",
+        "description": "Engaging title for the pet video (20-40 characters)"
+      },
+      "description": "5 engaging titles for social media"
+    },
+    "descriptions": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Description text ending with '....'"
+          },
+          "emojis": {
+            "type": "string",
+            "description": "3 pet-appropriate emojis as a string"
+          }
+        },
+        "required": ["text", "emojis"],
+        "additionalProperties": false
+      },
+      "description": "5 engaging descriptions with emojis"
+    }
+  },
+  "required": ["titles", "descriptions"],
+  "additionalProperties": false
+}

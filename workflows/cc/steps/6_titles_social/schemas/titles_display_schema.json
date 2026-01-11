@@ -1,8 +1,0 @@
-{
-  "type": "array",
-  "items": {
-    "type": "string",
-    "selectable": true,
-    "display": true
-  }
-}

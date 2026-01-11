@@ -1,0 +1,32 @@
+Generate ElevenLabs prompts for this music option:
+
+## Selected Music Option
+
+Name: {{ state.selected_music_option.name }}
+Description: {{ state.selected_music_option.description }}
+BPM: {{ state.selected_music_option.bpm }}
+Key: {{ state.selected_music_option.key }}
+Instruments: {{ state.selected_music_option.instruments | join(', ') }}
+Mood: {{ state.selected_music_option.mood | join(', ') }}
+Energy: {{ state.selected_music_option.energy }}
+
+## Durations
+
+Background Music Duration: {{ state.duration_selection.sound_track_duration }} seconds
+Video Duration: {{ state.duration_selection.video_duration }} seconds
+
+## Narration Text (for voiceover prompt)
+
+{% if state.selected_text_overlay %}
+{% for sentence in state.selected_text_overlay.paragraphs[0].sentences %}
+{{ sentence }}
+{% endfor %}
+{% endif %}
+
+## Pet Context
+
+Pet Type: {{ state.pet_type_selection.label }}
+Story Theme: {{ state.aesthetic_selection.label }}
+Mood: {{ state.aesthetic_selection.visual_tone.mood }}
+
+Generate three ElevenLabs prompts (precise, evocative, voiceover) and a track title that match this {{ state.pet_type_selection.label | lower }} video's warm, {{ state.aesthetic_selection.visual_tone.mood | lower }} feel.
