@@ -4,31 +4,42 @@
   "description": "Generate and select a scene concept for your pet video",
   "modules": [
     {
-      "module_id": "history.keyword_history",
+      "module_id": "io.weighted_keywords",
       "inputs": {
         "resolver_schema": {
           "type": "object",
           "properties": {
-            "generated_expiry_days": { "resolver": "server" },
-            "selected_expiry_days": { "resolver": "server" },
-            "max_selected_keywords": { "resolver": "server" },
-            "max_generated_keywords": { "resolver": "server" },
-            "exclusion_categories": { "resolver": "server" }
+            "pipeline": { "resolver": "server" }
           }
         },
         "mode": "load",
-        "generated_expiry_days": "{{ config.keyword_history.generated_expiry_days }}",
-        "selected_expiry_days": "{{ config.keyword_history.selected_expiry_days }}",
-        "max_selected_keywords": "{{ config.keyword_history.max_selected_keywords }}",
-        "max_generated_keywords": "{{ config.keyword_history.max_generated_keywords }}",
-        "exclusion_categories": "{{ config.keyword_history.exclusion_categories }}",
-        "source_module_name": "save_scene_keywords"
+        "pipeline": [
+          {"$match": {"category": {"$in": ["setting", "behavior", "object"]}}},
+          {"$sort": {"weight": -1}},
+          {"$limit": 50}
+        ]
       },
       "outputs_to_state": {
-        "keyword_exclusion_list": "keyword_exclusion_list",
-        "keyword_stats": "keyword_stats"
+        "weighted_keywords": "loaded_keywords",
+        "count": "keyword_count"
       },
-      "name": "load_keyword_history"
+      "name": "load_keywords"
+    },
+    {
+      "module_id": "transform.extract",
+      "inputs": {
+        "resolver_schema": {
+          "type": "object",
+          "properties": {
+            "exclusion_list": { "resolver": "server" }
+          }
+        },
+        "exclusion_list": "{% set kws = [] %}{% for kw in state.loaded_keywords %}{% set _ = kws.append(kw.keyword) %}{% endfor %}{{ kws }}"
+      },
+      "outputs_to_state": {
+        "exclusion_list": "keyword_exclusion_list"
+      },
+      "name": "build_exclusion_list"
     },
     {
       "module_id": "api.llm",
@@ -73,23 +84,42 @@
       "name": "generate_scenes"
     },
     {
-      "module_id": "history.keyword_history",
+      "module_id": "transform.query",
       "inputs": {
         "resolver_schema": {
           "type": "object",
           "properties": {
-            "aesthetics": { "resolver": "server" },
-            "generated_expiry_days": { "resolver": "server" }
+            "data": { "resolver": "server" }
           }
         },
-        "mode": "save_generated",
-        "aesthetics": "[{% for scene in state.scene_concepts.scenes %}{\"aesthetic_keywords\": {{ scene.scene_keywords | tojson }}, \"ideas\": []}{% if not loop.last %}, {% endif %}{% endfor %}]",
-        "generated_expiry_days": "{{ config.keyword_history.generated_expiry_days }}"
+        "data": "{{ state.scene_concepts.scenes }}",
+        "pipeline": [
+          {"$unwind": "$scene_keywords"},
+          {"$replaceRoot": {"newRoot": "$scene_keywords"}},
+          {"$addFields": {"source": "generated"}}
+        ]
+      },
+      "outputs_to_state": {
+        "result": "flattened_keywords"
+      },
+      "name": "flatten_keywords"
+    },
+    {
+      "module_id": "io.weighted_keywords",
+      "inputs": {
+        "resolver_schema": {
+          "type": "object",
+          "properties": {
+            "weighted_keywords": { "resolver": "server" }
+          }
+        },
+        "mode": "save",
+        "weighted_keywords": "{{ state.flattened_keywords }}"
       },
       "outputs_to_state": {
         "saved_count": "keywords_saved_count"
       },
-      "name": "save_scene_keywords"
+      "name": "save_keywords"
     },
     {
       "module_id": "user.select",
@@ -154,24 +184,41 @@
       "name": "store_selected_scene"
     },
     {
-      "module_id": "history.keyword_history",
+      "module_id": "transform.query",
       "inputs": {
         "resolver_schema": {
           "type": "object",
           "properties": {
-            "aesthetic": { "resolver": "server" },
-            "idea": { "resolver": "server" },
-            "selected_expiry_days": { "resolver": "server" }
+            "data": { "resolver": "server" }
           }
         },
-        "mode": "save_selected",
-        "aesthetic": "{\"aesthetic_keywords\": {{ state.selected_scene.scene_keywords | tojson }}}",
-        "idea": "{\"idea_keywords\": []}",
-        "selected_expiry_days": "{{ config.keyword_history.selected_expiry_days }}",
-        "target_module_name": "save_scene_keywords"
+        "data": [{"scene": "{{ state.selected_scene }}"}],
+        "pipeline": [
+          {"$unwind": "$scene.scene_keywords"},
+          {"$replaceRoot": {"newRoot": "$scene.scene_keywords"}},
+          {"$addFields": {"source": "selected"}}
+        ]
       },
       "outputs_to_state": {
-        "updated_count": "keywords_updated_count"
+        "result": "selected_keywords"
+      },
+      "name": "extract_selected_keywords"
+    },
+    {
+      "module_id": "io.weighted_keywords",
+      "inputs": {
+        "resolver_schema": {
+          "type": "object",
+          "properties": {
+            "weighted_keywords": { "resolver": "server" }
+          }
+        },
+        "mode": "save",
+        "weighted_keywords": "{{ state.selected_keywords }}",
+        "accumulate_weight": false
+      },
+      "outputs_to_state": {
+        "saved_count": "keywords_updated_count"
       },
       "name": "update_selected_keywords"
     }

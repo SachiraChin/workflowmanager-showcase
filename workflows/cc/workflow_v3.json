@@ -19,14 +19,6 @@
           "models_config": "providers/anthropic/models.json"
         }
       }
-    },
-    "keyword_history": {
-      "generated_expiry_days": 5,
-      "selected_expiry_days": 10,
-      "max_selected_keywords": 30,
-      "max_generated_keywords": 50,
-      "categories": ["setting", "behavior", "object", "emotion"],
-      "exclusion_categories": ["setting", "behavior", "object"]
     }
   },
   "status_display": {
