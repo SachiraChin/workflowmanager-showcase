@@ -1,0 +1,45 @@
+{
+  "step_id": "workflow_summary",
+  "name": "Step {step_number}: Workflow Summary",
+  "description": "Generate and export a summary of all workflow selections and prompts",
+  "modules": [
+    {
+      "module_id": "io.render_template",
+      "inputs": {
+        "resolver_schema": {
+          "type": "object",
+          "properties": {
+            "template": { "resolver": "server" }
+          }
+        },
+        "template": {
+          "$ref": "prompts/cc_workflow_summary.txt",
+          "type": "jinja2"
+        }
+      },
+      "outputs_to_state": {
+        "rendered": "workflow_summary_text"
+      },
+      "name": "format_summary"
+    },
+    {
+      "module_id": "io.client_write",
+      "inputs": {
+        "resolver_schema": {
+          "type": "object",
+          "properties": {
+            "content": { "resolver": "server" }
+          }
+        },
+        "content": "{{ state.workflow_summary_text }}",
+        "filename": "cuddle_crew_summary.txt",
+        "format": "text"
+      },
+      "outputs_to_state": {
+        "file_path": "summary_file_path",
+        "filename": "summary_filename"
+      },
+      "name": "write_summary_file"
+    }
+  ]
+}

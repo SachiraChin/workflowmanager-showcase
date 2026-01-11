@@ -40,9 +40,37 @@
           "setting": {
             "type": "string",
             "description": "Where the scene takes place (be specific)"
+          },
+          "scene_keywords": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 6,
+            "items": {
+              "type": "object",
+              "properties": {
+                "keyword": {
+                  "type": "string",
+                  "description": "A single distinctive word or short phrase (1-3 words) that identifies this scene"
+                },
+                "category": {
+                  "type": "string",
+                  "enum": ["setting", "behavior", "object", "emotion"],
+                  "description": "The type of keyword"
+                },
+                "weight": {
+                  "type": "integer",
+                  "minimum": 10,
+                  "maximum": 100,
+                  "description": "How central this keyword is to the scene (higher = more defining)"
+                }
+              },
+              "required": ["keyword", "category", "weight"],
+              "additionalProperties": false
+            },
+            "description": "Keywords that uniquely identify this scene concept for duplicate prevention"
           }
         },
-        "required": ["title", "hook", "narrative", "visual_moments", "pet_behavior", "emotional_arc", "setting"],
+        "required": ["title", "hook", "narrative", "visual_moments", "pet_behavior", "emotional_arc", "setting", "scene_keywords"],
         "additionalProperties": false
       }
     }

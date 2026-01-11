@@ -4,6 +4,33 @@
   "description": "Generate and select a scene concept for your pet video",
   "modules": [
     {
+      "module_id": "history.keyword_history",
+      "inputs": {
+        "resolver_schema": {
+          "type": "object",
+          "properties": {
+            "generated_expiry_days": { "resolver": "server" },
+            "selected_expiry_days": { "resolver": "server" },
+            "max_selected_keywords": { "resolver": "server" },
+            "max_generated_keywords": { "resolver": "server" },
+            "exclusion_categories": { "resolver": "server" }
+          }
+        },
+        "mode": "load",
+        "generated_expiry_days": "{{ config.keyword_history.generated_expiry_days }}",
+        "selected_expiry_days": "{{ config.keyword_history.selected_expiry_days }}",
+        "max_selected_keywords": "{{ config.keyword_history.max_selected_keywords }}",
+        "max_generated_keywords": "{{ config.keyword_history.max_generated_keywords }}",
+        "exclusion_categories": "{{ config.keyword_history.exclusion_categories }}",
+        "source_module_name": "save_scene_keywords"
+      },
+      "outputs_to_state": {
+        "keyword_exclusion_list": "keyword_exclusion_list",
+        "keyword_stats": "keyword_stats"
+      },
+      "name": "load_keyword_history"
+    },
+    {
       "module_id": "api.llm",
       "inputs": {
         "resolver_schema": {
@@ -40,6 +67,25 @@
         "response": "scene_concepts"
       },
       "name": "generate_scenes"
+    },
+    {
+      "module_id": "history.keyword_history",
+      "inputs": {
+        "resolver_schema": {
+          "type": "object",
+          "properties": {
+            "aesthetics": { "resolver": "server" },
+            "generated_expiry_days": { "resolver": "server" }
+          }
+        },
+        "mode": "save_generated",
+        "aesthetics": "[{% for scene in state.scene_concepts.scenes %}{\"aesthetic_keywords\": {{ scene.scene_keywords | tojson }}, \"ideas\": []}{% if not loop.last %}, {% endif %}{% endfor %}]",
+        "generated_expiry_days": "{{ config.keyword_history.generated_expiry_days }}"
+      },
+      "outputs_to_state": {
+        "saved_count": "keywords_saved_count"
+      },
+      "name": "save_scene_keywords"
     },
     {
       "module_id": "user.select",
@@ -102,6 +148,28 @@
         "scene": "selected_scene"
       },
       "name": "store_selected_scene"
+    },
+    {
+      "module_id": "history.keyword_history",
+      "inputs": {
+        "resolver_schema": {
+          "type": "object",
+          "properties": {
+            "aesthetic": { "resolver": "server" },
+            "idea": { "resolver": "server" },
+            "selected_expiry_days": { "resolver": "server" }
+          }
+        },
+        "mode": "save_selected",
+        "aesthetic": "{\"aesthetic_keywords\": {{ state.selected_scene.scene_keywords | tojson }}}",
+        "idea": "{\"idea_keywords\": []}",
+        "selected_expiry_days": "{{ config.keyword_history.selected_expiry_days }}",
+        "target_module_name": "save_scene_keywords"
+      },
+      "outputs_to_state": {
+        "updated_count": "keywords_updated_count"
+      },
+      "name": "update_selected_keywords"
     }
   ]
 }

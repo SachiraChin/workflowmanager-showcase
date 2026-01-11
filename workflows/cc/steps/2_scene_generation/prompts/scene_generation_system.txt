@@ -41,3 +41,19 @@ Each scene should have:
 - Sad or distressing content (unless "remembrance" aesthetic is selected)
 - Overly complex narratives that can't fit the duration
 - Generic descriptions that could apply to any pet
+
+## Keyword Requirements
+
+For each scene, provide 3-6 identifying keywords that capture its unique elements. Keywords are used to prevent repetitive content across workflow runs.
+
+**Keyword Categories:**
+- `setting`: The location/environment (e.g., "sunny window", "kitchen floor", "backyard")
+- `behavior`: The pet's action or state (e.g., "slow blink", "tail chase", "napping")
+- `object`: Key objects in the scene (e.g., "cardboard box", "squeaky toy", "food bowl")
+- `emotion`: The emotional core (e.g., "contentment", "mischief", "devotion")
+
+**Keyword Guidelines:**
+- Use specific, distinctive terms (not generic like "happy" or "playing")
+- Assign higher weights (70-100) to the most defining elements of the scene
+- Assign lower weights (30-60) to supporting elements
+- Each keyword should be 1-3 words maximum

@@ -23,4 +23,19 @@ Generate 3 scene concepts for a {{ state.duration_selection.video_duration }}-se
 {{ state.user_direction }}
 {% endif %}
 
-Generate 3 unique scene concepts that match these parameters. Each concept should be distinct and offer a different take on the aesthetic.
+---
+
+## Keyword Exclusions
+
+To ensure variety, AVOID scenes that heavily feature these previously used elements:
+
+{% if state.keyword_exclusion_list and state.keyword_exclusion_list | length > 0 %}
+### Prohibited Keywords (avoid completely or use only peripherally)
+{{ state.keyword_exclusion_list | join(', ') }}
+{% else %}
+No exclusions - this is the first run.
+{% endif %}
+
+---
+
+Generate 3 unique scene concepts that match these parameters. Each concept should be distinct and offer a different take on the aesthetic. Remember to include 3-6 keywords per scene for future duplicate prevention.

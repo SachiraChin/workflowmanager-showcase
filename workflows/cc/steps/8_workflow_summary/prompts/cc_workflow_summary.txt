@@ -1,0 +1,149 @@
+================================================================================
+CUDDLE CREW - WORKFLOW SUMMARY
+================================================================================
+
+Generated: {{ now().strftime('%Y-%m-%d %H:%M:%S') }}
+
+=== USER SELECTIONS ===
+
+Pet Type: {{ state.pet_type_selection.label }}
+{{ state.pet_type_selection.description }}
+
+Story Aesthetic: {{ state.aesthetic_selection.label }}
+{{ state.aesthetic_selection.description }}
+
+Visual Tone:
+- Mood: {{ state.aesthetic_selection.visual_tone.mood }}
+- Lighting: {{ state.aesthetic_selection.visual_tone.lighting }}
+- Energy: {{ state.aesthetic_selection.visual_tone.energy }}
+
+Video Duration: {{ state.duration_selection.video_duration }} seconds
+Audio Duration: {{ state.duration_selection.sound_track_duration }} seconds
+
+{% if state.user_direction %}
+User Direction: {{ state.user_direction }}
+{% endif %}
+
+================================================================================
+SCENE CONCEPT
+================================================================================
+
+Title: {{ state.selected_scene.title }}
+
+Hook: {{ state.selected_scene.hook }}
+
+Narrative:
+{{ state.selected_scene.narrative }}
+
+Setting: {{ state.selected_scene.setting }}
+
+Pet Behavior: {{ state.selected_scene.pet_behavior }}
+
+Emotional Arc: {{ state.selected_scene.emotional_arc }}
+
+Visual Moments:
+{% for moment in state.selected_scene.visual_moments %}
+- {{ moment }}
+{% endfor %}
+
+================================================================================
+IMAGE PROMPTS
+================================================================================
+
+{% if state.image_prompts %}
+--- Midjourney ---
+{{ state.image_prompts.prompts.midjourney.prompt }}
+{% if state.image_prompts.prompts.midjourney.style_suffix %}
+Style: {{ state.image_prompts.prompts.midjourney.style_suffix }}
+{% endif %}
+{% if state.image_prompts.prompts.midjourney.aspect_ratio %}
+Aspect Ratio: {{ state.image_prompts.prompts.midjourney.aspect_ratio }}
+{% endif %}
+
+--- Leonardo Phoenix 1.0 ---
+{{ state.image_prompts.prompts.leonardo_phoenix.prompt }}
+
+--- Sora ---
+{{ state.image_prompts.prompts.sora.prompt }}
+{% endif %}
+
+================================================================================
+VIDEO PROMPTS
+================================================================================
+
+{% if state.video_prompts %}
+--- Motion 2.0 ---
+Positive: {{ state.video_prompts.prompts.motion_2_0.positive_prompt }}
+Negative: {{ state.video_prompts.prompts.motion_2_0.negative_prompt }}
+Motion Strength: {{ state.video_prompts.prompts.motion_2_0.motion_strength }}
+
+--- Midjourney Animate ---
+Prompt A: {{ state.video_prompts.prompts.midjourney_animate.prompt_a }}
+Prompt B: {{ state.video_prompts.prompts.midjourney_animate.prompt_b }}
+Negative: {{ state.video_prompts.prompts.midjourney_animate.negative_prompt }}
+Transition: {{ state.video_prompts.prompts.midjourney_animate.transition_style }}
+{% endif %}
+
+================================================================================
+TEXT OVERLAYS
+================================================================================
+
+{% if state.selected_text_overlay %}
+Style: {{ state.selected_text_overlay.set_id }}
+Description: {{ state.selected_text_overlay.set_description }}
+
+Text:
+{% for para in state.selected_text_overlay.paragraphs %}
+{% for sentence in para.sentences %}
+{{ sentence }}
+{% endfor %}
+{% endfor %}
+{% endif %}
+
+================================================================================
+TITLES & SOCIAL
+================================================================================
+
+{% if state.selected_title %}
+Selected Title: {{ state.selected_title }}
+{% endif %}
+
+{% if state.selected_description %}
+Selected Description:
+{{ state.selected_description.text }}
+{{ state.selected_description.emojis }}
+{% endif %}
+
+================================================================================
+MUSIC
+================================================================================
+
+{% if state.selected_music_option %}
+Selected Style: {{ state.selected_music_option.name }}
+{{ state.selected_music_option.description }}
+
+BPM: {{ state.selected_music_option.bpm }}
+Key: {{ state.selected_music_option.key }}
+Instruments: {{ state.selected_music_option.instruments | join(', ') }}
+Mood: {{ state.selected_music_option.mood | join(', ') }}
+Energy: {{ state.selected_music_option.energy }}
+{% endif %}
+
+{% if state.elevenlabs_prompts_response %}
+--- ElevenLabs Prompts ---
+
+Track Title: {{ state.elevenlabs_prompts_response.track_title }}
+
+Precise Prompt:
+{{ state.elevenlabs_prompts_response.elevenlabs_prompt_precise }}
+
+Evocative Prompt:
+{{ state.elevenlabs_prompts_response.elevenlabs_prompt_evocative }}
+
+Voiceover Prompt:
+{{ state.elevenlabs_prompts_response.elevenlabs_prompt_voiceover }}
+{% endif %}
+
+================================================================================
+END OF WORKFLOW SUMMARY
+================================================================================
