@@ -1,21 +1,23 @@
 {
   "type": "object",
+  "render_as": "section-list",
   "properties": {
     "scene_title": {
       "type": "string",
       "display": true,
-      "render_as": "section-title"
+      "display_label": "Scene",
+      "render_as": "section-title",
+      "highlight": true
     },
     "key_moment": {
       "type": "string",
       "display": true,
       "display_label": "Key Moment",
+      "render_as": "section-summary",
       "highlight": true
     },
     "prompts": {
       "type": "object",
-      "display": true,
-      "render_as": "section-list",
       "properties": {
         "midjourney": {
           "type": "object",
@@ -24,6 +26,7 @@
           "render_as": "card-stack",
           "properties": {
             "prompt": {
+              "render_as": "card-content",
               "type": "string",
               "display": true,
               "display_label": "Prompt"
@@ -44,6 +47,7 @@
           "render_as": "card-stack",
           "properties": {
             "prompt": {
+              "render_as": "card-content",
               "type": "string",
               "display": true,
               "display_label": "Prompt"
@@ -64,6 +68,7 @@
           "render_as": "card-stack",
           "properties": {
             "prompt": {
+              "render_as": "card-content",
               "type": "string",
               "display": true,
               "display_label": "Prompt"

@@ -1,5 +1,6 @@
 {
   "type": "object",
+  "render_as": "section-list",
   "properties": {
     "scene_title": {
       "type": "string",
@@ -9,13 +10,12 @@
     "motion_summary": {
       "type": "string",
       "display": true,
+      "render_as": "section-summary",
       "display_label": "Motion Summary",
       "highlight": true
     },
     "prompts": {
       "type": "object",
-      "display": true,
-      "render_as": "section-list",
       "properties": {
         "motion_2_0": {
           "type": "object",
@@ -26,12 +26,14 @@
             "positive_prompt": {
               "type": "string",
               "display": true,
+              "render_as": "card-content",
               "display_label": "Positive Prompt"
             },
             "negative_prompt": {
               "type": "string",
               "display": true,
               "display_label": "Negative Prompt",
+              "render_as": "card-content",
               "highlight": true,
               "highlight_color": "#FF6B6B"
             },
@@ -39,12 +41,14 @@
               "type": "string",
               "display": true,
               "display_label": "Strength",
+              "render_as": "card-subtitle",
               "highlight": true,
               "highlight_color": "#4ECDC4"
             },
             "motion_notes": {
               "type": "string",
               "display": true,
+              "render_as": "card-subtitle",
               "display_label": "Notes"
             }
           }
@@ -58,16 +62,19 @@
             "prompt_a": {
               "type": "string",
               "display": true,
+              "render_as": "card-content",
               "display_label": "Prompt A (Start)"
             },
             "prompt_b": {
               "type": "string",
               "display": true,
+              "render_as": "card-content",
               "display_label": "Prompt B (End)"
             },
             "negative_prompt": {
               "type": "string",
               "display": true,
+              "render_as": "card-content",
               "display_label": "Negative Prompt",
               "highlight": true,
               "highlight_color": "#FF6B6B"
@@ -77,7 +84,8 @@
               "display": true,
               "display_label": "Transition",
               "highlight": true,
-              "highlight_color": "#7B68EE"
+              "highlight_color": "#7B68EE",
+              "render_as": "card-subtitle"
             }
           }
         }
