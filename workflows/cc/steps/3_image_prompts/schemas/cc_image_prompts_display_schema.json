@@ -28,7 +28,7 @@
           "render_as": "card",
           "properties": {
             "prompt": {
-              "render_as": "card-content",
+              "render_as": "content-panel",
               "type": "string",
               "display": true,
               "display_label": "Prompt"
@@ -49,7 +49,7 @@
           "render_as": "card",
           "properties": {
             "prompt": {
-              "render_as": "card-content",
+              "render_as": "content-panel",
               "type": "string",
               "display": true,
               "display_label": "Prompt"
@@ -70,7 +70,7 @@
           "render_as": "card",
           "properties": {
             "prompt": {
-              "render_as": "card-content",
+              "render_as": "content-panel",
               "type": "string",
               "display": true,
               "display_label": "Prompt"

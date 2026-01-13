@@ -28,14 +28,14 @@
             "positive_prompt": {
               "type": "string",
               "display": true,
-              "render_as": "card-content",
+              "render_as": "content-panel",
               "display_label": "Positive Prompt"
             },
             "negative_prompt": {
               "type": "string",
               "display": true,
               "display_label": "Negative Prompt",
-              "render_as": "card-content",
+              "render_as": "content-panel",
               "highlight": true,
               "highlight_color": "#FF6B6B"
             },
@@ -64,19 +64,19 @@
             "prompt_a": {
               "type": "string",
               "display": true,
-              "render_as": "card-content",
+              "render_as": "content-panel",
               "display_label": "Prompt A (Start)"
             },
             "prompt_b": {
               "type": "string",
               "display": true,
-              "render_as": "card-content",
+              "render_as": "content-panel",
               "display_label": "Prompt B (End)"
             },
             "negative_prompt": {
               "type": "string",
               "display": true,
-              "render_as": "card-content",
+              "render_as": "content-panel",
               "display_label": "Negative Prompt",
               "highlight": true,
               "highlight_color": "#FF6B6B"
