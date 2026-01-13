@@ -1,5 +1,6 @@
 {
   "type": "array",
+  "display": "visible",
   "render_as": "card-stack",
   "items": {
     "type": "string",

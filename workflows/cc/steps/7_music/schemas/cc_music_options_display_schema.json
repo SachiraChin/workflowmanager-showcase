@@ -1,8 +1,11 @@
 {
   "type": "array",
+  "display": "visible",
   "render_as": "section-list",
   "items": {
     "type": "object",
+    "display": "visible",
+    "render_as": "section",
     "selectable": true,
     "properties": {
       "name": {

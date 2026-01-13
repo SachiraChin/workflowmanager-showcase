@@ -1,6 +1,7 @@
 {
   "type": "object",
-  "render_as": "section-list",
+  "display": "visible",
+  "render_as": "section",
   "properties": {
     "scene_title": {
       "type": "string",
@@ -18,12 +19,13 @@
     },
     "prompts": {
       "type": "object",
+      "display": "passthrough",
       "properties": {
         "midjourney": {
           "type": "object",
-          "display": true,
+          "display": "visible",
           "display_label": "Midjourney",
-          "render_as": "card-stack",
+          "render_as": "card",
           "properties": {
             "prompt": {
               "render_as": "card-content",
@@ -42,9 +44,9 @@
         },
         "leonardo_phoenix": {
           "type": "object",
-          "display": true,
+          "display": "visible",
           "display_label": "Leonardo Phoenix 1.0",
-          "render_as": "card-stack",
+          "render_as": "card",
           "properties": {
             "prompt": {
               "render_as": "card-content",
@@ -63,9 +65,9 @@
         },
         "sora": {
           "type": "object",
-          "display": true,
+          "display": "visible",
           "display_label": "Sora 1",
-          "render_as": "card-stack",
+          "render_as": "card",
           "properties": {
             "prompt": {
               "render_as": "card-content",

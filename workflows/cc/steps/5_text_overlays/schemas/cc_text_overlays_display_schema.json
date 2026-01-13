@@ -1,11 +1,15 @@
 {
   "type": "object",
+  "display": "passthrough",
   "properties": {
     "text_sets": {
       "type": "array",
+      "display": "visible",
       "render_as": "section-list",
       "items": {
         "type": "object",
+        "display": "visible",
+        "render_as": "section",
         "properties": {
           "set_id": {
             "type": "string",
@@ -20,9 +24,12 @@
           },
           "paragraphs": {
             "type": "array",
+            "display": "visible",
             "render_as": "card-stack",
             "items": {
               "type": "object",
+              "display": "visible",
+              "render_as": "card",
               "selectable": true,
               "properties": {
                 "paragraph_id": {

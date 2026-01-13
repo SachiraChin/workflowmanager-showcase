@@ -1,6 +1,7 @@
 {
   "type": "object",
-  "render_as": "section-list",
+  "display": "visible",
+  "render_as": "section",
   "properties": {
     "scene_title": {
       "type": "string",
@@ -16,12 +17,13 @@
     },
     "prompts": {
       "type": "object",
+      "display": "passthrough",
       "properties": {
         "motion_2_0": {
           "type": "object",
-          "display": true,
+          "display": "visible",
           "display_label": "Motion 2.0",
-          "render_as": "card-stack",
+          "render_as": "card",
           "properties": {
             "positive_prompt": {
               "type": "string",
@@ -55,9 +57,9 @@
         },
         "midjourney_animate": {
           "type": "object",
-          "display": true,
+          "display": "visible",
           "display_label": "Midjourney Animate",
-          "render_as": "card-stack",
+          "render_as": "card",
           "properties": {
             "prompt_a": {
               "type": "string",

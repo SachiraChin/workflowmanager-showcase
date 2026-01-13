@@ -1,8 +1,11 @@
 {
   "type": "array",
+  "display": "visible",
   "render_as": "card-stack",
   "items": {
     "type": "object",
+    "display": "visible",
+    "render_as": "card",
     "selectable": true,
     "properties": {
       "id": {
