@@ -26,6 +26,7 @@
           "display": "visible",
           "display_label": "Midjourney",
           "render_as": "card",
+          "nudges": ["index-badge"],
           "properties": {
             "prompt": {
               "render_as": "content-panel",
@@ -47,6 +48,7 @@
           "display": "visible",
           "display_label": "Leonardo Phoenix 1.0",
           "render_as": "card",
+          "nudges": ["index-badge"],
           "properties": {
             "prompt": {
               "render_as": "content-panel",
@@ -68,6 +70,7 @@
           "display": "visible",
           "display_label": "Sora 1",
           "render_as": "card",
+          "nudges": ["index-badge"],
           "properties": {
             "prompt": {
               "render_as": "content-panel",

@@ -126,6 +126,7 @@
           "type": "object",
           "display_mode": "review",
           "render_as": "card",
+          "nudges": ["index-badge"],
           "properties": {
             "track_title": {
               "type": "string",

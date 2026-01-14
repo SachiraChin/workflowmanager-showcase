@@ -6,6 +6,7 @@
     "type": "object",
     "display": "visible",
     "render_as": "card",
+    "nudges": ["index-badge"],
     "selectable": true,
     "properties": {
       "text": {
