@@ -1,50 +1,58 @@
 {
   "type": "array",
-  "display": "visible",
-  "render_as": "section-list",
+  "_ux.display": "visible",
+  "_ux.render_as": "section-list",
   "items": {
     "type": "object",
-    "display": "visible",
-    "render_as": "section",
-    "selectable": true,
+    "_ux": {
+      "display": "visible",
+      "render_as": "section",
+      "selectable": true
+    },
     "properties": {
       "name": {
         "type": "string",
-        "display": true,
-        "render_as": "section-title"
+        "_ux.display": true,
+        "_ux.render_as": "section-title"
       },
       "description": {
         "type": "string",
-        "display": true,
-        "render_as": "section-summary",
-        "highlight": true
+        "_ux": {
+          "display": true,
+          "render_as": "section-summary",
+          "highlight": true
+        }
       },
       "bpm": {
         "type": "integer",
-        "display": true,
-        "display_label": "BPM"
+        "_ux.display": true,
+        "_ux.display_label": "BPM"
       },
       "key": {
         "type": "string",
-        "display": true,
-        "display_label": "Key"
+        "_ux.display": true,
+        "_ux.display_label": "Key"
       },
       "energy": {
         "type": "string",
-        "display": true,
-        "display_label": "Energy"
+        "_ux.display": true,
+        "_ux.display_label": "Energy"
       },
       "instruments": {
         "type": "array",
-        "display": true,
-        "display_label": "Instruments",
-        "display_format": "{{ value | join(', ') }}"
+        "_ux": {
+          "display": true,
+          "display_label": "Instruments",
+          "display_format": "{{ value | join(', ') }}"
+        }
       },
       "mood": {
         "type": "array",
-        "display": true,
-        "display_label": "Mood",
-        "display_format": "{{ value | join(', ') }}"
+        "_ux": {
+          "display": true,
+          "display_label": "Mood",
+          "display_format": "{{ value | join(', ') }}"
+        }
       }
     }
   }

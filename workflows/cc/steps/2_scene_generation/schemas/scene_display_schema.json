@@ -1,56 +1,64 @@
 {
   "type": "object",
-  "display": "passthrough",
+  "_ux.display": "passthrough",
   "properties": {
     "scenes": {
       "type": "array",
-      "display": "visible",
-      "render_as": "card-stack",
+      "_ux.display": "visible",
+      "_ux.render_as": "card-stack",
       "items": {
         "type": "object",
-        "display": "visible",
-        "render_as": "card",
-        "nudges": ["index-badge"],
-        "selectable": true,
+        "_ux": {
+          "display": "visible",
+          "render_as": "card",
+          "nudges": ["index-badge"],
+          "selectable": true
+        },
         "properties": {
           "title": {
             "type": "string",
-            "display": true,
-            "render_as": "card-title"
+            "_ux.display": true,
+            "_ux.render_as": "card-title"
           },
           "hook": {
             "type": "string",
-            "display": true,
-            "render_as": "card-subtitle",
-            "highlight": true
+            "_ux": {
+              "display": true,
+              "render_as": "card-subtitle",
+              "highlight": true
+            }
           },
           "narrative": {
             "type": "string",
-            "display": true,
-            "display_label": "Story"
+            "_ux.display": true,
+            "_ux.display_label": "Story"
           },
           "visual_moments": {
             "type": "array",
-            "display": true,
-            "display_label": "Key Moments",
-            "display_format": "{{ value | join(' → ') }}"
+            "_ux": {
+              "display": true,
+              "display_label": "Key Moments",
+              "display_format": "{{ value | join(' → ') }}"
+            }
           },
           "pet_behavior": {
             "type": "string",
-            "display": true,
-            "display_label": "Pet Focus",
-            "highlight": true,
-            "highlight_color": "#FFB347"
+            "_ux": {
+              "display": true,
+              "display_label": "Pet Focus",
+              "highlight": true,
+              "highlight_color": "#FFB347"
+            }
           },
           "emotional_arc": {
             "type": "string",
-            "display": true,
-            "display_label": "Emotional Arc"
+            "_ux.display": true,
+            "_ux.display_label": "Emotional Arc"
           },
           "setting": {
             "type": "string",
-            "display": true,
-            "display_label": "Setting"
+            "_ux.display": true,
+            "_ux.display_label": "Setting"
           }
         }
       }

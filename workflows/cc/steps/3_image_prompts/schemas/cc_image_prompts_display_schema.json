@@ -1,89 +1,111 @@
 {
   "type": "object",
-  "display": "visible",
-  "render_as": "section",
+  "_ux.display": "visible",
+  "_ux.render_as": "section",
   "properties": {
     "scene_title": {
       "type": "string",
-      "display": true,
-      "display_label": "Scene",
-      "render_as": "section-title",
-      "highlight": true
+      "_ux": {
+        "display": true,
+        "display_label": "Scene",
+        "render_as": "section-title",
+        "highlight": true
+      }
     },
     "key_moment": {
       "type": "string",
-      "display": true,
-      "display_label": "Key Moment",
-      "render_as": "section-summary",
-      "highlight": true
+      "_ux": {
+        "display": true,
+        "display_label": "Key Moment",
+        "render_as": "section-summary",
+        "highlight": true
+      }
     },
     "prompts": {
       "type": "object",
-      "display": "passthrough",
+      "_ux.display": "passthrough",
       "properties": {
         "midjourney": {
           "type": "object",
-          "display": "visible",
-          "display_label": "Midjourney",
-          "render_as": "card",
-          "nudges": ["index-badge"],
+          "_ux": {
+            "display": "visible",
+            "display_label": "Midjourney",
+            "render_as": "card",
+            "nudges": ["index-badge"]
+          },
           "properties": {
             "prompt": {
-              "render_as": "content-panel",
               "type": "string",
-              "display": true,
-              "display_label": "Prompt"
+              "_ux": {
+                "render_as": "content-panel",
+                "display": true,
+                "display_label": "Prompt"
+              }
             },
             "style_notes": {
               "type": "string",
-              "display": true,
-              "display_label": "Style",
-              "highlight": true,
-              "highlight_color": "#7B68EE"
+              "_ux": {
+                "display": true,
+                "display_label": "Style",
+                "highlight": true,
+                "highlight_color": "#7B68EE"
+              }
             }
           }
         },
         "leonardo_phoenix": {
           "type": "object",
-          "display": "visible",
-          "display_label": "Leonardo Phoenix 1.0",
-          "render_as": "card",
-          "nudges": ["index-badge"],
+          "_ux": {
+            "display": "visible",
+            "display_label": "Leonardo Phoenix 1.0",
+            "render_as": "card",
+            "nudges": ["index-badge"]
+          },
           "properties": {
             "prompt": {
-              "render_as": "content-panel",
               "type": "string",
-              "display": true,
-              "display_label": "Prompt"
+              "_ux": {
+                "render_as": "content-panel",
+                "display": true,
+                "display_label": "Prompt"
+              }
             },
             "style_notes": {
               "type": "string",
-              "display": true,
-              "display_label": "Style",
-              "highlight": true,
-              "highlight_color": "#FF6B6B"
+              "_ux": {
+                "display": true,
+                "display_label": "Style",
+                "highlight": true,
+                "highlight_color": "#FF6B6B"
+              }
             }
           }
         },
         "sora": {
           "type": "object",
-          "display": "visible",
-          "display_label": "Sora 1",
-          "render_as": "card",
-          "nudges": ["index-badge"],
+          "_ux": {
+            "display": "visible",
+            "display_label": "Sora 1",
+            "render_as": "card",
+            "nudges": ["index-badge"]
+          },
           "properties": {
             "prompt": {
-              "render_as": "content-panel",
               "type": "string",
-              "display": true,
-              "display_label": "Prompt"
+              "_ux": {
+                "render_as": "content-panel",
+                "display": true,
+                "display_label": "Prompt"
+              }
             },
             "camera_notes": {
               "type": "string",
-              "display": true,
-              "display_label": "Camera",
-              "highlight": true,
-              "highlight_color": "#4ECDC4"
+              "_ux": {
+                "display": true,
+                "display_label": "Camera",
+                "highlight": true,
+                "highlight_color": "#4ECDC4"
+              }
             }
           }
         }

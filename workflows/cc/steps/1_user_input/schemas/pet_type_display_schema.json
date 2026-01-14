@@ -1,27 +1,29 @@
 {
   "type": "array",
-  "display": "visible",
-  "render_as": "card-stack",
+  "_ux.display": "visible",
+  "_ux.render_as": "card-stack",
   "items": {
     "type": "object",
-    "display": "visible",
-    "render_as": "card",
-    "nudges": ["index-badge"],
-    "selectable": true,
+    "_ux": {
+      "display": "visible",
+      "render_as": "card",
+      "nudges": ["index-badge"],
+      "selectable": true
+    },
     "properties": {
       "id": {
         "type": "string",
-        "display": false
+        "_ux.display": false
       },
       "label": {
         "type": "string",
-        "display": true,
-        "render_as": "card-title"
+        "_ux.display": true,
+        "_ux.render_as": "card-title"
       },
       "description": {
         "type": "string",
-        "display": true,
-        "render_as": "card-subtitle"
+        "_ux.display": true,
+        "_ux.render_as": "card-subtitle"
       }
     }
   }

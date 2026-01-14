@@ -1,56 +1,62 @@
 {
   "type": "array",
-  "display": "visible",
-  "render_as": "card-stack",
+  "_ux.display": "visible",
+  "_ux.render_as": "card-stack",
   "items": {
     "type": "object",
-    "display": "visible",
-    "render_as": "card",
-    "nudges": ["index-badge"],
-    "selectable": true,
+    "_ux": {
+      "display": "visible",
+      "render_as": "card",
+      "nudges": ["index-badge"],
+      "selectable": true
+    },
     "properties": {
       "id": {
         "type": "string",
-        "display": false
+        "_ux.display": false
       },
       "label": {
         "type": "string",
-        "display": true,
-        "render_as": "card-title"
+        "_ux.display": true,
+        "_ux.render_as": "card-title"
       },
       "description": {
         "type": "string",
-        "display": true,
-        "render_as": "card-subtitle"
+        "_ux.display": true,
+        "_ux.render_as": "card-subtitle"
       },
       "visual_tone": {
         "type": "object",
-        "display": true,
-        "display_label": "Visual Tone",
+        "_ux.display": true,
+        "_ux.display_label": "Visual Tone",
         "properties": {
           "mood": {
             "type": "string",
-            "display": true,
-            "display_label": "Mood"
+            "_ux.display": true,
+            "_ux.display_label": "Mood"
           },
           "lighting": {
             "type": "string",
-            "display": true,
-            "display_label": "Lighting"
+            "_ux.display": true,
+            "_ux.display_label": "Lighting"
           },
           "energy": {
             "type": "string",
-            "display": true,
-            "display_label": "Energy",
-            "highlight": true
+            "_ux": {
+              "display": true,
+              "display_label": "Energy",
+              "highlight": true
+            }
           }
         }
       },
       "story_angles": {
         "type": "array",
-        "display": true,
-        "display_label": "Story Ideas",
-        "display_format": "{{ value | join(' | ') }}"
+        "_ux": {
+          "display": true,
+          "display_label": "Story Ideas",
+          "display_format": "{{ value | join(' | ') }}"
+        }
       }
     }
   }

@@ -124,30 +124,34 @@
         "data": "{{ state.elevenlabs_prompts_response }}",
         "schema": {
           "type": "object",
-          "display_mode": "review",
-          "render_as": "card",
-          "nudges": ["index-badge"],
+          "_ux": {
+            "display_mode": "review",
+            "render_as": "card",
+            "nudges": ["index-badge"]
+          },
           "properties": {
             "track_title": {
               "type": "string",
-              "display": true,
-              "display_label": "Track Title",
-              "render_as": "card-title"
+              "_ux": {
+                "display": true,
+                "display_label": "Track Title",
+                "render_as": "card-title"
+              }
             },
             "elevenlabs_prompt_precise": {
               "type": "string",
-              "display": true,
-              "display_label": "Precise Prompt"
+              "_ux.display": true,
+              "_ux.display_label": "Precise Prompt"
             },
             "elevenlabs_prompt_evocative": {
               "type": "string",
-              "display": true,
-              "display_label": "Evocative Prompt"
+              "_ux.display": true,
+              "_ux.display_label": "Evocative Prompt"
             },
             "elevenlabs_prompt_voiceover": {
               "type": "string",
-              "display": true,
-              "display_label": "Voiceover Prompt"
+              "_ux.display": true,
+              "_ux.display_label": "Voiceover Prompt"
             }
           }
         },

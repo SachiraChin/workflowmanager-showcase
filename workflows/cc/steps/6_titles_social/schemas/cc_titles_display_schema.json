@@ -1,10 +1,10 @@
 {
   "type": "array",
-  "display": "visible",
-  "render_as": "card-stack",
+  "_ux.display": "visible",
+  "_ux.render_as": "card-stack",
   "items": {
     "type": "string",
-    "selectable": true,
-    "display": true
+    "_ux.selectable": true,
+    "_ux.display": true
   }
 }
