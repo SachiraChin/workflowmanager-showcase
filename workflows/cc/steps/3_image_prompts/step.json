@@ -64,7 +64,7 @@
                     "prompts": { "resolver": "server" }
                   }
                 },
-                "prompts": "{{ state.image_prompts.prompts }}",
+                "prompts": "{{ state.image_prompts }}",
                 "schema": {
                   "$ref": "schemas/cc_image_prompts_display_schema.json",
                   "type": "json"
