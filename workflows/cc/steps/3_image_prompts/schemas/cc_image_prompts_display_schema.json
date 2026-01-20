@@ -39,7 +39,87 @@
               "_ux": {
                 "render_as": "content-panel",
                 "display": true,
-                "display_label": "Prompt"
+                "display_label": "Prompt",
+                "input_schema": {
+                  "type": "object",
+                  "properties": {
+                    "aspect_ratio": {
+                      "type": "string",
+                      "title": "Aspect Ratio",
+                      "enum": ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"],
+                      "default": "16:9",
+                      "_ux": {
+                        "enum_labels": {
+                          "1:1": "1:1 (Square)",
+                          "16:9": "16:9 (Landscape)",
+                          "9:16": "9:16 (Portrait)",
+                          "4:3": "4:3",
+                          "3:4": "3:4",
+                          "3:2": "3:2",
+                          "2:3": "2:3"
+                        }
+                      }
+                    },
+                    "speed": {
+                      "type": "string",
+                      "title": "Speed",
+                      "enum": ["relaxed", "fast", "turbo"],
+                      "default": "fast",
+                      "_ux": {
+                        "enum_labels": {
+                          "relaxed": "Relaxed",
+                          "fast": "Fast",
+                          "turbo": "Turbo"
+                        }
+                      }
+                    },
+                    "version": {
+                      "type": "string",
+                      "title": "Version",
+                      "enum": ["7", "6.1", "6", "5.2", "niji6"],
+                      "default": "7",
+                      "_ux": {
+                        "enum_labels": {
+                          "7": "V7",
+                          "6.1": "V6.1",
+                          "6": "V6",
+                          "5.2": "V5.2",
+                          "niji6": "Niji 6"
+                        }
+                      }
+                    },
+                    "stylization": {
+                      "type": "integer",
+                      "title": "Stylization",
+                      "minimum": 0,
+                      "maximum": 1000,
+                      "default": 100,
+                      "_ux": {
+                        "input_type": "slider"
+                      }
+                    },
+                    "weirdness": {
+                      "type": "integer",
+                      "title": "Weirdness",
+                      "minimum": 0,
+                      "maximum": 3000,
+                      "default": 0,
+                      "_ux": {
+                        "input_type": "slider"
+                      }
+                    },
+                    "variety": {
+                      "type": "integer",
+                      "title": "Variety",
+                      "minimum": 0,
+                      "maximum": 100,
+                      "default": 0,
+                      "_ux": {
+                        "input_type": "slider"
+                      }
+                    }
+                  }
+                }
               }
             },
             "style_notes": {
@@ -53,30 +133,114 @@
             }
           }
         },
-        "leonardo_phoenix": {
+        "leonardo": {
           "type": "object",
           "_ux": {
             "display": "visible",
-            "display_label": "Leonardo Phoenix 1.0",
+            "display_label": "Leonardo",
             "render_as": "card",
             "nudges": ["index-badge"]
           },
           "properties": {
-            "prompt": {
-              "type": "string",
+            "phoenix_1_0": {
+              "type": "object",
               "_ux": {
+                "display": true,
                 "render_as": "content-panel",
-                "display": true,
-                "display_label": "Prompt"
-              }
-            },
-            "style_notes": {
-              "type": "string",
-              "_ux": {
-                "display": true,
-                "display_label": "Style",
-                "highlight": true,
-                "highlight_color": "#FF6B6B"
+                "display_label": "Phoenix 1.0",
+                "input_schema": {
+                  "type": "object",
+                  "properties": {
+                    "aspect_ratio": {
+                      "type": "string",
+                      "title": "Aspect Ratio",
+                      "enum": ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"],
+                      "default": "16:9",
+                      "_ux": {
+                        "enum_labels": {
+                          "1:1": "1:1 (Square)",
+                          "16:9": "16:9 (Landscape)",
+                          "9:16": "9:16 (Portrait)",
+                          "4:3": "4:3",
+                          "3:4": "3:4",
+                          "3:2": "3:2",
+                          "2:3": "2:3"
+                        }
+                      }
+                    },
+                    "quality": {
+                      "type": "string",
+                      "title": "Quality",
+                      "enum": ["low", "balanced", "high"],
+                      "default": "balanced",
+                      "_ux": {
+                        "enum_labels": {
+                          "low": "Low (Fast)",
+                          "balanced": "Balanced",
+                          "high": "High Quality"
+                        }
+                      }
+                    },
+                    "preset_style": {
+                      "type": "string",
+                      "title": "Style",
+                      "enum": ["NONE", "CINEMATIC", "PHOTOGRAPHY", "ANIME", "ILLUSTRATION", "DYNAMIC", "VIBRANT", "MOODY", "HDR", "BOKEH"],
+                      "default": "NONE",
+                      "_ux": {
+                        "enum_labels": {
+                          "NONE": "None",
+                          "CINEMATIC": "Cinematic",
+                          "PHOTOGRAPHY": "Photography",
+                          "ANIME": "Anime",
+                          "ILLUSTRATION": "Illustration",
+                          "DYNAMIC": "Dynamic",
+                          "VIBRANT": "Vibrant",
+                          "MOODY": "Moody",
+                          "HDR": "HDR",
+                          "BOKEH": "Bokeh"
+                        }
+                      }
+                    },
+                    "num_images": {
+                      "type": "integer",
+                      "title": "Images",
+                      "enum": [1, 2, 4],
+                      "default": 4,
+                      "_ux": {
+                        "enum_labels": {
+                          "1": "1",
+                          "2": "2",
+                          "4": "4"
+                        }
+                      }
+                    },
+                    "guidance_scale": {
+                      "type": "integer",
+                      "title": "Guidance",
+                      "minimum": 1,
+                      "maximum": 20,
+                      "default": 7,
+                      "_ux": {
+                        "input_type": "slider"
+                      }
+                    }
+                  }
+                }
+              },
+              "properties": {
+                "prompt": {
+                  "type": "string",
+                  "_ux.display_label": "Prompt"
+                },
+                "style_notes": {
+                  "type": "string",
+                  "_ux": {
+                    "display": true,
+                    "display_label": "Style",
+                    "highlight": true,
+                    "highlight_color": "#FF6B6B"
+                  }
+                }
               }
             }
           }

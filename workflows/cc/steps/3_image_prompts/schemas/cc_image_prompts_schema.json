@@ -27,19 +27,26 @@
           "required": ["prompt", "style_notes"],
           "additionalProperties": false
         },
-        "leonardo_phoenix": {
+        "leonardo": {
           "type": "object",
           "properties": {
-            "prompt": {
-              "type": "string",
-              "description": "Leonardo Phoenix 1.0 optimized prompt"
-            },
-            "style_notes": {
-              "type": "string",
-              "description": "Brief note on the style/quality targeted"
+            "phoenix_1_0": {
+              "type": "object",
+              "properties": {
+                "prompt": {
+                  "type": "string",
+                  "description": "Leonardo Phoenix 1.0 optimized prompt"
+                },
+                "style_notes": {
+                  "type": "string",
+                  "description": "Brief note on the style/quality targeted"
+                }
+              },
+              "required": ["prompt", "style_notes"],
+              "additionalProperties": false
             }
           },
-          "required": ["prompt", "style_notes"],
+          "required": ["phoenix_1_0"],
           "additionalProperties": false
         },
         "sora": {
@@ -58,7 +65,7 @@
           "additionalProperties": false
         }
       },
-      "required": ["midjourney", "leonardo_phoenix", "sora"],
+      "required": ["midjourney", "leonardo", "sora"],
       "additionalProperties": false
     }
   },
