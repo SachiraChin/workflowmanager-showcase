@@ -94,6 +94,7 @@
                       "minimum": 0,
                       "maximum": 1000,
                       "default": 100,
+                      "step": 10,
                       "_ux": {
                         "input_type": "slider"
                       }
@@ -104,6 +105,7 @@
                       "minimum": 0,
                       "maximum": 3000,
                       "default": 0,
+                      "step": 50,
                       "_ux": {
                         "input_type": "slider"
                       }
@@ -114,6 +116,7 @@
                       "minimum": 0,
                       "maximum": 100,
                       "default": 0,
+                      "step": 5,
                       "_ux": {
                         "input_type": "slider"
                       }
@@ -233,6 +236,7 @@
                       "minimum": 1,
                       "maximum": 20,
                       "default": 7,
+                      "step": 1,
                       "_ux": {
                         "input_type": "slider"
                       }
