@@ -23,10 +23,23 @@ Generate image prompts based on this scene concept:
 
 **Pet Type:** {{ state.pet_type_selection.label }}
 
+**Core Aesthetic:** {{ state.aesthetic_selection.label }}
+{{ state.aesthetic_selection.description }}
+
 **Visual Tone:**
 - Mood: {{ state.aesthetic_selection.visual_tone.mood }}
 - Lighting: {{ state.aesthetic_selection.visual_tone.lighting }}
 - Energy: {{ state.aesthetic_selection.visual_tone.energy }}
+- Warmth: {{ state.aesthetic_selection.visual_tone.warmth }}
+
+**Required Visual Elements (MUST include in prompts):**
+{% for element in state.aesthetic_selection.visual_elements %}
+- {{ element }}
+{% endfor %}
+
+**Prompting Keywords:**
+- Use these: {{ state.aesthetic_selection.prompting_keywords.positive | join(', ') }}
+- Avoid these: {{ state.aesthetic_selection.prompting_keywords.negative | join(', ') }}
 
 {% if state.user_direction %}
 **User Direction:** {{ state.user_direction }}

@@ -298,5 +298,39 @@
       "positive": ["memory", "remembrance", "tribute", "forever", "rainbow bridge", "cherished", "beloved", "miss"],
       "negative": ["graphic", "disturbing", "clinical"]
     }
+  },
+  {
+    "id": "heavenly",
+    "label": "Heavenly Realm",
+    "description": "Pets in an ethereal paradise - a dreamlike celestial world with cloud floors, golden light, ancient ruins, and magical atmosphere.",
+    "visual_tone": {
+      "mood": "ethereal, majestic, serene",
+      "lighting": "soft golden glow, divine rays, ambient luminescence",
+      "energy": "gentle but awe-inspiring",
+      "warmth": "warm golden"
+    },
+    "story_angles": [
+      "Walking on clouds in paradise",
+      "Exploring ancient celestial ruins",
+      "Playing among butterflies and light particles",
+      "Resting by heavenly rivers and waterfalls",
+      "Guardian angel moments",
+      "Discovering floating islands and temples"
+    ],
+    "visual_elements": [
+      "Fluffy clouds as ground and platforms",
+      "Crystal-clear rivers flowing through the sky",
+      "Ancient marble ruins with overgrown flowers",
+      "Distant floating mountains and temples",
+      "Butterflies, doves, and glowing particles",
+      "Soft mist and golden light rays",
+      "Ornate pillars and archways",
+      "Celestial flowers and blooming gardens",
+      "Gentle waterfalls cascading into clouds"
+    ],
+    "prompting_keywords": {
+      "positive": ["heavenly", "celestial", "ethereal", "paradise", "divine", "clouds", "golden light", "angelic", "serene", "majestic", "floating", "ancient ruins", "butterflies", "sacred", "transcendent"],
+      "negative": ["dark", "scary", "hellish", "fire", "destruction", "horror", "mundane", "urban"]
+    }
   }
 ]
