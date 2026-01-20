@@ -9,9 +9,15 @@
         "resolver_schema": {
           "type": "object",
           "properties": {
-            "input": { "resolver": "server" },
-            "system": { "resolver": "server" },
-            "metadata": { "resolver": "server" }
+            "input": {
+              "resolver": "server"
+            },
+            "system": {
+              "resolver": "server"
+            },
+            "metadata": {
+              "resolver": "server"
+            }
           }
         },
         "ai_config": {},
@@ -46,134 +52,67 @@
       "name": "generate_image_prompts"
     },
     {
-      "module_id": "pipeline.execution_groups",
-      "name": "prompt_review_group",
-      "groups": [
-        {
-          "name": "webui_path",
-          "requires": [
-            { "capability": "media.generate", "priority": 100 }
-          ],
-          "modules": [
-            {
-              "module_id": "media.generate",
-              "inputs": {
-                "resolver_schema": {
-                  "type": "object",
-                  "properties": {
-                    "prompts": { "resolver": "server" }
-                  }
-                },
-                "prompts": "{{ state.image_prompts }}",
-                "schema": {
-                  "$ref": "schemas/cc_image_prompts_display_schema.json",
-                  "type": "json"
-                },
-                "title": "Generate and Select Images"
-              },
-              "outputs_to_state": {
-                "selected_content_id": "selected_image_id",
-                "selected_content": "selected_image_data",
-                "generations": "image_generations"
-              },
-              "sub_actions": [
-                {
-                  "id": "generate",
-                  "label": "Generate Images",
-                  "action_type": "txt2img",
-                  "loading_label": "Generating...",
-                  "result_key": "generations"
-                }
-              ],
-              "retryable": {
-                "default_option": "continue",
-                "options": [
-                  {
-                    "id": "continue",
-                    "mode": "continue",
-                    "label": "Accept and continue"
-                  },
-                  {
-                    "id": "retry",
-                    "mode": "retry",
-                    "label": "Regenerate prompts",
-                    "shortcut": "r",
-                    "target_module": "generate_image_prompts",
-                    "feedback": {
-                      "enabled": true,
-                      "prompt": "What should be different?",
-                      "default_message": "Please generate different image prompts with more variety in composition and mood."
-                    }
-                  },
-                  {
-                    "id": "change_scene",
-                    "mode": "jump",
-                    "label": "Choose different scene",
-                    "target_step": "scene_generation",
-                    "target_module": "select_scene"
-                  }
-                ]
-              },
-              "name": "generate_and_select_images"
+      "module_id": "media.generate",
+      "inputs": {
+        "resolver_schema": {
+          "type": "object",
+          "properties": {
+            "prompts": {
+              "resolver": "server"
             }
-          ]
+          }
         },
+        "prompts": "{{ state.image_prompts }}",
+        "schema": {
+          "$ref": "schemas/cc_image_prompts_display_schema.json",
+          "type": "json"
+        },
+        "title": "Generate and Select Images"
+      },
+      "outputs_to_state": {
+        "selected_content_id": "selected_image_id",
+        "selected_content": "selected_image_data",
+        "generations": "image_generations"
+      },
+      "sub_actions": [
         {
-          "name": "tui_path",
-          "requires": [],
-          "modules": [
-            {
-              "module_id": "user.select",
-              "inputs": {
-                "resolver_schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": { "resolver": "server" }
-                  }
-                },
-                "prompt": "Review generated image prompts",
-                "data": "{{ state.image_prompts }}",
-                "schema": {
-                  "$ref": "schemas/cc_image_prompts_display_schema.json",
-                  "type": "json"
-                },
-                "mode": "review"
-              },
-              "outputs_to_state": {},
-              "retryable": {
-                "default_option": "continue",
-                "options": [
-                  {
-                    "id": "continue",
-                    "mode": "continue",
-                    "label": "Accept and continue"
-                  },
-                  {
-                    "id": "retry",
-                    "mode": "retry",
-                    "label": "Regenerate prompts",
-                    "shortcut": "r",
-                    "target_module": "generate_image_prompts",
-                    "feedback": {
-                      "enabled": true,
-                      "prompt": "What should be different?",
-                      "default_message": "Please generate different image prompts with more variety in composition and mood."
-                    }
-                  },
-                  {
-                    "id": "change_scene",
-                    "mode": "jump",
-                    "label": "Choose different scene",
-                    "target_step": "scene_generation",
-                    "target_module": "select_scene"
-                  }
-                ]
-              },
-              "name": "review_image_prompts"
-            }
-          ]
+          "id": "generate",
+          "label": "Generate Images",
+          "action_type": "txt2img",
+          "loading_label": "Generating...",
+          "result_key": "generations"
         }
-      ]
+      ],
+      "retryable": {
+        "default_option": "continue",
+        "options": [
+          {
+            "id": "continue",
+            "mode": "continue",
+            "label": "Accept and continue"
+          },
+          {
+            "id": "retry",
+            "mode": "retry",
+            "label": "Regenerate prompts",
+            "shortcut": "r",
+            "target_module": "generate_image_prompts",
+            "feedback": {
+              "enabled": true,
+              "prompt": "What should be different?",
+              "default_message": "Please generate different image prompts with more variety in composition and mood."
+            }
+          },
+          {
+            "id": "change_scene",
+            "mode": "jump",
+            "label": "Choose different scene",
+            "target_step": "scene_generation",
+            "target_module": "select_scene"
+          }
+        ]
+      },
+      "name": "generate_and_select_images"
     }
   ]
 }

@@ -599,6 +599,70 @@ The `history.keyword_history` module was designed specifically for the OMS workf
 
 ---
 
+## 10. Media Preview Provider/Model Identification is Path-Dependent
+
+**Date Identified:** 2026-01-20
+**Severity:** Medium
+**Status:** Open
+
+### Problem
+
+The `MediaPromptPanel` component extracts `provider` and `model_id` (prompt_id) from the schema path by convention:
+- Path: `["prompts", "leonardo", "phoenix_1_0"]`
+- Provider extracted as: `path[path.length - 2]` → `"leonardo"`
+- Model/prompt_id extracted as: `path[path.length - 1]` → `"phoenix_1_0"`
+
+This relies on an implicit path structure convention that is not enforced or documented. If the schema structure changes or a different nesting is used, the extraction breaks silently.
+
+### Impact
+
+1. **Fragile convention**: Path structure must follow exact pattern for extraction to work
+2. **Silent failures**: Wrong provider/model causes incorrect pricing API calls (isPhoenix, isSDXL flags)
+3. **Not documented**: Convention exists only in code, easy to violate when creating new schemas
+4. **Tight coupling**: Frontend path parsing must match backend model mapping (PROMPT_MODEL_MAP)
+
+### Files Affected
+
+**Frontend:**
+- `webui/src/components/workflow/interactions/media-generation/MediaPromptPanel.tsx` - Path extraction logic (lines 128-132)
+
+**Backend:**
+- `server/modules/media/leonardo/provider.py` - `PROMPT_MODEL_MAP` (lines 79-84), `_calculate_credits()` uses model to determine `isPhoenix`/`isSDXL` flags
+
+**Schemas:**
+- `workflows/cc/steps/3_image_prompts/schemas/cc_image_prompts_display_schema.json`
+- `workflows/oms/steps/2_prompt_generation/schemas/leonardo_display_schema.json`
+
+### Suggested Fix Options
+
+**Option A: UX Config Metadata**
+Add explicit `_ux.provider` and `_ux.model_id` to each prompt's schema:
+```json
+"phoenix_1_0": {
+  "_ux": {
+    "provider": "leonardo",
+    "model_id": "phoenix_1_0",
+    "display_label": "Phoenix 1.0"
+  }
+}
+```
+Frontend reads from UX config instead of parsing path.
+
+**Option B: Pass from Parent Context**
+MediaGeneration component knows full structure. Pass provider/model_id through context rather than having MediaPromptPanel extract from path.
+
+**Option C: Schema Property**
+Add a `$meta` property at schema level defining provider/model explicitly.
+
+**Option D: SubActionConfig Enhancement**
+Include provider and model info in the sub-action configuration from workflow module config.
+
+### Current Workaround
+
+Continue using path-based extraction with the implicit convention. Document the required path structure in schema comments.
+
+---
+
 ## Template for New Issues
 
 ```markdown

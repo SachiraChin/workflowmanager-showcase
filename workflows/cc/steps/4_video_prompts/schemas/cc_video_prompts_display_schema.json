@@ -26,8 +26,7 @@
           "_ux": {
             "display": "visible",
             "display_label": "Motion 2.0",
-            "render_as": "card",
-            "nudges": ["index-badge"]
+            "render_as": "card"
           },
           "properties": {
             "positive_prompt": {
@@ -73,8 +72,7 @@
           "_ux": {
             "display": "visible",
             "display_label": "Midjourney Animate",
-            "render_as": "card",
-            "nudges": ["index-badge"]
+            "render_as": "card"
           },
           "properties": {
             "prompt_a": {

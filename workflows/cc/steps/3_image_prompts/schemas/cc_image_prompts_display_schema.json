@@ -47,7 +47,7 @@
                       "type": "string",
                       "title": "Aspect Ratio",
                       "enum": ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"],
-                      "default": "16:9",
+                      "default": "9:16",
                       "_ux": {
                         "enum_labels": {
                           "1:1": "1:1 (Square)",
@@ -256,6 +256,34 @@
                           "3.5": "3.5",
                           "4.0": "4.0",
                           "4.5": "4.5 (High)"
+                        }
+                      }
+                    },
+                    "num_inference_steps": {
+                      "type": "integer",
+                      "title": "Steps",
+                      "minimum": 10,
+                      "maximum": 60,
+                      "default": 15,
+                      "step": 1,
+                      "_ux": {
+                        "input_type": "slider"
+                      }
+                    },
+                    "scheduler": {
+                      "type": "string",
+                      "title": "Scheduler",
+                      "enum": ["EULER_DISCRETE", "EULER_ANCESTRAL_DISCRETE", "LEONARDO", "DPM_SOLVER", "DDIM", "KLMS", "PNDM"],
+                      "default": "EULER_DISCRETE",
+                      "_ux": {
+                        "enum_labels": {
+                          "EULER_DISCRETE": "Euler Discrete",
+                          "EULER_ANCESTRAL_DISCRETE": "Euler Ancestral",
+                          "LEONARDO": "Leonardo",
+                          "DPM_SOLVER": "DPM Solver",
+                          "DDIM": "DDIM",
+                          "KLMS": "KLMS",
+                          "PNDM": "PNDM"
                         }
                       }
                     }
