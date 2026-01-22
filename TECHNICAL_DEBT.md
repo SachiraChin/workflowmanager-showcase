@@ -663,6 +663,73 @@ Continue using path-based extraction with the implicit convention. Document the 
 
 ---
 
+## 11. Nested _ux Inside input_schema Properties
+
+**Date Identified:** 2026-01-21
+**Severity:** Low
+**Status:** Open
+
+### Problem
+
+The display schema for media generation uses `_ux` properties nested inside `input_schema.properties`. For example:
+
+```json
+"prompt": {
+  "_ux": {
+    "input_schema": {
+      "properties": {
+        "sampler_combo": {
+          "type": "string",
+          "title": "Sampler",
+          "_ux": {
+            "input_type": "select"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+This creates a nested `_ux` structure: `prompt._ux.input_schema.properties.sampler_combo._ux`. While this technically works (because `getUx()` is called on each property individually), it violates the intended design pattern where `_ux` should not be nested within another `_ux`.
+
+### Impact
+
+1. **Design inconsistency**: Breaks the convention that `_ux` is a top-level enhancement on schema properties
+2. **Confusing structure**: Developers may not realize `_ux` inside `input_schema` is processed differently
+3. **Potential bugs**: Future schema processing changes might not account for this nesting pattern
+
+### Files Affected
+
+- `workflows/cc/steps/3_image_prompts/schemas/cc_image_prompts_display_schema.json` - SD prompt input_schema with nested `_ux`
+- `webui/src/components/workflow/interactions/media-generation/MediaPromptPanel.tsx` - Processes nested `_ux` in ParameterField
+
+### Why It Works Currently
+
+The code path extracts `input_schema` as a standalone schema object, then iterates its properties calling `getUx(propSchema)` on each. So the inner `_ux` is processed in isolation, not as nested within the outer `_ux`.
+
+### Suggested Fix
+
+Consider alternative approaches for controlled field hints:
+
+**Option A: Schema-level property**
+Put `input_type` at schema level instead of in `_ux`:
+```json
+"sampler_combo": {
+  "type": "string",
+  "title": "Sampler",
+  "input_type": "select"
+}
+```
+
+**Option B: Infer from context**
+Fields that receive dynamic options from a controller should automatically render as selects without needing explicit hints.
+
+**Option C: Accept the pattern**
+Document this as an acceptable exception where `input_schema` is treated as an independent sub-schema that can have its own `_ux` properties.
+
+---
+
 ## Template for New Issues
 
 ```markdown
