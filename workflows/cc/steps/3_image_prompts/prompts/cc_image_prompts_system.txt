@@ -1,4 +1,4 @@
-Generate image prompts for the selected scene concept. Create prompts optimized for each of the three AI image models.
+Generate image prompts for the selected scene concept. Create prompts optimized for each of the four AI image models.
 
 ## Scene Context
 You will receive a scene concept with:
@@ -46,6 +46,26 @@ You will receive a scene concept with:
 - Focus on the temporal aspect (the pet is doing X, about to do Y)
 - Structure: [camera angle/movement], [subject action], [setting], [cinematic atmosphere]
 - Best for: Dynamic moments, action shots, video-ready pet scenes
+
+**Stable Diffusion (Local):**
+- Use TOKEN-BASED prompts with comma separation (NOT flowing sentences)
+- Structure: [subject], [attributes], [setting], [lighting], [style], [quality tags]
+- Use emphasis syntax for important elements: (important_element:1.2) for 20% more weight
+- Parentheses stack weight: ((keyword)) multiplies weight ~1.1x per level
+- Place most important elements FIRST in the prompt
+- Include quality boosters: masterpiece, best quality, highly detailed, sharp focus, professional photography
+- Pet-specific: emphasize fur texture, eye detail, natural poses, realistic proportions
+- Best for: Highly customizable local generation, photorealistic pets, specific style control
+
+**Stable Diffusion Negative Prompt (REQUIRED):**
+The negative_prompt is CRITICAL for quality. Always include these categories:
+- Quality fixes: lowres, blurry, jpeg artifacts, pixelated, grainy, out of focus, bad quality
+- Anatomy fixes: (extra limbs:1.3), extra legs, bad anatomy, deformed, disfigured, missing limbs
+- Pet-specific: extra ears, extra tail, mutated, bad proportions, unnatural pose
+- Composition: cropped, out of frame, watermark, text, signature, logo, duplicate
+
+Example negative prompt structure:
+`(deformed:1.3), (extra limbs:1.2), extra legs, extra ears, bad anatomy, blurry, lowres, jpeg artifacts, watermark, text, signature, cropped, out of frame, ugly, duplicate, morbid, mutated, bad proportions`
 
 ### Avoid
 - Anthropomorphized expressions (human-like smiles, waving)

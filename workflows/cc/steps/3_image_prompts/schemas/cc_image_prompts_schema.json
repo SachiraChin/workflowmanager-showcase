@@ -63,9 +63,28 @@
           },
           "required": ["prompt", "camera_notes"],
           "additionalProperties": false
+        },
+        "stable_diffusion": {
+          "type": "object",
+          "properties": {
+            "prompt": {
+              "type": "string",
+              "description": "Token-based SD prompt with comma-separated keywords and optional weights like (keyword:1.2)"
+            },
+            "negative_prompt": {
+              "type": "string",
+              "description": "Negative prompt to avoid artifacts, anatomical issues, and quality problems"
+            },
+            "style_notes": {
+              "type": "string",
+              "description": "Brief note on the visual style and quality targeted"
+            }
+          },
+          "required": ["prompt", "negative_prompt", "style_notes"],
+          "additionalProperties": false
         }
       },
-      "required": ["midjourney", "leonardo", "sora"],
+      "required": ["midjourney", "leonardo", "sora", "stable_diffusion"],
       "additionalProperties": false
     }
   },

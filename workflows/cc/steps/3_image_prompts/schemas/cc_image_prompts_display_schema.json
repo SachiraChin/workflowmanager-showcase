@@ -335,6 +335,149 @@
               }
             }
           }
+        },
+        "stable_diffusion": {
+          "type": "object",
+          "_ux": {
+            "display": "visible",
+            "display_label": "Stable Diffusion",
+            "render_as": "card",
+            "nudges": ["index-badge"]
+          },
+          "properties": {
+            "prompt": {
+              "type": "string",
+              "_ux": {
+                "render_as": "content-panel",
+                "display": true,
+                "display_label": "Prompt",
+                "input_schema": {
+                  "type": "object",
+                  "properties": {
+                    "negative_prompt": {
+                      "type": "string",
+                      "title": "Negative Prompt",
+                      "_ux": {
+                        "input_type": "textarea",
+                        "rows": 2,
+                        "source_field": "negative_prompt"
+                      }
+                    },
+                    "model_category": {
+                      "type": "string",
+                      "title": "Category",
+                      "required": true,
+                      "enum": "{{ state.sd_model_categories }}",
+                      "value_key": "id",
+                      "label_key": "name",
+                      "controls": {
+                        "checkpoint": {
+                          "type": "enum",
+                          "enum_path": "models",
+                          "value_key": "checkpoint_name",
+                          "label_key": "model_name",
+                          "default_index": 0,
+                          "reset": true
+                        }
+                      }
+                    },
+                    "checkpoint": {
+                      "type": "string",
+                      "title": "Model",
+                      "required": true,
+                      "_ux": {
+                        "input_type": "select"
+                      },
+                      "controls": {
+                        "sampler_combo": {
+                          "type": "enum",
+                          "enum_path": "params.sampler_combo",
+                          "value_key": "value",
+                          "label_format": "{sampler} / {scheduler} ({steps} steps, CFG {cfg_scale})",
+                          "default_index": 0,
+                          "reset": true
+                        },
+                        "resolution": {
+                          "type": "enum",
+                          "enum_path": "params.resolution",
+                          "value_key": "value",
+                          "label_key": "value",
+                          "default_index": 0,
+                          "reset": true
+                        },
+                        "vae": {
+                          "type": "enum",
+                          "enum_path": "params.vae",
+                          "value_key": "value",
+                          "default_index": 0,
+                          "reset": true
+                        },
+                        "hires": {
+                          "type": "enum",
+                          "enum_path": "params.hires",
+                          "value_key": "value",
+                          "label_format": "{upscale}x - {upscaler} (denoise: {denoising})",
+                          "default_index": -1,
+                          "reset": true
+                        }
+                      }
+                    },
+                    "sampler_combo": {
+                      "type": "string",
+                      "title": "Sampler",
+                      "required": true,
+                      "_ux": {
+                        "input_type": "select"
+                      }
+                    },
+                    "resolution": {
+                      "type": "string",
+                      "title": "Resolution",
+                      "required": true,
+                      "_ux": {
+                        "input_type": "select"
+                      }
+                    },
+                    "vae": {
+                      "type": "string",
+                      "title": "VAE",
+                      "_ux": {
+                        "input_type": "select"
+                      }
+                    },
+                    "hires": {
+                      "type": "string",
+                      "title": "Hires Fix",
+                      "_ux": {
+                        "input_type": "select"
+                      }
+                    },
+                    "batch_size": {
+                      "type": "integer",
+                      "title": "Images",
+                      "enum": [1, 2, 4],
+                      "default": 4
+                    }
+                  }
+                }
+              }
+            },
+            "negative_prompt": {
+              "type": "string",
+              "_ux": {
+                "display": false
+              }
+            },
+            "style_notes": {
+              "type": "string",
+              "_ux": {
+                "display": true,
+                "display_label": "Style",
+                "highlight": true,
+                "highlight_color": "#9B59B6"
+              }
+            }
+          }
         }
       }
     }

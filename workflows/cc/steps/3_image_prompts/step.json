@@ -1,7 +1,7 @@
 {
   "step_id": "image_prompts",
   "name": "Step {step_number}: Generate Image Prompts",
-  "description": "Generate optimized prompts for Midjourney, Leonardo Phoenix, and Sora",
+  "description": "Generate optimized prompts for Midjourney, Leonardo Phoenix, Sora, and Stable Diffusion",
   "modules": [
     {
       "module_id": "api.llm",
@@ -52,12 +52,29 @@
       "name": "generate_image_prompts"
     },
     {
+      "module_id": "api.fetch",
+      "inputs": {
+        "url": "/wm-api/models/by_category",
+        "base_url": "http://172.18.48.1:7860",
+        "method": "GET",
+        "extract_path": "categories",
+        "error_on_failure": true
+      },
+      "outputs_to_state": {
+        "response": "sd_model_categories"
+      },
+      "name": "fetch_sd_models"
+    },
+    {
       "module_id": "media.generate",
       "inputs": {
         "resolver_schema": {
           "type": "object",
           "properties": {
             "prompts": {
+              "resolver": "server"
+            },
+            "schema": {
               "resolver": "server"
             }
           }
