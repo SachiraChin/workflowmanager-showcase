@@ -17,3 +17,10 @@ server-logs
 *.zip
 .env
 **/.env
+
+# Build artifacts
+*.egg-info/
+.eggs/
+build/
+dist/
+logs/
