@@ -13,14 +13,17 @@
     },
     "prompts": {
       "type": "object",
-      "_ux.display": "passthrough",
+      "_ux": {
+        "display": "visible",
+        "render_as": "tabs"
+      },
       "properties": {
         "midjourney": {
           "type": "object",
           "_ux": {
             "display": "visible",
-            "display_label": "Midjourney",
-            "render_as": "media",
+            "tab_label": "Midjourney",
+            "render_as": "tab.media",
             "provider": "midjourney",
             "input_schema": {
               "type": "object",
@@ -137,9 +140,8 @@
           "type": "object",
           "_ux": {
             "display": "visible",
-            "display_label": "Leonardo",
-            "render_as": "card",
-            "nudges": ["index-badge"]
+            "tab_label": "Leonardo",
+            "render_as": "tab"
           },
           "properties": {
             "phoenix_1_0": {
@@ -322,8 +324,8 @@
           "type": "object",
           "_ux": {
             "display": "visible",
-            "display_label": "Sora 1",
-            "render_as": "media",
+            "tab_label": "Sora",
+            "render_as": "tab.media",
             "provider": "sora",
             "input_schema": {
               "type": "object",
@@ -362,8 +364,8 @@
           "type": "object",
           "_ux": {
             "display": "visible",
-            "display_label": "Stable Diffusion",
-            "render_as": "media",
+            "tab_label": "Stable Diffusion",
+            "render_as": "tab.media",
             "provider": "stable_diffusion",
             "input_schema": {
               "type": "object",
