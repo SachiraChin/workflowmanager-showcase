@@ -1,0 +1,68 @@
+{
+  "default": {
+    "api_endpoint": "messages",
+    "supports": {
+      "temperature": { "min": 0, "max": 1, "default": 1 },
+      "max_tokens": { "max": 8192, "required": true },
+      "vision": true,
+      "structured_output": false,
+      "reasoning_effort": false,
+      "cache_control": true
+    }
+  },
+  "claude-sonnet-4-20250514": {
+    "api_endpoint": "messages",
+    "supports": {
+      "temperature": { "min": 0, "max": 1, "default": 1 },
+      "max_tokens": { "max": 8192, "required": true },
+      "vision": true,
+      "structured_output": false,
+      "reasoning_effort": false,
+      "cache_control": true
+    }
+  },
+  "claude-3-5-sonnet-20241022": {
+    "api_endpoint": "messages",
+    "supports": {
+      "temperature": { "min": 0, "max": 1, "default": 1 },
+      "max_tokens": { "max": 8192, "required": true },
+      "vision": true,
+      "structured_output": false,
+      "reasoning_effort": false,
+      "cache_control": true
+    }
+  },
+  "claude-3-5-sonnet-20240620": {
+    "api_endpoint": "messages",
+    "supports": {
+      "temperature": { "min": 0, "max": 1, "default": 1 },
+      "max_tokens": { "max": 8192, "required": true },
+      "vision": true,
+      "structured_output": false,
+      "reasoning_effort": false,
+      "cache_control": true
+    }
+  },
+  "claude-3-opus-20240229": {
+    "api_endpoint": "messages",
+    "supports": {
+      "temperature": { "min": 0, "max": 1, "default": 1 },
+      "max_tokens": { "max": 4096, "required": true },
+      "vision": true,
+      "structured_output": false,
+      "reasoning_effort": false,
+      "cache_control": true
+    }
+  },
+  "claude-3-haiku-20240307": {
+    "api_endpoint": "messages",
+    "supports": {
+      "temperature": { "min": 0, "max": 1, "default": 1 },
+      "max_tokens": { "max": 4096, "required": true },
+      "vision": true,
+      "structured_output": false,
+      "reasoning_effort": false,
+      "cache_control": true
+    }
+  }
+}

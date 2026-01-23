@@ -1,0 +1,32 @@
+{
+  "rich_router": {
+    "scroll": {
+      "lines_per_page": 10,
+      "lines_per_arrow": 1,
+      "fast_scroll_threshold_ms": 200,
+      "max_scrollback_lines": 10000
+    }
+  },
+  "prompt_caching": {
+    "default": {
+      "enabled": false,
+      "cache_system_message": false,
+      "cache_user_prefix": false
+    },
+    "gpt-4o": {
+      "enabled": false,
+      "cache_system_message": false,
+      "cache_user_prefix": false
+    },
+    "gpt-5.1": {
+      "enabled": true,
+      "cache_system_message": true,
+      "cache_user_prefix": true
+    },
+    "gpt-5-mini": {
+      "enabled": true,
+      "cache_system_message": true,
+      "cache_user_prefix": true
+    }
+  }
+}

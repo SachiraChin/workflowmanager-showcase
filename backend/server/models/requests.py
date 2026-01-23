@@ -1,0 +1,113 @@
+"""
+API Request Models
+
+Pydantic models for API request bodies.
+"""
+
+from typing import Dict, Any, List, Optional, Union
+from pydantic import BaseModel, Field, model_validator
+
+from .interaction import InteractionResponseData
+
+
+class StartWorkflowByVersionRequest(BaseModel):
+    """
+    Request to start workflow with an existing version.
+
+    Used with POST /start/{workflow_version_id} endpoint.
+    The version_id comes from the path parameter.
+    """
+    project_name: str  # Unique project identifier within user + template scope
+    ai_config: Optional[Dict[str, Any]] = None  # AI config dict with api_key
+    force_new: bool = False  # Force new workflow even if one exists
+    capabilities: List[str] = Field(default_factory=list)  # Client capabilities for resolution selection
+
+
+class StartWorkflowRequest(BaseModel):
+    """
+    Request to start workflow with uploaded content.
+
+    Used with POST /start endpoint.
+    Workflow content is required - use /start/{version_id} for existing versions.
+
+    Content formats:
+    - str: Base64 encoded zip file containing workflow folder
+    - dict: Pre-resolved workflow JSON (all $refs already expanded)
+
+    When using zip mode (string), workflow_entry_point specifies the main
+    workflow file path within the zip (e.g., "workflow_v3.json").
+
+    Workflow run is identified by: user_id (from access key) + project_name + workflow_template_name
+    - project_name: User-provided unique project identifier (e.g., "my_video_project")
+
+    All outputs are stored in the database, not filesystem.
+    """
+    project_name: str  # Unique project identifier within user + template scope
+    workflow_content: Union[str, Dict[str, Any]]  # Workflow: base64 zip or JSON dict (required)
+    workflow_entry_point: Optional[str] = None  # Path to main workflow file within zip
+    ai_config: Optional[Dict[str, Any]] = None  # AI config dict with api_key
+    force_new: bool = False  # Force new workflow even if one exists
+    capabilities: List[str] = Field(default_factory=list)  # Client capabilities for resolution selection
+
+    @model_validator(mode='after')
+    def check_workflow_content(self) -> 'StartWorkflowRequest':
+        """Validate workflow content is provided and entry point for zips."""
+        if isinstance(self.workflow_content, str) and not self.workflow_entry_point:
+            raise ValueError("workflow_entry_point is required when workflow_content is a zip (base64 string)")
+
+        return self
+
+
+class RespondRequest(BaseModel):
+    """Request to respond to an interaction"""
+    workflow_run_id: str
+    interaction_id: str
+    response: InteractionResponseData
+
+
+class RetryRequest(BaseModel):
+    """Request to retry a module with optional feedback"""
+    workflow_run_id: str
+    target_module: str
+    feedback: Optional[str] = None
+
+
+class ResumeWorkflowRequest(BaseModel):
+    """
+    Optional request body for resume endpoint.
+
+    Can be used in two ways:
+    1. Simple resume: No content, loads stored workflow definition
+    2. Resume with update: Provide new workflow_content to update before resuming
+
+    When workflow_content is provided:
+    - Server compares with stored version
+    - If changed, returns requires_confirmation with version diff
+    - Client must call /resume/confirm to proceed with the update
+    """
+    # Optional workflow content for "resume with update"
+    workflow_content: Optional[Union[Dict[str, Any], str]] = None  # JSON dict or base64-encoded ZIP
+    workflow_entry_point: Optional[str] = None  # Required for ZIP files
+
+    # AI configuration override
+    ai_config: Optional[Dict[str, Any]] = None
+
+    # Client capabilities for resolution selection
+    capabilities: List[str] = Field(default_factory=list)
+
+
+class SubActionRequest(BaseModel):
+    """
+    Request to execute a sub-action within an interaction.
+
+    Sub-actions are operations (like image generation) that can be triggered
+    from within an interactive module without completing the interaction.
+
+    The response is streamed via SSE with progress updates.
+    """
+    interaction_id: str  # ID of the current interaction
+    provider: str  # Provider name: "midjourney", "leonardo"
+    action_type: str  # Operation type: "txt2img", "img2img", "img2vid"
+    prompt_id: str  # Identifier for the prompt being processed
+    params: Dict[str, Any]  # Generation parameters (includes 'prompt')
+    source_data: Any = None  # Original prompt data from workflow (for storage)
