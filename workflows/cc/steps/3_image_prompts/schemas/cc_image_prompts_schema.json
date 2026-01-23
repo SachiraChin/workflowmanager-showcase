@@ -67,20 +67,24 @@
         "stable_diffusion": {
           "type": "object",
           "properties": {
-            "prompt": {
+            "tag_prompt": {
               "type": "string",
               "description": "Token-based SD prompt with comma-separated keywords and optional weights like (keyword:1.2)"
             },
+            "natural_prompt": {
+              "type": "string",
+              "description": "Natural language SD prompt with flowing descriptive sentences"
+            },
             "negative_prompt": {
               "type": "string",
-              "description": "Negative prompt to avoid artifacts, anatomical issues, and quality problems"
+              "description": "Token-based negative prompt to avoid artifacts, anatomical issues, and quality problems"
             },
             "style_notes": {
               "type": "string",
               "description": "Brief note on the visual style and quality targeted"
             }
           },
-          "required": ["prompt", "negative_prompt", "style_notes"],
+          "required": ["tag_prompt", "natural_prompt", "negative_prompt", "style_notes"],
           "additionalProperties": false
         }
       },

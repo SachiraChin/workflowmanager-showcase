@@ -1,25 +1,15 @@
 {
   "type": "object",
-  "_ux.display": "visible",
-  "_ux.render_as": "section",
+  "_ux.display": "passthrough",
   "properties": {
+    "_ux.display": "passthrough",
     "scene_title": {
       "type": "string",
-      "_ux": {
-        "display": true,
-        "display_label": "Scene",
-        "render_as": "section-title",
-        "highlight": true
-      }
+      "_ux.display": false
     },
     "key_moment": {
       "type": "string",
-      "_ux": {
-        "display": true,
-        "display_label": "Key Moment",
-        "render_as": "section-summary",
-        "highlight": true
-      }
+      "_ux.display": false
     },
     "prompts": {
       "type": "object",
@@ -30,99 +20,106 @@
           "_ux": {
             "display": "visible",
             "display_label": "Midjourney",
-            "render_as": "card",
-            "nudges": ["index-badge"]
+            "render_as": "media",
+            "provider": "midjourney",
+            "input_schema": {
+              "type": "object",
+              "properties": {
+                "_text": {
+                  "type": "string",
+                  "title": "Prompt",
+                  "_ux": {
+                    "input_type": "textarea",
+                    "rows": 4,
+                    "source_field": "prompt"
+                  }
+                },
+                "aspect_ratio": {
+                  "type": "string",
+                  "title": "Aspect Ratio",
+                  "enum": ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"],
+                  "default": "9:16",
+                  "_ux": {
+                    "enum_labels": {
+                      "1:1": "1:1 (Square)",
+                      "16:9": "16:9 (Landscape)",
+                      "9:16": "9:16 (Portrait)",
+                      "4:3": "4:3",
+                      "3:4": "3:4",
+                      "3:2": "3:2",
+                      "2:3": "2:3"
+                    }
+                  }
+                },
+                "speed": {
+                  "type": "string",
+                  "title": "Speed",
+                  "enum": ["relaxed", "fast", "turbo"],
+                  "default": "fast",
+                  "_ux": {
+                    "enum_labels": {
+                      "relaxed": "Relaxed",
+                      "fast": "Fast",
+                      "turbo": "Turbo"
+                    }
+                  }
+                },
+                "version": {
+                  "type": "string",
+                  "title": "Version",
+                  "enum": ["7", "6.1", "6", "5.2", "niji6"],
+                  "default": "7",
+                  "_ux": {
+                    "enum_labels": {
+                      "7": "V7",
+                      "6.1": "V6.1",
+                      "6": "V6",
+                      "5.2": "V5.2",
+                      "niji6": "Niji 6"
+                    }
+                  }
+                },
+                "stylization": {
+                  "type": "integer",
+                  "title": "Stylization",
+                  "minimum": 0,
+                  "maximum": 1000,
+                  "default": 100,
+                  "step": 10,
+                  "_ux": {
+                    "input_type": "slider"
+                  }
+                },
+                "weirdness": {
+                  "type": "integer",
+                  "title": "Weirdness",
+                  "minimum": 0,
+                  "maximum": 3000,
+                  "default": 0,
+                  "step": 50,
+                  "_ux": {
+                    "input_type": "slider"
+                  }
+                },
+                "variety": {
+                  "type": "integer",
+                  "title": "Variety",
+                  "minimum": 0,
+                  "maximum": 100,
+                  "default": 0,
+                  "step": 5,
+                  "_ux": {
+                    "input_type": "slider"
+                  }
+                }
+              }
+            }
           },
           "properties": {
             "prompt": {
               "type": "string",
               "_ux": {
-                "render_as": "content-panel",
-                "display": true,
-                "display_label": "Prompt",
-                "input_schema": {
-                  "type": "object",
-                  "properties": {
-                    "aspect_ratio": {
-                      "type": "string",
-                      "title": "Aspect Ratio",
-                      "enum": ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"],
-                      "default": "9:16",
-                      "_ux": {
-                        "enum_labels": {
-                          "1:1": "1:1 (Square)",
-                          "16:9": "16:9 (Landscape)",
-                          "9:16": "9:16 (Portrait)",
-                          "4:3": "4:3",
-                          "3:4": "3:4",
-                          "3:2": "3:2",
-                          "2:3": "2:3"
-                        }
-                      }
-                    },
-                    "speed": {
-                      "type": "string",
-                      "title": "Speed",
-                      "enum": ["relaxed", "fast", "turbo"],
-                      "default": "fast",
-                      "_ux": {
-                        "enum_labels": {
-                          "relaxed": "Relaxed",
-                          "fast": "Fast",
-                          "turbo": "Turbo"
-                        }
-                      }
-                    },
-                    "version": {
-                      "type": "string",
-                      "title": "Version",
-                      "enum": ["7", "6.1", "6", "5.2", "niji6"],
-                      "default": "7",
-                      "_ux": {
-                        "enum_labels": {
-                          "7": "V7",
-                          "6.1": "V6.1",
-                          "6": "V6",
-                          "5.2": "V5.2",
-                          "niji6": "Niji 6"
-                        }
-                      }
-                    },
-                    "stylization": {
-                      "type": "integer",
-                      "title": "Stylization",
-                      "minimum": 0,
-                      "maximum": 1000,
-                      "default": 100,
-                      "step": 10,
-                      "_ux": {
-                        "input_type": "slider"
-                      }
-                    },
-                    "weirdness": {
-                      "type": "integer",
-                      "title": "Weirdness",
-                      "minimum": 0,
-                      "maximum": 3000,
-                      "default": 0,
-                      "step": 50,
-                      "_ux": {
-                        "input_type": "slider"
-                      }
-                    },
-                    "variety": {
-                      "type": "integer",
-                      "title": "Variety",
-                      "minimum": 0,
-                      "maximum": 100,
-                      "default": 0,
-                      "step": 5,
-                      "_ux": {
-                        "input_type": "slider"
-                      }
-                    }
-                  }
-                }
+                "display": false
               }
             },
             "style_notes": {
@@ -149,11 +146,22 @@
               "type": "object",
               "_ux": {
                 "display": true,
-                "render_as": "content-panel",
+                "render_as": "media",
                 "display_label": "Phoenix 1.0",
+                "provider": "leonardo",
+                "prompt_id": "phoenix_1_0",
                 "input_schema": {
                   "type": "object",
                   "properties": {
+                    "_text": {
+                      "type": "string",
+                      "title": "Prompt",
+                      "_ux": {
+                        "input_type": "textarea",
+                        "rows": 4,
+                        "source_field": "prompt"
+                      }
+                    },
                     "aspect_ratio": {
                       "type": "string",
                       "title": "Aspect Ratio",
@@ -293,7 +301,9 @@
               "properties": {
                 "prompt": {
                   "type": "string",
-                  "_ux.display_label": "Prompt"
+                  "_ux": {
+                    "display": false
+                  }
                 },
                 "style_notes": {
                   "type": "string",
@@ -313,16 +323,28 @@
           "_ux": {
             "display": "visible",
             "display_label": "Sora 1",
-            "render_as": "card",
-            "nudges": ["index-badge"]
+            "render_as": "media",
+            "provider": "sora",
+            "input_schema": {
+              "type": "object",
+              "properties": {
+                "_text": {
+                  "type": "string",
+                  "title": "Prompt",
+                  "_ux": {
+                    "input_type": "textarea",
+                    "rows": 4,
+                    "source_field": "prompt"
+                  }
+                }
+              }
+            }
           },
           "properties": {
             "prompt": {
               "type": "string",
               "_ux": {
-                "render_as": "content-panel",
-                "display": true,
-                "display_label": "Prompt"
+                "display": false
               }
             },
             "camera_notes": {
@@ -341,125 +363,170 @@
           "_ux": {
             "display": "visible",
             "display_label": "Stable Diffusion",
-            "render_as": "card",
-            "nudges": ["index-badge"]
-          },
-          "properties": {
-            "prompt": {
-              "type": "string",
-              "_ux": {
-                "render_as": "content-panel",
-                "display": true,
-                "display_label": "Prompt",
-                "input_schema": {
-                  "type": "object",
-                  "properties": {
-                    "negative_prompt": {
-                      "type": "string",
-                      "title": "Negative Prompt",
-                      "_ux": {
-                        "input_type": "textarea",
-                        "rows": 2,
-                        "source_field": "negative_prompt"
-                      }
-                    },
-                    "model_category": {
-                      "type": "string",
-                      "title": "Category",
-                      "required": true,
-                      "enum": "{{ state.sd_model_categories }}",
-                      "value_key": "id",
-                      "label_key": "name",
-                      "controls": {
-                        "checkpoint": {
-                          "type": "enum",
-                          "enum_path": "models",
-                          "value_key": "checkpoint_name",
-                          "label_key": "model_name",
-                          "default_index": 0,
-                          "reset": true
-                        }
-                      }
-                    },
-                    "checkpoint": {
-                      "type": "string",
-                      "title": "Model",
-                      "required": true,
-                      "_ux": {
-                        "input_type": "select"
-                      },
-                      "controls": {
-                        "sampler_combo": {
-                          "type": "enum",
-                          "enum_path": "params.sampler_combo",
-                          "value_key": "value",
-                          "label_format": "{sampler} / {scheduler} ({steps} steps, CFG {cfg_scale})",
-                          "default_index": 0,
-                          "reset": true
-                        },
-                        "resolution": {
-                          "type": "enum",
-                          "enum_path": "params.resolution",
-                          "value_key": "value",
-                          "label_key": "value",
-                          "default_index": 0,
-                          "reset": true
-                        },
-                        "vae": {
-                          "type": "enum",
-                          "enum_path": "params.vae",
-                          "value_key": "value",
-                          "default_index": 0,
-                          "reset": true
-                        },
-                        "hires": {
-                          "type": "enum",
-                          "enum_path": "params.hires",
-                          "value_key": "value",
-                          "label_format": "{upscale}x - {upscaler} (denoise: {denoising})",
-                          "default_index": -1,
-                          "reset": true
-                        }
-                      }
-                    },
-                    "sampler_combo": {
-                      "type": "string",
-                      "title": "Sampler",
-                      "required": true,
-                      "_ux": {
-                        "input_type": "select"
-                      }
-                    },
-                    "resolution": {
-                      "type": "string",
-                      "title": "Resolution",
-                      "required": true,
-                      "_ux": {
-                        "input_type": "select"
-                      }
-                    },
-                    "vae": {
-                      "type": "string",
-                      "title": "VAE",
-                      "_ux": {
-                        "input_type": "select"
-                      }
-                    },
-                    "hires": {
-                      "type": "string",
-                      "title": "Hires Fix",
-                      "_ux": {
-                        "input_type": "select"
-                      }
-                    },
-                    "batch_size": {
-                      "type": "integer",
-                      "title": "Images",
-                      "enum": [1, 2, 4],
-                      "default": 4
+            "render_as": "media",
+            "provider": "stable_diffusion",
+            "input_schema": {
+              "type": "object",
+              "properties": {
+                "prompt_type": {
+                  "type": "string",
+                  "title": "Prompt Style",
+                  "enum": [
+                    { "key": "tag", "label": "Tag-based", "value": "{{ state.image_prompts.prompts.stable_diffusion.tag_prompt }}" },
+                    { "key": "natural", "label": "Natural Language", "value": "{{ state.image_prompts.prompts.stable_diffusion.natural_prompt }}" }
+                  ],
+                  "value_key": "key",
+                  "label_key": "label",
+                  "default": "tag",
+                  "controls": {
+                    "_text": {
+                      "type": "value",
+                      "value_path": ".value"
                     }
                   }
+                },
+                "_text": {
+                  "type": "string",
+                  "title": "Prompt",
+                  "_ux": {
+                    "input_type": "textarea",
+                    "rows": 4,
+                    "source_field": "tag_prompt"
+                  }
+                },
+                "negative_prompt": {
+                  "type": "string",
+                  "title": "Negative Prompt",
+                  "_ux": {
+                    "input_type": "textarea",
+                    "rows": 4,
+                    "source_data": "{negative_prompt}, deformed face, distorted face, malformed face, asymmetrical face, uneven face, stretched face, misaligned eyes, uneven eyes, extra eyes, missing eyes, crossed eyes, mutated eyes, bulging eyes, sunken eyes, glassy eyes, hollow eyes, deformed eyes, unnatural eye placement, warped muzzle, twisted snout, deformed muzzle, crooked nose, broken snout, flattened face, malformed mouth, distorted mouth, extra mouth, duplicated mouth, open mouth, broken jaw, distorted jaw, extra teeth, missing teeth, visible gums, hanging tongue, deformed tongue, deformed head, malformed head, warped skull, crushed head, elongated head, uneven head shape, extra limbs, extra legs, extra ears, missing ears, fused ears, misplaced ears, malformed ears, extra tail, bad anatomy, bad proportions, mutation, mutated, lowres, blurry, out of focus, jpeg artifacts, noisy, oversharpened"
+                  }
+                },
+                "model_category": {
+                  "type": "string",
+                  "title": "Category",
+                  "required": true,
+                  "enum": "{{ state.sd_model_categories }}",
+                  "value_key": "id",
+                  "label_key": "name",
+                  "controls": {
+                    "checkpoint": {
+                      "type": "enum",
+                      "enum_path": "models",
+                      "value_key": "checkpoint_name",
+                      "label_key": "model_name",
+                      "default_index": 0,
+                      "reset": true
+                    }
+                  }
+                },
+                "checkpoint": {
+                  "type": "string",
+                  "title": "Model",
+                  "required": true,
+                  "_ux": {
+                    "input_type": "select"
+                  },
+                  "controls": {
+                    "sampler_combo": {
+                      "type": "enum",
+                      "enum_path": "params.sampler_combo",
+                      "value_key": "value",
+                      "label_format": "{value.sampler} / {value.scheduler} ({value.steps} steps, CFG {value.cfg_scale}) (count: {count})",
+                      "default_index": 0,
+                      "reset": true
+                    },
+                    "resolution": {
+                      "type": "enum",
+                      "enum_path": "params.resolution",
+                      "value_key": "value",
+                      "label_format": "{value} (count: {count})",
+                      "default_index": 0,
+                      "reset": true
+                    },
+                    "vae": {
+                      "type": "enum",
+                      "enum_path": "params.vae",
+                      "value_key": "value",
+                      "default_index": 0,
+                      "reset": true
+                    },
+                    "hires": {
+                      "type": "enum",
+                      "enum_path": "params.hires",
+                      "value_key": "value",
+                      "label_format": "{value.upscale}x - {value.upscaler} (denoise: {value.denoising}) (count: {count})",
+                      "default_index": -1,
+                      "reset": true
+                    },
+                    "adetailer": {
+                      "type": "enum",
+                      "enum_path": "params.adetailer",
+                      "value_key": "value",
+                      "label_format": "{value.model} (conf: {value.confidence}, denoise: {value.denoising_strength}) (count: {count})",
+                      "default_index": -1,
+                      "reset": true
+                    }
+                  }
+                },
+                "sampler_combo": {
+                  "type": "string",
+                  "title": "Sampler",
+                  "required": true,
+                  "_ux": {
+                    "input_type": "select"
+                  }
+                },
+                "resolution": {
+                  "type": "string",
+                  "title": "Resolution",
+                  "required": true,
+                  "_ux": {
+                    "input_type": "select"
+                  }
+                },
+                "vae": {
+                  "type": "string",
+                  "title": "VAE",
+                  "_ux": {
+                    "input_type": "select"
+                  }
+                },
+                "hires": {
+                  "type": "string",
+                  "title": "Hires Fix",
+                  "_ux": {
+                    "input_type": "select"
+                  }
+                },
+                "adetailer": {
+                  "type": "string",
+                  "title": "ADetailer",
+                  "_ux": {
+                    "input_type": "select"
+                  }
+                },
+                "batch_size": {
+                  "type": "integer",
+                  "title": "Images",
+                  "enum": [1, 2, 4],
+                  "default": 4
                 }
+              }
+            }
+          },
+          "properties": {
+            "tag_prompt": {
+              "type": "string",
+              "_ux": {
+                "display": false
+              }
+            },
+            "natural_prompt": {
+              "type": "string",
+              "_ux": {
+                "display": false
               }
             },
             "negative_prompt": {
