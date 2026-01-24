@@ -34,7 +34,7 @@ from models import (
 from backend.db import DbEventType
 
 # Import TaskQueue for the new task-based flow
-from worker.queue import TaskQueue
+from backend.worker.queue import TaskQueue
 
 logger = logging.getLogger('workflow.api')
 

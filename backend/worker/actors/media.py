@@ -15,7 +15,7 @@ from typing import Dict, Any, Tuple
 from .base import ActorBase, ProgressCallback
 
 # Import from providers package (NOT from server)
-from providers.media import (
+from backend.providers.media import (
     MediaProviderRegistry,
     GenerationError,
     download_media,
@@ -24,7 +24,7 @@ from providers.media import (
 
 # Import Database for content repository access
 # The worker creates its own DB connection
-from db import Database
+from backend.db import Database
 
 logger = logging.getLogger("worker.actors.media")
 

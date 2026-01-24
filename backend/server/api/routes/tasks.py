@@ -17,8 +17,7 @@ from sse_starlette.sse import EventSourceResponse
 from ..dependencies import get_db, get_current_user_id
 
 # Import TaskQueue from worker package
-# The worker package is at the project root level
-from worker.queue import TaskQueue
+from backend.worker.queue import TaskQueue
 
 logger = logging.getLogger('workflow.api')
 
