@@ -90,9 +90,15 @@ export function InputSchemaRenderer({ schema, data, path }: InputSchemaRendererP
         {Object.entries(properties).map(([key, fieldSchema]) => {
           const fieldUx = getUx(fieldSchema as Record<string, unknown>);
           const colSpan = fieldUx.col_span;
+          const sourceField = fieldUx.source_field as string | undefined;
 
-          // Initial value: data[key] if exists, otherwise schema.default
-          const initialValue = data?.[key] ?? (fieldSchema as Record<string, unknown>).default;
+          // Initial value priority: source_field > data[key] > schema.default
+          let initialValue: unknown;
+          if (sourceField && data?.[sourceField] !== undefined) {
+            initialValue = data[sourceField];
+          } else {
+            initialValue = data?.[key] ?? (fieldSchema as Record<string, unknown>).default;
+          }
 
           // Build item styles for col_span
           const itemStyle: React.CSSProperties = {};

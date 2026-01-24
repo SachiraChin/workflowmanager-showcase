@@ -138,6 +138,8 @@ export interface UxConfig {
   input_type?: InputType;
   form_type?: string;
   enum_labels?: Record<string, string>;
+  source_field?: string;  // Field name in data to get initial value from
+  source_data?: string;   // Template string with {field} placeholders
 
   // Layout configuration (for input_schema container)
   layout?: LayoutMode;
