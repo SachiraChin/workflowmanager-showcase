@@ -14,7 +14,7 @@ from pymongo.database import Database
 from pymongo.collection import Collection
 
 from .base import BaseRepository
-from utils import uuid7_str
+from ..utils import uuid7_str
 
 
 class FileRepository(BaseRepository):

@@ -462,7 +462,7 @@ class StateRepository(BaseRepository):
         Raises:
             ValueError: If target module not found in branch lineage
         """
-        from utils import uuid7_str
+        from ..utils import uuid7_str
 
         current_branch_id = self.get_current_branch_id(workflow_run_id)
         logger.info(
