@@ -76,9 +76,13 @@ export function TerminalRenderer({
     let inputContent: React.ReactNode;
     switch (inputType) {
       case "select": {
-        // Extract enum data for select options
+        // Extract select config from schema root (not _ux)
         const enumData = schemaRecord.enum as unknown[] | undefined;
-        const enumLabels = ux.enum_labels;
+        const enumLabels = schemaRecord.enum_labels as Record<string, string> | undefined;
+        const valueKey = schemaRecord.value_key as string | undefined;
+        const labelKey = schemaRecord.label_key as string | undefined;
+        const labelFormat = schemaRecord.label_format as string | undefined;
+        const controls = schemaRecord.controls as Record<string, unknown> | undefined;
         inputContent = (
           <SelectInputRenderer
             path={path}
@@ -86,6 +90,10 @@ export function TerminalRenderer({
             label={inputLabel}
             enumData={enumData}
             enumLabels={enumLabels}
+            valueKey={valueKey}
+            labelKey={labelKey}
+            labelFormat={labelFormat}
+            controls={controls}
             className={className}
           />
         );

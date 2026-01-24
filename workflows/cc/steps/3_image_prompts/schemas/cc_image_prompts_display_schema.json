@@ -48,17 +48,17 @@
                   "title": "Aspect Ratio",
                   "enum": ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"],
                   "default": "9:16",
+                  "enum_labels": {
+                    "1:1": "1:1 (Square)",
+                    "16:9": "16:9 (Landscape)",
+                    "9:16": "9:16 (Portrait)",
+                    "4:3": "4:3",
+                    "3:4": "3:4",
+                    "3:2": "3:2",
+                    "2:3": "2:3"
+                  },
                   "_ux": {
-                    "input_type": "select",
-                    "enum_labels": {
-                      "1:1": "1:1 (Square)",
-                      "16:9": "16:9 (Landscape)",
-                      "9:16": "9:16 (Portrait)",
-                      "4:3": "4:3",
-                      "3:4": "3:4",
-                      "3:2": "3:2",
-                      "2:3": "2:3"
-                    }
+                    "input_type": "select"
                   }
                 },
                 "speed": {
@@ -66,13 +66,13 @@
                   "title": "Speed",
                   "enum": ["relaxed", "fast", "turbo"],
                   "default": "fast",
+                  "enum_labels": {
+                    "relaxed": "Relaxed",
+                    "fast": "Fast",
+                    "turbo": "Turbo"
+                  },
                   "_ux": {
-                    "input_type": "select",
-                    "enum_labels": {
-                      "relaxed": "Relaxed",
-                      "fast": "Fast",
-                      "turbo": "Turbo"
-                    }
+                    "input_type": "select"
                   }
                 },
                 "version": {
@@ -80,15 +80,15 @@
                   "title": "Version",
                   "enum": ["7", "6.1", "6", "5.2", "niji6"],
                   "default": "7",
+                  "enum_labels": {
+                    "7": "V7",
+                    "6.1": "V6.1",
+                    "6": "V6",
+                    "5.2": "V5.2",
+                    "niji6": "Niji 6"
+                  },
                   "_ux": {
-                    "input_type": "select",
-                    "enum_labels": {
-                      "7": "V7",
-                      "6.1": "V6.1",
-                      "6": "V6",
-                      "5.2": "V5.2",
-                      "niji6": "Niji 6"
-                    }
+                    "input_type": "select"
                   }
                 },
                 "stylization": {
@@ -184,17 +184,17 @@
                       "title": "Aspect Ratio",
                       "enum": ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"],
                       "default": "9:16",
+                      "enum_labels": {
+                        "1:1": "1:1 (Square)",
+                        "16:9": "16:9 (Landscape)",
+                        "9:16": "9:16 (Portrait)",
+                        "4:3": "4:3",
+                        "3:4": "3:4",
+                        "3:2": "3:2",
+                        "2:3": "2:3"
+                      },
                       "_ux": {
-                        "input_type": "select",
-                        "enum_labels": {
-                          "1:1": "1:1 (Square)",
-                          "16:9": "16:9 (Landscape)",
-                          "9:16": "9:16 (Portrait)",
-                          "4:3": "4:3",
-                          "3:4": "3:4",
-                          "3:2": "3:2",
-                          "2:3": "2:3"
-                        }
+                        "input_type": "select"
                       }
                     },
                     "size": {
@@ -202,13 +202,13 @@
                       "title": "Size",
                       "enum": ["small", "medium", "large"],
                       "default": "medium",
+                      "enum_labels": {
+                        "small": "Small (Fast)",
+                        "medium": "Medium",
+                        "large": "Large"
+                      },
                       "_ux": {
-                        "input_type": "select",
-                        "enum_labels": {
-                          "small": "Small (Fast)",
-                          "medium": "Medium",
-                          "large": "Large"
-                        }
+                        "input_type": "select"
                       }
                     },
                     "generation_mode": {
@@ -216,13 +216,13 @@
                       "title": "Generation Mode",
                       "enum": ["fast", "quality", "ultra"],
                       "default": "fast",
+                      "enum_labels": {
+                        "fast": "Fast",
+                        "quality": "Quality (~1.5x)",
+                        "ultra": "Ultra (~2x)"
+                      },
                       "_ux": {
-                        "input_type": "select",
-                        "enum_labels": {
-                          "fast": "Fast",
-                          "quality": "Quality (~1.5x)",
-                          "ultra": "Ultra (~2x)"
-                        }
+                        "input_type": "select"
                       }
                     },
                     "preset_style": {
@@ -230,20 +230,20 @@
                       "title": "Style",
                       "enum": ["NONE", "CINEMATIC", "PHOTOGRAPHY", "ANIME", "ILLUSTRATION", "DYNAMIC", "VIBRANT", "MOODY", "HDR", "BOKEH"],
                       "default": "NONE",
+                      "enum_labels": {
+                        "NONE": "None",
+                        "CINEMATIC": "Cinematic",
+                        "PHOTOGRAPHY": "Photography",
+                        "ANIME": "Anime",
+                        "ILLUSTRATION": "Illustration",
+                        "DYNAMIC": "Dynamic",
+                        "VIBRANT": "Vibrant",
+                        "MOODY": "Moody",
+                        "HDR": "HDR",
+                        "BOKEH": "Bokeh"
+                      },
                       "_ux": {
-                        "input_type": "select",
-                        "enum_labels": {
-                          "NONE": "None",
-                          "CINEMATIC": "Cinematic",
-                          "PHOTOGRAPHY": "Photography",
-                          "ANIME": "Anime",
-                          "ILLUSTRATION": "Illustration",
-                          "DYNAMIC": "Dynamic",
-                          "VIBRANT": "Vibrant",
-                          "MOODY": "Moody",
-                          "HDR": "HDR",
-                          "BOKEH": "Bokeh"
-                        }
+                        "input_type": "select"
                       }
                     },
                     "num_images": {
@@ -251,13 +251,13 @@
                       "title": "Images",
                       "enum": ["1", "2", "4"],
                       "default": "4",
+                      "enum_labels": {
+                        "1": "1",
+                        "2": "2",
+                        "4": "4"
+                      },
                       "_ux": {
-                        "input_type": "select",
-                        "enum_labels": {
-                          "1": "1",
-                          "2": "2",
-                          "4": "4"
-                        }
+                        "input_type": "select"
                       }
                     },
                     "guidance_scale": {
@@ -276,18 +276,18 @@
                       "title": "Contrast",
                       "enum": ["1.0", "1.3", "1.8", "2.5", "3.0", "3.5", "4.0", "4.5"],
                       "default": "3.0",
+                      "enum_labels": {
+                        "1.0": "1.0 (Low)",
+                        "1.3": "1.3",
+                        "1.8": "1.8",
+                        "2.5": "2.5",
+                        "3.0": "3.0 (Default)",
+                        "3.5": "3.5",
+                        "4.0": "4.0",
+                        "4.5": "4.5 (High)"
+                      },
                       "_ux": {
-                        "input_type": "select",
-                        "enum_labels": {
-                          "1.0": "1.0 (Low)",
-                          "1.3": "1.3",
-                          "1.8": "1.8",
-                          "2.5": "2.5",
-                          "3.0": "3.0 (Default)",
-                          "3.5": "3.5",
-                          "4.0": "4.0",
-                          "4.5": "4.5 (High)"
-                        }
+                        "input_type": "select"
                       }
                     },
                     "num_inference_steps": {
@@ -306,17 +306,17 @@
                       "title": "Scheduler",
                       "enum": ["EULER_DISCRETE", "EULER_ANCESTRAL_DISCRETE", "LEONARDO", "DPM_SOLVER", "DDIM", "KLMS", "PNDM"],
                       "default": "EULER_DISCRETE",
+                      "enum_labels": {
+                        "EULER_DISCRETE": "Euler Discrete",
+                        "EULER_ANCESTRAL_DISCRETE": "Euler Ancestral",
+                        "LEONARDO": "Leonardo",
+                        "DPM_SOLVER": "DPM Solver",
+                        "DDIM": "DDIM",
+                        "KLMS": "KLMS",
+                        "PNDM": "PNDM"
+                      },
                       "_ux": {
-                        "input_type": "select",
-                        "enum_labels": {
-                          "EULER_DISCRETE": "Euler Discrete",
-                          "EULER_ANCESTRAL_DISCRETE": "Euler Ancestral",
-                          "LEONARDO": "Leonardo",
-                          "DPM_SOLVER": "DPM Solver",
-                          "DDIM": "DDIM",
-                          "KLMS": "KLMS",
-                          "PNDM": "PNDM"
-                        }
+                        "input_type": "select"
                       }
                     }
                   }
