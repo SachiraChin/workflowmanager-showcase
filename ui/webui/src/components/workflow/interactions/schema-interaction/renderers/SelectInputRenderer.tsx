@@ -348,13 +348,15 @@ export function SelectInputRenderer({
       return String(rawStored._idx);
     }
 
-    // Primitive value: use as-is
+    // Primitive value: use as-is for simple enums
     if (!useIndexSelection) {
       return String(rawStored);
     }
 
-    // Legacy: stored object without _idx (shouldn't happen after migration)
-    return "";
+    // Index-based selection with primitive stored value (from InputSchemaContext)
+    // Find matching index by comparing to originalValue (which is rec[valueKey])
+    const matchIdx = indexedOptions.findIndex((opt) => opt.originalValue === rawStored);
+    return matchIdx >= 0 ? String(matchIdx) : "";
   }, [rawStored, propValue, useIndexSelection, valueKey, indexedOptions, isObjectEnumMode, enumData]);
 
   // Determine state
