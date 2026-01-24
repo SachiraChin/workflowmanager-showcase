@@ -14,7 +14,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Request, Response, Depends
 from pydantic import BaseModel, EmailStr
 
-from ..auth import (
+from backend.server.api.auth import (
     verify_password,
     create_access_token,
     create_refresh_token,

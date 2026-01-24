@@ -12,7 +12,7 @@ import logging
 from fastapi import APIRouter, HTTPException, Query, Depends
 from sse_starlette.sse import EventSourceResponse
 
-from ..dependencies import get_db, get_current_user_id
+from backend.server.api.dependencies import get_db, get_current_user_id
 from .streaming import active_state_streams
 from utils import sanitize_error_message
 from models import SSEEventType

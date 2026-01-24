@@ -16,7 +16,7 @@ import logging
 import requests
 from typing import Any, Dict, List, Optional
 
-from ..base import (
+from backend.providers.media.base import (
     MediaProviderBase,
     GenerationResult,
     ProgressCallback,
@@ -29,7 +29,7 @@ from ..base import (
     CreditInfo,
     PreviewInfo,
 )
-from ..registry import register
+from backend.providers.media.registry import register
 
 logger = logging.getLogger(__name__)
 

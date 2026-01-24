@@ -12,7 +12,7 @@ from typing import Dict
 from fastapi import APIRouter, HTTPException, Query, Depends
 from sse_starlette.sse import EventSourceResponse
 
-from ..dependencies import get_db, get_processor, get_current_user_id
+from backend.server.api.dependencies import get_db, get_processor, get_current_user_id
 from utils import sanitize_error_message
 
 # =============================================================================

@@ -19,7 +19,7 @@ import logging
 import requests
 from typing import Any, Dict, List, Optional
 
-from ..base import (
+from backend.server.modules.media.base import (
     MediaProviderBase,
     GenerationResult,
     ProgressCallback,
@@ -32,7 +32,7 @@ from ..base import (
     CreditInfo,
     PreviewInfo,
 )
-from ..registry import register
+from backend.server.modules.media.registry import register
 import math
 
 logger = logging.getLogger(__name__)
