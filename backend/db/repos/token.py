@@ -13,7 +13,7 @@ from pymongo import ASCENDING
 from pymongo.database import Database
 from pymongo.collection import Collection
 
-from .base import BaseRepository
+from backend.db.base import BaseRepository
 
 
 class TokenRepository(BaseRepository):

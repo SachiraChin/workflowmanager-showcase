@@ -10,7 +10,7 @@ import logging
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Query, Depends
 
-from backend.server.db import DbEventType
+from backend.db import DbEventType
 from ..dependencies import get_db, get_processor, get_current_user_id
 from ..api_utils import resolve_workflow_from_content, set_api_keys_from_config
 from ..workflow_diff_utils import compute_workflow_diff

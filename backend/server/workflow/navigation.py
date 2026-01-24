@@ -7,7 +7,7 @@ Handles retry and jump operations within workflows.
 import logging
 from typing import Dict, Any, Optional
 
-from backend.server.db import Database, DbEventType
+from backend.db import Database, DbEventType
 from models import (
     WorkflowStatus,
     WorkflowResponse,

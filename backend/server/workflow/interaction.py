@@ -10,7 +10,7 @@ import threading
 import asyncio
 from typing import Dict, Any, Union
 
-from backend.server.db import Database, DbEventType
+from backend.db import Database, DbEventType
 from models import (
     WorkflowStatus,
     WorkflowResponse,

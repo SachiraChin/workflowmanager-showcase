@@ -1,13 +1,12 @@
 """
 Database Layer - MongoDB connection and repositories.
 
-This package provides:
+This module provides:
 - Database: Connection manager with repository access
-- Repository classes for data operations
 - DbEventType: Event type constants
 
 Usage:
-    from backend.server.db import Database, DbEventType
+    from backend.db import Database, DbEventType
 
     db = Database(connection_string, database_name)
     workflow = db.workflow_repo.get_workflow(workflow_run_id)
@@ -21,22 +20,22 @@ from pymongo import MongoClient
 from pymongo.database import Database as MongoDatabase
 from pymongo.collection import Collection
 
-from .base import BaseRepository
-from .user_repository import UserRepository
-from .event_repository import EventRepository
-from .workflow_repository import WorkflowRepository
-from .branch_repository import BranchRepository
-from .file_repository import FileRepository
-from .state_repository import StateRepository
-from .token_repository import TokenRepository
-from .version_repository import VersionRepository
-from .content_repository import ContentRepository
+from backend.db.base import BaseRepository
+from backend.db.repos.user import UserRepository
+from backend.db.repos.event import EventRepository
+from backend.db.repos.workflow import WorkflowRepository
+from backend.db.repos.branch import BranchRepository
+from backend.db.repos.file import FileRepository
+from backend.db.repos.state import StateRepository
+from backend.db.repos.token import TokenRepository
+from backend.db.repos.version import VersionRepository
+from backend.db.repos.content import ContentRepository
 
 # Import mixins
-from .mixins.config import DatabaseConfigMixin
-from .mixins.history import DatabaseHistoryMixin
-from .mixins.migrations import DatabaseMigrationsMixin
-from .mixins.recovery import DatabaseRecoveryMixin
+from backend.db.mixins.config import DatabaseConfigMixin
+from backend.db.mixins.history import DatabaseHistoryMixin
+from backend.db.mixins.migrations import DatabaseMigrationsMixin
+from backend.db.mixins.recovery import DatabaseRecoveryMixin
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +126,7 @@ class Database(DatabaseHistoryMixin, DatabaseMigrationsMixin, DatabaseConfigMixi
 
     def _run_migrations(self):
         """Run database migrations on startup."""
-        from .migrations import run_migrations
+        from backend.db.migrations import run_migrations
 
         try:
             stats = run_migrations(self.db)

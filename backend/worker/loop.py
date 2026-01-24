@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Dict, Optional, Set
 
-from .queue import TaskQueue, Task
+from backend.db import TaskQueue, Task
 from .actors import ActorRegistry, ensure_actors_registered
 
 logger = logging.getLogger("worker.loop")

@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional, List, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from backend.server.db import Database
+    from backend.db import Database
 
 
 class DatabaseConfigMixin:

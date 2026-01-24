@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Dict, Any, List, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from backend.server.db import Database
+    from backend.db import Database
 
 
 class DatabaseHistoryMixin:
@@ -100,7 +100,7 @@ class DatabaseHistoryMixin:
         Returns:
             Tuple of (workflow_version_id, workflow_template_id, is_new)
         """
-        from backend.server.utils import uuid7_str
+        from backend.db.utils import uuid7_str
 
         # Ensure template exists for this user
         template_id = self.get_or_create_workflow_template(workflow_template_name, user_id)

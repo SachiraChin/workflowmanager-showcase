@@ -14,8 +14,8 @@ from pymongo import ASCENDING, DESCENDING
 from pymongo.database import Database
 from pymongo.collection import Collection
 
-from .base import BaseRepository
-from backend.server.utils import uuid7_str
+from backend.db.base import BaseRepository
+from backend.db.utils import uuid7_str
 
 
 class EventRepository(BaseRepository):
