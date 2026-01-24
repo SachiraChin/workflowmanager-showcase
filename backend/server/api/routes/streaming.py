@@ -31,7 +31,7 @@ from models import (
     RespondRequest,
     SubActionRequest,
 )
-from backend.db import DbEventType
+from backend.server.db import DbEventType
 
 # Import TaskQueue for the new task-based flow
 from backend.worker.queue import TaskQueue

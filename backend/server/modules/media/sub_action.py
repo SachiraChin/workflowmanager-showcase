@@ -11,7 +11,7 @@ import concurrent.futures
 from typing import Any, Dict, AsyncGenerator, List
 from dataclasses import dataclass
 
-from backend.db import Database
+from backend.server.db import Database
 from models import (
     SubActionStarted,
     SubActionProgress,

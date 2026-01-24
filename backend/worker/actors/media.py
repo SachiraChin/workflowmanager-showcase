@@ -24,7 +24,7 @@ from backend.providers.media import (
 
 # Import Database for content repository access
 # The worker creates its own DB connection
-from backend.db import Database
+from backend.server.db import Database
 
 logger = logging.getLogger("worker.actors.media")
 

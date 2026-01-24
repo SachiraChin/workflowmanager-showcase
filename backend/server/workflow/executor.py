@@ -7,7 +7,7 @@ Handles step and module execution within workflows.
 import logging
 from typing import Dict, Any, TYPE_CHECKING
 
-from backend.db import Database, DbEventType
+from backend.server.db import Database, DbEventType
 from models import (
     WorkflowStatus,
     WorkflowResponse,

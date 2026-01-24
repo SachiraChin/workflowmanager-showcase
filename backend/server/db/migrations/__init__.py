@@ -48,7 +48,7 @@ def ensure_index(collection: Collection, keys: Union[str, List], **kwargs) -> st
         Index name
 
     Example:
-        from server.db.migrations import ensure_index
+        from backend.server.db.migrations import ensure_index
         ensure_index(db.users, "user_id", unique=True)
         ensure_index(db.events, [("workflow_run_id", 1), ("event_id", 1)])
     """
@@ -117,7 +117,7 @@ def backup_database(db: Database) -> str:
         RuntimeError: If backup fails or verification fails
 
     Example:
-        from server.db.migrations import backup_database
+        from backend.server.db.migrations import backup_database
         backup_db_name = backup_database(db)
     """
     db_name = db.name
@@ -194,7 +194,7 @@ def discover_migrations() -> List[Migration]:
 
         try:
             # Import the migration module
-            module = importlib.import_module(f".{module_name}", package="server.db.migrations")
+            module = importlib.import_module(f".{module_name}", package="backend.server.db.migrations")
 
             # Extract required attributes
             migration_id = getattr(module, "MIGRATION_ID", None)

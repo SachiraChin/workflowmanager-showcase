@@ -17,7 +17,7 @@ from models import (
     SSEEvent,
     SSEEventType,
 )
-from backend.db import DbEventType
+from backend.server.db import DbEventType
 from utils import sanitize_error_message
 
 from .workflow_utils import get_workflow_def, rebuild_services

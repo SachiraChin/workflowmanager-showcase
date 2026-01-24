@@ -7,7 +7,7 @@ Contains context classes used by workflow processor and modules.
 import logging
 from typing import Dict, Any, Optional
 
-from backend.db import Database
+from backend.server.db import Database
 
 
 class StateProxy:

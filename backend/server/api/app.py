@@ -32,7 +32,7 @@ from . import convertors  # noqa: F401
 
 from . import dependencies
 from .routes import auth
-from backend.db import Database
+from backend.server.db import Database
 from workflow import WorkflowProcessor
 from .contract_validation import validate_all_contracts
 from .routes.streaming import active_streams, active_state_streams
