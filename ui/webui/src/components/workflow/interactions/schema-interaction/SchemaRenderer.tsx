@@ -244,9 +244,13 @@ export function SchemaRenderer({
   // ==========================================================================
   // 8. Primitive - check display mode and use TerminalRenderer
   // ==========================================================================
-  const displayMode = normalizeDisplay(ux.display);
-  if (displayMode === "hidden") {
-    return null;
+  // Input types should always render (they manage their own visibility)
+  // Only apply display mode check for non-input primitives
+  if (!ux.input_type) {
+    const displayMode = normalizeDisplay(ux.display);
+    if (displayMode === "hidden") {
+      return null;
+    }
   }
 
   return (
