@@ -84,7 +84,8 @@ export function SchemaRenderer({
   // ==========================================================================
   // 1. Handle null/undefined data
   // ==========================================================================
-  if (data == null) {
+  // Input types can render without data (they manage values via context)
+  if (data == null && !ux.input_type) {
     return null;
   }
 
