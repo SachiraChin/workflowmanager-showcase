@@ -122,7 +122,7 @@ export function InputSchemaComposer({ data, schema, path, ux }: InputSchemaCompo
           path={path}
           ux={{ ...remainingUx, render_as: outerRenderAs }}
         >
-          <>
+          <div className="space-y-4">
             {inputComponent}
             <SchemaRenderer
               schema={schema}
@@ -130,7 +130,7 @@ export function InputSchemaComposer({ data, schema, path, ux }: InputSchemaCompo
               path={path}
               ux={{ ...remainingUx, render_as: innerRenderAs }}
             />
-          </>
+          </div>
         </SchemaRenderer>
       </InputSchemaContext.Provider>
     );
@@ -139,13 +139,15 @@ export function InputSchemaComposer({ data, schema, path, ux }: InputSchemaCompo
   // Simple render_as - fragment composition
   return (
     <InputSchemaContext.Provider value={contextValue}>
-      {inputComponent}
-      <SchemaRenderer
-        schema={schema}
-        data={data}
-        path={path}
-        ux={remainingUx}
-      />
+      <div className="space-y-4">
+        {inputComponent}
+        <SchemaRenderer
+          schema={schema}
+          data={data}
+          path={path}
+          ux={remainingUx}
+        />
+      </div>
     </InputSchemaContext.Provider>
   );
 }
