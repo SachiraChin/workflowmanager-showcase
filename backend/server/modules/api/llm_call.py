@@ -9,7 +9,7 @@ import json
 from typing import Dict, Any, List, Optional
 from engine.module_interface import ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
 from .base import Message
-from .registry import ProviderRegistry
+from backend.server.modules.api.registry import ProviderRegistry
 
 
 class LLMCallModule(ExecutableModule):
@@ -165,9 +165,6 @@ class LLMCallModule(ExecutableModule):
     def execute(self, inputs: Dict[str, Any], context) -> Dict[str, Any]:
         """Execute LLM API call via selected provider."""
         try:
-            # Import providers to trigger registration
-            from . import providers  # noqa
-
             # Get provider
             provider_id = self.get_input_value(inputs, 'provider') or 'openai'
             provider = ProviderRegistry.get(provider_id)
