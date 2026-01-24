@@ -7,7 +7,7 @@ This package provides:
 - DbEventType: Event type constants
 
 Usage:
-    from db import Database, DbEventType
+    from backend.server.db import Database, DbEventType
 
     db = Database(connection_string, database_name)
     workflow = db.workflow_repo.get_workflow(workflow_run_id)

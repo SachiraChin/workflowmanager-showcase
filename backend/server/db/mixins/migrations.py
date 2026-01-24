@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Dict, Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from db import Database
+    from backend.server.db import Database
 
 
 class DatabaseMigrationsMixin:
@@ -30,7 +30,7 @@ class DatabaseMigrationsMixin:
         Returns:
             Current branch ID (created if needed)
         """
-        from ...utils import uuid7_str
+        from backend.server.utils import uuid7_str
         import logging
         logger = logging.getLogger(__name__)
 

@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Dict, Any, List, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from db import Database
+    from backend.server.db import Database
 
 
 class DatabaseRecoveryMixin:
@@ -36,7 +36,7 @@ class DatabaseRecoveryMixin:
                 "cutoff_event_id": "evt_xxx"
             }
         """
-        from db import DbEventType
+        from backend.server.db import DbEventType
         import logging
 
         logger = logging.getLogger(__name__)
@@ -172,7 +172,7 @@ class DatabaseRecoveryMixin:
         Non-stable events (workflow may be mid-operation):
         - STEP_STARTED, MODULE_STARTED, INTERACTION_REQUESTED
         """
-        from db import DbEventType
+        from backend.server.db import DbEventType
 
         # Use .value to compare with string event_type from database
         stable_types = {
