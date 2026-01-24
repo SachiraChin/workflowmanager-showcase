@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useInputOptional, isIndexedValue, type DynamicOption, type IndexedValue } from "../InputContext";
+import { useInputSchemaOptional } from "../InputSchemaContext";
 
 // =============================================================================
 // Types
@@ -242,6 +243,10 @@ export function SelectInputRenderer({
   readonly: propReadonly,
 }: SelectInputRendererProps) {
   const inputContext = useInputOptional();
+  const inputSchemaContext = useInputSchemaOptional();
+
+  // Get the field key (last element of path) for InputSchemaContext
+  const fieldKey = path[path.length - 1];
 
   // Check for dynamic options from context (this field is controlled by another)
   const dynamicOptions = inputContext?.getDynamicOptions(path);
@@ -310,8 +315,10 @@ export function SelectInputRenderer({
     return simpleOptions;
   }, [useIndexSelection, indexedOptions, simpleOptions]);
 
-  // Get stored value - use getRawValue to check for IndexedValue
-  const rawStored = inputContext?.getRawValue(path);
+  // Get stored value - try InputSchemaContext first, fall back to InputContext
+  // InputSchemaContext stores simple values, InputContext may store IndexedValue
+  const schemaContextValue = inputSchemaContext?.getValue(fieldKey);
+  const rawStored = schemaContextValue !== undefined ? schemaContextValue : inputContext?.getRawValue(path);
 
   // Determine display value for Select
   // If stored as IndexedValue, use _idx directly (no comparison needed)
@@ -353,7 +360,8 @@ export function SelectInputRenderer({
   // Determine state
   const disabled = inputContext?.disabled ?? propDisabled ?? false;
   const readonly = inputContext?.readonly ?? propReadonly ?? false;
-  const error = inputContext?.getError(path);
+  // Try InputSchemaContext first (uses fieldKey), fall back to InputContext (uses path)
+  const error = inputSchemaContext?.errors[fieldKey] ?? inputContext?.getError(path);
 
   // Get path prefix for sibling fields (remove last element which is this field's key)
   const siblingPathPrefix = useMemo(() => path.slice(0, -1), [path]);
@@ -491,6 +499,22 @@ export function SelectInputRenderer({
 
   // Handle change - store IndexedValue for object selections, plain value for primitives
   const handleChange = (newValue: string) => {
+    // Try InputSchemaContext first (simple value storage)
+    if (inputSchemaContext) {
+      if (useIndexSelection) {
+        // For indexed selection, store the original value (not IndexedValue)
+        const idx = parseInt(newValue, 10);
+        const opt = indexedOptions[idx];
+        if (opt) {
+          inputSchemaContext.setValue(fieldKey, opt.originalValue);
+        }
+      } else {
+        inputSchemaContext.setValue(fieldKey, newValue);
+      }
+      return;
+    }
+
+    // Fall back to InputContext (supports complex IndexedValue)
     if (inputContext) {
       if (useIndexSelection) {
         // Look up original value by index and store as IndexedValue
@@ -503,9 +527,11 @@ export function SelectInputRenderer({
       } else {
         inputContext.setValue(path, newValue);
       }
-    } else {
-      propOnChange?.(newValue);
+      return;
     }
+
+    // Fall back to prop onChange
+    propOnChange?.(newValue);
   };
 
   // Find label for current value

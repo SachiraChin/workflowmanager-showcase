@@ -27,12 +27,18 @@
             "provider": "midjourney",
             "input_schema": {
               "type": "object",
+              "_ux": {
+                "layout": "grid",
+                "layout_columns": 3,
+                "layout_columns_sm": 2
+              },
               "properties": {
                 "_text": {
                   "type": "string",
                   "title": "Prompt",
                   "_ux": {
                     "input_type": "textarea",
+                    "col_span": "full",
                     "rows": 4,
                     "source_field": "prompt"
                   }
@@ -43,6 +49,7 @@
                   "enum": ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"],
                   "default": "9:16",
                   "_ux": {
+                    "input_type": "select",
                     "enum_labels": {
                       "1:1": "1:1 (Square)",
                       "16:9": "16:9 (Landscape)",
@@ -60,6 +67,7 @@
                   "enum": ["relaxed", "fast", "turbo"],
                   "default": "fast",
                   "_ux": {
+                    "input_type": "select",
                     "enum_labels": {
                       "relaxed": "Relaxed",
                       "fast": "Fast",
@@ -73,6 +81,7 @@
                   "enum": ["7", "6.1", "6", "5.2", "niji6"],
                   "default": "7",
                   "_ux": {
+                    "input_type": "select",
                     "enum_labels": {
                       "7": "V7",
                       "6.1": "V6.1",
@@ -154,12 +163,18 @@
                 "prompt_id": "phoenix_1_0",
                 "input_schema": {
                   "type": "object",
+                  "_ux": {
+                    "layout": "grid",
+                    "layout_columns": 3,
+                    "layout_columns_sm": 2
+                  },
                   "properties": {
                     "_text": {
                       "type": "string",
                       "title": "Prompt",
                       "_ux": {
                         "input_type": "textarea",
+                        "col_span": "full",
                         "rows": 4,
                         "source_field": "prompt"
                       }
@@ -170,6 +185,7 @@
                       "enum": ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"],
                       "default": "9:16",
                       "_ux": {
+                        "input_type": "select",
                         "enum_labels": {
                           "1:1": "1:1 (Square)",
                           "16:9": "16:9 (Landscape)",
@@ -187,6 +203,7 @@
                       "enum": ["small", "medium", "large"],
                       "default": "medium",
                       "_ux": {
+                        "input_type": "select",
                         "enum_labels": {
                           "small": "Small (Fast)",
                           "medium": "Medium",
@@ -200,6 +217,7 @@
                       "enum": ["fast", "quality", "ultra"],
                       "default": "fast",
                       "_ux": {
+                        "input_type": "select",
                         "enum_labels": {
                           "fast": "Fast",
                           "quality": "Quality (~1.5x)",
@@ -213,6 +231,7 @@
                       "enum": ["NONE", "CINEMATIC", "PHOTOGRAPHY", "ANIME", "ILLUSTRATION", "DYNAMIC", "VIBRANT", "MOODY", "HDR", "BOKEH"],
                       "default": "NONE",
                       "_ux": {
+                        "input_type": "select",
                         "enum_labels": {
                           "NONE": "None",
                           "CINEMATIC": "Cinematic",
@@ -233,6 +252,7 @@
                       "enum": ["1", "2", "4"],
                       "default": "4",
                       "_ux": {
+                        "input_type": "select",
                         "enum_labels": {
                           "1": "1",
                           "2": "2",
@@ -257,6 +277,7 @@
                       "enum": ["1.0", "1.3", "1.8", "2.5", "3.0", "3.5", "4.0", "4.5"],
                       "default": "3.0",
                       "_ux": {
+                        "input_type": "select",
                         "enum_labels": {
                           "1.0": "1.0 (Low)",
                           "1.3": "1.3",
@@ -286,6 +307,7 @@
                       "enum": ["EULER_DISCRETE", "EULER_ANCESTRAL_DISCRETE", "LEONARDO", "DPM_SOLVER", "DDIM", "KLMS", "PNDM"],
                       "default": "EULER_DISCRETE",
                       "_ux": {
+                        "input_type": "select",
                         "enum_labels": {
                           "EULER_DISCRETE": "Euler Discrete",
                           "EULER_ANCESTRAL_DISCRETE": "Euler Ancestral",
@@ -329,12 +351,18 @@
             "provider": "sora",
             "input_schema": {
               "type": "object",
+              "_ux": {
+                "layout": "grid",
+                "layout_columns": 3,
+                "layout_columns_sm": 2
+              },
               "properties": {
                 "_text": {
                   "type": "string",
                   "title": "Prompt",
                   "_ux": {
                     "input_type": "textarea",
+                    "col_span": "full",
                     "rows": 4,
                     "source_field": "prompt"
                   }
@@ -369,6 +397,11 @@
             "provider": "stable_diffusion",
             "input_schema": {
               "type": "object",
+              "_ux": {
+                "layout": "grid",
+                "layout_columns": 3,
+                "layout_columns_sm": 2
+              },
               "properties": {
                 "prompt_type": {
                   "type": "string",
@@ -380,6 +413,9 @@
                   "value_key": "key",
                   "label_key": "label",
                   "default": "tag",
+                  "_ux": {
+                    "input_type": "select"
+                  },
                   "controls": {
                     "_text": {
                       "type": "value",
@@ -392,6 +428,7 @@
                   "title": "Prompt",
                   "_ux": {
                     "input_type": "textarea",
+                    "col_span": "full",
                     "rows": 4,
                     "source_field": "tag_prompt"
                   }
@@ -401,6 +438,7 @@
                   "title": "Negative Prompt",
                   "_ux": {
                     "input_type": "textarea",
+                    "col_span": "full",
                     "rows": 4,
                     "source_data": "{negative_prompt}, deformed face, distorted face, malformed face, asymmetrical face, uneven face, stretched face, misaligned eyes, uneven eyes, extra eyes, missing eyes, crossed eyes, mutated eyes, bulging eyes, sunken eyes, glassy eyes, hollow eyes, deformed eyes, unnatural eye placement, warped muzzle, twisted snout, deformed muzzle, crooked nose, broken snout, flattened face, malformed mouth, distorted mouth, extra mouth, duplicated mouth, open mouth, broken jaw, distorted jaw, extra teeth, missing teeth, visible gums, hanging tongue, deformed tongue, deformed head, malformed head, warped skull, crushed head, elongated head, uneven head shape, extra limbs, extra legs, extra ears, missing ears, fused ears, misplaced ears, malformed ears, extra tail, bad anatomy, bad proportions, mutation, mutated, lowres, blurry, out of focus, jpeg artifacts, noisy, oversharpened"
                   }
@@ -412,6 +450,9 @@
                   "enum": "{{ state.sd_model_categories }}",
                   "value_key": "id",
                   "label_key": "name",
+                  "_ux": {
+                    "input_type": "select"
+                  },
                   "controls": {
                     "checkpoint": {
                       "type": "enum",
@@ -513,7 +554,10 @@
                   "type": "integer",
                   "title": "Images",
                   "enum": [1, 2, 4],
-                  "default": 4
+                  "default": 4,
+                  "_ux": {
+                    "input_type": "select"
+                  }
                 }
               }
             }

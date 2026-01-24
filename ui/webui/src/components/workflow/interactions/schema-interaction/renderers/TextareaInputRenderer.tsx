@@ -10,6 +10,7 @@
 import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 import { useInputOptional } from "../InputContext";
+import { useInputSchemaOptional } from "../InputSchemaContext";
 
 // =============================================================================
 // Types
@@ -52,25 +53,38 @@ export function TextareaInputRenderer({
   readonly: propReadonly,
 }: TextareaInputRendererProps) {
   const inputContext = useInputOptional();
+  const inputSchemaContext = useInputSchemaOptional();
+
+  // Get field key for InputSchemaContext
+  const fieldKey = path[path.length - 1];
 
   // Determine value source
-  // Use context value if set, otherwise fall back to prop value (initial/default)
-  const contextValue = inputContext?.getValue(path) as string | undefined;
-  const value = contextValue !== undefined ? contextValue : (propValue ?? "");
+  // Try InputSchemaContext first, fall back to InputContext, then prop
+  const schemaContextValue = inputSchemaContext?.getValue(fieldKey) as string | undefined;
+  const inputContextValue = inputContext?.getValue(path) as string | undefined;
+  const value = schemaContextValue ?? inputContextValue ?? propValue ?? "";
 
   // Determine state
   const disabled = inputContext?.disabled ?? propDisabled ?? false;
   const readonly = inputContext?.readonly ?? propReadonly ?? false;
-  const error = inputContext?.getError(path);
+  // Try InputSchemaContext first for error
+  const error = inputSchemaContext?.errors[fieldKey] ?? inputContext?.getError(path);
 
   // Handle change
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
+    // Try InputSchemaContext first
+    if (inputSchemaContext) {
+      inputSchemaContext.setValue(fieldKey, newValue);
+      return;
+    }
+    // Fall back to InputContext
     if (inputContext) {
       inputContext.setValue(path, newValue);
-    } else {
-      propOnChange?.(newValue);
+      return;
     }
+    // Fall back to prop onChange
+    propOnChange?.(newValue);
   };
 
   // Readonly mode - render as text

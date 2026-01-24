@@ -18,13 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { useWorkflowStateContext } from "@/contexts/WorkflowStateContext";
 import { useInput } from "../schema-interaction/InputContext";
-import { getUx } from "../schema-interaction/ux-utils";
-import {
-  TextareaInputRenderer,
-  SelectInputRenderer,
-  SliderInputRenderer,
-  type ControlConfig,
-} from "../schema-interaction/renderers";
+import { useInputSchemaOptional } from "../schema-interaction/InputSchemaContext";
 import { MediaGrid } from "./MediaGrid";
 import { useMediaGeneration } from "./MediaGenerationContext";
 import type { SchemaProperty, UxConfig } from "../schema-interaction/types";
@@ -58,6 +52,7 @@ export function MediaPanel({
   void _schema; // Schema is available but we primarily use ux.input_schema
   const mediaContext = useMediaGeneration();
   const inputContext = useInput();
+  const inputSchemaContext = useInputSchemaOptional();
   const { state: workflowState } = useWorkflowStateContext();
   // Reserved for future template expansion in display_format
   const _templateState = (workflowState.state_mapped || {}) as Record<string, unknown>;
@@ -259,32 +254,28 @@ export function MediaPanel({
 
   // Handle generate button click
   const handleGenerate = (action: SubActionConfig) => {
-    const params: Record<string, unknown> = {
-      prompt: currentPromptText,
-    };
-
-    // Add parameter values from input context
-    for (const key of parameterKeys) {
-      const paramPath = [...path, key];
-      const value = inputContext.getValue(paramPath);
-      if (value !== undefined && value !== null && value !== "") {
-        params[key] = value;
-      } else {
-        const initialValue = getParamInitialValue(key);
-        if (initialValue !== undefined && initialValue !== null && initialValue !== "") {
-          params[key] = initialValue;
-        }
-      }
+    if (!inputSchemaContext) {
+      console.warn("[MediaPanel] No InputSchemaContext available for generation");
+      return;
     }
 
-    // Validate required fields
+    const params: Record<string, unknown> = {
+      prompt: currentPromptText,
+      ...inputSchemaContext.values,
+    };
+
+    // Validate required fields and set errors via context (shows red border on inputs)
     const errors: string[] = [];
+    inputSchemaContext.clearAllErrors();
+
     for (const fieldKey of requiredFields) {
       const value = params[fieldKey];
       if (value === undefined || value === null || value === "") {
         const propSchema = inputProperties[fieldKey] as Record<string, unknown>;
         const fieldTitle = (propSchema?.title as string) || fieldKey;
-        errors.push(`${fieldTitle} is required`);
+        const errorMsg = `${fieldTitle} is required`;
+        errors.push(errorMsg);
+        inputSchemaContext.setError(fieldKey, errorMsg);
       }
     }
 
@@ -308,28 +299,6 @@ export function MediaPanel({
 
       {/* Body */}
       <div className="p-4 space-y-4">
-        {/* Parameters */}
-        {parameterKeys.length > 0 && !readonly && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {parameterKeys.map((key) => {
-              const propSchema = inputProperties[key];
-              const propUx = getUx(propSchema as Record<string, unknown>);
-              const paramPath = [...path, key];
-
-              return (
-                <ParameterField
-                  key={key}
-                  fieldKey={key}
-                  path={paramPath}
-                  schema={propSchema}
-                  ux={propUx}
-                  disabled={loading}
-                />
-              );
-            })}
-          </div>
-        )}
-
         {/* Preview Info - Resolution and Credits */}
         {!readonly && (preview || previewLoading) && (
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground bg-muted/30 rounded-md px-3 py-2">
@@ -422,110 +391,4 @@ export function MediaPanel({
       </div>
     </div>
   );
-}
-
-// =============================================================================
-// Parameter Field Component
-// =============================================================================
-
-interface ParameterFieldProps {
-  fieldKey: string;
-  path: string[];
-  schema: SchemaProperty;
-  ux: UxConfig;
-  disabled: boolean;
-}
-
-function ParameterField({ fieldKey, path, schema, ux, disabled }: ParameterFieldProps) {
-  const schemaRecord = schema as Record<string, unknown>;
-  const label = ux.display_label || (schemaRecord.title as string) || fieldKey;
-  const inputType = ux.input_type;
-  const minimum = schemaRecord.minimum as number | undefined;
-  const maximum = schemaRecord.maximum as number | undefined;
-  const step = schemaRecord.step as number | undefined;
-  const defaultValue = schemaRecord.default;
-
-  // Extract enum-related props for SelectInputRenderer
-  const enumData = schemaRecord.enum as unknown[] | undefined;
-  const valueKey = schemaRecord.value_key as string | undefined;
-  const labelKey = schemaRecord.label_key as string | undefined;
-  const labelFormat = schemaRecord.label_format as string | undefined;
-  const controls = schemaRecord.controls as Record<string, ControlConfig> | undefined;
-  const enumLabels = ux.enum_labels;
-
-  // Skip _text field - it's handled separately as the prompt textarea
-  if (fieldKey === "_text") {
-    return (
-      <div className="col-span-full">
-        <label className="block text-sm font-medium text-muted-foreground mb-1.5">
-          {label}
-        </label>
-        <TextareaInputRenderer
-          path={path}
-          value={defaultValue as string}
-          placeholder="Enter prompt..."
-          minRows={4}
-          readonly={false}
-          disabled={disabled}
-        />
-      </div>
-    );
-  }
-
-  // Select input
-  const isSelectType = enumData !== undefined || inputType === "select" || valueKey !== undefined;
-  if (isSelectType) {
-    return (
-      <SelectInputRenderer
-        path={path}
-        enumData={enumData}
-        valueKey={valueKey}
-        labelKey={labelKey}
-        labelFormat={labelFormat}
-        controls={controls}
-        enumLabels={enumLabels}
-        label={label}
-        disabled={disabled}
-        value={defaultValue as string}
-      />
-    );
-  }
-
-  // Slider input
-  if (inputType === "slider" && minimum !== undefined && maximum !== undefined) {
-    return (
-      <SliderInputRenderer
-        path={path}
-        min={minimum}
-        max={maximum}
-        step={step}
-        label={label}
-        disabled={disabled}
-        value={defaultValue as number}
-      />
-    );
-  }
-
-  // Textarea input
-  if (inputType === "textarea") {
-    const rows = (ux as Record<string, unknown>).rows as number | undefined;
-    return (
-      <div className="col-span-full">
-        <label className="block text-sm font-medium text-muted-foreground mb-1.5">
-          {label}
-        </label>
-        <TextareaInputRenderer
-          path={path}
-          value={defaultValue as string}
-          placeholder=""
-          minRows={rows || 2}
-          readonly={false}
-          disabled={disabled}
-        />
-      </div>
-    );
-  }
-
-  // Skip unsupported input types
-  return null;
 }

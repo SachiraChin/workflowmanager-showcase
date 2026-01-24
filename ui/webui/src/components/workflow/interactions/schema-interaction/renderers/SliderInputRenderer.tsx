@@ -12,6 +12,7 @@ import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Slider } from "@/components/ui/slider";
 import { useInputOptional } from "../InputContext";
+import { useInputSchemaOptional } from "../InputSchemaContext";
 
 // =============================================================================
 // Types
@@ -60,19 +61,25 @@ export function SliderInputRenderer({
   readonly: propReadonly,
 }: SliderInputRendererProps) {
   const inputContext = useInputOptional();
+  const inputSchemaContext = useInputSchemaOptional();
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Determine value source - prefer context value, fall back to prop default
-  const contextValue = inputContext?.getValue(path);
-  const rawValue = contextValue ?? propValue;
+  // Get field key for InputSchemaContext
+  const fieldKey = path[path.length - 1];
+
+  // Determine value source - try InputSchemaContext first, fall back to InputContext, then prop
+  const schemaContextValue = inputSchemaContext?.getValue(fieldKey);
+  const inputContextValue = inputContext?.getValue(path);
+  const rawValue = schemaContextValue ?? inputContextValue ?? propValue;
   const value = typeof rawValue === "number" ? rawValue : min;
 
   // Determine state
   const disabled = inputContext?.disabled ?? propDisabled ?? false;
   const readonly = inputContext?.readonly ?? propReadonly ?? false;
-  const error = inputContext?.getError(path);
+  // Try InputSchemaContext first for error
+  const error = inputSchemaContext?.errors[fieldKey] ?? inputContext?.getError(path);
 
   // Focus input when entering edit mode
   useEffect(() => {
@@ -85,11 +92,18 @@ export function SliderInputRenderer({
   // Handle slider change
   const handleChange = (values: number[]) => {
     const newValue = values[0];
+    // Try InputSchemaContext first
+    if (inputSchemaContext) {
+      inputSchemaContext.setValue(fieldKey, newValue);
+      return;
+    }
+    // Fall back to InputContext
     if (inputContext) {
       inputContext.setValue(path, newValue);
-    } else {
-      propOnChange?.(newValue);
+      return;
     }
+    // Fall back to prop onChange
+    propOnChange?.(newValue);
   };
 
   // Handle clicking on value to edit

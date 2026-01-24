@@ -132,20 +132,59 @@ export interface UxConfig {
   highlight?: boolean;
   highlight_color?: string;
   selectable?: boolean;
-  input_schema?: Record<string, unknown>;
-  input_type?: "textarea" | "select" | "slider" | "checkbox" | "text";
+
+  // Input schema for editable fields
+  input_schema?: InputSchemaConfig;
+  input_type?: InputType;
   form_type?: string;
   enum_labels?: Record<string, string>;
+
+  // Layout configuration (for input_schema container)
+  layout?: LayoutMode;
+  layout_columns?: number;
+  layout_columns_sm?: number;
+  layout_gap?: number;
+
+  // Item layout (for individual input fields)
+  col_span?: number | "full";
+  row_span?: number;
+  order?: number;
+
   // Validation hints
   required?: boolean;
   minimum?: number;
   maximum?: number;
+
   // Media generation metadata
   provider?: string;
   prompt_id?: string;
+
   // Tab metadata
   tab_label?: string;
   tab_label_field?: string;
+}
+
+// =============================================================================
+// Input Schema Types
+// =============================================================================
+
+/** Layout mode for input schema container */
+export type LayoutMode = "grid" | "flex" | "stack";
+
+/** Input type for editable fields */
+export type InputType = "textarea" | "select" | "slider" | "checkbox" | "text";
+
+/** Input schema configuration - object schema with properties for input fields */
+export interface InputSchemaConfig {
+  type: "object";
+  properties?: Record<string, SchemaProperty>;
+  required?: string[];
+  _ux?: {
+    layout?: LayoutMode;
+    layout_columns?: number;
+    layout_columns_sm?: number;
+    layout_gap?: number;
+  };
 }
 
 /**

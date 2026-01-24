@@ -302,7 +302,7 @@ export function InputProvider({
       if (fieldSchema) {
         const ux = getUx(fieldSchema as Record<string, unknown>);
         return ux.input_schema && typeof ux.input_schema === "object"
-          ? (ux.input_schema as Record<string, unknown>).default
+          ? (ux.input_schema as unknown as Record<string, unknown>).default
           : undefined;
       }
       return undefined;

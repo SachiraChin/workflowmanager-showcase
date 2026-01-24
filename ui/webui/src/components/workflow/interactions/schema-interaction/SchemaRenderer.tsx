@@ -40,6 +40,7 @@ import { TableSchemaRenderer } from "./TableSchemaRenderer";
 import { MediaPanel } from "../media-generation/MediaPanel";
 import { TabLayout } from "./TabLayout";
 import { TabsLayout } from "./layouts/TabsLayout";
+import { InputSchemaComposer } from "./InputSchemaComposer";
 
 // Import layouts to trigger registration
 import "./layouts";
@@ -85,6 +86,24 @@ export function SchemaRenderer({
   // ==========================================================================
   if (data == null) {
     return null;
+  }
+
+  // ==========================================================================
+  // 1.5. Input schema handling - delegate to InputSchemaComposer
+  // ==========================================================================
+  // When input_schema is present, InputSchemaComposer handles:
+  // - Providing InputSchemaContext for value/error management
+  // - Rendering InputSchemaRenderer for input fields
+  // - Rendering remaining schema (handles compound render_as internally)
+  if (ux.input_schema) {
+    return (
+      <InputSchemaComposer
+        data={data}
+        schema={schema}
+        path={path}
+        ux={ux}
+      />
+    );
   }
 
   // ==========================================================================

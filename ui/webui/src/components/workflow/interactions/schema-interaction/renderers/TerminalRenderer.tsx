@@ -16,6 +16,9 @@ import { UrlRenderer } from "./UrlRenderer";
 import { DateTimeRenderer } from "./DateTimeRenderer";
 import { NumberRenderer } from "./NumberRenderer";
 import { ImageRenderer } from "./ImageRenderer";
+import { SelectInputRenderer } from "./SelectInputRenderer";
+import { SliderInputRenderer } from "./SliderInputRenderer";
+import { TextareaInputRenderer } from "./TextareaInputRenderer";
 
 // =============================================================================
 // Types
@@ -48,18 +51,97 @@ export function TerminalRenderer({
   className,
   path = [],
   data,
-  schema: _schema,
+  schema,
   ux,
 }: TerminalRendererProps) {
   // Extract UX properties
   const label = ux.display_label;
   const renderAs = ux.render_as || "text";
+  const inputType = ux.input_type;
   const nudges = ux.nudges || [];
 
   // Selection state (null if not selectable or missing props)
   const selectable = useSelectable(path, data ?? value, ux);
 
-  // Handle null/undefined values
+  // ==========================================================================
+  // Input types - editable controls (render even if value is null/undefined)
+  // ==========================================================================
+  // Input types manage their own state via context, so they can render without
+  // an initial value. They are rendered BEFORE null check.
+  if (inputType) {
+    const schemaRecord = (schema || {}) as Record<string, unknown>;
+    const schemaTitle = schemaRecord.title as string | undefined;
+    const inputLabel = label || schemaTitle;
+
+    let inputContent: React.ReactNode;
+    switch (inputType) {
+      case "select": {
+        // Extract enum data for select options
+        const enumData = schemaRecord.enum as unknown[] | undefined;
+        const enumLabels = ux.enum_labels;
+        inputContent = (
+          <SelectInputRenderer
+            path={path}
+            value={value as string | undefined}
+            label={inputLabel}
+            enumData={enumData}
+            enumLabels={enumLabels}
+            className={className}
+          />
+        );
+        break;
+      }
+      case "slider": {
+        const min = (schemaRecord.minimum as number) ?? 0;
+        const max = (schemaRecord.maximum as number) ?? 100;
+        const step = schemaRecord.step as number | undefined;
+        inputContent = (
+          <SliderInputRenderer
+            path={path}
+            value={value as number | undefined}
+            label={inputLabel}
+            min={min}
+            max={max}
+            step={step}
+            className={className}
+          />
+        );
+        break;
+      }
+      case "textarea":
+        inputContent = (
+          <TextareaInputRenderer
+            path={path}
+            value={value as string | undefined}
+            label={inputLabel}
+            className={className}
+          />
+        );
+        break;
+      case "text":
+      default:
+        // Default to textarea for text input type
+        inputContent = (
+          <TextareaInputRenderer
+            path={path}
+            value={value as string | undefined}
+            label={inputLabel}
+            minRows={1}
+            className={className}
+          />
+        );
+        break;
+    }
+
+    // Input types don't use SelectableWrapper
+    return inputContent;
+  }
+
+  // ==========================================================================
+  // Display types - read-only rendering (requires value)
+  // ==========================================================================
+
+  // Handle null/undefined values for display types
   if (value === null || value === undefined) {
     return null;
   }
