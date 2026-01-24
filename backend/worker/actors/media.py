@@ -237,11 +237,13 @@ class MediaActor(ActorBase):
             )
 
             # Return data only - server constructs URLs
+            # Include raw_response for storage in task queue
             return {
                 "workflow_run_id": workflow_run_id,
                 "metadata_id": metadata_id,
                 "content_ids": content_ids,
                 "filenames": filenames,
+                "raw_response": result.raw_response,
             }
 
         except Exception as e:

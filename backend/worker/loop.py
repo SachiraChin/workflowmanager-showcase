@@ -282,8 +282,11 @@ class WorkerLoop:
                 lambda: actor.execute(task.payload, progress_callback)
             )
 
+            # Extract raw_response for separate storage in task document
+            raw_response = result.pop("raw_response", None)
+
             # Mark completed
-            self.queue.complete_task(task.task_id, result)
+            self.queue.complete_task(task.task_id, result, response=raw_response)
             logger.info(f"Task {task.task_id} completed successfully")
 
         except Exception as e:

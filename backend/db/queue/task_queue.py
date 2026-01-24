@@ -158,6 +158,7 @@ class TaskQueue:
             "concurrency_limit": None,
             "payload": payload,
             "result": None,
+            "response": None,
             "error": None,
             "progress": {
                 "elapsed_ms": 0,
@@ -306,13 +307,19 @@ class TaskQueue:
             {"$set": {"heartbeat_at": datetime.utcnow()}}
         )
 
-    def complete_task(self, task_id: str, result: Dict[str, Any]):
+    def complete_task(
+        self,
+        task_id: str,
+        result: Dict[str, Any],
+        response: Optional[Dict[str, Any]] = None,
+    ):
         """
         Mark task as completed with result.
 
         Args:
             task_id: Task to complete
-            result: Task result data
+            result: Task result data (processed/picked data)
+            response: Raw response from provider (optional)
         """
         self.collection.update_one(
             {"task_id": task_id},
@@ -320,6 +327,7 @@ class TaskQueue:
                 "$set": {
                     "status": "completed",
                     "result": result,
+                    "response": response,
                     "completed_at": datetime.utcnow(),
                     "progress.message": "Completed",
                     "progress.updated_at": datetime.utcnow(),
