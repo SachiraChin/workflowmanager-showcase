@@ -39,10 +39,11 @@ At the start of each session, use **task-driven context loading** to balance und
 2. **Load context based on the answer**:
    | Focus Area | What to Read |
    |------------|--------------|
-   | **server** | `server/` in depth + `contracts/` |
-   | **webui** | `webui/src/` in depth + `contracts/` |
-   | **workflow** | `workflows/` + `server/engine/` (for resolution/execution) |
-   | **tui** | `tui/` in depth + `contracts/` |
+   | **server** | `backend/server/` in depth + `contracts/` |
+   | **webui** | `ui/webui/src/` in depth + `contracts/` |
+   | **workflow** | `workflows/` + `backend/server/engine/` (for resolution/execution) |
+   | **tui** | `ui/tui/` in depth + `contracts/` |
+   | **worker** | `backend/worker/` in depth + `backend/db/` |
    | **cross-cutting / unsure** | Ask operator to clarify specific area |
 
 3. **When reading the relevant module**, read it thoroughly:
@@ -54,40 +55,49 @@ At the start of each session, use **task-driven context loading** to balance und
 
 **Why this approach**: Loading the entire codebase upfront consumes context budget and leads to degraded performance after compaction events. Focused loading preserves context for actual work.
 
-## Cross-Module Awareness (server, tui, webui, workflows)
+## Cross-Module Awareness (backend, ui, workflows)
 
-This project has four tightly coupled modules that share contracts and data structures. Before any coding session, you must understand:
+This project has tightly coupled modules that share contracts and data structures. Before any coding session, you must understand:
 
-1. **server/** - Backend workflow engine
-2. **tui/** - Terminal UI client
-3. **webui/** - Web UI client (React/TypeScript)
-4. **workflows/** - Workflow JSON definitions
+1. **backend/server/** - Backend workflow engine (API + execution)
+2. **backend/worker/** - Task queue worker for async jobs
+3. **backend/db/** - Shared database layer
+4. **backend/providers/** - External service providers (media generation)
+5. **ui/tui/** - Terminal UI client
+6. **ui/webui/** - Web UI client (React/TypeScript)
+7. **workflows/** - Workflow JSON definitions
+8. **contracts/** - Shared types between server and clients
 
 **Rules for editing any of these modules:**
 
 1. **Before editing any file in these folders**, read related files in OTHER modules to understand dependencies. Never assume a change is isolated.
 
-2. **When modifying server/**:
-   - Check if tui/ has strategies or handlers that depend on this change
-   - Check if webui/ has types or components that mirror this data structure
+2. **When modifying backend/server/**:
+   - Check if ui/tui/ has strategies or handlers that depend on this change
+   - Check if ui/webui/ has types or components that mirror this data structure
    - Check if workflows/ JSON schemas depend on this behavior
 
-3. **When modifying tui/**:
+3. **When modifying backend/worker/**:
+   - Check if backend/server/ has API routes that depend on TaskQueue
+   - Verify backend/db/ contracts are maintained
+   - Check backend/providers/ interfaces
+
+4. **When modifying ui/tui/**:
    - Verify the corresponding server module produces compatible data
    - Check contracts/ for shared interfaces being used
    - Ensure strategies handle all InteractionType values
 
-4. **When modifying webui/**:
-   - Verify webui/src/lib/types.ts matches server/api/models.py
+5. **When modifying ui/webui/**:
+   - Verify ui/webui/src/lib/types.ts matches backend/server/api/models.py
    - Check if SSE event handling matches server streaming behavior
    - Ensure interaction components handle all server response shapes
 
-5. **When modifying workflows/**:
-   - Verify server/engine/ handles any schema changes
+6. **When modifying workflows/**:
+   - Verify backend/server/engine/ handles any schema changes
    - Check that TUI/WebUI can render new display schemas
    - Test $ref resolution and Jinja2 template syntax
 
-6. **After completing any change**, trace through the data flow across all affected modules to verify no breaking changes were introduced.
+7. **After completing any change**, trace through the data flow across all affected modules to verify no breaking changes were introduced.
 
 ## Architecture and Issues Document Rules
 
