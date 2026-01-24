@@ -1,5 +1,5 @@
 """
-Worker entry point - Run with: python -m worker
+Worker entry point - Run with: python -m backend.worker
 """
 
 # Load .env file before other imports that might use env vars
