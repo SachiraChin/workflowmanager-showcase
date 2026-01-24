@@ -174,6 +174,7 @@ class ContentRepository(BaseRepository):
         extension: str,
         local_path: str,
         provider_content_id: Optional[str] = None,
+        seed: Optional[int] = None,
     ) -> None:
         """
         Store a generated content item with download information.
@@ -190,6 +191,7 @@ class ContentRepository(BaseRepository):
             extension: File extension (e.g., "png", "jpg", "mp4")
             local_path: Local file path where content was saved
             provider_content_id: Provider's content identifier
+            seed: Generation seed (-1 if not available)
         """
         self.content.insert_one({
             "generated_content_id": content_id,
@@ -202,6 +204,7 @@ class ContentRepository(BaseRepository):
             "extension": extension,
             "local_path": local_path,
             "downloaded_at": datetime.utcnow(),
+            "seed": seed,
         })
 
     def get_generation(self, metadata_id: str) -> Optional[Dict[str, Any]]:

@@ -21,6 +21,7 @@ from typing import Any, Dict, List, Optional
 
 from backend.providers.media.base import (
     MediaProviderBase,
+    ContentItem,
     GenerationResult,
     ProgressCallback,
     AuthenticationError,
@@ -271,15 +272,20 @@ class MidAPIProvider(MediaProviderBase):
         # Poll for result
         task_result = self._poll_for_result(task_id, progress_callback)
 
-        # Extract URLs from result
+        # Extract content items from result
+        # MidJourney does not provide seed information, use -1
         result_info = task_result.get("resultInfoJson", {})
         result_urls = result_info.get("resultUrls", [])
-        urls = [item.get("resultUrl") for item in result_urls if item.get("resultUrl")]
+        content = [
+            ContentItem(url=item.get("resultUrl"), seed=-1)
+            for item in result_urls
+            if item.get("resultUrl")
+        ]
 
-        logger.info(f"[MidAPI] Generation complete: {len(urls)} images")
+        logger.info(f"[MidAPI] Generation complete: {len(content)} images")
 
         return GenerationResult(
-            urls=urls,
+            content=content,
             raw_response=task_result,
             provider_task_id=task_id
         )
@@ -354,15 +360,20 @@ class MidAPIProvider(MediaProviderBase):
         # Poll for result
         task_result = self._poll_for_result(new_task_id, progress_callback)
 
-        # Extract URLs from result
+        # Extract content items from result
+        # MidJourney does not provide seed information, use -1
         result_info = task_result.get("resultInfoJson", {})
         result_urls = result_info.get("resultUrls", [])
-        urls = [item.get("resultUrl") for item in result_urls if item.get("resultUrl")]
+        content = [
+            ContentItem(url=item.get("resultUrl"), seed=-1)
+            for item in result_urls
+            if item.get("resultUrl")
+        ]
 
-        logger.info(f"[MidAPI] Variation complete: {len(urls)} images")
+        logger.info(f"[MidAPI] Variation complete: {len(content)} images")
 
         return GenerationResult(
-            urls=urls,
+            content=content,
             raw_response=task_result,
             provider_task_id=new_task_id
         )
@@ -433,15 +444,20 @@ class MidAPIProvider(MediaProviderBase):
         # Poll for result
         task_result = self._poll_for_result(task_id, progress_callback)
 
-        # Extract URLs from result
+        # Extract content items from result
+        # MidJourney does not provide seed information, use -1
         result_info = task_result.get("resultInfoJson", {})
         result_urls = result_info.get("resultUrls", [])
-        urls = [item.get("resultUrl") for item in result_urls if item.get("resultUrl")]
+        content = [
+            ContentItem(url=item.get("resultUrl"), seed=-1)
+            for item in result_urls
+            if item.get("resultUrl")
+        ]
 
-        logger.info(f"[MidAPI] Video generation complete: {len(urls)} videos")
+        logger.info(f"[MidAPI] Video generation complete: {len(content)} videos")
 
         return GenerationResult(
-            urls=urls,
+            content=content,
             raw_response=task_result,
             provider_task_id=task_id
         )

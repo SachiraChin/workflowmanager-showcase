@@ -17,16 +17,29 @@ ProgressCallback = Callable[[int, str], None]
 
 
 @dataclass
+class ContentItem:
+    """
+    A single generated content item from a provider.
+
+    Attributes:
+        url: URL to the generated content
+        seed: Generation seed (-1 if not available from provider)
+    """
+    url: str
+    seed: int = -1
+
+
+@dataclass
 class GenerationResult:
     """
     Result from a media generation operation.
 
     Attributes:
-        urls: List of generated content URLs
+        content: List of generated content items (url, seed, etc.)
         raw_response: Full response from provider for storage
         provider_task_id: Provider's task/generation ID
     """
-    urls: List[str]
+    content: List[ContentItem]
     raw_response: Dict[str, Any]
     provider_task_id: Optional[str] = None
 

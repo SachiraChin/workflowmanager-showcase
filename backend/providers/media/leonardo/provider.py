@@ -18,6 +18,7 @@ from typing import Any, Dict, List, Optional
 
 from backend.providers.media.base import (
     MediaProviderBase,
+    ContentItem,
     GenerationResult,
     ProgressCallback,
     AuthenticationError,
@@ -460,14 +461,22 @@ class LeonardoProvider(MediaProviderBase):
         # Poll for result
         generation_data = self._poll_for_generation(generation_id, progress_callback)
 
-        # Extract URLs from generated images
-        generated_images = generation_data.get("generated_images", [])
-        urls = [img.get("url") for img in generated_images if img.get("url")]
+        # Extract content items from generated images
+        # Leonardo has a single seed for the entire generation
+        generation_seed = generation_data.get("seed")
+        seed = generation_seed if generation_seed is not None else -1
 
-        logger.info(f"[Leonardo] Generation complete: {len(urls)} images")
+        generated_images = generation_data.get("generated_images", [])
+        content = [
+            ContentItem(url=img.get("url"), seed=seed)
+            for img in generated_images
+            if img.get("url")
+        ]
+
+        logger.info(f"[Leonardo] Generation complete: {len(content)} images")
 
         return GenerationResult(
-            urls=urls,
+            content=content,
             raw_response=generation_data,
             provider_task_id=generation_id
         )
@@ -561,14 +570,22 @@ class LeonardoProvider(MediaProviderBase):
         # Poll for result
         generation_data = self._poll_for_generation(generation_id, progress_callback)
 
-        # Extract URLs from generated images
-        generated_images = generation_data.get("generated_images", [])
-        urls = [img.get("url") for img in generated_images if img.get("url")]
+        # Extract content items from generated images
+        # Leonardo has a single seed for the entire generation
+        generation_seed = generation_data.get("seed")
+        seed = generation_seed if generation_seed is not None else -1
 
-        logger.info(f"[Leonardo] img2img complete: {len(urls)} images")
+        generated_images = generation_data.get("generated_images", [])
+        content = [
+            ContentItem(url=img.get("url"), seed=seed)
+            for img in generated_images
+            if img.get("url")
+        ]
+
+        logger.info(f"[Leonardo] img2img complete: {len(content)} images")
 
         return GenerationResult(
-            urls=urls,
+            content=content,
             raw_response=generation_data,
             provider_task_id=generation_id
         )
@@ -703,22 +720,26 @@ class LeonardoProvider(MediaProviderBase):
         # Poll for result
         generation_data = self._poll_for_video(generation_id, progress_callback)
 
-        # Extract video URLs - Leonardo returns motion URLs in generated_images
+        # Extract content items - Leonardo returns motion URLs in generated_images
+        # Leonardo has a single seed for the entire generation
+        generation_seed = generation_data.get("seed")
+        seed = generation_seed if generation_seed is not None else -1
+
         generated_images = generation_data.get("generated_images", [])
-        urls = []
+        content = []
         for img in generated_images:
             # Video URL is in motionMP4URL field
             video_url = img.get("motionMP4URL")
             if video_url:
-                urls.append(video_url)
+                content.append(ContentItem(url=video_url, seed=seed))
             # Fallback to regular URL if no motion URL
             elif img.get("url"):
-                urls.append(img.get("url"))
+                content.append(ContentItem(url=img.get("url"), seed=seed))
 
-        logger.info(f"[Leonardo] Video generation complete: {len(urls)} videos")
+        logger.info(f"[Leonardo] Video generation complete: {len(content)} videos")
 
         return GenerationResult(
-            urls=urls,
+            content=content,
             raw_response=generation_data,
             provider_task_id=generation_id
         )

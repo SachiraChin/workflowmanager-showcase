@@ -23,6 +23,7 @@ Usage:
 # Base class, types, and exceptions
 from .base import (
     MediaProviderBase,
+    ContentItem,
     GenerationResult,
     ProgressCallback,
     ResolutionInfo,
@@ -50,6 +51,7 @@ from .download import download_media, DownloadResult, DownloadError
 __all__ = [
     # Base class and types
     'MediaProviderBase',
+    'ContentItem',
     'GenerationResult',
     'ProgressCallback',
     'ResolutionInfo',

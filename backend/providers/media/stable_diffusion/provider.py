@@ -21,6 +21,7 @@ from typing import Any, Dict, Optional
 
 from backend.providers.media.base import (
     MediaProviderBase,
+    ContentItem,
     GenerationResult,
     ProgressCallback,
     GenerationError,
@@ -451,15 +452,21 @@ class StableDiffusionProvider(MediaProviderBase):
         # Poll for result
         task_result = self._poll_for_result(task_id, progress_callback)
 
-        # Extract image IDs and build URLs
+        # Extract content items with seeds
+        # Stable Diffusion provides seeds array that matches 1:1 with images
         result_data = task_result.get("result", {})
         image_ids = result_data.get("images", [])
-        urls = [self._build_image_url(img_id) for img_id in image_ids]
+        seeds = result_data.get("seeds", [])
 
-        logger.info(f"[StableDiffusion] Generation complete: {len(urls)} images")
+        content = []
+        for i, img_id in enumerate(image_ids):
+            seed = seeds[i] if i < len(seeds) else -1
+            content.append(ContentItem(url=self._build_image_url(img_id), seed=seed))
+
+        logger.info(f"[StableDiffusion] Generation complete: {len(content)} images")
 
         return GenerationResult(
-            urls=urls,
+            content=content,
             raw_response=task_result,
             provider_task_id=task_id
         )
@@ -592,15 +599,21 @@ class StableDiffusionProvider(MediaProviderBase):
         # Poll for result
         task_result = self._poll_for_result(task_id, progress_callback)
 
-        # Extract image IDs and build URLs
+        # Extract content items with seeds
+        # Stable Diffusion provides seeds array that matches 1:1 with images
         result_data = task_result.get("result", {})
         image_ids = result_data.get("images", [])
-        urls = [self._build_image_url(img_id) for img_id in image_ids]
+        seeds = result_data.get("seeds", [])
 
-        logger.info(f"[StableDiffusion] img2img complete: {len(urls)} images")
+        content = []
+        for i, img_id in enumerate(image_ids):
+            seed = seeds[i] if i < len(seeds) else -1
+            content.append(ContentItem(url=self._build_image_url(img_id), seed=seed))
+
+        logger.info(f"[StableDiffusion] img2img complete: {len(content)} images")
 
         return GenerationResult(
-            urls=urls,
+            content=content,
             raw_response=task_result,
             provider_task_id=task_id
         )

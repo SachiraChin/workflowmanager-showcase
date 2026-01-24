@@ -193,13 +193,13 @@ class MediaActor(ActorBase):
             filenames = []
             content_type = "video" if action_type == "img2vid" else "image"
 
-            for index, provider_url in enumerate(result.urls):
+            for index, item in enumerate(result.content):
                 content_id = _generate_content_id()
 
                 # Download file to local storage
                 try:
                     download_result = download_media(
-                        url=provider_url,
+                        url=item.url,
                         metadata_id=metadata_id,
                         content_id=content_id,
                         index=index,
@@ -216,23 +216,24 @@ class MediaActor(ActorBase):
                     )
                     raise GenerationError(f"Download failed: {e}")
 
-                # Store content record with download info
+                # Store content record with download info and seed
                 self._db.content_repo.store_content_with_download(
                     content_id=content_id,
                     metadata_id=metadata_id,
                     workflow_run_id=workflow_run_id,
                     index=index,
-                    provider_url=provider_url,
+                    provider_url=item.url,
                     content_type=content_type,
                     extension=download_result.extension,
                     local_path=download_result.local_path,
+                    seed=item.seed,
                 )
 
                 content_ids.append(content_id)
                 filenames.append(f"{content_id}.{download_result.extension}")
 
             logger.info(
-                f"[MediaActor] Complete: {len(result.urls)} {content_type}s generated, "
+                f"[MediaActor] Complete: {len(result.content)} {content_type}s generated, "
                 f"metadata_id={metadata_id}"
             )
 
