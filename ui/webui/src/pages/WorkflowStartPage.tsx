@@ -7,7 +7,7 @@
  * 3. History - Resume from previous runs
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -32,6 +32,7 @@ import {
 } from "@/components/workflow/start/WorkflowRunsList";
 import { VersionDiffDialog } from "@/components/workflow/start/VersionDiffDialog";
 import { useWorkflowExecution } from "@/hooks/useWorkflowExecution";
+import { api } from "@/lib/api";
 
 // =============================================================================
 // Types
@@ -63,6 +64,22 @@ export function WorkflowStartPage({ onWorkflowStarted }: WorkflowStartPageProps)
   const [isStarting, setIsStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
   const [isConfirmingVersion, setIsConfirmingVersion] = useState(false);
+  const [lastProjectName, setLastProjectName] = useState<string | null>(null);
+
+  // Fetch last project name on mount
+  useEffect(() => {
+    const fetchLastProjectName = async () => {
+      try {
+        const response = await api.listWorkflowRuns(1, 0);
+        if (response.workflows.length > 0) {
+          setLastProjectName(response.workflows[0].project_name);
+        }
+      } catch (e) {
+        // Silently ignore - this is just a hint
+      }
+    };
+    fetchLastProjectName();
+  }, []);
 
   // Workflow execution hook
   const {
@@ -310,6 +327,11 @@ export function WorkflowStartPage({ onWorkflowStarted }: WorkflowStartPageProps)
                 />
                 <p className="text-xs text-muted-foreground">
                   A unique identifier for this workflow run
+                  {lastProjectName && (
+                    <span className="block mt-1">
+                      Last project name: <span className="font-medium">{lastProjectName}</span>
+                    </span>
+                  )}
                 </p>
               </div>
 

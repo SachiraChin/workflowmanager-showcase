@@ -96,6 +96,8 @@ function getTimeAgo(dateString: string): string {
 // Component
 // =============================================================================
 
+const PAGE_SIZE = 10;
+
 export function WorkflowRunsList({
   onResume,
   onResumeWithUpdate,
@@ -104,6 +106,8 @@ export function WorkflowRunsList({
   // Workflow runs state
   const [runs, setRuns] = useState<WorkflowRun[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
 
   // Expanded run state (for resume with update)
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
@@ -123,8 +127,9 @@ export function WorkflowRunsList({
   useEffect(() => {
     const fetchRuns = async () => {
       try {
-        const response = await api.listWorkflowRuns(50);
+        const response = await api.listWorkflowRuns(PAGE_SIZE, 0);
         setRuns(response.workflows);
+        setTotalCount(response.total);
       } catch (e) {
         console.error("Failed to fetch workflow runs", e);
       } finally {
@@ -133,6 +138,22 @@ export function WorkflowRunsList({
     };
     fetchRuns();
   }, []);
+
+  // Load more runs
+  const loadMore = useCallback(async () => {
+    setIsLoadingMore(true);
+    try {
+      const response = await api.listWorkflowRuns(PAGE_SIZE, runs.length);
+      setRuns((prev) => [...prev, ...response.workflows]);
+      setTotalCount(response.total);
+    } catch (e) {
+      console.error("Failed to load more workflow runs", e);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [runs.length]);
+
+  const hasMore = runs.length < totalCount;
 
   // Clear upload state
   const clearUpload = useCallback(() => {
@@ -325,7 +346,7 @@ export function WorkflowRunsList({
         const isExpanded = expandedRunId === run.workflow_run_id;
 
         return (
-          <div key={run.workflow_run_id} className="rounded-lg border">
+          <div key={run.workflow_run_id} className="rounded-lg border shrink-0">
             {/* Run info row */}
             <div className="flex items-center gap-3 p-3">
               {getStatusIcon(run.status)}
@@ -498,6 +519,27 @@ export function WorkflowRunsList({
           </div>
         );
       })}
+
+      {/* Load More button */}
+      {hasMore && (
+        <div className="pt-2 flex justify-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={loadMore}
+            disabled={isLoadingMore}
+          >
+            {isLoadingMore ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Loading...
+              </>
+            ) : (
+              `Load More (${runs.length} of ${totalCount})`
+            )}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

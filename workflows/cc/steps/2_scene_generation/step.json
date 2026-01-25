@@ -176,7 +176,7 @@
             "scene": { "resolver": "server" }
           }
         },
-        "scene": "{{ state.scene_concepts.scenes[state.selected_scene_indices[0]] }}"
+        "scene": "{{ state.scene_concepts[state.selected_scene_indices[0]][state.selected_scene_indices[1]] }}"
       },
       "outputs_to_state": {
         "scene": "selected_scene"

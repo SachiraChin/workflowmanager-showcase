@@ -102,7 +102,8 @@ async def get_active_workflows(
 async def get_all_workflows(
     db = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
-    limit: int = 50,
+    limit: int = 10,
+    offset: int = 0,
     updated_since_hours: Optional[int] = Query(None, description="Filter to workflows updated in last N hours")
 ):
     """
@@ -116,7 +117,8 @@ async def get_all_workflows(
     if updated_since_hours:
         updated_since = datetime.utcnow() - timedelta(hours=updated_since_hours)
 
-    workflows = db.workflow_repo.get_all_workflows(limit=limit, updated_since=updated_since, user_id=user_id)
+    workflows = db.workflow_repo.get_all_workflows(limit=limit, offset=offset, updated_since=updated_since, user_id=user_id)
+    total_count = db.workflow_repo.count_all_workflows(updated_since=updated_since, user_id=user_id)
 
     enriched = []
     for wf in workflows:
@@ -190,4 +192,4 @@ async def get_all_workflows(
             "layout": layout
         })
 
-    return {"workflows": enriched, "count": len(enriched)}
+    return {"workflows": enriched, "count": len(enriched), "total": total_count}

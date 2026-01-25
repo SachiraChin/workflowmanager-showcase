@@ -338,7 +338,8 @@ class WorkflowRepository(BaseRepository):
 
     def get_all_workflows(
         self,
-        limit: int = 50,
+        limit: int = 10,
+        offset: int = 0,
         updated_since: datetime = None,
         user_id: str = None,
     ) -> List[Dict[str, Any]]:
@@ -347,6 +348,7 @@ class WorkflowRepository(BaseRepository):
 
         Args:
             limit: Maximum number of workflows to return
+            offset: Number of workflows to skip (for pagination)
             updated_since: Only return workflows updated after this time
             user_id: If provided, only return workflows for this user
 
@@ -360,5 +362,31 @@ class WorkflowRepository(BaseRepository):
             query["user_id"] = user_id
 
         return list(
-            self.workflow_runs.find(query).sort("updated_at", DESCENDING).limit(limit)
+            self.workflow_runs.find(query)
+            .sort("updated_at", DESCENDING)
+            .skip(offset)
+            .limit(limit)
         )
+
+    def count_all_workflows(
+        self,
+        updated_since: datetime = None,
+        user_id: str = None,
+    ) -> int:
+        """
+        Count all workflows matching the filters.
+
+        Args:
+            updated_since: Only count workflows updated after this time
+            user_id: If provided, only count workflows for this user
+
+        Returns:
+            Total count of matching workflows
+        """
+        query = {}
+        if updated_since:
+            query["updated_at"] = {"$gte": updated_since}
+        if user_id:
+            query["user_id"] = user_id
+
+        return self.workflow_runs.count_documents(query)

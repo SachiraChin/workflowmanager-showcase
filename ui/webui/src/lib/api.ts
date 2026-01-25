@@ -214,7 +214,7 @@ class ApiClient {
     return this.request<WorkflowTemplatesResponse>("/workflow-templates");
   }
 
-  async listWorkflowRuns(limit: number = 50): Promise<{
+  async listWorkflowRuns(limit: number = 10, offset: number = 0): Promise<{
     workflows: Array<{
       workflow_run_id: string;
       project_name: string;
@@ -227,6 +227,7 @@ class ApiClient {
       completed_at: string | null;
     }>;
     count: number;
+    total: number;
   }> {
     return this.request<{
       workflows: Array<{
@@ -241,7 +242,8 @@ class ApiClient {
         completed_at: string | null;
       }>;
       count: number;
-    }>(`/workflows/all?limit=${limit}`);
+      total: number;
+    }>(`/workflows/all?limit=${limit}&offset=${offset}`);
   }
 
   /**
