@@ -25,15 +25,28 @@ Generate 3 scene concepts for a {{ state.duration_selection.video_duration }}-se
 
 ---
 
-## Keyword Exclusions
+## Keyword Avoidance
 
-To ensure variety, AVOID scenes that heavily feature these previously used elements:
+You will receive two weighted keyword groups. Higher weight = higher priority to avoid.
 
-{% if state.keyword_exclusion_list and state.keyword_exclusion_list | length > 0 %}
-### Prohibited Keywords (avoid completely or use only peripherally)
-{{ state.keyword_exclusion_list | join(', ') }}
+### Critically Prohibited (hard ban)
+Treat as semantic ban — avoid synonyms and related concepts.
+
+{% if state.keyword_exclusions_selected and state.keyword_exclusions_selected | length > 0 %}
+**Total weight: {{ state.keyword_exclusions_selected | sum(attribute='weight') }}**
+{% for kw in state.keyword_exclusions_selected %}{{ kw.keyword }}:{{ kw.weight }}{% if not loop.last %}, {% endif %}{% endfor %}
 {% else %}
-No exclusions - this is the first run.
+No selected keywords yet - this is the first run.
+{% endif %}
+
+### Optionally Prohibited (strongly discouraged)
+Avoid unless necessary. If used, keep minimal and non-central.
+
+{% if state.keyword_exclusions_generated and state.keyword_exclusions_generated | length > 0 %}
+**Total weight: {{ state.keyword_exclusions_generated | sum(attribute='weight') }}**
+{% for kw in state.keyword_exclusions_generated %}{{ kw.keyword }}:{{ kw.weight }}{% if not loop.last %}, {% endif %}{% endfor %}
+{% else %}
+No generated keywords yet - this is the first run.
 {% endif %}
 
 ---

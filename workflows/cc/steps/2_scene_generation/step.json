@@ -26,20 +26,44 @@
       "name": "load_keywords"
     },
     {
-      "module_id": "transform.extract",
+      "module_id": "transform.query",
       "inputs": {
         "resolver_schema": {
           "type": "object",
           "properties": {
-            "exclusion_list": { "resolver": "server" }
+            "data": { "resolver": "server" }
           }
         },
-        "exclusion_list": "{% set kws = [] %}{% for kw in state.loaded_keywords %}{% set _ = kws.append(kw.keyword) %}{% endfor %}{{ kws }}"
+        "data": "{{ state.loaded_keywords }}",
+        "pipeline": [
+          {"$match": {"source": "selected"}},
+          {"$project": {"keyword": 1, "weight": 1, "category": 1, "source": 1, "_id": 0}}
+        ]
       },
       "outputs_to_state": {
-        "exclusion_list": "keyword_exclusion_list"
+        "result": "keyword_exclusions_selected"
       },
-      "name": "build_exclusion_list"
+      "name": "filter_selected_keywords"
+    },
+    {
+      "module_id": "transform.query",
+      "inputs": {
+        "resolver_schema": {
+          "type": "object",
+          "properties": {
+            "data": { "resolver": "server" }
+          }
+        },
+        "data": "{{ state.loaded_keywords }}",
+        "pipeline": [
+          {"$match": {"source": "generated"}},
+          {"$project": {"keyword": 1, "weight": 1, "category": 1, "source": 1, "_id": 0}}
+        ]
+      },
+      "outputs_to_state": {
+        "result": "keyword_exclusions_generated"
+      },
+      "name": "filter_generated_keywords"
     },
     {
       "module_id": "api.llm",
