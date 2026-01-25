@@ -670,8 +670,8 @@ export function FilesTreeView() {
 
   return (
     <>
-      <Card>
-        <CardHeader className="py-3">
+      <Card className="flex flex-col flex-1 min-h-0 gap-0 pb-0 overflow-hidden">
+        <CardHeader className="pb-2 shrink-0">
           <CardTitle className="text-sm flex items-center gap-2">
             Workflow Files
             <span
@@ -690,8 +690,8 @@ export function FilesTreeView() {
             </button>
           </CardTitle>
         </CardHeader>
-        <CardContent className="pt-0 pb-3 space-y-3">
-          <div className="relative">
+        <CardContent className="pt-0 pb-3 flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
+          <div className="relative shrink-0">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
@@ -702,7 +702,7 @@ export function FilesTreeView() {
             />
           </div>
 
-          <div className="h-[280px] overflow-y-auto overflow-x-hidden scrollbar-inner">
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden scrollbar-inner">
             {renderTreeContent()}
           </div>
         </CardContent>

@@ -94,7 +94,7 @@ export function ExecutionStatus({
     : 0;
 
   return (
-    <Card>
+    <Card className="gap-0 pb-0">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium">Execution Status</CardTitle>

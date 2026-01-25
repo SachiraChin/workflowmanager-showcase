@@ -1000,12 +1000,15 @@ export function StateTreeView() {
     }
   }, [configPopup, getModuleConfig, getRawModuleConfig]);
 
-  // Build root nodes from state
-  const rootNodes: TreeNodeData[] = Object.entries(state).map(([key, value]) => ({
-    key,
-    value,
-    path: [key],
-  }));
+  // Build root nodes from state - only show steps and state_mapped
+  const allowedKeys = ["steps", "state_mapped"];
+  const rootNodes: TreeNodeData[] = Object.entries(state)
+    .filter(([key]) => allowedKeys.includes(key))
+    .map(([key, value]) => ({
+      key,
+      value,
+      path: [key],
+    }));
 
   // Filter root nodes based on search
   const filteredNodes = useMemo(() => {
@@ -1059,8 +1062,8 @@ export function StateTreeView() {
 
   return (
     <>
-      <Card>
-        <CardHeader className="py-3">
+      <Card className="flex flex-col flex-1 min-h-0 gap-0 pb-0 overflow-hidden">
+        <CardHeader className="pb-2 shrink-0">
           <CardTitle className="text-sm flex items-center gap-2">
             Workflow State
             <span
@@ -1079,8 +1082,8 @@ export function StateTreeView() {
             </button>
           </CardTitle>
         </CardHeader>
-        <CardContent className="pt-0 pb-3 space-y-3">
-          <div className="relative">
+        <CardContent className="pt-0 pb-3 flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
+          <div className="relative shrink-0">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
@@ -1091,7 +1094,7 @@ export function StateTreeView() {
             />
           </div>
 
-          <div className="h-[280px] overflow-y-auto overflow-x-hidden scrollbar-inner">
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden scrollbar-inner">
             {renderTreeContent()}
           </div>
         </CardContent>

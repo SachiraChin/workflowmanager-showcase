@@ -100,8 +100,8 @@ export function WorkflowSidebar({
       </div>
 
       {/* Project info */}
-      <Card>
-        <CardContent className="pt-4">
+      <Card className="gap-0 pb-0">
+        <CardContent className="pb-3">
           <div className="text-sm space-y-1">
             <div>
               <span className="text-muted-foreground">Project: </span>

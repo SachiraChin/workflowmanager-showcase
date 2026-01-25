@@ -12,8 +12,9 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MagneticScrollContainer, MagneticScrollCard } from "@/components/ui/magnetic-scroll-container";
-import { Loader2 } from "lucide-react";
+import { Loader2, Database, FolderTree } from "lucide-react";
 import { VersionDiffDialog } from "@/components/workflow/start/VersionDiffDialog";
 import { WorkflowSidebar, StateTreeView, FilesTreeView } from "@/components/workflow/state";
 import { InteractionPanel, WorkflowCompletion } from "@/components/workflow/runner";
@@ -196,27 +197,43 @@ export function WorkflowRunnerPage({ onRestart }: WorkflowRunnerPageProps) {
       <WorkflowStateProvider workflowRunId={workflowRunId}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Left sidebar - Status */}
-          <div className="lg:col-span-1 space-y-4">
-            <WorkflowSidebar
-              pageState={pageState}
-              status={status}
-              progress={progress}
-              isProcessing={isProcessing}
-              elapsedMs={elapsedMs}
-              lastMessage={lastMessage ?? ""}
-              error={error}
-              statusDisplayFields={statusDisplayFields}
-              projectName={projectName ?? "Unknown"}
-              workflowRunId={workflowRunId ?? ""}
-              onCancel={handleExit}
-              onRestart={handleRestart}
-            />
+          <div className="lg:col-span-1 flex flex-col gap-4 h-[calc(100vh-5rem)] overflow-hidden">
+            <div className="shrink-0">
+              <WorkflowSidebar
+                pageState={pageState}
+                status={status}
+                progress={progress}
+                isProcessing={isProcessing}
+                elapsedMs={elapsedMs}
+                lastMessage={lastMessage ?? ""}
+                error={error}
+                statusDisplayFields={statusDisplayFields}
+                projectName={projectName ?? "Unknown"}
+                workflowRunId={workflowRunId ?? ""}
+                onCancel={handleExit}
+                onRestart={handleRestart}
+              />
+            </div>
 
-            {/* Live State Tree - always visible for debugging */}
-            <StateTreeView />
-
-            {/* Workflow Files Tree - always visible for debugging */}
-            <FilesTreeView />
+            {/* State/Files tabs - fills remaining space */}
+            <Tabs defaultValue="state" className="flex-1 min-h-0 overflow-hidden">
+              <TabsList className="w-full shrink-0">
+                <TabsTrigger value="state" className="flex-1 gap-1.5">
+                  <Database className="h-4 w-4" />
+                  State
+                </TabsTrigger>
+                <TabsTrigger value="files" className="flex-1 gap-1.5">
+                  <FolderTree className="h-4 w-4" />
+                  Files
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="state" className="min-h-0 mt-0 flex flex-col overflow-hidden">
+                <StateTreeView />
+              </TabsContent>
+              <TabsContent value="files" className="min-h-0 mt-0 flex flex-col overflow-hidden">
+                <FilesTreeView />
+              </TabsContent>
+            </Tabs>
           </div>
 
           {/* Main content - Magnetic scroll-snap interaction cards */}
