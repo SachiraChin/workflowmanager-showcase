@@ -43,6 +43,9 @@ export interface InputSchemaContextValue {
   getValue: (key: string) => unknown;
   setValue: (key: string, value: unknown) => void;
 
+  // Get values with destination_field mapping applied (for submission)
+  getMappedValues: () => Record<string, unknown>;
+
   // Validation errors
   errors: Record<string, string>;
   setError: (key: string, error: string) => void;

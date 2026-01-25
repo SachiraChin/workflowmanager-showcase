@@ -36,6 +36,7 @@
                 "_text": {
                   "type": "string",
                   "title": "Prompt",
+                  "destination_field": "prompt",
                   "_ux": {
                     "input_type": "textarea",
                     "col_span": "full",
@@ -172,6 +173,7 @@
                     "_text": {
                       "type": "string",
                       "title": "Prompt",
+                      "destination_field": "prompt",
                       "_ux": {
                         "input_type": "textarea",
                         "col_span": "full",
@@ -360,6 +362,7 @@
                 "_text": {
                   "type": "string",
                   "title": "Prompt",
+                  "destination_field": "prompt",
                   "_ux": {
                     "input_type": "textarea",
                     "col_span": "full",
@@ -426,6 +429,7 @@
                 "_text": {
                   "type": "string",
                   "title": "Prompt",
+                  "destination_field": "prompt",
                   "_ux": {
                     "input_type": "textarea",
                     "col_span": "full",

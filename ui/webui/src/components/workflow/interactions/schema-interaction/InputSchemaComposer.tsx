@@ -79,6 +79,20 @@ export function InputSchemaComposer({ data, schema, path, ux }: InputSchemaCompo
       }
     },
 
+    // Get values with destination_field mapping applied
+    getMappedValues: () => {
+      const result: Record<string, unknown> = {};
+      const properties = inputSchema?.properties || {};
+      for (const [key, fieldSchema] of Object.entries(properties)) {
+        const schemaRecord = fieldSchema as Record<string, unknown>;
+        const destKey = (schemaRecord.destination_field as string) || key;
+        if (values[key] !== undefined) {
+          result[destKey] = values[key];
+        }
+      }
+      return result;
+    },
+
     errors,
     setError: (key, error) => {
       setErrors(prev => ({ ...prev, [key]: error }));

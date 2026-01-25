@@ -7,6 +7,7 @@
  * - calls setValue on change via InputContext
  */
 
+import { useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 import { useInputOptional } from "../InputContext";
@@ -63,6 +64,15 @@ export function TextareaInputRenderer({
   const schemaContextValue = inputSchemaContext?.getValue(fieldKey) as string | undefined;
   const inputContextValue = inputContext?.getValue(path) as string | undefined;
   const value = schemaContextValue ?? inputContextValue ?? propValue ?? "";
+
+  // Initialize context with prop value on mount (if context value is undefined)
+  useEffect(() => {
+    if (inputSchemaContext && schemaContextValue === undefined && propValue !== undefined) {
+      inputSchemaContext.setValue(fieldKey, propValue);
+    }
+    // Only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Determine state
   const disabled = inputContext?.disabled ?? propDisabled ?? false;

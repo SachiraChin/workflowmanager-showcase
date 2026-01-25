@@ -213,6 +213,9 @@ export interface SchemaProperty {
   additionalProperties?: SchemaProperty;
   enum?: string[];
 
+  // Input field destination mapping (for submission)
+  destination_field?: string;
+
   // Index signature for legacy root-level UX + _ux.* flat notation
   [key: string]: unknown;
 }

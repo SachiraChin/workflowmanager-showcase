@@ -235,23 +235,6 @@ export function MediaPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [readonly, pathKey, provider, defaultActionType, paramValuesKey, promptId]);
 
-  // Get the prompt text value
-  const promptTextPath = useMemo(() => [...path, "_text"], [path]);
-  const currentPromptText = useMemo(() => {
-    const editedValue = inputContext.getValue(promptTextPath);
-    if (editedValue !== undefined && editedValue !== null) {
-      return String(editedValue);
-    }
-    // Fall back to source_field from _text input or first available prompt
-    const textSchema = inputProperties._text as Record<string, unknown> | undefined;
-    const textUx = (textSchema?._ux || {}) as Record<string, unknown>;
-    const sourceField = textUx.source_field as string | undefined;
-    if (sourceField && sourceField in panelData) {
-      return String(panelData[sourceField] ?? "");
-    }
-    return "";
-  }, [inputContext, promptTextPath, inputProperties, panelData]);
-
   // Handle generate button click
   const handleGenerate = (action: SubActionConfig) => {
     if (!inputSchemaContext) {
@@ -259,10 +242,8 @@ export function MediaPanel({
       return;
     }
 
-    const params: Record<string, unknown> = {
-      prompt: currentPromptText,
-      ...inputSchemaContext.values,
-    };
+    // Get values with destination_field mapping applied
+    const params: Record<string, unknown> = inputSchemaContext.getMappedValues();
 
     // Validate required fields and set errors via context (shows red border on inputs)
     const errors: string[] = [];

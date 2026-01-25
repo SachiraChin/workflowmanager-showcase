@@ -320,6 +320,15 @@ export function SelectInputRenderer({
   const schemaContextValue = inputSchemaContext?.getValue(fieldKey);
   const rawStored = schemaContextValue !== undefined ? schemaContextValue : inputContext?.getRawValue(path);
 
+  // Initialize context with prop value on mount (if context value is undefined)
+  useEffect(() => {
+    if (inputSchemaContext && schemaContextValue === undefined && propValue !== undefined) {
+      inputSchemaContext.setValue(fieldKey, propValue);
+    }
+    // Only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Determine display value for Select
   // If stored as IndexedValue, use _idx directly (no comparison needed)
   // Otherwise fall back to string comparison for primitive values

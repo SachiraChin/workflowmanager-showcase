@@ -75,6 +75,15 @@ export function SliderInputRenderer({
   const rawValue = schemaContextValue ?? inputContextValue ?? propValue;
   const value = typeof rawValue === "number" ? rawValue : min;
 
+  // Initialize context with prop value on mount (if context value is undefined)
+  useEffect(() => {
+    if (inputSchemaContext && schemaContextValue === undefined && propValue !== undefined) {
+      inputSchemaContext.setValue(fieldKey, propValue);
+    }
+    // Only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Determine state
   const disabled = inputContext?.disabled ?? propDisabled ?? false;
   const readonly = inputContext?.readonly ?? propReadonly ?? false;
