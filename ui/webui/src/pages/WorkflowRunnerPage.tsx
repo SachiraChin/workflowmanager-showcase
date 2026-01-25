@@ -123,7 +123,12 @@ export function WorkflowRunnerPage({ onRestart }: WorkflowRunnerPageProps) {
   }, [currentInteraction, interactionsWithSteps.length]);
 
   // Fetch status display fields when workflow is running
+  // TEMPORARILY DISABLED for debugging
   useEffect(() => {
+    // Disabled - return early
+    return;
+
+    // eslint-disable-next-line no-unreachable
     if (!workflowRunId || status === "completed" || status === "error") {
       return;
     }
