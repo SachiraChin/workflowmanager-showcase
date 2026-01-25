@@ -415,3 +415,53 @@ export interface SubActionRequest {
   /** Original prompt data from workflow (for storage) */
   source_data?: unknown;
 }
+
+// =============================================================================
+// Workflow Files Types
+// =============================================================================
+
+/**
+ * A single file entry in the file tree.
+ */
+export interface WorkflowFile {
+  file_id: string;
+  filename: string;
+  content_type: string;
+}
+
+/**
+ * A group of files (e.g., an API call with request/response).
+ */
+export interface FileGroup {
+  group_id: string;
+  created_at: string | null;
+  files: WorkflowFile[];
+}
+
+/**
+ * File tree structure - entirely dynamic based on actual data.
+ *
+ * Structure depends on branches and grouping:
+ * - Single branch: { [category]: StepGroups | WorkflowFile[] }
+ * - Multiple branches: { [branch_id]: { [category]: ... } }
+ *
+ * Where StepGroups = { [step_id]: FileGroup[] }
+ *
+ * Files with group_id are organized as: category/step_id/groups/files
+ * Files without group_id are flat arrays under category.
+ */
+export type FileTree = Record<string, unknown>;
+
+/**
+ * Content of a file fetched from the API.
+ */
+export interface WorkflowFileContent {
+  file_id: string;
+  workflow_run_id: string;
+  category: string;
+  group_id?: string;
+  filename: string;
+  content_type: string;
+  content: unknown;
+  metadata: Record<string, unknown>;
+}

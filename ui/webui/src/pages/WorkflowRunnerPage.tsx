@@ -15,12 +15,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { MagneticScrollContainer, MagneticScrollCard } from "@/components/ui/magnetic-scroll-container";
 import { Loader2 } from "lucide-react";
 import { VersionDiffDialog } from "@/components/workflow/start/VersionDiffDialog";
-import { WorkflowSidebar, StateTreeView } from "@/components/workflow/state";
+import { WorkflowSidebar, StateTreeView, FilesTreeView } from "@/components/workflow/state";
 import { InteractionPanel, WorkflowCompletion } from "@/components/workflow/runner";
 import { CompletedInteractionCard } from "@/components/workflow/history";
 import { useWorkflowExecution } from "@/hooks/useWorkflowExecution";
 import { WorkflowStateProvider } from "@/contexts/WorkflowStateContext";
-import { api } from "@/lib/api";
+// import { api } from "@/lib/api";  // TEMPORARILY DISABLED - status display polling
 import type { CompletedInteraction, InteractionResponseData } from "@/lib/types";
 
 /** Interaction with step context for rendering */
@@ -124,33 +124,29 @@ export function WorkflowRunnerPage({ onRestart }: WorkflowRunnerPageProps) {
 
   // Fetch status display fields when workflow is running
   // TEMPORARILY DISABLED for debugging
-  useEffect(() => {
-    // Disabled - return early
-    return;
-
-    // eslint-disable-next-line no-unreachable
-    if (!workflowRunId || status === "completed" || status === "error") {
-      return;
-    }
-
-    const fetchStatusDisplay = async () => {
-      try {
-        const response = await api.getStatusDisplay(workflowRunId);
-        if (response.display_fields) {
-          setStatusDisplayFields(response.display_fields);
-        }
-      } catch (e) {
-        // Silently ignore - status display is optional
-        console.debug("Failed to fetch status display", e);
-      }
-    };
-
-    // Fetch immediately and then every 5 seconds
-    fetchStatusDisplay();
-    const interval = setInterval(fetchStatusDisplay, 5000);
-
-    return () => clearInterval(interval);
-  }, [workflowRunId, status]);
+  // useEffect(() => {
+  //   if (!workflowRunId || status === "completed" || status === "error") {
+  //     return;
+  //   }
+  //
+  //   const fetchStatusDisplay = async () => {
+  //     try {
+  //       const response = await api.getStatusDisplay(workflowRunId);
+  //       if (response.display_fields) {
+  //         setStatusDisplayFields(response.display_fields);
+  //       }
+  //     } catch (e) {
+  //       // Silently ignore - status display is optional
+  //       console.debug("Failed to fetch status display", e);
+  //     }
+  //   };
+  //
+  //   // Fetch immediately and then every 5 seconds
+  //   fetchStatusDisplay();
+  //   const interval = setInterval(fetchStatusDisplay, 5000);
+  //
+  //   return () => clearInterval(interval);
+  // }, [workflowRunId, status]);
 
   // Handle interaction response
   const handleInteractionSubmit = useCallback(
@@ -216,8 +212,11 @@ export function WorkflowRunnerPage({ onRestart }: WorkflowRunnerPageProps) {
               onRestart={handleRestart}
             />
 
-            {/* Live State Tree */}
-            {pageState === "running" && <StateTreeView />}
+            {/* Live State Tree - always visible for debugging */}
+            <StateTreeView />
+
+            {/* Workflow Files Tree - always visible for debugging */}
+            <FilesTreeView />
           </div>
 
           {/* Main content - Magnetic scroll-snap interaction cards */}

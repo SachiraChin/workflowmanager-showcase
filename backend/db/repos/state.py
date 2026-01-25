@@ -33,6 +33,7 @@ class StateRepository(BaseRepository):
         self.events: Collection = db.events
         self.branches: Collection = db.branches
         self.workflow_runs: Collection = db.workflow_runs
+        self.workflow_files: Collection = db.workflow_files
 
     def get_branch_lineage(self, branch_id: str) -> List[Tuple[str, Optional[str]]]:
         """
@@ -217,6 +218,133 @@ class StateRepository(BaseRepository):
                         result["state_mapped"][state_key] = value
 
         return result
+
+    def get_full_workflow_state(
+        self, workflow_run_id: str, branch_id: str = None
+    ) -> Dict[str, Any]:
+        """
+        Get complete workflow state including module outputs and file tree.
+
+        This is the main method for the state streaming endpoint, providing
+        all workflow state data in a single response.
+
+        Returns:
+            {
+                "steps": {...},        # hierarchical module state
+                "state_mapped": {...}, # state-mapped values
+                "files": {...}         # file tree structure
+            }
+        """
+        # Get existing hierarchical state
+        state = self.get_module_outputs_hierarchical(workflow_run_id, branch_id)
+
+        # Add file tree (includes all branches, organized appropriately)
+        state["files"] = self._build_file_tree(workflow_run_id)
+
+        return state
+
+    def _build_file_tree(self, workflow_run_id: str) -> Dict[str, Any]:
+        """
+        Build hierarchical file tree from workflow_files collection.
+
+        Hierarchy rules (all dynamic based on actual data):
+        - If multiple branches exist: branch_id becomes root level
+        - If single branch: branch level is omitted
+        - Files with group_id: organized as category/step_id/[groups]
+        - Files without group_id: flat list directly under category
+
+        The structure is entirely determined by the data - no hardcoded keys.
+        """
+        query = {"workflow_run_id": workflow_run_id}
+        files = list(self.workflow_files.find(query).sort("created_at", ASCENDING))
+
+        if not files:
+            return {}
+
+        # Check how many unique branches exist
+        branch_ids = set()
+        for f in files:
+            bid = f.get("branch_id")
+            if bid:
+                branch_ids.add(bid)
+
+        has_multiple_branches = len(branch_ids) > 1
+
+        if has_multiple_branches:
+            # Organize by branch_id at root
+            result: Dict[str, Any] = {}
+            for file_doc in files:
+                branch_id = file_doc.get("branch_id")
+                if not branch_id:
+                    continue  # Skip files without branch_id when multiple branches exist
+                if branch_id not in result:
+                    result[branch_id] = {}
+                self._add_file_to_tree(result[branch_id], file_doc)
+            return result
+        else:
+            # Single branch - hide branch level
+            result: Dict[str, Any] = {}
+            for file_doc in files:
+                self._add_file_to_tree(result, file_doc)
+            return result
+
+    def _add_file_to_tree(self, tree: Dict[str, Any], file_doc: Dict[str, Any]) -> None:
+        """
+        Add a single file document to a tree structure.
+
+        Hierarchy rules:
+        - Files with group_id: category -> step_id -> groups -> files
+        - Files without group_id: category -> files (flat list)
+
+        Args:
+            tree: The tree dict to add file to
+            file_doc: The file document from MongoDB
+        """
+        category = file_doc.get("category")
+        if not category:
+            return  # Skip files without category
+
+        group_id = file_doc.get("group_id")
+        metadata = file_doc.get("metadata", {})
+        step_id = metadata.get("step_id")
+        created_at = file_doc.get("created_at")
+
+        file_entry = {
+            "file_id": file_doc.get("file_id"),
+            "filename": file_doc.get("filename"),
+            "content_type": file_doc.get("content_type", "text"),
+        }
+
+        if group_id and step_id:
+            # File has group_id - organize under category/step_id/groups
+            if category not in tree:
+                tree[category] = {}
+
+            if step_id not in tree[category]:
+                tree[category][step_id] = []
+
+            # Find or create group entry
+            group_entry = None
+            for g in tree[category][step_id]:
+                if g["group_id"] == group_id:
+                    group_entry = g
+                    break
+
+            if not group_entry:
+                group_entry = {
+                    "group_id": group_id,
+                    "created_at": created_at.isoformat() if created_at else None,
+                    "files": [],
+                }
+                tree[category][step_id].append(group_entry)
+
+            group_entry["files"].append(file_entry)
+        else:
+            # File without group_id - flat list under category
+            if category not in tree:
+                tree[category] = []
+
+            tree[category].append(file_entry)
 
     def get_module_output(
         self, workflow_run_id: str, module_name: str

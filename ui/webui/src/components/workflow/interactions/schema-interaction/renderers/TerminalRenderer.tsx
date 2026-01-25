@@ -7,7 +7,7 @@
  *   wraps content in SelectableWrapper with selection UI.
  */
 
-import type { SchemaProperty, UxConfig } from "../types";
+import type { SchemaProperty, UxConfig, ControlConfig } from "../types";
 import { useSelectable } from "../useSelectable";
 import { SelectableWrapper } from "../SelectableWrapper";
 import { TextRenderer } from "./TextRenderer";
@@ -82,7 +82,7 @@ export function TerminalRenderer({
         const valueKey = schemaRecord.value_key as string | undefined;
         const labelKey = schemaRecord.label_key as string | undefined;
         const labelFormat = schemaRecord.label_format as string | undefined;
-        const controls = schemaRecord.controls as Record<string, unknown> | undefined;
+        const controls = schemaRecord.controls as Record<string, ControlConfig> | undefined;
         inputContent = (
           <SelectInputRenderer
             path={path}

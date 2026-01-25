@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/select";
 import { useInputOptional, isIndexedValue, type DynamicOption, type IndexedValue } from "../InputContext";
 import { useInputSchemaOptional } from "../InputSchemaContext";
+import type { ControlConfig } from "../types";
 
 // =============================================================================
 // Types
@@ -44,26 +45,6 @@ interface IndexedSelectOption {
   label: string;
   /** Original value (may be object) to store when selected */
   originalValue: unknown;
-}
-
-/** Config for a controlled field */
-export interface ControlConfig {
-  /** Type of control - "enum" sets options, "value" sets value directly */
-  type: "enum" | "value";
-  /** Path to extract options from in the selected object (e.g., "params.sampler_combo") - for type="enum" */
-  enum_path?: string;
-  /** Path to extract value from in the selected object (e.g., ".value") - for type="value" */
-  value_path?: string;
-  /** Key in each option object to use as value */
-  value_key?: string;
-  /** Key in each option object to use as label (simple case) */
-  label_key?: string;
-  /** Format string for label using {field} placeholders (complex case) */
-  label_format?: string;
-  /** Index of option to auto-select (default: 0, use -1 for no auto-select) */
-  default_index?: number;
-  /** Reset field value when parent changes (default: false) */
-  reset?: boolean;
 }
 
 interface SelectInputRendererProps {

@@ -52,9 +52,9 @@ async def get_workflow_state_v2(
     user_id: str = Depends(get_current_user_id)
 ):
     """
-    Get current workflow state in hierarchical format.
+    Get current workflow state in hierarchical format including files.
 
-    Returns state organized by step -> module -> outputs.
+    Returns state organized by step -> module -> outputs, plus file tree.
 
     Response format:
     {
@@ -62,13 +62,14 @@ async def get_workflow_state_v2(
         "state": {
             "steps": {
                 "step_id": {
-                    "modules": {
-                        "module_name": { ...module outputs... }
-                    }
+                    "module_name": { ...module outputs... }
                 }
             },
             "state_mapped": {
-                "key": value  # Flat state-mapped values
+                "key": value
+            },
+            "files": {
+                "category": { ... }  # Dynamic structure based on data
             }
         }
     }
@@ -77,7 +78,7 @@ async def get_workflow_state_v2(
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
 
-    state = db.state_repo.get_module_outputs_hierarchical(workflow_run_id)
+    state = db.state_repo.get_full_workflow_state(workflow_run_id)
 
     return {
         "workflow_run_id": workflow_run_id,
@@ -93,12 +94,13 @@ async def stream_workflow_state_v2(
     user_id: str = Depends(get_current_user_id)
 ):
     """
-    Stream workflow state updates via SSE in hierarchical format.
+    Stream workflow state updates via SSE in hierarchical format including files.
 
-    Same as /state/stream but returns hierarchical structure:
+    Returns full workflow state with hierarchical structure:
     {
-        "steps": { step_id: { "modules": { module_name: data } } },
-        "state_mapped": { key: value }
+        "steps": { step_id: { module_name: data } },
+        "state_mapped": { key: value },
+        "files": { ... }
     }
     """
     workflow = db.workflow_repo.get_workflow(workflow_run_id)
@@ -122,7 +124,7 @@ async def stream_workflow_state_v2(
         last_hash = None
 
         try:
-            initial_state = await asyncio.to_thread(db.state_repo.get_module_outputs_hierarchical, workflow_run_id)
+            initial_state = await asyncio.to_thread(db.state_repo.get_full_workflow_state, workflow_run_id)
             last_hash = _compute_state_hash(initial_state)
 
             yield {
@@ -137,7 +139,7 @@ async def stream_workflow_state_v2(
                     break
 
                 try:
-                    current_state = await asyncio.to_thread(db.state_repo.get_module_outputs_hierarchical, workflow_run_id)
+                    current_state = await asyncio.to_thread(db.state_repo.get_full_workflow_state, workflow_run_id)
                     current_hash = _compute_state_hash(current_state)
 
                     if current_hash != last_hash:

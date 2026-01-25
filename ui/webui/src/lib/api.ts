@@ -13,6 +13,7 @@ import type {
   InteractionHistoryResponse,
   WorkflowTemplatesResponse,
   SubActionRequest,
+  WorkflowFileContent,
 } from "./types";
 import { API_URL } from "./config";
 
@@ -203,6 +204,10 @@ class ApiClient {
       definition: WorkflowDefinition;
       raw_definition?: WorkflowDefinition;
     }>(`/workflow/${workflowRunId}/definition`);
+  }
+
+  async getWorkflowFile(workflowRunId: string, fileId: string): Promise<WorkflowFileContent> {
+    return this.request<WorkflowFileContent>(`/workflow/${workflowRunId}/files/${fileId}`);
   }
 
   async listWorkflowTemplates(): Promise<WorkflowTemplatesResponse> {

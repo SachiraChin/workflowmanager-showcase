@@ -7,7 +7,7 @@ import { createContext, useContext, useEffect, useState, useCallback } from "rea
 import type { ReactNode } from "react";
 import { useWorkflowState } from "@/hooks/useWorkflowState";
 import { api } from "@/lib/api";
-import type { WorkflowDefinition, ModuleConfig } from "@/lib/types";
+import type { WorkflowDefinition, ModuleConfig, FileTree, WorkflowFileContent } from "@/lib/types";
 
 interface WorkflowStateContextValue {
   /** Current workflow state */
@@ -26,6 +26,10 @@ interface WorkflowStateContextValue {
   getModuleConfig: (stepId: string, moduleName: string) => ModuleConfig | null;
   /** Get module config from raw definition (for groups and regular modules) */
   getRawModuleConfig: (stepId: string, moduleName: string) => ModuleConfig | null;
+  /** File tree from workflow state (streamed via SSE) */
+  files: FileTree | null;
+  /** Fetch content of a specific file */
+  fetchFileContent: (fileId: string) => Promise<WorkflowFileContent | null>;
 }
 
 const WorkflowStateContext = createContext<WorkflowStateContextValue | null>(null);
@@ -87,6 +91,20 @@ export function WorkflowStateProvider({
     return module || null;
   }, [rawWorkflowDefinition]);
 
+  // Extract files from state
+  const files = (state.files as FileTree) || null;
+
+  // Fetch file content
+  const fetchFileContent = useCallback(async (fileId: string): Promise<WorkflowFileContent | null> => {
+    if (!workflowRunId) return null;
+    try {
+      return await api.getWorkflowFile(workflowRunId, fileId);
+    } catch (err) {
+      console.error("Failed to fetch file content", err);
+      return null;
+    }
+  }, [workflowRunId]);
+
   // Keep module-level state in sync for non-React access
   useEffect(() => {
     setCurrentWorkflowState(state);
@@ -102,6 +120,8 @@ export function WorkflowStateProvider({
       rawWorkflowDefinition,
       getModuleConfig,
       getRawModuleConfig,
+      files,
+      fetchFileContent,
     }}>
       {children}
     </WorkflowStateContext.Provider>
@@ -125,6 +145,8 @@ export function useWorkflowStateContext(): WorkflowStateContextValue {
       rawWorkflowDefinition: null,
       getModuleConfig: () => null,
       getRawModuleConfig: () => null,
+      files: null,
+      fetchFileContent: async () => null,
     };
   }
   return context;

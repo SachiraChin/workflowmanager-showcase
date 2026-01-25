@@ -28,6 +28,8 @@ export {
   SelectInputRenderer,
   buildOptionsFromSchema,
   type SelectOption,
-  type ControlConfig,
 } from "./SelectInputRenderer";
 export { SliderInputRenderer } from "./SliderInputRenderer";
+
+// Re-export shared types
+export type { ControlConfig } from "../types";
