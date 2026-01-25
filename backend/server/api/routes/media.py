@@ -10,7 +10,7 @@ from typing import Any, Dict
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
-from backend.server.api.dependencies import get_db, get_current_user_id
+from ..dependencies import get_db, get_current_user_id
 from modules.media import MediaProviderRegistry
 
 logger = logging.getLogger('workflow.api')

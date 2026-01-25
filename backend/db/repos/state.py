@@ -15,7 +15,7 @@ from pymongo import ASCENDING, DESCENDING
 from pymongo.database import Database
 from pymongo.collection import Collection
 
-from backend.db.base import BaseRepository
+from ..base import BaseRepository
 
 logger = logging.getLogger(__name__)
 
@@ -462,7 +462,7 @@ class StateRepository(BaseRepository):
         Raises:
             ValueError: If target module not found in branch lineage
         """
-        from backend.db.utils import uuid7_str
+        from ..utils import uuid7_str
 
         current_branch_id = self.get_current_branch_id(workflow_run_id)
         logger.info(

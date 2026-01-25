@@ -14,7 +14,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
-from backend.server.api.dependencies import get_db, get_current_user_id
+from ..dependencies import get_db, get_current_user_id
 
 # Import TaskQueue from shared db package
 from backend.db import TaskQueue

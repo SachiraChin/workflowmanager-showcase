@@ -18,10 +18,10 @@ Usage:
     task_id = queue.enqueue(actor="media", payload={...})
 """
 
-from backend.db.database import Database, DbEventType
-from backend.db.base import BaseRepository
-from backend.db.queue import TaskQueue, Task
-from backend.db.repos import (
+from .database import Database, DbEventType
+from .base import BaseRepository
+from .queue import TaskQueue, Task
+from .repos import (
     UserRepository,
     EventRepository,
     WorkflowRepository,

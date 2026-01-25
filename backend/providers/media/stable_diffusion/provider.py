@@ -19,7 +19,7 @@ import logging
 import requests
 from typing import Any, Dict, Optional
 
-from backend.providers.media.base import (
+from ..base import (
     MediaProviderBase,
     ContentItem,
     GenerationResult,
@@ -30,7 +30,7 @@ from backend.providers.media.base import (
     CreditInfo,
     PreviewInfo,
 )
-from backend.providers.media.registry import register
+from ..registry import register
 
 logger = logging.getLogger(__name__)
 

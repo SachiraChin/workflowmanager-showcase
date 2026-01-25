@@ -21,9 +21,9 @@ from typing import Any, Dict, List, Optional
 # Cancel check interval - configurable via environment variable
 CANCEL_CHECK_INTERVAL = float(os.environ.get("CANCEL_CHECK_INTERVAL", "0.1"))
 
-from backend.server.modules.api.base import LLMProviderBase, Message, MessageContent, ContentType
-from backend.server.modules.api.registry import register
-from backend.server.modules.api.call_logger import get_api_call_logger
+from ...base import LLMProviderBase, Message, MessageContent, ContentType
+from ...registry import register
+from ...call_logger import get_api_call_logger
 from engine.context_utils import require_step_id_from_metadata
 
 

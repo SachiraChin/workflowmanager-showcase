@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, Query, Depends
 from jinja2 import Environment, BaseLoader
 
-from backend.server.api.dependencies import get_db, get_current_user_id
+from ..dependencies import get_db, get_current_user_id
 
 logger = logging.getLogger('workflow.api')
 

@@ -9,7 +9,7 @@ import json
 from typing import Dict, Any, List, Optional
 from engine.module_interface import ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
 from .base import Message
-from backend.server.modules.api.registry import ProviderRegistry
+from .registry import ProviderRegistry
 
 
 class LLMCallModule(ExecutableModule):

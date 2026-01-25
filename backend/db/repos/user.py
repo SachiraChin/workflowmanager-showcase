@@ -14,7 +14,7 @@ from typing import Dict, Any, List, Optional
 from pymongo.database import Database
 from pymongo.collection import Collection
 
-from backend.db.base import BaseRepository
+from ..base import BaseRepository
 
 
 class UserRepository(BaseRepository):

@@ -11,7 +11,7 @@ from typing import Dict, Any, Optional
 from fastapi import APIRouter, HTTPException, Query, Depends
 from fastapi.responses import FileResponse
 
-from backend.server.api.dependencies import get_db, get_current_user_id
+from ..dependencies import get_db, get_current_user_id
 
 router = APIRouter(prefix="/workflow", tags=["files"])
 

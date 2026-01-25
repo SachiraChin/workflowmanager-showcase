@@ -4,15 +4,15 @@ Repository Package
 Provides repository classes for data operations.
 """
 
-from backend.db.repos.user import UserRepository
-from backend.db.repos.event import EventRepository
-from backend.db.repos.workflow import WorkflowRepository
-from backend.db.repos.branch import BranchRepository
-from backend.db.repos.file import FileRepository
-from backend.db.repos.state import StateRepository
-from backend.db.repos.token import TokenRepository
-from backend.db.repos.version import VersionRepository
-from backend.db.repos.content import ContentRepository
+from .user import UserRepository
+from .event import EventRepository
+from .workflow import WorkflowRepository
+from .branch import BranchRepository
+from .file import FileRepository
+from .state import StateRepository
+from .token import TokenRepository
+from .version import VersionRepository
+from .content import ContentRepository
 
 __all__ = [
     "UserRepository",

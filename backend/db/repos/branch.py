@@ -14,8 +14,8 @@ from typing import Dict, Any, List, Optional, Tuple
 from pymongo.database import Database
 from pymongo.collection import Collection
 
-from backend.db.base import BaseRepository
-from backend.db.utils import uuid7_str
+from ..base import BaseRepository
+from ..utils import uuid7_str
 
 
 logger = logging.getLogger(__name__)

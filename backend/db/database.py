@@ -20,22 +20,22 @@ from pymongo import MongoClient
 from pymongo.database import Database as MongoDatabase
 from pymongo.collection import Collection
 
-from backend.db.base import BaseRepository
-from backend.db.repos.user import UserRepository
-from backend.db.repos.event import EventRepository
-from backend.db.repos.workflow import WorkflowRepository
-from backend.db.repos.branch import BranchRepository
-from backend.db.repos.file import FileRepository
-from backend.db.repos.state import StateRepository
-from backend.db.repos.token import TokenRepository
-from backend.db.repos.version import VersionRepository
-from backend.db.repos.content import ContentRepository
+from .base import BaseRepository
+from .repos.user import UserRepository
+from .repos.event import EventRepository
+from .repos.workflow import WorkflowRepository
+from .repos.branch import BranchRepository
+from .repos.file import FileRepository
+from .repos.state import StateRepository
+from .repos.token import TokenRepository
+from .repos.version import VersionRepository
+from .repos.content import ContentRepository
 
 # Import mixins
-from backend.db.mixins.config import DatabaseConfigMixin
-from backend.db.mixins.history import DatabaseHistoryMixin
-from backend.db.mixins.migrations import DatabaseMigrationsMixin
-from backend.db.mixins.recovery import DatabaseRecoveryMixin
+from .mixins.config import DatabaseConfigMixin
+from .mixins.history import DatabaseHistoryMixin
+from .mixins.migrations import DatabaseMigrationsMixin
+from .mixins.recovery import DatabaseRecoveryMixin
 
 logger = logging.getLogger(__name__)
 
@@ -126,7 +126,7 @@ class Database(DatabaseHistoryMixin, DatabaseMigrationsMixin, DatabaseConfigMixi
 
     def _run_migrations(self):
         """Run database migrations on startup."""
-        from backend.db.migrations import run_migrations
+        from .migrations import run_migrations
 
         try:
             stats = run_migrations(self.db)

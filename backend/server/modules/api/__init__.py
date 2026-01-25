@@ -27,20 +27,19 @@ Legacy modules (deprecated, use api.llm instead):
 - api.anthropic: Direct Anthropic calls
 """
 
-# Base classes (siblings - relative imports OK)
+# Base classes
 from .base import LLMProviderBase, Message, MessageContent, ContentType
 
-# Registry (sibling - relative import OK)
+# Registry
 from .registry import ProviderRegistry, register
 
-# Providers - import to trigger registration (children - absolute imports)
-from backend.server.modules.api.providers.openai.provider import OpenAIProvider
-from backend.server.modules.api.providers.anthropic.provider import AnthropicProvider
+# Providers - import package to trigger registration via providers/__init__.py
+from . import providers
 
-# Unified module (sibling - relative import OK)
+# Unified module
 from .llm_call import LLMCallModule
 
-# HTTP fetch module (sibling - relative import OK)
+# HTTP fetch module
 from .fetch import APIFetchModule
 
 __all__ = [
@@ -52,9 +51,6 @@ __all__ = [
     # Registry
     'ProviderRegistry',
     'register',
-    # Providers
-    'OpenAIProvider',
-    'AnthropicProvider',
     # Modules
     'LLMCallModule',
     'APIFetchModule',

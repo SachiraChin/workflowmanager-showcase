@@ -30,7 +30,7 @@ class DatabaseMigrationsMixin:
         Returns:
             Current branch ID (created if needed)
         """
-        from backend.db.utils import uuid7_str
+        from ..utils import uuid7_str
         import logging
         logger = logging.getLogger(__name__)
 
