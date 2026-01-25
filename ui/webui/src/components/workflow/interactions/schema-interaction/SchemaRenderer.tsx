@@ -62,6 +62,10 @@ interface SchemaRendererProps {
   ux?: UxConfig;
   /** Children from compound render_as parsing (e.g., tab.media passes inner renderer) */
   children?: ReactNode;
+  /** Whether inputs are disabled */
+  disabled?: boolean;
+  /** Whether inputs are readonly */
+  readonly?: boolean;
 }
 
 // =============================================================================
@@ -74,6 +78,8 @@ export function SchemaRenderer({
   path = [],
   ux: uxProp,
   children,
+  disabled = false,
+  readonly = false,
 }: SchemaRendererProps) {
   const { state: workflowState } = useWorkflowStateContext();
   const templateState = (workflowState.state_mapped || {}) as Record<string, unknown>;
@@ -103,6 +109,8 @@ export function SchemaRenderer({
         schema={schema}
         path={path}
         ux={ux}
+        disabled={disabled}
+        readonly={readonly}
       />
     );
   }

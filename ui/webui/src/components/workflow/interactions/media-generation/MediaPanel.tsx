@@ -13,11 +13,10 @@
  * replacing the implicit ContentPanelSchemaRenderer check.
  */
 
-import { useMemo, useEffect, useCallback, useState } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { useWorkflowStateContext } from "@/contexts/WorkflowStateContext";
-import { useInput } from "../schema-interaction/InputContext";
 import { useInputSchemaOptional } from "../schema-interaction/InputSchemaContext";
 import { MediaGrid } from "./MediaGrid";
 import { useMediaGeneration } from "./MediaGenerationContext";
@@ -44,14 +43,14 @@ interface MediaPanelProps {
 // =============================================================================
 
 export function MediaPanel({
-  data,
+  data: _data,
   schema: _schema,
   path,
   ux,
 }: MediaPanelProps) {
+  void _data; // Data is passed but values are managed by InputSchemaContext
   void _schema; // Schema is available but we primarily use ux.input_schema
   const mediaContext = useMediaGeneration();
-  const inputContext = useInput();
   const inputSchemaContext = useInputSchemaOptional();
   const { state: workflowState } = useWorkflowStateContext();
   // Reserved for future template expansion in display_format
@@ -84,67 +83,9 @@ export function MediaPanel({
   // Header from display_label
   const header = ux.display_label || path[path.length - 1];
 
-  // Get the data object for this path (for source_field lookups)
-  const panelData = useMemo(
-    () => (typeof data === "object" && data !== null ? data as Record<string, unknown> : {}),
-    [data]
-  );
-
   // Extract input_schema for parameters
   const inputSchema = ux.input_schema as SchemaProperty | undefined;
   const inputProperties = (inputSchema?.properties || {}) as Record<string, SchemaProperty>;
-  const parameterKeys = Object.keys(inputProperties);
-
-  // Helper to get initial value for a parameter (checks source_field)
-  const getParamInitialValue = useCallback(
-    (key: string): unknown => {
-      const propSchema = inputProperties[key] as Record<string, unknown>;
-      const propUx = (propSchema?._ux || {}) as Record<string, unknown>;
-
-      // Check for source_field - get value from panel data
-      const sourceField = propUx.source_field as string | undefined;
-      if (sourceField && sourceField in panelData) {
-        return panelData[sourceField];
-      }
-
-      // Fall back to schema default
-      return propSchema?.default;
-    },
-    [inputProperties, panelData]
-  );
-
-  // Resolve {field} placeholders in a template string using panel data
-  const resolveSourceData = useCallback((template: string): string => {
-    return template.replace(/\{(\w+)\}/g, (_, field) => {
-      const value = panelData[field];
-      return value !== undefined ? String(value) : "";
-    });
-  }, [panelData]);
-
-  // Initialize source_field/source_data parameter values on mount
-  useEffect(() => {
-    if (readonly) return;
-
-    for (const key of parameterKeys) {
-      const propSchema = inputProperties[key] as Record<string, unknown>;
-      const propUx = (propSchema?._ux || {}) as Record<string, unknown>;
-      const sourceField = propUx.source_field as string | undefined;
-      const sourceData = propUx.source_data as string | undefined;
-
-      const paramPath = [...path, key];
-      const existingValue = inputContext.getValue(paramPath);
-      if (existingValue !== undefined) continue;
-
-      // source_data takes precedence - supports {field} template syntax
-      if (sourceData) {
-        inputContext.setValue(paramPath, resolveSourceData(sourceData));
-      } else if (sourceField && sourceField in panelData) {
-        inputContext.setValue(paramPath, panelData[sourceField]);
-      }
-    }
-    // Run only once on mount (when panelData becomes available)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [panelData !== undefined]);
 
   // Get state for this path
   const generations = getGenerations(path);
@@ -181,44 +122,11 @@ export function MediaPanel({
   // Get first sub-action type for preview (default to txt2img)
   const defaultActionType = subActions.length > 0 ? subActions[0].action_type : "txt2img";
 
-  // Stable path key for dependencies
-  const pathKey = path.join(".");
-
-  // Build current params object (reserved for future direct params access)
-  const _currentParams = useMemo(() => {
-    const params: Record<string, unknown> = {};
-    for (const key of parameterKeys) {
-      const paramPath = [...path, key];
-      const value = inputContext.getValue(paramPath);
-      if (value !== undefined) {
-        params[key] = value;
-      } else {
-        // Use initial value (from source_field or schema default)
-        const initialValue = getParamInitialValue(key);
-        if (initialValue !== undefined) {
-          params[key] = initialValue;
-        }
-      }
-    }
-    return params;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathKey, parameterKeys.join(","), getParamInitialValue]);
-  void _currentParams;
-
-  // Get current param values as a stable string for change detection
+  // Get current param values as a stable string for change detection (for preview)
   const paramValuesKey = useMemo(() => {
-    const values: Record<string, unknown> = {};
-    for (const key of parameterKeys) {
-      const paramPath = [...path, key];
-      const value = inputContext.getValue(paramPath);
-      if (value !== undefined) {
-        values[key] = value;
-      } else {
-        values[key] = getParamInitialValue(key);
-      }
-    }
-    return JSON.stringify(values);
-  }, [parameterKeys, path, inputContext, getParamInitialValue]);
+    if (!inputSchemaContext) return "{}";
+    return JSON.stringify(inputSchemaContext.values);
+  }, [inputSchemaContext?.values]);
 
   // Fetch preview when params change (debounced)
   useEffect(() => {
@@ -233,7 +141,7 @@ export function MediaPanel({
 
     return () => clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [readonly, pathKey, provider, defaultActionType, paramValuesKey, promptId]);
+  }, [readonly, path.join("."), provider, defaultActionType, paramValuesKey, promptId]);
 
   // Handle generate button click
   const handleGenerate = (action: SubActionConfig) => {

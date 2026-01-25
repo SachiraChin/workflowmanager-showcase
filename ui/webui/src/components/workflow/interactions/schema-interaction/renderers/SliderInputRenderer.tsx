@@ -11,7 +11,6 @@
 import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Slider } from "@/components/ui/slider";
-import { useInputOptional } from "../InputContext";
 import { useInputSchemaOptional } from "../InputSchemaContext";
 
 // =============================================================================
@@ -35,11 +34,11 @@ interface SliderInputRendererProps {
   className?: string;
   /** Show value display */
   showValue?: boolean;
-  /** Direct onChange handler (used when not in InputContext) */
+  /** Direct onChange handler (used when not in InputSchemaContext) */
   onChange?: (value: number) => void;
-  /** Direct disabled state (used when not in InputContext) */
+  /** Direct disabled state (used when not in InputSchemaContext) */
   disabled?: boolean;
-  /** Direct readonly state (used when not in InputContext) */
+  /** Direct readonly state (used when not in InputSchemaContext) */
   readonly?: boolean;
 }
 
@@ -60,7 +59,6 @@ export function SliderInputRenderer({
   disabled: propDisabled,
   readonly: propReadonly,
 }: SliderInputRendererProps) {
-  const inputContext = useInputOptional();
   const inputSchemaContext = useInputSchemaOptional();
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState("");
@@ -69,26 +67,23 @@ export function SliderInputRenderer({
   // Get field key for InputSchemaContext
   const fieldKey = path[path.length - 1];
 
-  // Determine value source - try InputSchemaContext first, fall back to InputContext, then prop
-  const schemaContextValue = inputSchemaContext?.getValue(fieldKey);
-  const inputContextValue = inputContext?.getValue(path);
-  const rawValue = schemaContextValue ?? inputContextValue ?? propValue;
+  // Determine value source - try InputSchemaContext first, then prop
+  const rawValue = inputSchemaContext?.getValue(fieldKey) ?? propValue;
   const value = typeof rawValue === "number" ? rawValue : min;
 
   // Initialize context with prop value on mount (if context value is undefined)
   useEffect(() => {
-    if (inputSchemaContext && schemaContextValue === undefined && propValue !== undefined) {
+    if (inputSchemaContext && inputSchemaContext.getValue(fieldKey) === undefined && propValue !== undefined) {
       inputSchemaContext.setValue(fieldKey, propValue);
     }
     // Only run on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Determine state
-  const disabled = inputContext?.disabled ?? propDisabled ?? false;
-  const readonly = inputContext?.readonly ?? propReadonly ?? false;
-  // Try InputSchemaContext first for error
-  const error = inputSchemaContext?.errors[fieldKey] ?? inputContext?.getError(path);
+  // Determine state from InputSchemaContext, fall back to props
+  const disabled = inputSchemaContext?.disabled ?? propDisabled ?? false;
+  const readonly = inputSchemaContext?.readonly ?? propReadonly ?? false;
+  const error = inputSchemaContext?.errors[fieldKey];
 
   // Focus input when entering edit mode
   useEffect(() => {
@@ -101,14 +96,9 @@ export function SliderInputRenderer({
   // Handle slider change
   const handleChange = (values: number[]) => {
     const newValue = values[0];
-    // Try InputSchemaContext first
+    // Use InputSchemaContext for value storage
     if (inputSchemaContext) {
       inputSchemaContext.setValue(fieldKey, newValue);
-      return;
-    }
-    // Fall back to InputContext
-    if (inputContext) {
-      inputContext.setValue(path, newValue);
       return;
     }
     // Fall back to prop onChange

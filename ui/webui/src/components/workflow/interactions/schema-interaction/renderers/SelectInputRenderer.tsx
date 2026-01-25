@@ -24,8 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useInputOptional, isIndexedValue, type DynamicOption, type IndexedValue } from "../InputContext";
-import { useInputSchemaOptional } from "../InputSchemaContext";
+import { useInputSchemaOptional, type DynamicOption } from "../InputSchemaContext";
 import type { ControlConfig } from "../types";
 
 // =============================================================================
@@ -58,11 +57,11 @@ interface SelectInputRendererProps {
   placeholder?: string;
   /** Additional CSS classes */
   className?: string;
-  /** Direct onChange handler (used when not in InputContext) */
+  /** Direct onChange handler (used when not in InputSchemaContext) */
   onChange?: (value: string) => void;
-  /** Direct disabled state (used when not in InputContext) */
+  /** Direct disabled state (used when not in InputSchemaContext) */
   disabled?: boolean;
-  /** Direct readonly state (used when not in InputContext) */
+  /** Direct readonly state (used when not in InputSchemaContext) */
   readonly?: boolean;
 
   // === Options can be provided in multiple ways ===
@@ -223,14 +222,13 @@ export function SelectInputRenderer({
   disabled: propDisabled,
   readonly: propReadonly,
 }: SelectInputRendererProps) {
-  const inputContext = useInputOptional();
   const inputSchemaContext = useInputSchemaOptional();
 
   // Get the field key (last element of path) for InputSchemaContext
   const fieldKey = path[path.length - 1];
 
   // Check for dynamic options from context (this field is controlled by another)
-  const dynamicOptions = inputContext?.getDynamicOptions(path);
+  const dynamicOptions = inputSchemaContext?.getDynamicOptions(fieldKey);
 
   // Determine mode based on what's provided
   const isObjectEnumMode = enumData !== undefined && valueKey !== undefined &&
@@ -296,14 +294,12 @@ export function SelectInputRenderer({
     return simpleOptions;
   }, [useIndexSelection, indexedOptions, simpleOptions]);
 
-  // Get stored value - try InputSchemaContext first, fall back to InputContext
-  // InputSchemaContext stores simple values, InputContext may store IndexedValue
-  const schemaContextValue = inputSchemaContext?.getValue(fieldKey);
-  const rawStored = schemaContextValue !== undefined ? schemaContextValue : inputContext?.getRawValue(path);
+  // Get stored value from InputSchemaContext (stores simple values)
+  const rawStored = inputSchemaContext?.getValue(fieldKey);
 
   // Initialize context with prop value on mount (if context value is undefined)
   useEffect(() => {
-    if (inputSchemaContext && schemaContextValue === undefined && propValue !== undefined) {
+    if (inputSchemaContext && rawStored === undefined && propValue !== undefined) {
       inputSchemaContext.setValue(fieldKey, propValue);
     }
     // Only run on mount
@@ -311,8 +307,7 @@ export function SelectInputRenderer({
   }, []);
 
   // Determine display value for Select
-  // If stored as IndexedValue, use _idx directly (no comparison needed)
-  // Otherwise fall back to string comparison for primitive values
+  // InputSchemaContext stores the actual value (not IndexedValue), so we need to find matching index
   const value = useMemo(() => {
     if (rawStored === undefined || rawStored === null) {
       if (!propValue) return "";
@@ -333,39 +328,28 @@ export function SelectInputRenderer({
       return String(propValue);
     }
 
-    // IndexedValue: use _idx directly
-    if (isIndexedValue(rawStored)) {
-      return String(rawStored._idx);
-    }
-
     // Primitive value: use as-is for simple enums
     if (!useIndexSelection) {
       return String(rawStored);
     }
 
-    // Index-based selection with primitive stored value (from InputSchemaContext)
-    // Find matching index by comparing to originalValue (which is rec[valueKey])
+    // Index-based selection: find matching index by comparing to originalValue
     const matchIdx = indexedOptions.findIndex((opt) => opt.originalValue === rawStored);
     return matchIdx >= 0 ? String(matchIdx) : "";
   }, [rawStored, propValue, useIndexSelection, valueKey, indexedOptions, isObjectEnumMode, enumData]);
 
-  // Determine state
-  const disabled = inputContext?.disabled ?? propDisabled ?? false;
-  const readonly = inputContext?.readonly ?? propReadonly ?? false;
-  // Try InputSchemaContext first (uses fieldKey), fall back to InputContext (uses path)
-  const error = inputSchemaContext?.errors[fieldKey] ?? inputContext?.getError(path);
-
-  // Get path prefix for sibling fields (remove last element which is this field's key)
-  const siblingPathPrefix = useMemo(() => path.slice(0, -1), [path]);
+  // Determine state from InputSchemaContext, fall back to props
+  const disabled = inputSchemaContext?.disabled ?? propDisabled ?? false;
+  const readonly = inputSchemaContext?.readonly ?? propReadonly ?? false;
+  const error = inputSchemaContext?.errors[fieldKey];
 
   // Find the currently selected object (for fields with controls)
-  // Uses stored IndexedValue or falls back to computed value index
   const selectedObject = useMemo(() => {
     if (!controls) return undefined;
 
-    // Get index: prefer stored IndexedValue, fall back to value (which handles default)
-    let idx = isIndexedValue(rawStored) ? rawStored._idx : -1;
-    if (idx < 0 && value) {
+    // Find index from current value
+    let idx = -1;
+    if (value) {
       idx = parseInt(value, 10);
       if (isNaN(idx)) idx = -1;
     }
@@ -382,7 +366,7 @@ export function SelectInputRenderer({
     }
 
     return undefined;
-  }, [controls, rawStored, value, isObjectEnumMode, enumData, hasDynamicOptions, dynamicOptions]);
+  }, [controls, value, isObjectEnumMode, enumData, hasDynamicOptions, dynamicOptions]);
 
   // Ref to track last updated value to prevent infinite loops
   const lastUpdatedValueRef = useRef<string | undefined>(undefined);
@@ -390,7 +374,7 @@ export function SelectInputRenderer({
   // Effect to update controlled fields when selection changes
   // Runs for both prop-based enum and controlled fields with nested controls
   useEffect(() => {
-    if (!controls || !inputContext) return;
+    if (!controls || !inputSchemaContext) return;
 
     // Prevent infinite loop - only update if value actually changed
     if (lastUpdatedValueRef.current === value) return;
@@ -401,14 +385,12 @@ export function SelectInputRenderer({
     const valueIsCleared = !value || value === "";
 
     for (const [fieldName, config] of Object.entries(controls)) {
-      const fieldPath = [...siblingPathPrefix, fieldName];
-
       // Handle type="value" - set target field value directly
       if (config.type === "value") {
         // If value is cleared, optionally reset the target field
         if (valueIsCleared) {
           if (config.reset) {
-            inputContext.setValue(fieldPath, undefined);
+            inputSchemaContext.setValue(fieldName, undefined);
           }
           continue;
         }
@@ -423,7 +405,7 @@ export function SelectInputRenderer({
             : config.value_path;
           const extractedValue = getByPath(selectedObject, pathStr);
           if (extractedValue !== undefined) {
-            inputContext.setValue(fieldPath, extractedValue);
+            inputSchemaContext.setValue(fieldName, extractedValue);
           }
         }
         continue;
@@ -434,9 +416,9 @@ export function SelectInputRenderer({
 
       // If value is cleared, clear all controlled fields
       if (valueIsCleared) {
-        inputContext.setDynamicOptions(fieldPath, []);
+        inputSchemaContext.setDynamicOptions(fieldName, []);
         if (config.reset) {
-          inputContext.setValue(fieldPath, undefined);
+          inputSchemaContext.setValue(fieldName, undefined);
         }
         continue;
       }
@@ -448,9 +430,9 @@ export function SelectInputRenderer({
       const items = getByPath(selectedObject, config.enum_path!);
       if (!Array.isArray(items) || items.length === 0) {
         // Clear options and reset value if no items found
-        inputContext.setDynamicOptions(fieldPath, []);
+        inputSchemaContext.setDynamicOptions(fieldName, []);
         if (config.reset) {
-          inputContext.setValue(fieldPath, undefined);
+          inputSchemaContext.setValue(fieldName, undefined);
         }
         continue;
       }
@@ -464,37 +446,33 @@ export function SelectInputRenderer({
       );
 
       // Set dynamic options
-      inputContext.setDynamicOptions(fieldPath, fieldOptions);
+      inputSchemaContext.setDynamicOptions(fieldName, fieldOptions);
 
       // Reset field value if reset is enabled
       if (config.reset) {
-        inputContext.setValue(fieldPath, undefined);
+        inputSchemaContext.setValue(fieldName, undefined);
       }
 
       // Auto-select default index if field has no value (or was just reset)
       // Skip auto-selection if default_index is negative (explicitly optional)
       const defaultIndex = config.default_index ?? 0;
       if (defaultIndex >= 0 && fieldOptions.length > 0 && fieldOptions[defaultIndex]) {
-        const currentFieldValue = config.reset ? undefined : inputContext.getValue(fieldPath);
+        const currentFieldValue = config.reset ? undefined : inputSchemaContext.getValue(fieldName);
         if (currentFieldValue === undefined) {
-          // Store as IndexedValue for consistent handling
-          const indexedValue: IndexedValue = {
-            _idx: defaultIndex,
-            _value: fieldOptions[defaultIndex].value,
-          };
-          inputContext.setValue(fieldPath, indexedValue);
+          // Store the actual value (not IndexedValue)
+          inputSchemaContext.setValue(fieldName, fieldOptions[defaultIndex].value);
         }
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]); // Only re-run when value changes
 
-  // Handle change - store IndexedValue for object selections, plain value for primitives
+  // Handle change - store the actual value
   const handleChange = (newValue: string) => {
-    // Try InputSchemaContext first (simple value storage)
+    // Use InputSchemaContext for value storage
     if (inputSchemaContext) {
       if (useIndexSelection) {
-        // For indexed selection, store the original value (not IndexedValue)
+        // For indexed selection, store the original value
         const idx = parseInt(newValue, 10);
         const opt = indexedOptions[idx];
         if (opt) {
@@ -502,22 +480,6 @@ export function SelectInputRenderer({
         }
       } else {
         inputSchemaContext.setValue(fieldKey, newValue);
-      }
-      return;
-    }
-
-    // Fall back to InputContext (supports complex IndexedValue)
-    if (inputContext) {
-      if (useIndexSelection) {
-        // Look up original value by index and store as IndexedValue
-        const idx = parseInt(newValue, 10);
-        const opt = indexedOptions[idx];
-        if (opt) {
-          const indexedValue: IndexedValue = { _idx: idx, _value: opt.originalValue };
-          inputContext.setValue(path, indexedValue);
-        }
-      } else {
-        inputContext.setValue(path, newValue);
       }
       return;
     }

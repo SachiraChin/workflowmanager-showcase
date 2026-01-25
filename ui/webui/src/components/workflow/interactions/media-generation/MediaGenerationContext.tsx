@@ -60,6 +60,9 @@ export interface MediaGenerationContextValue {
   /** Readonly mode */
   readonly: boolean;
 
+  /** Disabled mode */
+  disabled: boolean;
+
   /** Get preview info for a prompt */
   getPreview: (path: string[]) => PreviewInfo | undefined;
 

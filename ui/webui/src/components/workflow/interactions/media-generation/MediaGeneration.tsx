@@ -4,13 +4,11 @@
  * Orchestrates:
  * - State management (generations, selection, loading)
  * - MediaGenerationContext for descendant components
- * - InputProvider for editable prompts and parameters
  * - SchemaRenderer for schema-driven layout
  * - Sub-action API calls with SSE streaming
  * - Readonly mode for history view
  *
- * The actual prompt rendering is handled by ContentPanelSchemaRenderer,
- * which detects MediaGenerationContext and delegates to MediaPromptPanel.
+ * Input values are managed by InputSchemaContext (provided by InputSchemaComposer).
  */
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
@@ -18,13 +16,12 @@ import { useInteraction } from "@/lib/interaction-context";
 import { useWorkflowStore } from "@/lib/workflow-store";
 import { api } from "@/lib/api";
 import { toMediaUrl } from "@/lib/config";
-import { InputProvider } from "../schema-interaction/InputContext";
 import { SchemaRenderer } from "../schema-interaction/SchemaRenderer";
 import {
   MediaGenerationProvider,
   type MediaGenerationContextValue,
 } from "./MediaGenerationContext";
-import { pathToKey } from "../schema-interaction/InputContext";
+import { pathToKey } from "../schema-interaction/InputSchemaContext";
 import type {
   SubActionConfig,
   GenerationResult,
@@ -50,7 +47,6 @@ export function MediaGeneration() {
   const subActions = (displayData.sub_actions || []) as SubActionConfig[];
 
   // State
-  const [promptValues, setPromptValues] = useState<Record<string, unknown>>({});
   const [generations, setGenerations] = useState<Record<string, GenerationResult[]>>({});
   const [selectedContentId, setSelectedContentId] = useState<string | null>(null);
   const [loadingPrompts, setLoadingPrompts] = useState<Set<string>>(new Set());
@@ -474,6 +470,7 @@ export function MediaGeneration() {
       onSelectContent: setSelectedContentId,
       executeSubAction,
       readonly: isReadonly,
+      disabled: disabled || isReadonly,
       getPreview: (path: string[]) => {
         const key = pathToKey(path);
         return previewByPrompt[key];
@@ -504,6 +501,7 @@ export function MediaGeneration() {
       selectedContentId,
       executeSubAction,
       isReadonly,
+      disabled,
       previewByPrompt,
       previewLoadingPrompts,
       fetchPreview,
@@ -522,17 +520,15 @@ export function MediaGeneration() {
 
   return (
     <MediaGenerationProvider value={mediaContextValue}>
-      <InputProvider
-        initialValues={promptValues}
-        onChange={setPromptValues}
-        disabled={disabled || isReadonly}
-        readonly={isReadonly}
-        schema={schema}
-      >
-        <div className="h-full overflow-auto">
-          <SchemaRenderer data={data} schema={schema} path={[]} />
-        </div>
-      </InputProvider>
+      <div className="h-full overflow-auto">
+        <SchemaRenderer
+          data={data}
+          schema={schema}
+          path={[]}
+          disabled={disabled || isReadonly}
+          readonly={isReadonly}
+        />
+      </div>
     </MediaGenerationProvider>
   );
 }

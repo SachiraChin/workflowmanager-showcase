@@ -13,12 +13,13 @@
  * - MediaPanel or other consumers (validate, submit values, display error messages)
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import type { SchemaProperty, UxConfig, RenderAs } from "./types";
 import {
   InputSchemaContext,
   type InputSchemaContextValue,
   type InputSchema,
+  type DynamicOption,
 } from "./InputSchemaContext";
 import { InputSchemaRenderer } from "./InputSchemaRenderer";
 
@@ -39,30 +40,70 @@ interface InputSchemaComposerProps {
   path: string[];
   /** Pre-extracted UX config (contains input_schema) */
   ux: UxConfig;
+  /** Whether inputs are disabled */
+  disabled?: boolean;
+  /** Whether inputs are readonly */
+  readonly?: boolean;
 }
 
 // =============================================================================
 // Component
 // =============================================================================
 
-export function InputSchemaComposer({ data, schema, path, ux }: InputSchemaComposerProps) {
+export function InputSchemaComposer({
+  data,
+  schema,
+  path,
+  ux,
+  disabled = false,
+  readonly = false,
+}: InputSchemaComposerProps) {
   const inputSchema = ux.input_schema as InputSchema;
 
-  // Initialize values from data, falling back to schema defaults
+  // Initialize values from data, handling source_data/source_field
   const [values, setValues] = useState<Record<string, unknown>>(() => {
     const initial: Record<string, unknown> = {};
     const properties = inputSchema?.properties || {};
     const dataRecord = (data || {}) as Record<string, unknown>;
 
     for (const [key, fieldSchema] of Object.entries(properties)) {
-      // Value priority: data[key] → schema.default → undefined
       const schemaRecord = fieldSchema as Record<string, unknown>;
-      initial[key] = dataRecord[key] ?? schemaRecord.default;
+      const fieldUx = (schemaRecord._ux || {}) as Record<string, unknown>;
+      const sourceField = fieldUx.source_field as string | undefined;
+      const sourceData = fieldUx.source_data as string | undefined;
+
+      // Value priority: source_data > source_field > data[key] > schema.default
+      if (sourceData) {
+        // Resolve {field} placeholders in the template
+        initial[key] = sourceData.replace(/\{(\w+)\}/g, (_, field) => {
+          const value = dataRecord[field];
+          return value !== undefined ? String(value) : "";
+        });
+      } else if (sourceField && dataRecord[sourceField] !== undefined) {
+        initial[key] = dataRecord[sourceField];
+      } else {
+        initial[key] = dataRecord[key] ?? schemaRecord.default;
+      }
     }
     return initial;
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Dynamic options for controlled select fields
+  const [dynamicOptions, setDynamicOptionsState] = useState<Record<string, DynamicOption[]>>({});
+
+  const getDynamicOptions = useCallback(
+    (key: string): DynamicOption[] | undefined => dynamicOptions[key],
+    [dynamicOptions]
+  );
+
+  const setDynamicOptions = useCallback(
+    (key: string, options: DynamicOption[]) => {
+      setDynamicOptionsState(prev => ({ ...prev, [key]: options }));
+    },
+    []
+  );
 
   // Create context value
   const contextValue = useMemo<InputSchemaContextValue>(() => ({
@@ -105,9 +146,17 @@ export function InputSchemaComposer({ data, schema, path, ux }: InputSchemaCompo
     },
     clearAllErrors: () => setErrors({}),
 
+    // Dynamic options for controlled select fields
+    getDynamicOptions,
+    setDynamicOptions,
+
+    // State
     isValid: Object.keys(errors).length === 0,
+    disabled,
+    readonly,
+
     inputSchema,
-  }), [values, errors, inputSchema]);
+  }), [values, errors, getDynamicOptions, setDynamicOptions, disabled, readonly, inputSchema]);
 
   // Create UX without input_schema for remaining content
   const remainingUx: UxConfig = { ...ux, input_schema: undefined };

@@ -4,16 +4,43 @@
  * Provides:
  * - Values management (get/set input values)
  * - Error management (validation errors per field)
+ * - Dynamic options for controlled select fields
+ * - Disabled/readonly state propagation
  * - Schema reference for validation rules
  *
  * Used by:
  * - InputSchemaComposer (provides the context)
- * - Input renderers (read/write values, display errors)
+ * - Input renderers (read/write values, display errors, get dynamic options)
  * - MediaPanel (validate and submit values)
  */
 
 import { createContext, useContext } from "react";
 import type { SchemaProperty } from "./types";
+
+// =============================================================================
+// Dynamic Options Types
+// =============================================================================
+
+/**
+ * Option for dynamic dropdowns populated by controls.
+ */
+export interface DynamicOption {
+  value: unknown;
+  label: string;
+  /** Full source item for nested controls (when controlled field also controls others) */
+  sourceItem?: unknown;
+}
+
+// =============================================================================
+// Utilities
+// =============================================================================
+
+/**
+ * Convert path array to dot-separated key string.
+ */
+export function pathToKey(path: string[]): string {
+  return path.join(".");
+}
 
 // =============================================================================
 // Types
@@ -52,8 +79,14 @@ export interface InputSchemaContextValue {
   clearError: (key: string) => void;
   clearAllErrors: () => void;
 
+  // Dynamic options for controlled select fields
+  getDynamicOptions: (key: string) => DynamicOption[] | undefined;
+  setDynamicOptions: (key: string, options: DynamicOption[]) => void;
+
   // State
   isValid: boolean;
+  disabled: boolean;
+  readonly: boolean;
 
   // Schema reference (for validation rules)
   inputSchema: InputSchema;

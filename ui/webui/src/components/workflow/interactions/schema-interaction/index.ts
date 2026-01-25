@@ -12,17 +12,15 @@ export { normalizeDisplay, isSpecialRendererType, SPECIAL_RENDERER_TYPES } from 
 // UX utilities
 export { getUx, hasUx } from "./ux-utils";
 
-// Input context
+// Input schema context
 export {
-  InputProvider,
-  useInput,
-  useInputOptional,
+  useInputSchema,
+  useInputSchemaOptional,
   pathToKey,
-  keyToPath,
-  type InputContextValue,
-  type InputProviderProps,
-  type ValidationError,
-} from "./InputContext";
+  type InputSchemaContextValue,
+  type InputSchema,
+  type DynamicOption,
+} from "./InputSchemaContext";
 
 // Utilities
 export { getItemAddon, formatTimeAgo, formatLabel } from "./schema-utils";
