@@ -10,6 +10,7 @@ ai_config_r_4o.json
 models.txt
 .pytest_cache
 *.log
+log*.txt
 nul
 server-logs
 .DS_Store
