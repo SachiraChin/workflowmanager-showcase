@@ -111,6 +111,9 @@ class MediaGenerateModule(InteractiveModule):
         # Get retryable config from context (set by workflow processor)
         retryable = getattr(context, 'retryable', None)
 
+        # Get source_image for img2vid (optional, from workflow inputs)
+        source_image = inputs.get('source_image')
+
         return InteractionRequest(
             interaction_type=InteractionType.MEDIA_GENERATION,
             interaction_id=f"media_{uuid7_str()}",
@@ -119,6 +122,7 @@ class MediaGenerateModule(InteractiveModule):
                 "data": prompts,
                 "schema": schema,
                 "sub_actions": sub_actions,
+                "source_image": source_image,
                 "generations": {},
                 "retryable": retryable
             },
@@ -177,6 +181,14 @@ class MediaGenerateModule(InteractiveModule):
             # Also check response.selected_content if provided directly
             if not selected_content and response.selected_content:
                 selected_content = response.selected_content
+
+            # Enrich with local_path from database if available
+            if selected_content and hasattr(context, 'db') and context.db:
+                content_record = context.db.content_repo.get_content_by_id(
+                    selected_content_id
+                )
+                if content_record and content_record.get('local_path'):
+                    selected_content['local_path'] = content_record['local_path']
 
         if hasattr(context, 'logger'):
             context.logger.debug(

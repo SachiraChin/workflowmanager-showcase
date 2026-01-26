@@ -184,7 +184,15 @@ class MediaActor(ActorBase):
             if action_type == "txt2img":
                 result = method(prompt, method_params, progress_callback=progress_callback)
             elif action_type in ("img2img", "img2vid"):
-                source_image = params.get("source_image", "")
+                source_image = params.get("source_image")
+
+                # For img2vid, if source_image not in params, look up from interaction event
+                if not source_image and action_type == "img2vid":
+                    source_image = self._get_source_image_from_interaction(interaction_id)
+
+                if not source_image:
+                    raise GenerationError(f"{action_type} requires source_image")
+
                 result = method(source_image, prompt, method_params, progress_callback=progress_callback)
             else:
                 raise GenerationError(f"Unknown action type: {action_type}")
@@ -264,3 +272,31 @@ class MediaActor(ActorBase):
                 error_message=str(e),
             )
             raise
+
+    def _get_source_image_from_interaction(self, interaction_id: str) -> str | None:
+        """
+        Look up source_image from the interaction event's _resolved_inputs.
+
+        For img2vid, the source image is stored in _resolved_inputs when
+        the interaction was created. This allows the workflow to specify
+        the source image without the client needing to send it back.
+
+        Args:
+            interaction_id: The interaction ID to look up
+
+        Returns:
+            The source_image data or None if not found
+        """
+        try:
+            interaction_event = self._db.events.find_one({
+                "data.interaction_id": interaction_id
+            })
+            if interaction_event:
+                resolved_inputs = interaction_event.get("data", {}).get("_resolved_inputs", {})
+                source_image = resolved_inputs.get("source_image")
+                if source_image:
+                    logger.info(f"[MediaActor] Found source_image in interaction _resolved_inputs")
+                    return source_image
+        except Exception as e:
+            logger.warning(f"[MediaActor] Failed to look up source_image: {e}")
+        return None
