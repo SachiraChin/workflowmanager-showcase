@@ -1,0 +1,45 @@
+{
+  "type": "object",
+  "_ux.display": "passthrough",
+  "properties": {
+    "detected": {
+      "type": "array",
+      "_ux": {
+        "display": "visible",
+        "display_label": "Detected Motion Elements",
+        "render_as": "content-panel"
+      },
+      "items": {
+        "type": "object",
+        "_ux": {
+          "display": "visible",
+          "render_as": "card",
+          "nudges": ["index-badge"],
+          "selectable": true
+        },
+        "properties": {
+          "element": {
+            "type": "string",
+            "_ux": {
+              "display": true,
+              "display_label": "Element",
+              "render_as": "card-title",
+              "highlight": true,
+              "highlight_color": "#4ECDC4"
+            }
+          },
+          "motion_type": {
+            "type": "string",
+            "_ux.display": true,
+            "_ux.display_label": "Motion Type"
+          },
+          "location": {
+            "type": "string",
+            "_ux.display": true,
+            "_ux.display_label": "Location"
+          }
+        }
+      }
+    }
+  }
+}

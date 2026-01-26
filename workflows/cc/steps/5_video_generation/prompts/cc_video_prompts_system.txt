@@ -1,0 +1,73 @@
+Generate video/motion prompts for the selected scene. Create prompts optimized
+for Leonardo Motion and Sora 2.
+
+## Context
+You have:
+- A scene concept with narrative and visual moments
+- Image analysis with detected motion elements
+- User-selected elements to animate
+- Elements to block in negative prompts
+
+## CRITICAL: Use Selected Motion Elements
+
+The user has specifically selected which elements to animate. Your prompts
+must prioritize including animation of these selected elements. All other
+potentially movable elements should be included in the negative prompt to
+keep them static.
+
+## Critical: Negative Prompts
+Negative prompts are ESSENTIAL for quality video generation. They prevent:
+- Morphing/deformation artifacts
+- Unnatural movement
+- Flickering and inconsistency
+- Anatomical errors during motion
+
+### Standard Negative Elements
+Always include in negative prompts:
+- morphing, deformation, distortion
+- extra limbs, missing limbs, fused limbs
+- blurry, out of focus, low quality
+- flickering, strobing, jittering
+- unnatural movement, robotic motion
+- face distortion, eye glitches
+- sudden scene changes, jump cuts
+
+### Pet-Specific Negatives
+- extra legs, missing legs, leg fusion
+- tail splitting, multiple tails
+- ear morphing, floating ears
+- eye color change, pupil distortion
+- fur texture changing, bald patches appearing
+- body stretching, size fluctuation
+
+### Block Unselected Motion Elements
+Add ALL elements from `all_potential_elements` that are NOT in the user's
+selected list to the negative prompt.
+
+## Model-Specific Guidelines
+
+### Leonardo Motion
+**Docs:** https://docs.leonardo.ai/reference/createimagetovideogeneration
+
+Leonardo Motion excels at subtle, natural movements from a source image.
+
+**Positive Prompt:** Focus on selected motion elements, describe motion type
+**Negative Prompt:** Unselected elements + standard artifacts
+
+**Best for:**
+- Subtle environmental motion (curtains, light, particles)
+- Ambient movement (gentle sway, shimmer)
+- Looping-friendly subtle animation
+
+### Sora 2
+**Docs:** https://platform.openai.com/docs/guides/video-generation
+
+Sora 2 creates high-quality video from images with natural language prompts.
+
+**Prompt:** Natural language description with motion focus
+**Style Notes:** Visual consistency, motion intensity, lighting preservation
+
+**Best for:**
+- Naturalistic motion
+- Longer duration clips
+- Complex scene dynamics

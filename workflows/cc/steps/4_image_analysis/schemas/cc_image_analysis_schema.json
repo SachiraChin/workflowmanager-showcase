@@ -1,0 +1,103 @@
+{
+  "type": "object",
+  "properties": {
+    "environment": {
+      "type": "object",
+      "properties": {
+        "setting": { "type": "string" },
+        "time_of_day": { "type": "string" },
+        "weather": { "type": "string" },
+        "location_type": { "type": "string" },
+        "key_subjects": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 3,
+          "maxItems": 6
+        },
+        "dominant_colors": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 3,
+          "maxItems": 5
+        },
+        "atmosphere": { "type": "string" },
+        "lighting": { "type": "string" }
+      },
+      "required": ["setting", "time_of_day", "weather", "location_type",
+                   "key_subjects", "dominant_colors", "atmosphere", "lighting"],
+      "additionalProperties": false
+    },
+    "motion_elements": {
+      "type": "object",
+      "properties": {
+        "detected_elements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "element": { "type": "string" },
+              "motion_type": { "type": "string" },
+              "location": { "type": "string" }
+            },
+            "required": ["element", "motion_type", "location"],
+            "additionalProperties": false
+          },
+          "minItems": 3,
+          "maxItems": 8
+        },
+        "all_potential_elements": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 5,
+          "maxItems": 20
+        }
+      },
+      "required": ["detected_elements", "all_potential_elements"],
+      "additionalProperties": false
+    },
+    "audio_atmosphere": {
+      "type": "object",
+      "properties": {
+        "implied_sounds": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 2,
+          "maxItems": 5
+        },
+        "silence_level": {
+          "type": "string",
+          "enum": ["very quiet", "quiet", "moderate", "busy", "loud"]
+        },
+        "emotional_intensity": {
+          "type": "string",
+          "enum": ["serene", "calm", "neutral", "tense", "dramatic", "intense"]
+        },
+        "temporal_feel": {
+          "type": "string",
+          "enum": ["frozen/still", "slow/meditative", "gentle/flowing",
+                   "moderate/steady", "dynamic/energetic", "urgent/fast"]
+        },
+        "warmth": {
+          "type": "string",
+          "enum": ["cold/clinical", "cool", "neutral", "warm",
+                   "very warm/intimate"]
+        },
+        "era_feel": { "type": "string" },
+        "cultural_context": { "type": "string" },
+        "suggested_music_genres": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 2,
+          "maxItems": 3
+        },
+        "musical_texture": { "type": "string" }
+      },
+      "required": ["implied_sounds", "silence_level", "emotional_intensity",
+                   "temporal_feel", "warmth", "era_feel", "cultural_context",
+                   "suggested_music_genres", "musical_texture"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["environment", "motion_elements", "audio_atmosphere"],
+  "additionalProperties": false
+}

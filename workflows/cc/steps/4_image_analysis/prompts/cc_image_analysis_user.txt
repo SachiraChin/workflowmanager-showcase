@@ -1,0 +1,8 @@
+Analyze this image of a pet scene and extract:
+1. Environment details (setting, time, weather, location, subjects, colors,
+   atmosphere, lighting)
+2. Motion elements for animation (detected candidates and all potential
+   elements)
+3. Audio atmosphere (implied sounds, emotional qualities, music suggestions)
+
+Focus on elements that would enhance a heartwarming pet related video.

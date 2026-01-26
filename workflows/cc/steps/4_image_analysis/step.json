@@ -1,0 +1,51 @@
+{
+  "step_id": "image_analysis",
+  "name": "Step {step_number}: Image Analysis",
+  "description": "Analyze selected image for motion elements and audio atmosphere",
+  "modules": [
+    {
+      "module_id": "api.llm",
+      "inputs": {
+        "resolver_schema": {
+          "type": "object",
+          "properties": {
+            "input": { "resolver": "server" },
+            "system": { "resolver": "server" },
+            "metadata": { "resolver": "server" }
+          }
+        },
+        "input": [
+          {
+            "content": "{{ state.selected_image_data.local_path }}",
+            "type": "image"
+          },
+          { "$ref": "prompts/cc_image_analysis_user.txt", "type": "text" }
+        ],
+        "output_schema": {
+          "$ref": "schemas/cc_image_analysis_schema.json",
+          "type": "json"
+        },
+        "metadata": {
+          "step_id": "{{ step.step_id }}"
+        },
+        "system": [
+          {
+            "$ref": "prompts/cc_role_visual_analyst.txt",
+            "type": "text",
+            "cache_ttl": 10800
+          },
+          {
+            "$ref": "prompts/cc_image_analysis_system.txt",
+            "type": "text",
+            "cache_ttl": 10800
+          }
+        ],
+        "provider": "openai"
+      },
+      "outputs_to_state": {
+        "response": "image_analysis"
+      },
+      "name": "analyze_image"
+    }
+  ]
+}

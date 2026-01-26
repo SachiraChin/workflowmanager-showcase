@@ -1,0 +1,144 @@
+{
+  "step_id": "video_generation",
+  "name": "Step {step_number}: Video Generation",
+  "description": "Select motion elements, generate video prompts, and create videos",
+  "modules": [
+    {
+      "module_id": "user.select",
+      "inputs": {
+        "resolver_schema": {
+          "type": "object",
+          "properties": {
+            "data": { "resolver": "server" }
+          }
+        },
+        "data": {
+          "detected": "{{ state.image_analysis.motion_elements.detected_elements }}"
+        },
+        "schema": {
+          "$ref": "schemas/cc_motion_elements_display_schema.json",
+          "type": "json"
+        },
+        "prompt": "Select motion elements to animate in your video",
+        "multi_select": true,
+        "mode": "select"
+      },
+      "outputs_to_state": {
+        "selected_indices": "selected_motion_element_indices",
+        "selected_data": "selected_motion_elements"
+      },
+      "name": "select_motion_elements"
+    },
+    {
+      "module_id": "api.llm",
+      "inputs": {
+        "resolver_schema": {
+          "type": "object",
+          "properties": {
+            "input": { "resolver": "server" },
+            "system": { "resolver": "server" },
+            "metadata": { "resolver": "server" }
+          }
+        },
+        "input": {
+          "$ref": "prompts/cc_video_prompts_user.txt",
+          "type": "jinja2"
+        },
+        "output_schema": {
+          "$ref": "schemas/cc_video_prompts_schema.json",
+          "type": "json"
+        },
+        "metadata": {
+          "step_id": "{{ step.step_id }}"
+        },
+        "system": [
+          {
+            "$ref": "prompts/cc_role_motion_engineer.txt",
+            "type": "text",
+            "cache_ttl": 10800
+          },
+          {
+            "$ref": "prompts/cc_video_prompts_system.txt",
+            "type": "text",
+            "cache_ttl": 10800
+          }
+        ],
+        "provider": "openai"
+      },
+      "outputs_to_state": {
+        "response": "video_prompts"
+      },
+      "name": "generate_video_prompts"
+    },
+    {
+      "module_id": "media.generate",
+      "inputs": {
+        "resolver_schema": {
+          "type": "object",
+          "properties": {
+            "prompts": { "resolver": "server" },
+            "source_image": { "resolver": "server" }
+          }
+        },
+        "prompts": "{{ state.video_prompts.prompts }}",
+        "schema": {
+          "$ref": "schemas/cc_video_generation_display_schema.json",
+          "type": "json"
+        },
+        "title": "Generate and Select Videos",
+        "source_image": "{{ state.selected_image_data }}"
+      },
+      "outputs_to_state": {
+        "selected_content_id": "selected_video_id",
+        "selected_content": "selected_video_data",
+        "generations": "video_generations"
+      },
+      "sub_actions": [
+        {
+          "id": "generate",
+          "label": "Generate Videos",
+          "action_type": "img2vid",
+          "loading_label": "Generating video...",
+          "result_key": "generations"
+        }
+      ],
+      "retryable": {
+        "default_option": "continue",
+        "options": [
+          {
+            "id": "continue",
+            "mode": "continue",
+            "label": "Accept and continue"
+          },
+          {
+            "id": "retry_prompts",
+            "mode": "retry",
+            "label": "Regenerate video prompts",
+            "shortcut": "r",
+            "target_module": "generate_video_prompts",
+            "feedback": {
+              "enabled": true,
+              "prompt": "What should be different?",
+              "default_message": "Please generate different video prompts."
+            }
+          },
+          {
+            "id": "change_motion_elements",
+            "mode": "jump",
+            "label": "Change motion elements",
+            "target_step": "video_generation",
+            "target_module": "select_motion_elements"
+          },
+          {
+            "id": "change_image",
+            "mode": "jump",
+            "label": "Go back to image selection",
+            "target_step": "image_prompts",
+            "target_module": "generate_and_select_images"
+          }
+        ]
+      },
+      "name": "generate_and_select_videos"
+    }
+  ]
+}

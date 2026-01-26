@@ -12,12 +12,12 @@
     "prompts": {
       "type": "object",
       "properties": {
-        "motion_2_0": {
+        "leonardo": {
           "type": "object",
           "properties": {
             "positive_prompt": {
               "type": "string",
-              "description": "Main motion prompt describing what should happen - primary motion, secondary motion, camera, atmosphere"
+              "description": "Main motion prompt describing what should happen - primary motion, secondary motion, atmosphere"
             },
             "negative_prompt": {
               "type": "string",
@@ -36,31 +36,23 @@
           "required": ["positive_prompt", "negative_prompt", "motion_strength", "motion_notes"],
           "additionalProperties": false
         },
-        "midjourney_animate": {
+        "sora": {
           "type": "object",
           "properties": {
-            "prompt_a": {
+            "prompt": {
               "type": "string",
-              "description": "Start state - describes the opening frame/moment"
+              "description": "Natural language description with motion focus for Sora 2"
             },
-            "prompt_b": {
+            "style_notes": {
               "type": "string",
-              "description": "End state - describes where the motion leads to"
-            },
-            "negative_prompt": {
-              "type": "string",
-              "description": "REQUIRED: Elements to avoid throughout the animation - morphing, artifacts, anatomical errors"
-            },
-            "transition_notes": {
-              "type": "string",
-              "description": "Brief description of how A transitions to B"
+              "description": "Notes on visual consistency, motion intensity, lighting preservation"
             }
           },
-          "required": ["prompt_a", "prompt_b", "negative_prompt", "transition_notes"],
+          "required": ["prompt", "style_notes"],
           "additionalProperties": false
         }
       },
-      "required": ["motion_2_0", "midjourney_animate"],
+      "required": ["leonardo", "sora"],
       "additionalProperties": false
     }
   },

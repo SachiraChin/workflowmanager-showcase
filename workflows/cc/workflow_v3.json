@@ -69,23 +69,27 @@
       "type": "json"
     },
     {
-      "$ref": "steps/4_video_prompts/step.json",
+      "$ref": "steps/4_image_analysis/step.json",
       "type": "json"
     },
     {
-      "$ref": "steps/5_text_overlays/step.json",
+      "$ref": "steps/5_video_generation/step.json",
       "type": "json"
     },
     {
-      "$ref": "steps/6_titles_social/step.json",
+      "$ref": "steps/6_text_overlays/step.json",
       "type": "json"
     },
     {
-      "$ref": "steps/7_music/step.json",
+      "$ref": "steps/7_titles_social/step.json",
       "type": "json"
     },
     {
-      "$ref": "steps/8_workflow_summary/step.json",
+      "$ref": "steps/8_music/step.json",
+      "type": "json"
+    },
+    {
+      "$ref": "steps/9_workflow_summary/step.json",
       "type": "json"
     }
   ]

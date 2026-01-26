@@ -814,6 +814,94 @@ After InputRenderer is implemented:
 
 ---
 
+## 14. Sub-Actions Lack Proper Event Storage
+
+**Date Identified:** 2026-01-26
+**Severity:** Medium
+**Status:** Open
+
+### Problem
+
+Sub-actions (img2vid, txt2img, img2img) execute through the task queue worker
+but do not emit proper workflow events to the event store. The sub-action flow:
+1. Client triggers sub-action via `POST /workflow/{id}/sub-action`
+2. Task is enqueued to worker
+3. Worker executes provider method and streams SSE progress
+4. Results stored in `content_generation_metadata` and `generated_content` tables
+
+However, no events are stored in the workflow event system for:
+- Sub-action started
+- Sub-action progress
+- Sub-action completed/failed
+
+This means:
+- Sub-action history is not queryable via the event system
+- Workflow replay/debugging cannot show sub-action execution
+- No unified audit trail for all workflow operations
+
+### Impact
+
+1. **Incomplete audit trail**: Sub-action executions are not recorded as events
+2. **Debugging difficulty**: Cannot replay or inspect sub-action execution history
+3. **Inconsistent architecture**: Regular module execution emits events, but
+   sub-actions bypass this system
+4. **Analytics gap**: Cannot query sub-action patterns/failures via event store
+
+### Files Affected
+
+- `backend/server/api/routes/streaming.py` - `execute_sub_action()` creates
+  task but no events
+- `backend/server/modules/media/sub_action.py` - Yields domain events but
+  doesn't store to event repo
+- `backend/worker/actors/media.py` - Processes sub-action, no event storage
+
+### Suggested Fix
+
+1. **Add event storage in sub_action.py**:
+   ```python
+   async def execute_media_sub_action(...):
+       # Store sub-action started event
+       db.event_repo.store_event(
+           workflow_run_id=workflow_run_id,
+           event_type=DbEventType.SUB_ACTION_STARTED,
+           data={
+               "action_id": action_id,
+               "interaction_id": request.interaction_id,
+               "provider": request.provider,
+               "action_type": request.action_type,
+               "prompt_id": request.prompt_id
+           }
+       )
+
+       # ... execution ...
+
+       # Store sub-action completed event
+       db.event_repo.store_event(
+           workflow_run_id=workflow_run_id,
+           event_type=DbEventType.SUB_ACTION_COMPLETED,
+           data={
+               "action_id": action_id,
+               "metadata_id": metadata_id,
+               "content_ids": content_ids
+           }
+       )
+   ```
+
+2. **Add new event types**:
+   ```python
+   class DbEventType(Enum):
+       # ... existing ...
+       SUB_ACTION_STARTED = "sub_action_started"
+       SUB_ACTION_PROGRESS = "sub_action_progress"  # Optional
+       SUB_ACTION_COMPLETED = "sub_action_completed"
+       SUB_ACTION_FAILED = "sub_action_failed"
+   ```
+
+3. **Consider worker-side storage**: If sub-action runs in worker process,
+   ensure worker has access to event storage (it already has db access)
+
+---
+
 ## Template for New Issues
 
 ```markdown

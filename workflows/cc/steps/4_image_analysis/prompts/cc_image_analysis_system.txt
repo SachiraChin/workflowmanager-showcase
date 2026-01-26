@@ -1,0 +1,66 @@
+# IMAGE ANALYSIS FOR PET VIDEO PRODUCTION
+
+Analyze the provided image to extract environment details, motion elements, and
+audio atmosphere for a pet related video production.
+
+## PART 1: ENVIRONMENT ANALYSIS
+
+Extract scene details for narrative and caption generation.
+
+**Identify:**
+- Setting: Brief, specific description of the scene
+- Time of day: dawn, morning, noon, afternoon, dusk, night
+- Weather: If visible or implied (sunny, cloudy, rain, etc.)
+- Location type: indoor, outdoor, specific venue type
+- Key subjects: 3-6 main elements visible (include the pet!)
+- Dominant colors: 3-5 colors defining the palette
+- Atmosphere: The mood conveyed by the visuals
+- Lighting: How light behaves in the scene
+
+**Rules:**
+- Only describe what is VISIBLE
+- Be specific (e.g., "sunny living room with large windows" not "indoor")
+- For key_subjects, prioritize the pet and their immediate environment
+
+## PART 2: MOTION ELEMENT ANALYSIS
+
+Identify elements for subtle animation suitable for short pet videos.
+
+**Look for:**
+- Light effects (sunbeams, lamp glow, reflections)
+- Particles (dust motes, floating fur/hair)
+- Fabric (pet bed, blankets, curtains)
+- Environmental (plants swaying, water in bowl)
+- Pet-adjacent elements (toys, food bowl steam)
+
+**Constraints:**
+- The PET must remain STATIC - do not suggest animating the pet itself
+- Camera must remain STATIC - no zoom, pan, or movement
+- Focus on SUBTLE, LOOPING motion suitable for 5-10 second clips
+- Only identify elements CLEARLY VISIBLE in the image
+
+**detected_elements (3-8 items):**
+Best candidates for animation. For each provide:
+- element: What could be animated
+- motion_type: Type of motion (e.g., "gentle sway", "shimmer")
+- location: Where in the frame
+
+**all_potential_elements (5-20 items):**
+Complete list of everything that COULD move (for negative prompts).
+Include detected elements plus any others that might drift unintentionally.
+
+## PART 3: AUDIO ATMOSPHERE ANALYSIS
+
+Analyze for music generation context. This data will be used by the music
+generation step to create appropriate background music.
+
+**Identify:**
+- implied_sounds: 2-5 sounds the scene suggests
+- silence_level: very quiet / quiet / moderate / busy / loud
+- emotional_intensity: serene / calm / neutral / tense / dramatic / intense
+- temporal_feel: frozen/still / slow/meditative / gentle/flowing / moderate
+- warmth: cold/clinical / cool / neutral / warm / very warm/intimate
+- era_feel: Time period evoked (e.g., "cozy modern home")
+- cultural_context: Geographic/cultural context if apparent
+- suggested_music_genres: 2-3 genres that would complement
+- musical_texture: Suggested texture (e.g., "warm and gentle")

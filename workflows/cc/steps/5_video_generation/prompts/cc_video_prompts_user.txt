@@ -1,0 +1,41 @@
+Generate video/motion prompts for this pet scene:
+
+## Scene Details
+
+**Title:** {{ state.selected_scene.title }}
+**Narrative:** {{ state.selected_scene.narrative }}
+**Pet Behavior Focus:** {{ state.selected_scene.pet_behavior }}
+**Setting:** {{ state.selected_scene.setting }}
+**Emotional Arc:** {{ state.selected_scene.emotional_arc }}
+
+## Context
+
+**Pet Type:** {{ state.pet_type_selection.label }}
+**Visual Tone:** {{ state.aesthetic_selection.visual_tone.mood }}
+**Duration Target:** {{ state.duration_selection.video_duration }} seconds
+
+## Image Analysis
+
+**Environment:**
+- Setting: {{ state.image_analysis.environment.setting }}
+- Atmosphere: {{ state.image_analysis.environment.atmosphere }}
+- Lighting: {{ state.image_analysis.environment.lighting }}
+
+## IMPORTANT: Selected Motion Elements
+
+The user has specifically chosen these elements to animate. Your prompts must
+prioritize including animation of the following elements:
+
+{% for element in state.selected_motion_elements %}
+- **{{ element.element }}**: {{ element.motion_type }} ({{ element.location }})
+{% endfor %}
+
+## All Potential Motion Elements (for negative prompt filtering)
+
+These are ALL elements that could potentially move. Add any element from this
+list that is NOT in the selected list above to the negative prompt:
+
+{{ state.image_analysis.motion_elements.all_potential_elements | join(', ') }}
+
+Generate Leonardo Motion and Sora 2 video prompts with natural, subtle motion.
+The pet and all unselected elements must remain static.
