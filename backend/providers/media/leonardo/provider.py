@@ -77,12 +77,24 @@ VIDEO_MODELS = [
     "KLING2_5",      # Kling 2.5
 ]
 
-# Prompt ID to Model ID mapping
-# Maps workflow prompt keys to Leonardo model UUIDs
-PROMPT_MODEL_MAP: Dict[str, str] = {
-    "phoenix_1_0": "de7d3faf-762f-48e0-b3b7-9d0ac3a3fcf3",  # Leonardo Phoenix 1.0
-    "anime_xl": "e71a1c2f-4f80-4800-934f-2c68979d8cc8",      # Leonardo Anime XL
+# Model type classification by model_id
+# Used for pricing API to determine isSDXL and isPhoenix flags
+PHOENIX_MODEL_IDS = {
+    "de7d3faf-762f-48e0-b3b7-9d0ac3a3fcf3",  # Leonardo Phoenix 1.0
+    "6b645e3a-d64f-4341-a6d8-7a3690fbf042",  # Leonardo Phoenix 0.9
 }
+
+SDXL_MODEL_IDS = {
+    "e71a1c2f-4f80-4800-934f-2c68979d8cc8",  # Leonardo Anime XL
+    "b24e16ff-06e3-43eb-8d33-4416c2d75876",  # Leonardo Lightning XL
+    "aa77f04e-3eec-4034-9c07-d0f619684628",  # Leonardo Kino XL
+    "5c232a9e-9061-4777-980a-ddc8e65647c6",  # Leonardo Vision XL
+    "1e60896f-3c26-4296-8ecc-53e2afecc132",  # Leonardo Diffusion XL
+    "16e7060a-803e-4df3-97ee-edcfa5dc9cc8",  # SDXL 1.0
+    "b63f7119-31dc-4540-969b-2a9df997e173",  # SDXL 0.9
+    "2067ae52-33fd-4a82-bb92-c2c55e7d2786",  # AlbedoBase XL
+}
+
 
 # Base dimensions for each aspect ratio (size="small")
 # Format: aspect_ratio -> (width, height)
@@ -294,9 +306,8 @@ class LeonardoProvider(MediaProviderBase):
         Args:
             prompt: Text description of desired image
             params: Generation parameters:
-                - prompt_id: str - Used for model lookup via PROMPT_MODEL_MAP
-                - model: str - base model (PHOENIX, FLUX, SDXL_1_0, etc.)
-                - model_id: str - UUID for custom fine-tuned model (optional, overrides model)
+                - model_id: str - UUID for the model to use (required)
+                - model: str - base model name as fallback (PHOENIX, FLUX, SDXL_1_0, etc.)
                 - aspect_ratio: str - Combined with size for dimension lookup
                 - size: str - "small", "medium", "large" (preferred)
                 - quality: str - Legacy alias for size ("low"→"small", "balanced"→"medium", "high"→"large")
@@ -306,7 +317,8 @@ class LeonardoProvider(MediaProviderBase):
                 - guidance_scale: float (1-20)
                 - num_inference_steps: int (10-60)
                 - seed: int
-                - preset_style: str (ANIME, CINEMATIC, PHOTOGRAPHY, etc.)
+                - preset_style: str - For SDXL/SD1.5 models (CINEMATIC, BOKEH, etc.)
+                - style_uuid: str - For Phoenix/Flux/Lucid models (UUID)
                 - negative_prompt: str
                 - contrast: float - For Phoenix/Flux models (1.0-4.5)
                 - generation_mode: str - "fast", "quality", or "ultra" (preferred)
@@ -352,20 +364,12 @@ class LeonardoProvider(MediaProviderBase):
         # Model selection priority:
         # 1. Explicit model_id (UUID) - highest priority
         # 2. Explicit model (sd_version)
-        # 3. Lookup from prompt_id via PROMPT_MODEL_MAP
         if "model_id" in params:
             # Custom fine-tuned model by UUID
             payload["modelId"] = params["model_id"]
         elif "model" in params:
             # Base model by name (maps to sd_version)
             payload["sd_version"] = params["model"]
-        elif "prompt_id" in params and params["prompt_id"] in PROMPT_MODEL_MAP:
-            # Lookup model_id from prompt_id
-            payload["modelId"] = PROMPT_MODEL_MAP[params["prompt_id"]]
-            logger.info(
-                f"[Leonardo] Using model from prompt_id mapping: "
-                f"{params['prompt_id']} -> {payload['modelId']}"
-            )
 
         # Optional parameters
         if "guidance_scale" in params:
@@ -380,6 +384,10 @@ class LeonardoProvider(MediaProviderBase):
             payload["scheduler"] = params["scheduler"]
         if "negative_prompt" in params:
             payload["negative_prompt"] = params["negative_prompt"]
+
+        # Style UUID - for Phoenix, Flux, and Lucid models
+        if "style_uuid" in params and params["style_uuid"]:
+            payload["styleUUID"] = params["style_uuid"]
 
         # Prompt Magic settings - only add strength/version if prompt_magic is enabled
         if "prompt_magic" in params:
@@ -531,6 +539,10 @@ class LeonardoProvider(MediaProviderBase):
             payload["scheduler"] = params["scheduler"]
         if "negative_prompt" in params:
             payload["negative_prompt"] = params["negative_prompt"]
+
+        # Style UUID - for Phoenix, Flux, and Lucid models
+        if "style_uuid" in params and params["style_uuid"]:
+            payload["styleUUID"] = params["style_uuid"]
 
         # Prompt Magic settings - only add strength/version if prompt_magic is enabled
         if "prompt_magic" in params:
@@ -872,10 +884,10 @@ class LeonardoProvider(MediaProviderBase):
             is_alchemy = generation_mode in ("quality", "ultra")
             is_ultra = generation_mode == "ultra"
 
-            # Determine model type from prompt_id
-            prompt_id = params.get("prompt_id", "")
-            is_phoenix = prompt_id == "phoenix_1_0"
-            is_sdxl = prompt_id == "anime_xl"  # Anime XL is SDXL-based
+            # Determine model type from model_id for pricing
+            model_id = params.get("model_id", "")
+            is_phoenix = model_id in PHOENIX_MODEL_IDS
+            is_sdxl = model_id in SDXL_MODEL_IDS
 
             # Build service params - ALL fields are required by pricing API
             service_params: Dict[str, Any] = {
