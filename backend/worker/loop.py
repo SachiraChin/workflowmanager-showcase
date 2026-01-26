@@ -185,6 +185,8 @@ class WorkerLoop:
                     f"Provider {provider_id}: at capacity "
                     f"({current_count}/{max_concurrent})"
                 )
+                # Update queue positions for waiting tasks
+                self.queue.update_queue_positions(provider_id)
                 continue
 
             # Get queued tasks for this provider
@@ -229,6 +231,9 @@ class WorkerLoop:
 
                 # Start processing (non-blocking)
                 self._start_task(claimed)
+
+            # Update queue positions for any remaining queued tasks
+            self.queue.update_queue_positions(provider_id)
 
     def _start_task(self, task: Task):
         """

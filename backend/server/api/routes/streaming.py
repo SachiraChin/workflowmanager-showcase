@@ -213,6 +213,10 @@ async def execute_sub_action(
 
     The client should then connect to /api/task/{task_id}/stream for SSE updates.
     """
+    import time
+    request_start = time.time()
+    logger.info(f"[Task] Sub-action handler ENTERED for workflow {workflow_run_id[:8]}...")
+
     workflow = db.workflow_repo.get_workflow(workflow_run_id)
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
@@ -232,8 +236,8 @@ async def execute_sub_action(
         raise HTTPException(status_code=400, detail="Interaction missing module_id")
 
     logger.info(
-        f"[Task] Sub-action request for workflow {workflow_run_id[:8]}..., "
-        f"module={module_id}, provider={request.provider}, action={request.action_type}, prompt={request.prompt_id}"
+        f"[Task] Sub-action for module={module_id}, provider={request.provider}, "
+        f"action={request.action_type}, prompt={request.prompt_id}"
     )
 
     # Route to appropriate actor based on module_id
@@ -253,7 +257,8 @@ async def execute_sub_action(
             }
         )
 
-        logger.info(f"[Task] Created task {task_id} for sub-action")
+        elapsed = time.time() - request_start
+        logger.info(f"[Task] Created task {task_id} for sub-action (took {elapsed:.3f}s)")
 
         return {"task_id": task_id}
     else:

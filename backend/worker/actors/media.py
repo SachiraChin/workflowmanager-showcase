@@ -9,6 +9,7 @@ This actor handles media generation tasks by:
 """
 
 import os
+import json
 import logging
 from typing import Dict, Any, Tuple
 
@@ -116,6 +117,9 @@ class MediaActor(ActorBase):
         4. Stores content records in the database
         5. Returns URLs and IDs for the generated content
         """
+        # Log raw payload for debugging
+        logger.info(f"[MediaActor] Raw payload received:\n{json.dumps(payload, indent=2, default=str)}")
+
         # Extract payload fields
         workflow_run_id = payload["workflow_run_id"]
         interaction_id = payload["interaction_id"]
@@ -170,6 +174,11 @@ class MediaActor(ActorBase):
 
             # Inject prompt_id into params for provider-level mapping
             method_params["prompt_id"] = prompt_id
+
+            # Log params being sent to provider
+            logger.info(f"[MediaActor] Calling {provider_name}.{action_type} with:\n"
+                        f"  prompt: {prompt[:200]}{'...' if len(prompt) > 200 else ''}\n"
+                        f"  params: {json.dumps(method_params, indent=2, default=str)}")
 
             # Call provider (synchronous - this is the long-running operation)
             if action_type == "txt2img":

@@ -536,6 +536,51 @@ class TaskQueue:
             for doc in docs
         ]
 
+    def update_queue_positions(self, concurrency_identifier: str):
+        """
+        Update progress message with queue position for all queued tasks.
+
+        Called by worker when a provider is at capacity to inform waiting
+        tasks of their position in the queue.
+
+        Args:
+            concurrency_identifier: Provider/concurrency group identifier
+        """
+        # Get all queued tasks for this provider, sorted by priority and time
+        queued_docs = list(self.collection.find(
+            {
+                "status": "queued",
+                "payload.provider": concurrency_identifier,
+            },
+            {"task_id": 1}
+        ).sort([
+            ("priority", DESCENDING),
+            ("created_at", ASCENDING)
+        ]))
+
+        if not queued_docs:
+            return
+
+        total = len(queued_docs)
+        logger.info(
+            f"Updating queue positions for {total} queued {concurrency_identifier} task(s)"
+        )
+
+        # Update each task with its position
+        for position, doc in enumerate(queued_docs, start=1):
+            task_id = doc["task_id"]
+            message = f"Queued (position {position} of {total})"
+            logger.info(f"  {task_id}: {message}")
+            self.collection.update_one(
+                {"task_id": task_id},
+                {
+                    "$set": {
+                        "progress.message": message,
+                        "progress.updated_at": datetime.utcnow(),
+                    }
+                }
+            )
+
     def close(self):
         """Close database connection."""
         self.client.close()
