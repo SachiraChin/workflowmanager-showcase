@@ -129,6 +129,15 @@ issues/{date}_{issue_name}/
 
 This allows tracking the evolution of design decisions and preserving the discussion history.
 
+### Formatting Rules
+
+1. **Maximum line length is 80 columns.** All lines in architecture and issue
+   documents must not exceed 80 characters.
+2. **Use hard wraps.** When a line exceeds 80 columns, break it with a newline
+   and continue on the next line. Do not rely on soft wrapping.
+3. **Exception for code blocks and tables.** Code blocks and markdown tables
+   may exceed 80 columns when necessary for readability.
+
 ### Architecture Document Content
 
 Architecture documents should include:

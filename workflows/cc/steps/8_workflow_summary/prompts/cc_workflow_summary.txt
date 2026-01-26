@@ -63,8 +63,8 @@ Aspect Ratio: {{ state.image_prompts.prompts.midjourney.aspect_ratio }}
 --- Leonardo Phoenix 1.0 ---
 {{ state.image_prompts.prompts.leonardo_phoenix.prompt }}
 
---- Sora ---
-{{ state.image_prompts.prompts.sora.prompt }}
+--- OpenAI ---
+{{ state.image_prompts.prompts.openai.prompt }}
 {% endif %}
 
 ================================================================================

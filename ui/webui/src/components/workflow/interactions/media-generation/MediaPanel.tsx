@@ -208,18 +208,16 @@ export function MediaPanel({
                     <span className="text-muted-foreground/50">•</span>
                     <span className="flex items-center gap-1.5">
                       <span className="font-medium text-foreground">Credits:</span>
-                      {preview.credits.credits}
-                      {preview.credits.total_cost_usd > 0 && (
-                        <span className="text-xs">(${preview.credits.total_cost_usd.toFixed(4)})</span>
-                      )}
+                      {preview.credits.credits} ({preview.credits.credits_per_image}/img)
                     </span>
+                  </>
+                )}
+                {preview.credits.total_cost_usd > 0 && (
+                  <>
                     <span className="text-muted-foreground/50">•</span>
                     <span className="flex items-center gap-1.5">
-                      <span className="font-medium text-foreground">Per Image:</span>
-                      {preview.credits.credits_per_image} credits
-                      {preview.credits.cost_per_image_usd > 0 && (
-                        <span className="text-xs">(${preview.credits.cost_per_image_usd.toFixed(4)})</span>
-                      )}
+                      <span className="font-medium text-foreground">Cost:</span>
+                      ${preview.credits.total_cost_usd.toFixed(4)} (${preview.credits.cost_per_image_usd.toFixed(4)}/img)
                     </span>
                   </>
                 )}

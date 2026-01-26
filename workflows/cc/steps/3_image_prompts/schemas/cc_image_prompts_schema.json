@@ -49,16 +49,16 @@
           "required": ["phoenix_1_0"],
           "additionalProperties": false
         },
-        "sora": {
+        "openai": {
           "type": "object",
           "properties": {
             "prompt": {
               "type": "string",
-              "description": "Sora 1 video-ready prompt with cinematic framing"
+              "description": "OpenAI GPT Image prompt optimized for photorealistic and artistic generation"
             },
             "camera_notes": {
               "type": "string",
-              "description": "Camera angle/movement suggestions for video"
+              "description": "Camera angle/framing suggestions for the image"
             }
           },
           "required": ["prompt", "camera_notes"],
@@ -88,7 +88,7 @@
           "additionalProperties": false
         }
       },
-      "required": ["midjourney", "leonardo", "sora", "stable_diffusion"],
+      "required": ["midjourney", "leonardo", "openai", "stable_diffusion"],
       "additionalProperties": false
     }
   },

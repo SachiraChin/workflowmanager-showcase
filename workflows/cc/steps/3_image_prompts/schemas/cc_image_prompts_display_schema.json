@@ -344,13 +344,13 @@
             }
           }
         },
-        "sora": {
+        "openai": {
           "type": "object",
           "_ux": {
             "display": "visible",
-            "tab_label": "Sora",
+            "tab_label": "OpenAI",
             "render_as": "tab.media",
-            "provider": "sora",
+            "provider": "openai",
             "input_schema": {
               "type": "object",
               "_ux": {
@@ -368,6 +368,90 @@
                     "col_span": "full",
                     "rows": 4,
                     "source_field": "prompt"
+                  }
+                },
+                "model": {
+                  "type": "string",
+                  "title": "Model",
+                  "enum": ["gpt-image-1.5", "gpt-image-1", "gpt-image-1-mini"],
+                  "default": "gpt-image-1-mini",
+                  "enum_labels": {
+                    "gpt-image-1.5": "GPT Image 1.5 (Best)",
+                    "gpt-image-1": "GPT Image 1",
+                    "gpt-image-1-mini": "GPT Image 1 Mini (Budget)"
+                  },
+                  "_ux": {
+                    "input_type": "select"
+                  }
+                },
+                "aspect_ratio": {
+                  "type": "string",
+                  "title": "Size",
+                  "enum": ["1:1", "2:3", "3:2"],
+                  "default": "2:3",
+                  "enum_labels": {
+                    "1:1": "1024x1024 (Square)",
+                    "2:3": "1024x1536 (Portrait)",
+                    "3:2": "1536x1024 (Landscape)"
+                  },
+                  "_ux": {
+                    "input_type": "select"
+                  }
+                },
+                "quality": {
+                  "type": "string",
+                  "title": "Quality",
+                  "enum": ["low", "medium", "high"],
+                  "default": "medium",
+                  "enum_labels": {
+                    "low": "Low (Fast)",
+                    "medium": "Medium",
+                    "high": "High (Best)"
+                  },
+                  "_ux": {
+                    "input_type": "select"
+                  }
+                },
+                "num_images": {
+                  "type": "string",
+                  "title": "Images",
+                  "enum": ["1", "2", "4"],
+                  "default": "4",
+                  "enum_labels": {
+                    "1": "1",
+                    "2": "2",
+                    "4": "4"
+                  },
+                  "_ux": {
+                    "input_type": "select"
+                  }
+                },
+                "background": {
+                  "type": "string",
+                  "title": "Background",
+                  "enum": ["auto", "opaque", "transparent"],
+                  "default": "auto",
+                  "enum_labels": {
+                    "auto": "Auto",
+                    "opaque": "Opaque",
+                    "transparent": "Transparent"
+                  },
+                  "_ux": {
+                    "input_type": "select"
+                  }
+                },
+                "output_format": {
+                  "type": "string",
+                  "title": "Format",
+                  "enum": ["png", "jpeg", "webp"],
+                  "default": "png",
+                  "enum_labels": {
+                    "png": "PNG",
+                    "jpeg": "JPEG",
+                    "webp": "WebP"
+                  },
+                  "_ux": {
+                    "input_type": "select"
                   }
                 }
               }

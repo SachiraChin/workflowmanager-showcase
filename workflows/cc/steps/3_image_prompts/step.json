@@ -1,7 +1,7 @@
 {
   "step_id": "image_prompts",
   "name": "Step {step_number}: Generate Image Prompts",
-  "description": "Generate optimized prompts for Midjourney, Leonardo Phoenix, Sora, and Stable Diffusion",
+  "description": "Generate optimized prompts for Midjourney, Leonardo Phoenix, OpenAI, and Stable Diffusion",
   "modules": [
     {
       "module_id": "api.llm",

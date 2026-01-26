@@ -44,6 +44,7 @@ from .registry import MediaProviderRegistry, register
 from .leonardo.provider import LeonardoProvider
 from .midapi.provider import MidAPIProvider
 from .stable_diffusion.provider import StableDiffusionProvider
+from .openai.provider import OpenAIProvider
 
 # Download utility
 from .download import download_media, DownloadResult, DownloadError
@@ -71,6 +72,7 @@ __all__ = [
     'LeonardoProvider',
     'MidAPIProvider',
     'StableDiffusionProvider',
+    'OpenAIProvider',
     # Download
     'download_media',
     'DownloadResult',

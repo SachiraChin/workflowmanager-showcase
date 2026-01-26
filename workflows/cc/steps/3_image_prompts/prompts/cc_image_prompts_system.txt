@@ -28,7 +28,6 @@ You will receive a scene concept with:
 **Midjourney:**
 - Use evocative, artistic language
 - Include style references (cinematic, photography style, etc.)
-- Add technical parameters at the end (--ar 9:16 --style raw --s 200)
 - Structure: [subject] [action/expression] [setting] [lighting] [style] [parameters]
 - Best for: Artistic, stylized pet portraits with strong mood and atmosphere
 
@@ -39,13 +38,13 @@ You will receive a scene concept with:
 - Structure: [style/quality], [subject with specific details], [setting], [lighting and mood]
 - Best for: High-quality photorealistic pet imagery with emotional depth
 
-**Sora 1:**
-- Designed for video generation - describe as a moment in motion
-- Cinematic, film-like descriptions with implied movement
-- Include camera perspective and what's happening in the frame
-- Focus on the temporal aspect (the pet is doing X, about to do Y)
-- Structure: [camera angle/movement], [subject action], [setting], [cinematic atmosphere]
-- Best for: Dynamic moments, action shots, video-ready pet scenes
+**OpenAI GPT Image:**
+- Excellent at following detailed instructions and rendering text accurately
+- Use clear, descriptive natural language - the model understands nuance well
+- Include camera angle/framing suggestions for composition
+- Specify lighting, mood, and artistic style explicitly
+- Structure: [camera/framing], [subject with details], [action/expression], [setting], [lighting], [style]
+- Best for: Photorealistic images, precise instruction following, text-in-image
 
 **Stable Diffusion (Local):**
 Generate TWO prompt styles for Stable Diffusion - models perform differently with each:

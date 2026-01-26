@@ -3,12 +3,18 @@ Media Download Utility - Download and store generated media files locally.
 
 Handles downloading images/videos from provider URLs and storing them
 in the configured local storage directories.
+
+Supports:
+- HTTP/HTTPS URLs (standard download)
+- Data URIs with base64 encoding (for providers like OpenAI that return base64)
 """
 
 import os
+import re
+import base64
 import logging
 import requests
-from typing import Tuple, Optional
+from typing import Optional
 from dataclasses import dataclass
 from urllib.parse import urlparse
 
@@ -86,7 +92,38 @@ def get_extension_from_url(url: str) -> Optional[str]:
     return None
 
 
-def download_media(
+def _get_storage_path(
+    content_type: str,
+    images_path: Optional[str],
+    videos_path: Optional[str],
+) -> str:
+    """
+    Get storage path based on content type.
+
+    Args:
+        content_type: Type of content ("image" or "video")
+        images_path: Absolute path to images storage directory
+        videos_path: Absolute path to videos storage directory
+
+    Returns:
+        Storage path string
+
+    Raises:
+        DownloadError: If storage path not configured
+    """
+    if content_type == "image":
+        if not images_path:
+            raise DownloadError("MEDIA_IMAGES_PATH not configured")
+        return images_path
+    elif content_type == "video":
+        if not videos_path:
+            raise DownloadError("MEDIA_VIDEOS_PATH not configured")
+        return videos_path
+    else:
+        raise DownloadError(f"Unknown content type: {content_type}")
+
+
+def _download_from_url(
     url: str,
     metadata_id: str,
     content_id: str,
@@ -96,10 +133,10 @@ def download_media(
     videos_path: Optional[str],
 ) -> DownloadResult:
     """
-    Download media from URL and save to local storage.
+    Download media from HTTP/HTTPS URL and save to local storage.
 
     Args:
-        url: Provider URL to download from
+        url: HTTP/HTTPS URL to download from
         metadata_id: Content generation metadata ID (for filename)
         content_id: Generated content ID (for filename)
         index: Index within the generation batch (for filename)
@@ -113,19 +150,7 @@ def download_media(
     Raises:
         DownloadError: If download fails or storage path not configured
     """
-    # Determine storage path based on content type
-    if content_type == "image":
-        storage_path = images_path
-        if not storage_path:
-            raise DownloadError("MEDIA_IMAGES_PATH not configured")
-    elif content_type == "video":
-        storage_path = videos_path
-        if not storage_path:
-            raise DownloadError("MEDIA_VIDEOS_PATH not configured")
-    else:
-        raise DownloadError(f"Unknown content type: {content_type}")
-
-    # Ensure storage directory exists
+    storage_path = _get_storage_path(content_type, images_path, videos_path)
     os.makedirs(storage_path, exist_ok=True)
 
     # Download the file
@@ -170,3 +195,123 @@ def download_media(
     logger.info(f"[MediaDownload] Saved to {local_path}")
 
     return DownloadResult(local_path=local_path, extension=extension)
+
+
+def _download_from_base64(
+    data_uri: str,
+    metadata_id: str,
+    content_id: str,
+    index: int,
+    content_type: str,
+    images_path: Optional[str],
+    videos_path: Optional[str],
+) -> DownloadResult:
+    """
+    Save media from a base64-encoded data URI to local storage.
+
+    Args:
+        data_uri: Data URI in format "data:{mime};base64,{encoded_data}"
+        metadata_id: Content generation metadata ID (for filename)
+        content_id: Generated content ID (for filename)
+        index: Index within the generation batch (for filename)
+        content_type: Type of content ("image" or "video")
+        images_path: Absolute path to images storage directory
+        videos_path: Absolute path to videos storage directory
+
+    Returns:
+        DownloadResult with local_path and extension
+
+    Raises:
+        DownloadError: If decoding fails or storage path not configured
+    """
+    storage_path = _get_storage_path(content_type, images_path, videos_path)
+    os.makedirs(storage_path, exist_ok=True)
+
+    logger.info(f"[MediaDownload] Decoding base64 {content_type}...")
+
+    # Parse data URI: data:image/png;base64,{data}
+    if "," not in data_uri:
+        raise DownloadError("Invalid data URI format: missing comma separator")
+
+    header, encoded = data_uri.split(",", 1)
+
+    # Extract mime type from header (e.g., "data:image/png;base64")
+    mime_match = re.match(r"data:([^;,]+)", header)
+    mime_type = mime_match.group(1) if mime_match else None
+
+    # Get extension from mime type
+    extension = None
+    if mime_type:
+        extension = get_extension_from_content_type(mime_type)
+
+    if not extension:
+        # Default based on content type
+        extension = "mp4" if content_type == "video" else "png"
+        logger.warning(
+            f"[MediaDownload] Could not determine extension from data URI, "
+            f"defaulting to {extension}"
+        )
+
+    # Decode base64
+    try:
+        file_data = base64.b64decode(encoded)
+    except Exception as e:
+        raise DownloadError(f"Failed to decode base64: {e}")
+
+    # Build filename: {metadata_id}_{content_id}_{index}.{extension}
+    filename = f"{metadata_id}_{content_id}_{index}.{extension}"
+    local_path = os.path.join(storage_path, filename)
+
+    # Save file
+    try:
+        with open(local_path, "wb") as f:
+            f.write(file_data)
+    except IOError as e:
+        raise DownloadError(f"Failed to save file: {e}")
+
+    logger.info(f"[MediaDownload] Saved base64 to {local_path}")
+
+    return DownloadResult(local_path=local_path, extension=extension)
+
+
+def download_media(
+    url: str,
+    metadata_id: str,
+    content_id: str,
+    index: int,
+    content_type: str,
+    images_path: Optional[str],
+    videos_path: Optional[str],
+) -> DownloadResult:
+    """
+    Download media from URL or data URI and save to local storage.
+
+    Supports:
+    - HTTP/HTTPS URLs (standard download from providers like Leonardo, MidAPI)
+    - Data URIs with base64 encoding (for providers like OpenAI)
+
+    Args:
+        url: Provider URL or data URI to download from
+        metadata_id: Content generation metadata ID (for filename)
+        content_id: Generated content ID (for filename)
+        index: Index within the generation batch (for filename)
+        content_type: Type of content ("image" or "video")
+        images_path: Absolute path to images storage directory
+        videos_path: Absolute path to videos storage directory
+
+    Returns:
+        DownloadResult with local_path and extension
+
+    Raises:
+        DownloadError: If download/decode fails or storage path not configured
+    """
+    if url.startswith("data:"):
+        return _download_from_base64(
+            url, metadata_id, content_id, index,
+            content_type, images_path, videos_path
+        )
+    else:
+        return _download_from_url(
+            url, metadata_id, content_id, index,
+            content_type, images_path, videos_path
+        )
