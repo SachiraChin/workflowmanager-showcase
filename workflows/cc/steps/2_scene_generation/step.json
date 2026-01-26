@@ -14,56 +14,38 @@
         },
         "mode": "load",
         "pipeline": [
-          {"$match": {"category": {"$in": ["setting", "behavior", "object"]}}},
+          {"$match": {"source": "selected"}},
           {"$sort": {"weight": -1}},
           {"$limit": 50}
         ]
       },
       "outputs_to_state": {
-        "weighted_keywords": "loaded_keywords",
+        "weighted_keywords": "keyword_exclusions_selected",
+        "count": "keyword_count"
+      },
+      "name": "load_selected_keywords"
+    },
+    {
+      "module_id": "io.weighted_keywords",
+      "inputs": {
+        "resolver_schema": {
+          "type": "object",
+          "properties": {
+            "pipeline": { "resolver": "server" }
+          }
+        },
+        "mode": "load",
+        "pipeline": [
+          {"$match": {"source": "generated"}},
+          {"$sort": {"weight": -1}},
+          {"$limit": 50}
+        ]
+      },
+      "outputs_to_state": {
+        "weighted_keywords": "keyword_exclusions_generated",
         "count": "keyword_count"
       },
       "name": "load_keywords"
-    },
-    {
-      "module_id": "transform.query",
-      "inputs": {
-        "resolver_schema": {
-          "type": "object",
-          "properties": {
-            "data": { "resolver": "server" }
-          }
-        },
-        "data": "{{ state.loaded_keywords }}",
-        "pipeline": [
-          {"$match": {"source": "selected"}},
-          {"$project": {"keyword": 1, "weight": 1, "category": 1, "source": 1, "_id": 0}}
-        ]
-      },
-      "outputs_to_state": {
-        "result": "keyword_exclusions_selected"
-      },
-      "name": "filter_selected_keywords"
-    },
-    {
-      "module_id": "transform.query",
-      "inputs": {
-        "resolver_schema": {
-          "type": "object",
-          "properties": {
-            "data": { "resolver": "server" }
-          }
-        },
-        "data": "{{ state.loaded_keywords }}",
-        "pipeline": [
-          {"$match": {"source": "generated"}},
-          {"$project": {"keyword": 1, "weight": 1, "category": 1, "source": 1, "_id": 0}}
-        ]
-      },
-      "outputs_to_state": {
-        "result": "keyword_exclusions_generated"
-      },
-      "name": "filter_generated_keywords"
     },
     {
       "module_id": "api.llm",

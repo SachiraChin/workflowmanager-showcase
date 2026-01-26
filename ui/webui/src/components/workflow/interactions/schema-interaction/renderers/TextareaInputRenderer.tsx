@@ -29,12 +29,14 @@ interface TextareaInputRendererProps {
   className?: string;
   /** Minimum rows to display */
   minRows?: number;
-  /** Direct onChange handler (used when not in InputSchemaContext) */
+  /** Direct onChange handler (used when not in InputSchemaContext or standalone mode) */
   onChange?: (value: string) => void;
   /** Direct disabled state (used when not in InputSchemaContext) */
   disabled?: boolean;
   /** Direct readonly state (used when not in InputSchemaContext) */
   readonly?: boolean;
+  /** Standalone mode - use props instead of context even if context exists */
+  standalone?: boolean;
 }
 
 // =============================================================================
@@ -51,36 +53,40 @@ export function TextareaInputRenderer({
   onChange: propOnChange,
   disabled: propDisabled,
   readonly: propReadonly,
+  standalone = false,
 }: TextareaInputRendererProps) {
   const inputSchemaContext = useInputSchemaOptional();
+
+  // In standalone mode, don't use context
+  const useContext = !standalone && inputSchemaContext;
 
   // Get field key for InputSchemaContext
   const fieldKey = path[path.length - 1];
 
-  // Determine value source - try InputSchemaContext first, then prop
-  const rawValue = inputSchemaContext?.getValue(fieldKey) as string | undefined;
+  // Determine value source - try InputSchemaContext first (unless standalone), then prop
+  const rawValue = useContext ? (inputSchemaContext?.getValue(fieldKey) as string | undefined) : undefined;
   const value = rawValue ?? propValue ?? "";
 
   // Initialize context with prop value on mount (if context value is undefined)
   useEffect(() => {
-    if (inputSchemaContext && inputSchemaContext.getValue(fieldKey) === undefined && propValue !== undefined) {
-      inputSchemaContext.setValue(fieldKey, propValue);
+    if (useContext && inputSchemaContext?.getValue(fieldKey) === undefined && propValue !== undefined) {
+      inputSchemaContext?.setValue(fieldKey, propValue);
     }
     // Only run on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Determine state from InputSchemaContext, fall back to props
-  const disabled = inputSchemaContext?.disabled ?? propDisabled ?? false;
-  const readonly = inputSchemaContext?.readonly ?? propReadonly ?? false;
-  const error = inputSchemaContext?.errors[fieldKey];
+  const disabled = (useContext ? inputSchemaContext?.disabled : undefined) ?? propDisabled ?? false;
+  const readonly = (useContext ? inputSchemaContext?.readonly : undefined) ?? propReadonly ?? false;
+  const error = useContext ? inputSchemaContext?.errors[fieldKey] : undefined;
 
   // Handle change
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
-    // Use InputSchemaContext for value storage
-    if (inputSchemaContext) {
-      inputSchemaContext.setValue(fieldKey, newValue);
+    // Use InputSchemaContext for value storage (unless standalone)
+    if (useContext) {
+      inputSchemaContext?.setValue(fieldKey, newValue);
       return;
     }
     // Fall back to prop onChange

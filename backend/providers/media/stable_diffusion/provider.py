@@ -182,13 +182,32 @@ class StableDiffusionProvider(MediaProviderBase):
 
     def _parse_resolution(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Parse resolution string and extract width/height.
+        Parse resolution and extract width/height.
 
-        resolution format: "1024x1024" or "832x1216"
+        Supports two formats:
+        1. String format: "1024x1024" or "832x1216" (legacy)
+        2. Object format: { "text": "1024x1024", "width": 1024, "height": 1024 } (new)
+
         Returns dict with width and height.
         """
         resolution = params.get("resolution")
-        if not resolution or not isinstance(resolution, str):
+        if not resolution:
+            return {}
+
+        # Handle object format: { text: "...", width: N, height: N }
+        if isinstance(resolution, dict):
+            width = resolution.get("width")
+            height = resolution.get("height")
+            if width is not None and height is not None:
+                return {
+                    "width": int(width),
+                    "height": int(height),
+                }
+            # Fallback to parsing text field if width/height not present
+            resolution = resolution.get("text", "")
+
+        # Handle string format: "1024x1024"
+        if not isinstance(resolution, str):
             return {}
 
         try:
@@ -350,7 +369,7 @@ class StableDiffusionProvider(MediaProviderBase):
                 - hires_fix: dict (enable, upscaler, steps, denoising_strength, upscale_by)
                 - adetailer: dict or list (model, confidence, denoising_strength, etc.) - parsed automatically
                 - sampler_combo: dict (steps, sampler, scheduler, cfg_scale) - parsed automatically
-                - resolution: str ("WxH") - parsed automatically
+                - resolution: str or dict - "WxH" string or {"text": "WxH", "width": N, "height": N}
             progress_callback: Optional callback for progress updates
 
         Returns:
@@ -491,7 +510,7 @@ class StableDiffusionProvider(MediaProviderBase):
                 - Plus all txt2img parameters
                 - adetailer: dict or list (model, confidence, denoising_strength, etc.) - parsed automatically
                 - sampler_combo: dict (steps, sampler, scheduler, cfg_scale) - parsed automatically
-                - resolution: str ("WxH") - parsed automatically
+                - resolution: str or dict - "WxH" string or {"text": "WxH", "width": N, "height": N}
             progress_callback: Optional callback for progress updates
 
         Returns:

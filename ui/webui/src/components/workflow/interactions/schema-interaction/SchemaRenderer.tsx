@@ -5,10 +5,12 @@
  * - Special renderers (before type routing):
  *   - ContentPanelSchemaRenderer for render_as: "content-panel"
  *   - TableSchemaRenderer for render_as: "table"
+ * - Input routing (when input_type present):
+ *   - InputRenderer for editable inputs (select, textarea, slider, number, text)
  * - Type-based routing:
  *   - ArraySchemaRenderer for arrays
  *   - ObjectSchemaRenderer for objects
- *   - TerminalRenderer for primitives
+ *   - TerminalRenderer for display primitives
  *
  * This is the new simplified architecture (R5) that:
  * - Has no strictMode
@@ -27,6 +29,7 @@ import type { SchemaProperty, RenderAs } from "./types";
 import { normalizeDisplay } from "./types";
 import { getUx } from "./ux-utils";
 import { TerminalRenderer } from "./renderers";
+import { InputRenderer } from "./InputRenderer";
 import { renderTemplate } from "@/lib/template-service";
 import { useWorkflowStateContext } from "@/contexts/WorkflowStateContext";
 
@@ -251,15 +254,27 @@ export function SchemaRenderer({
   }
 
   // ==========================================================================
-  // 8. Primitive - check display mode and use TerminalRenderer
+  // 8. Input types - route to InputRenderer
   // ==========================================================================
-  // Input types should always render (they manage their own visibility)
-  // Only apply display mode check for non-input primitives
-  if (!ux.input_type) {
-    const displayMode = normalizeDisplay(ux.display);
-    if (displayMode === "hidden") {
-      return null;
-    }
+  // Input types manage their own state via context and can render without data.
+  // They are handled separately from display types.
+  if (ux.input_type) {
+    return (
+      <InputRenderer
+        value={data}
+        path={path}
+        schema={schema}
+        ux={ux}
+      />
+    );
+  }
+
+  // ==========================================================================
+  // 9. Display primitives - check display mode and use TerminalRenderer
+  // ==========================================================================
+  const displayMode = normalizeDisplay(ux.display);
+  if (displayMode === "hidden") {
+    return null;
   }
 
   return (

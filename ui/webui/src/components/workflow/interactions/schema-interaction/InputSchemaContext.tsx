@@ -83,6 +83,11 @@ export interface InputSchemaContextValue {
   getDynamicOptions: (key: string) => DynamicOption[] | undefined;
   setDynamicOptions: (key: string, options: DynamicOption[]) => void;
 
+  // Alternative input mode tracking
+  alternativeMode: Record<string, boolean>;
+  isAlternativeMode: (key: string) => boolean;
+  setAlternativeMode: (key: string, active: boolean) => void;
+
   // State
   isValid: boolean;
   disabled: boolean;

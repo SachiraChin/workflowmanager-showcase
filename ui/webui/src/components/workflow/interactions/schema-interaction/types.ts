@@ -174,7 +174,7 @@ export interface UxConfig {
 export type LayoutMode = "grid" | "flex" | "stack";
 
 /** Input type for editable fields */
-export type InputType = "textarea" | "select" | "slider" | "checkbox" | "text";
+export type InputType = "textarea" | "select" | "slider" | "checkbox" | "text" | "number";
 
 /** Config for a controlled field - used by select and other input components */
 export interface ControlConfig {
@@ -207,6 +207,59 @@ export interface InputSchemaConfig {
     layout_columns_sm?: number;
     layout_gap?: number;
   };
+}
+
+// =============================================================================
+// Alternative Input Types
+// =============================================================================
+
+/**
+ * Alternative field definition - an input field within an alternative config.
+ *
+ * Fields with `key` are inputs that read/write to the stored value object.
+ * Fields without `key` (but with `content`) are static display elements.
+ */
+export interface AlternativeField {
+  /** Path into stored value object (e.g., "width" → value.width). Required for inputs. */
+  key?: string;
+  /** Static text to display (for non-input elements) */
+  content?: string;
+  /** Field type: integer, number, string */
+  type?: "integer" | "number" | "string";
+  /** Label for the input */
+  title?: string;
+  /** Default value when no prior value exists */
+  default?: unknown;
+  /** Minimum value constraint for numbers */
+  minimum?: number;
+  /** Maximum value constraint for numbers */
+  maximum?: number;
+  /** Step increment for numbers */
+  step?: number;
+  /** UX config for rendering */
+  _ux?: {
+    input_type?: InputType;
+    render_as?: string;
+  };
+}
+
+/**
+ * Alternative input configuration - allows a field to have multiple input modes.
+ *
+ * Example: A resolution dropdown can have an alternative mode with separate
+ * width/height number inputs.
+ */
+export interface AlternativeConfig {
+  /**
+   * Compose template - map of field paths to template strings.
+   * Templates use {key} syntax to reference alternative field values.
+   * Example: { "text": "{width}x{height}" }
+   */
+  compose: Record<string, string>;
+  /** Layout mode: "inline" (horizontal) or "stack" (vertical). Default: "inline" */
+  layout?: "inline" | "stack";
+  /** Ordered list of alternative field definitions */
+  fields: AlternativeField[];
 }
 
 /**

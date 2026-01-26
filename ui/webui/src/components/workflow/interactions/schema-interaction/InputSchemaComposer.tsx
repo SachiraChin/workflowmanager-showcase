@@ -105,6 +105,21 @@ export function InputSchemaComposer({
     []
   );
 
+  // Alternative input mode tracking
+  const [alternativeMode, setAlternativeModeState] = useState<Record<string, boolean>>({});
+
+  const isAlternativeMode = useCallback(
+    (key: string): boolean => alternativeMode[key] ?? false,
+    [alternativeMode]
+  );
+
+  const setAlternativeMode = useCallback(
+    (key: string, active: boolean) => {
+      setAlternativeModeState(prev => ({ ...prev, [key]: active }));
+    },
+    []
+  );
+
   // Create context value
   const contextValue = useMemo<InputSchemaContextValue>(() => ({
     values,
@@ -150,13 +165,18 @@ export function InputSchemaComposer({
     getDynamicOptions,
     setDynamicOptions,
 
+    // Alternative input mode tracking
+    alternativeMode,
+    isAlternativeMode,
+    setAlternativeMode,
+
     // State
     isValid: Object.keys(errors).length === 0,
     disabled,
     readonly,
 
     inputSchema,
-  }), [values, errors, getDynamicOptions, setDynamicOptions, disabled, readonly, inputSchema]);
+  }), [values, errors, getDynamicOptions, setDynamicOptions, alternativeMode, isAlternativeMode, setAlternativeMode, disabled, readonly, inputSchema]);
 
   // Create UX without input_schema for remaining content
   const remainingUx: UxConfig = { ...ux, input_schema: undefined };

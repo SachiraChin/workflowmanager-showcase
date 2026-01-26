@@ -730,6 +730,90 @@ Document this as an acceptable exception where `input_schema` is treated as an i
 
 ---
 
+## 12. Alternative Input: Custom Option on Toggle Back
+
+**Date Identified:** 2026-01-25
+**Severity:** Low
+**Status:** Open
+
+### Problem
+
+When a user is in alternative input mode (e.g., custom width/height for resolution) and toggles back to primary mode (dropdown), if the composed value doesn't match any dropdown option, the field resets to the default option.
+
+This loses the user's custom value unexpectedly.
+
+### Impact
+
+1. **Data loss**: User's custom input is discarded when switching modes
+2. **Confusing UX**: User expects their custom value to persist
+3. **Workaround required**: Users must remember to not toggle back, or re-enter values
+
+### Files Affected
+
+- `webui/src/components/workflow/interactions/schema-interaction/renderers/AlternativeInputWrapper.tsx` (to be created)
+- `webui/src/components/workflow/interactions/schema-interaction/renderers/SelectInputRenderer.tsx`
+
+### Suggested Fix
+
+When toggling from alternative to primary mode with a non-matching value:
+1. Add a virtual "Custom" option to the dropdown
+2. Show the composed value as the "Custom" option's label (e.g., "Custom (640x768)")
+3. Keep the custom value selected
+4. Allow user to switch to a preset option if desired
+
+Implementation approach:
+- Track whether current value is "custom" (not in options list)
+- Inject synthetic option at render time when custom
+- Store custom value separately to preserve it
+
+### Related
+
+- Architecture document: `architecture/2026_01_25_alternative_input/r5.md`
+
+---
+
+## 13. TerminalRenderer Cleanup After InputRenderer Extraction
+
+**Date Identified:** 2026-01-25
+**Severity:** Low
+**Status:** Open
+
+### Problem
+
+As part of the alternative input feature (architecture doc: `2026_01_25_alternative_input/r5.md`), input routing is being extracted from `TerminalRenderer` into a new `InputRenderer` component.
+
+After this extraction, `TerminalRenderer` should be audited for:
+1. Leftover input-related code that should have been moved
+2. Unnecessary complexity from supporting both display and input modes
+3. Dead code paths that only existed for input handling
+4. Naming/structure improvements now that it's purely for display
+
+### Impact
+
+1. **Code cleanliness**: Extracted code may leave artifacts behind
+2. **Maintenance**: Easier to maintain when fully separated
+3. **Future work**: Clean TerminalRenderer makes future display enhancements easier
+
+### Files Affected
+
+- `webui/src/components/workflow/interactions/schema-interaction/renderers/TerminalRenderer.tsx`
+
+### Suggested Fix
+
+After InputRenderer is implemented:
+1. Audit TerminalRenderer for any remaining input-related logic
+2. Remove unused imports/dependencies
+3. Simplify any conditionals that were only for input vs display branching
+4. Consider renaming to `DisplayRenderer` if appropriate
+5. Update comments/documentation to reflect new scope
+
+### Related
+
+- Architecture document: `architecture/2026_01_25_alternative_input/r5.md`
+- Blocked by: InputRenderer implementation (in progress)
+
+---
+
 ## Template for New Issues
 
 ```markdown

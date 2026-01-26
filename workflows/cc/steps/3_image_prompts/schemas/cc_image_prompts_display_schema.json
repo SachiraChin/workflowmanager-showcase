@@ -488,7 +488,7 @@
                       "type": "enum",
                       "enum_path": "params.resolution",
                       "value_key": "value",
-                      "label_format": "{value} (count: {count})",
+                      "label_format": "{value.text} (count: {count})",
                       "default_index": 0,
                       "reset": true
                     },
@@ -531,6 +531,44 @@
                   "required": true,
                   "_ux": {
                     "input_type": "select"
+                  },
+                  "alternative": {
+                    "compose": {
+                      "text": "{width}x{height}"
+                    },
+                    "layout": "inline",
+                    "fields": [
+                      {
+                        "key": "width",
+                        "type": "integer",
+                        "title": "W",
+                        "minimum": 64,
+                        "maximum": 2048,
+                        "step": 64,
+                        "default": 512,
+                        "_ux": {
+                          "input_type": "number"
+                        }
+                      },
+                      {
+                        "content": "x",
+                        "_ux": {
+                          "render_as": "text"
+                        }
+                      },
+                      {
+                        "key": "height",
+                        "type": "integer",
+                        "title": "H",
+                        "minimum": 64,
+                        "maximum": 2048,
+                        "step": 64,
+                        "default": 768,
+                        "_ux": {
+                          "input_type": "number"
+                        }
+                      }
+                    ]
                   }
                 },
                 "vae": {
