@@ -114,15 +114,19 @@ class MediaGenerateModule(InteractiveModule):
         # Get source_image for img2vid (optional, from workflow inputs)
         source_image = inputs.get('source_image')
 
+        # Build data object - include source_image if present for schema-driven rendering
+        data = dict(prompts) if isinstance(prompts, dict) else {}
+        if source_image:
+            data["_source_image"] = source_image
+
         return InteractionRequest(
             interaction_type=InteractionType.MEDIA_GENERATION,
             interaction_id=f"media_{uuid7_str()}",
             title=title,
             display_data={
-                "data": prompts,
+                "data": data,
                 "schema": schema,
                 "sub_actions": sub_actions,
-                "source_image": source_image,
                 "generations": {},
                 "retryable": retryable
             },

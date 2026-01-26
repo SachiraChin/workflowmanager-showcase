@@ -2,6 +2,20 @@
   "type": "object",
   "_ux.display": "passthrough",
   "properties": {
+    "_source_image": {
+      "type": "object",
+      "_ux.display": "passthrough",
+      "properties": {
+        "url": {
+          "type": "string",
+          "_ux": {
+            "display": "visible",
+            "render_as": "image",
+            "nudges": ["preview"]
+          }
+        }
+      }
+    },
     "leonardo": {
       "type": "object",
       "_ux": {
