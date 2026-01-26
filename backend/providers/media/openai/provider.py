@@ -69,15 +69,16 @@ SUPPORTED_IMAGE_SIZES = [
 ]
 
 # Available video sizes (Sora 2)
+# Per OpenAI pricing: 720p and HD (1792x1024)
 SUPPORTED_VIDEO_SIZES = [
-    # 1080p
-    "1920x1080",  # Landscape 16:9 (1080p)
-    "1080x1920",  # Portrait 9:16 (1080p)
-    "1080x1080",  # Square 1:1 (1080p)
-    # 720p
+    # 720p (sora-2 and sora-2-pro)
     "1280x720",   # Landscape 16:9 (720p)
     "720x1280",   # Portrait 9:16 (720p)
     "720x720",    # Square 1:1 (720p)
+    # HD - only sora-2-pro
+    "1792x1024",  # Landscape ~16:9 (HD)
+    "1024x1792",  # Portrait ~9:16 (HD)
+    "1024x1024",  # Square 1:1 (HD)
 ]
 
 # Video duration options (seconds)
@@ -95,15 +96,16 @@ ASPECT_RATIO_TO_IMAGE_SIZE = {
 
 # Aspect ratio + quality to video size mapping
 # Format: (aspect_ratio, quality) -> size
+# Note: HD (1792x1024) only available for sora-2-pro
 VIDEO_SIZE_MAP = {
-    # 720p variants
+    # 720p variants (sora-2 and sora-2-pro)
     ("16:9", "720p"): "1280x720",
     ("9:16", "720p"): "720x1280",
     ("1:1", "720p"): "720x720",
-    # 1080p variants
-    ("16:9", "1080p"): "1920x1080",
-    ("9:16", "1080p"): "1080x1920",
-    ("1:1", "1080p"): "1080x1080",
+    # HD variants (sora-2-pro only)
+    ("16:9", "HD"): "1792x1024",
+    ("9:16", "HD"): "1024x1792",
+    ("1:1", "HD"): "1024x1024",
 }
 
 # Pricing lookup table (model, quality, size) -> USD per image
@@ -152,6 +154,17 @@ OPENAI_IMAGE_COSTS = {
     ("gpt-image-1-mini", "high", "1024x1024"): 0.036,
     ("gpt-image-1-mini", "high", "1024x1536"): 0.052,
     ("gpt-image-1-mini", "high", "1536x1024"): 0.052,
+}
+
+# Video pricing - price per SECOND (model, quality) -> USD/second
+# Source: OpenAI Official Pricing Page (January 2026)
+# Note: HD quality only available for sora-2-pro
+OPENAI_VIDEO_COSTS_PER_SECOND = {
+    # sora-2 (only supports 720p)
+    ("sora-2", "720p"): 0.10,
+    # sora-2-pro
+    ("sora-2-pro", "720p"): 0.30,
+    ("sora-2-pro", "HD"): 0.50,
 }
 
 
@@ -241,13 +254,13 @@ class OpenAIProvider(MediaProviderBase):
 
         Supports:
         - Direct size: "1280x720"
-        - Aspect ratio + quality: "16:9" + "1080p" -> "1920x1080"
+        - Aspect ratio + quality: "16:9" + "HD" -> "1792x1024"
 
         Args:
-            params: Should contain 'aspect_ratio' and 'quality' (720p/1080p)
+            params: Should contain 'aspect_ratio' and 'quality' (720p/HD)
 
         Returns:
-            Video size string (e.g., "1920x1080")
+            Video size string (e.g., "1792x1024")
         """
         # Check for direct size
         if "size" in params and params["size"] in SUPPORTED_VIDEO_SIZES:
@@ -258,7 +271,7 @@ class OpenAIProvider(MediaProviderBase):
         quality = params.get("quality", "720p")
 
         # Normalize quality value
-        if quality not in ("720p", "1080p"):
+        if quality not in ("720p", "HD"):
             quality = "720p"
 
         # Look up size from mapping
@@ -813,8 +826,16 @@ class OpenAIProvider(MediaProviderBase):
         Get preview information (resolution and cost) for generation config.
 
         Uses static pricing table - no API call needed.
+
+        For video (img2vid):
+        - Pricing is per second of video
+        - HD quality only available for sora-2-pro
         """
-        # Resolve parameters
+        # Handle video generation
+        if action_type == "img2vid":
+            return self._get_video_preview_info(params)
+
+        # Image generation (txt2img, img2img)
         model = params.get("model", "gpt-image-1.5")
         size = self._resolve_size(params)
         quality = params.get("quality", "high")
@@ -848,6 +869,67 @@ class OpenAIProvider(MediaProviderBase):
             num_images=n,
             credits_per_image=0,
             cost_per_image_usd=round(cost_per_image, 4)
+        )
+
+        return PreviewInfo(resolution=resolution, credits=credits)
+
+    def _get_video_preview_info(self, params: Dict[str, Any]) -> PreviewInfo:
+        """
+        Get preview info for video generation (Sora 2).
+
+        Pricing is per second:
+        - sora-2 @ 720p: $0.10/sec
+        - sora-2-pro @ 720p: $0.30/sec
+        - sora-2-pro @ HD: $0.50/sec
+        """
+        model = params.get("model", "sora-2")
+        if model not in SUPPORTED_VIDEO_MODELS:
+            model = "sora-2"
+
+        quality = params.get("quality", "720p")
+
+        # sora-2 only supports 720p, force it if needed
+        if model == "sora-2" and quality != "720p":
+            quality = "720p"
+
+        # Normalize quality
+        if quality not in ("720p", "HD"):
+            quality = "720p"
+
+        # Get duration
+        duration = params.get("duration", 5)
+        if isinstance(duration, str):
+            duration = int(duration)
+        if duration not in SUPPORTED_VIDEO_DURATIONS:
+            duration = 5
+
+        # Get video size for resolution info
+        size = self._resolve_video_size(params)
+        parts = size.split("x")
+        width = int(parts[0])
+        height = int(parts[1])
+        megapixels = round((width * height) / 1_000_000, 2)
+
+        resolution = ResolutionInfo(
+            width=width,
+            height=height,
+            megapixels=megapixels
+        )
+
+        # Look up cost per second
+        cost_per_second = OPENAI_VIDEO_COSTS_PER_SECOND.get(
+            (model, quality),
+            0.10  # Fallback to sora-2 720p rate
+        )
+        total_cost = cost_per_second * duration
+
+        credits = CreditInfo(
+            credits=0,  # OpenAI uses USD, not credits
+            cost_per_credit=0,
+            total_cost_usd=round(total_cost, 2),
+            num_images=1,  # 1 video
+            credits_per_image=0,
+            cost_per_image_usd=round(total_cost, 2)  # Total cost for 1 video
         )
 
         return PreviewInfo(resolution=resolution, credits=credits)

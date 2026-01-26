@@ -107,16 +107,56 @@
                 "source_field": "prompt"
               }
             },
+            "model": {
+              "type": "string",
+              "title": "Model",
+              "enum": [
+                {
+                  "key": "sora-2",
+                  "label": "Sora 2 (Fast)",
+                  "qualities": [
+                    {"key": "720p", "label": "720p ($0.10/sec)"}
+                  ]
+                },
+                {
+                  "key": "sora-2-pro",
+                  "label": "Sora 2 Pro (Quality)",
+                  "qualities": [
+                    {"key": "720p", "label": "720p ($0.30/sec)"},
+                    {"key": "HD", "label": "HD ($0.50/sec)"}
+                  ]
+                }
+              ],
+              "value_key": "key",
+              "label_key": "label",
+              "default": "sora-2",
+              "_ux": { "input_type": "select" },
+              "controls": {
+                "quality": {
+                  "type": "enum",
+                  "enum_path": "qualities",
+                  "value_key": "key",
+                  "label_key": "label",
+                  "default_index": 0,
+                  "reset": true
+                }
+              }
+            },
+            "quality": {
+              "type": "string",
+              "title": "Quality",
+              "_ux": { "input_type": "select" }
+            },
             "duration": {
               "type": "string",
               "title": "Duration",
               "enum": ["5", "10", "15", "20"],
               "default": "5",
               "enum_labels": {
-                "5": "5 seconds",
-                "10": "10 seconds",
-                "15": "15 seconds",
-                "20": "20 seconds"
+                "5": "5 sec ($0.50-$2.50)",
+                "10": "10 sec ($1-$5)",
+                "15": "15 sec ($1.50-$7.50)",
+                "20": "20 sec ($2-$10)"
               },
               "_ux": { "input_type": "select" }
             },
@@ -125,13 +165,11 @@
               "title": "Aspect Ratio",
               "enum": ["16:9", "9:16", "1:1"],
               "default": "9:16",
-              "_ux": { "input_type": "select" }
-            },
-            "quality": {
-              "type": "string",
-              "title": "Quality",
-              "enum": ["720p", "1080p"],
-              "default": "720p",
+              "enum_labels": {
+                "16:9": "16:9 (Landscape)",
+                "9:16": "9:16 (Portrait)",
+                "1:1": "1:1 (Square)"
+              },
               "_ux": { "input_type": "select" }
             }
           }
