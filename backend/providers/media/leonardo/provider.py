@@ -602,6 +602,83 @@ class LeonardoProvider(MediaProviderBase):
             provider_task_id=generation_id
         )
 
+    def _upload_init_image(self, file_path: str) -> str:
+        """
+        Upload a local image to Leonardo for use as init image.
+
+        Uses Leonardo's presigned URL flow:
+        1. Request presigned URL from /init-image endpoint
+        2. Upload file to S3 using presigned URL
+        3. Return the image ID for use in generation
+
+        Args:
+            file_path: Local path to the image file
+
+        Returns:
+            Leonardo image ID
+
+        Raises:
+            GenerationError: If upload fails
+        """
+        import os
+        import mimetypes
+
+        # Validate file exists
+        if not os.path.exists(file_path):
+            raise GenerationError(f"Image file not found: {file_path}")
+
+        # Get file extension
+        _, ext = os.path.splitext(file_path)
+        ext = ext.lower().lstrip('.')
+        if ext not in ('png', 'jpg', 'jpeg', 'webp'):
+            raise GenerationError(f"Unsupported image format: {ext}")
+
+        # Step 1: Get presigned URL
+        logger.info(f"[Leonardo] Requesting presigned URL for upload...")
+        response = requests.post(
+            f"{LEONARDO_BASE_URL}/init-image",
+            json={"extension": ext},
+            headers=self._get_headers()
+        )
+        self._handle_response_error(response)
+        result = response.json()
+
+        upload_data = result.get("uploadInitImage", {})
+        image_id = upload_data.get("id")
+        presigned_url = upload_data.get("url")
+        presigned_fields = upload_data.get("fields")
+
+        if not image_id or not presigned_url:
+            raise GenerationError("Failed to get presigned URL from Leonardo")
+
+        # Step 2: Upload to S3 using presigned URL
+        logger.info(f"[Leonardo] Uploading image to S3 (id={image_id})...")
+
+        # Read file content
+        with open(file_path, 'rb') as f:
+            file_content = f.read()
+
+        # Build multipart form data with presigned fields
+        # The presigned fields must come before the file
+        files = {}
+        for key, value in (presigned_fields or {}).items():
+            files[key] = (None, value)
+
+        # Add the file last
+        content_type = mimetypes.guess_type(file_path)[0] or 'image/png'
+        files['file'] = (os.path.basename(file_path), file_content, content_type)
+
+        # Upload to S3 (no auth header - presigned URL handles auth)
+        upload_response = requests.post(presigned_url, files=files)
+
+        if upload_response.status_code not in (200, 201, 204):
+            raise GenerationError(
+                f"S3 upload failed: {upload_response.status_code} - {upload_response.text}"
+            )
+
+        logger.info(f"[Leonardo] Image uploaded successfully: {image_id}")
+        return image_id
+
     def _poll_for_video(
         self,
         generation_id: str,
@@ -663,7 +740,7 @@ class LeonardoProvider(MediaProviderBase):
 
     def img2vid(
         self,
-        source_image: str,
+        source_image: str | Dict[str, Any],
         prompt: str,
         params: Dict[str, Any],
         progress_callback: Optional[ProgressCallback] = None
@@ -672,10 +749,12 @@ class LeonardoProvider(MediaProviderBase):
         Generate video from an image using Leonardo AI.
 
         Args:
-            source_image: Leonardo image ID (from a previous generation or upload)
+            source_image: Either:
+                - Leonardo image ID string (from a previous generation)
+                - Dict with 'local_path' key (will be uploaded automatically)
             prompt: Text description for video motion
             params: Video parameters:
-                - image_type: str ("GENERATED" or "UPLOADED")
+                - image_type: str ("GENERATED" or "UPLOADED") - auto-set if uploading
                 - model: str (MOTION2, VEO3, etc.)
                 - resolution: str (RESOLUTION_480, RESOLUTION_720, RESOLUTION_1080)
                 - negative_prompt: str
@@ -687,10 +766,32 @@ class LeonardoProvider(MediaProviderBase):
         Returns:
             GenerationResult with video URLs
         """
+        # Handle source_image - can be Leonardo ID string or dict with local_path
+        image_id: str
+        image_type: str
+
+        if isinstance(source_image, dict):
+            # Source image from workflow - has local_path, url, content_id, etc.
+            local_path = source_image.get('local_path')
+            if local_path:
+                # Upload the local image to Leonardo
+                if progress_callback:
+                    progress_callback(0, "Uploading source image...")
+                image_id = self._upload_init_image(local_path)
+                image_type = "UPLOADED"
+            else:
+                raise GenerationError(
+                    "source_image dict must contain 'local_path' for upload"
+                )
+        else:
+            # Assume it's a Leonardo image ID
+            image_id = source_image
+            image_type = params.get("image_type", "GENERATED")
+
         # Build request payload
         payload = {
-            "imageId": source_image,
-            "imageType": params.get("image_type", "GENERATED"),
+            "imageId": image_id,
+            "imageType": image_type,
             "prompt": prompt or "",
         }
 
@@ -708,7 +809,7 @@ class LeonardoProvider(MediaProviderBase):
         if "frame_interpolation" in params:
             payload["frameInterpolation"] = params["frame_interpolation"]
 
-        logger.info(f"[Leonardo] Starting img2vid generation from {source_image}")
+        logger.info(f"[Leonardo] Starting img2vid generation from image_id={image_id}")
 
         # Make video generation request
         response = requests.post(
