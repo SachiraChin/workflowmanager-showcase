@@ -1,21 +1,29 @@
 """
-OpenAI Image Generation Provider.
+OpenAI Image and Video Generation Provider.
 
-Supports GPT Image models for text-to-image generation and image editing.
+Supports GPT Image models for text-to-image generation and image editing,
+and Sora 2 models for video generation.
 
-Available models:
+Available image models:
 - gpt-image-1.5: Latest, fastest, best quality (recommended)
 - gpt-image-1: Original model
 - gpt-image-1-mini: Budget option for high volume
 
-API Documentation: https://platform.openai.com/docs/api-reference/images
+Available video models:
+- sora-2: Fast, ideal for experimentation and quick iterations
+- sora-2-pro: Higher quality, best for production output
+
+API Documentation:
+- Images: https://platform.openai.com/docs/api-reference/images
+- Videos: https://platform.openai.com/docs/guides/video-generation
 """
 
 import os
 import base64
 import logging
+import time
 import requests
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 from ..base import (
     MediaProviderBase,
@@ -36,30 +44,66 @@ logger = logging.getLogger(__name__)
 # API Configuration
 OPENAI_BASE_URL = "https://api.openai.com/v1"
 REQUEST_TIMEOUT_SECONDS = 120  # Long timeout for generation
+VIDEO_POLL_INTERVAL_SECONDS = 10  # Polling interval for video generation
+VIDEO_MAX_POLL_ATTEMPTS = 180  # Max ~30 minutes for video generation
 
-# Available models
-SUPPORTED_MODELS = [
+# Available image models
+SUPPORTED_IMAGE_MODELS = [
     "gpt-image-1.5",
     "chatgpt-image-latest",
     "gpt-image-1",
     "gpt-image-1-mini",
 ]
 
-# Available sizes (only these 3 supported by GPT Image models)
-SUPPORTED_SIZES = [
+# Available video models (Sora 2)
+SUPPORTED_VIDEO_MODELS = [
+    "sora-2",      # Fast, ideal for experimentation
+    "sora-2-pro",  # Higher quality, production use
+]
+
+# Available image sizes (only these 3 supported by GPT Image models)
+SUPPORTED_IMAGE_SIZES = [
     "1024x1024",  # Square (1:1)
     "1024x1536",  # Portrait (2:3)
     "1536x1024",  # Landscape (3:2)
 ]
 
+# Available video sizes (Sora 2)
+SUPPORTED_VIDEO_SIZES = [
+    # 1080p
+    "1920x1080",  # Landscape 16:9 (1080p)
+    "1080x1920",  # Portrait 9:16 (1080p)
+    "1080x1080",  # Square 1:1 (1080p)
+    # 720p
+    "1280x720",   # Landscape 16:9 (720p)
+    "720x1280",   # Portrait 9:16 (720p)
+    "720x720",    # Square 1:1 (720p)
+]
+
+# Video duration options (seconds)
+SUPPORTED_VIDEO_DURATIONS = [5, 10, 15, 20]
+
 # Quality levels
 QUALITY_LEVELS = ["low", "medium", "high"]
 
-# Aspect ratio to size mapping
-ASPECT_RATIO_TO_SIZE = {
+# Aspect ratio to image size mapping
+ASPECT_RATIO_TO_IMAGE_SIZE = {
     "1:1": "1024x1024",
     "2:3": "1024x1536",
     "3:2": "1536x1024",
+}
+
+# Aspect ratio + quality to video size mapping
+# Format: (aspect_ratio, quality) -> size
+VIDEO_SIZE_MAP = {
+    # 720p variants
+    ("16:9", "720p"): "1280x720",
+    ("9:16", "720p"): "720x1280",
+    ("1:1", "720p"): "720x720",
+    # 1080p variants
+    ("16:9", "1080p"): "1920x1080",
+    ("9:16", "1080p"): "1080x1920",
+    ("1:1", "1080p"): "1080x1080",
 }
 
 # Pricing lookup table (model, quality, size) -> USD per image
@@ -174,7 +218,7 @@ class OpenAIProvider(MediaProviderBase):
         - Resolution dict: {"width": 1024, "height": 1024}
         """
         # Check for direct size
-        if "size" in params and params["size"] in SUPPORTED_SIZES:
+        if "size" in params and params["size"] in SUPPORTED_IMAGE_SIZES:
             return params["size"]
 
         # Check for resolution dict (from workflow params)
@@ -184,12 +228,46 @@ class OpenAIProvider(MediaProviderBase):
             height = resolution.get("height")
             if width and height:
                 size_str = f"{width}x{height}"
-                if size_str in SUPPORTED_SIZES:
+                if size_str in SUPPORTED_IMAGE_SIZES:
                     return size_str
 
         # Check for aspect ratio
         aspect_ratio = params.get("aspect_ratio", "1:1")
-        return ASPECT_RATIO_TO_SIZE.get(aspect_ratio, "1024x1024")
+        return ASPECT_RATIO_TO_IMAGE_SIZE.get(aspect_ratio, "1024x1024")
+
+    def _resolve_video_size(self, params: Dict[str, Any]) -> str:
+        """
+        Resolve video size from params.
+
+        Supports:
+        - Direct size: "1280x720"
+        - Aspect ratio + quality: "16:9" + "1080p" -> "1920x1080"
+
+        Args:
+            params: Should contain 'aspect_ratio' and 'quality' (720p/1080p)
+
+        Returns:
+            Video size string (e.g., "1920x1080")
+        """
+        # Check for direct size
+        if "size" in params and params["size"] in SUPPORTED_VIDEO_SIZES:
+            return params["size"]
+
+        # Get aspect ratio and quality
+        aspect_ratio = params.get("aspect_ratio", "9:16")
+        quality = params.get("quality", "720p")
+
+        # Normalize quality value
+        if quality not in ("720p", "1080p"):
+            quality = "720p"
+
+        # Look up size from mapping
+        size = VIDEO_SIZE_MAP.get((aspect_ratio, quality))
+        if size:
+            return size
+
+        # Fallback to 720p portrait if not found
+        return "720x1280"
 
     def _get_image_as_base64(self, source: str) -> str:
         """
@@ -435,23 +513,296 @@ class OpenAIProvider(MediaProviderBase):
 
     def img2vid(
         self,
-        source_image: str,
+        source_image: Union[str, Dict[str, Any]],
         prompt: str,
         params: Dict[str, Any],
         progress_callback: Optional[ProgressCallback] = None
     ) -> GenerationResult:
         """
-        Not supported by OpenAI Image API.
+        Generate video from image using Sora 2.
 
-        Note: OpenAI has Sora for video generation, but it's a separate API.
+        The source image acts as the first frame of the generated video.
+
+        Args:
+            source_image: URL, file path, or dict with 'local_path' key
+            prompt: Text description of the desired video
+            params: Generation parameters:
+                - model: str ("sora-2" or "sora-2-pro", default "sora-2")
+                - aspect_ratio: str ("16:9", "9:16", "1:1")
+                - quality: str ("720p" or "1080p", default "720p")
+                - duration: int (5, 10, 15, or 20 seconds)
+                - size: str (direct size, e.g., "1280x720" - overrides ratio+quality)
+            progress_callback: Optional callback for progress updates
+
+        Returns:
+            GenerationResult with video URL
+        """
+        # Resolve source image path
+        if isinstance(source_image, dict):
+            local_path = source_image.get('local_path')
+            if not local_path:
+                # Fall back to URL if local_path not available
+                local_path = source_image.get('url')
+            if not local_path:
+                raise GenerationError("source_image dict must have 'local_path' or 'url'")
+        else:
+            local_path = source_image
+
+        # Resolve parameters
+        model = params.get("model", "sora-2")
+        if model not in SUPPORTED_VIDEO_MODELS:
+            model = "sora-2"
+
+        size = self._resolve_video_size(params)
+
+        # Duration - convert string to int if needed
+        duration = params.get("duration", 5)
+        if isinstance(duration, str):
+            duration = int(duration)
+        if duration not in SUPPORTED_VIDEO_DURATIONS:
+            duration = 5
+
+        logger.info(
+            f"[OpenAI/Sora] Starting img2vid: model={model}, size={size}, "
+            f"duration={duration}s"
+        )
+
+        if progress_callback:
+            progress_callback(0, "Starting video generation...")
+
+        # Read image file for upload
+        image_data, mime_type = self._read_image_for_upload(local_path)
+
+        # Create video generation job (multipart/form-data)
+        headers = {"Authorization": f"Bearer {self.api_key}"}
+
+        # Determine file extension from mime type
+        ext_map = {"image/jpeg": "jpeg", "image/png": "png", "image/webp": "webp"}
+        extension = ext_map.get(mime_type, "jpeg")
+
+        files = {
+            "input_reference": (
+                f"source.{extension}",
+                image_data,
+                mime_type
+            ),
+        }
+
+        data = {
+            "prompt": prompt[:32000],
+            "model": model,
+            "size": size,
+            "seconds": str(duration),
+        }
+
+        try:
+            response = requests.post(
+                f"{OPENAI_BASE_URL}/videos",
+                data=data,
+                files=files,
+                headers=headers,
+                timeout=REQUEST_TIMEOUT_SECONDS
+            )
+        except requests.RequestException as e:
+            raise GenerationError(f"Video creation request failed: {e}")
+
+        self._handle_response_error(response)
+        job_result = response.json()
+
+        video_id = job_result.get("id")
+        if not video_id:
+            raise GenerationError("No video ID returned from API")
+
+        logger.info(f"[OpenAI/Sora] Video job created: {video_id}")
+
+        # Poll for completion
+        video_url = self._poll_video_completion(
+            video_id, progress_callback
+        )
+
+        if progress_callback:
+            progress_callback(100, "Complete!")
+
+        logger.info(f"[OpenAI/Sora] Video generation complete: {video_id}")
+
+        return GenerationResult(
+            content=[ContentItem(url=video_url, seed=-1)],
+            raw_response=job_result,
+            provider_task_id=video_id
+        )
+
+    def _read_image_for_upload(self, source: str) -> tuple:
+        """
+        Read image file for multipart upload.
+
+        Args:
+            source: URL, file path, or base64 data URI
+
+        Returns:
+            Tuple of (bytes, mime_type)
+        """
+        # Check if data URI
+        if source.startswith("data:image"):
+            # Parse data URI: data:image/jpeg;base64,<data>
+            if "," in source:
+                header, b64_data = source.split(",", 1)
+                mime_type = header.split(";")[0].replace("data:", "")
+                return base64.b64decode(b64_data), mime_type
+            raise GenerationError("Invalid data URI format")
+
+        # Check if URL
+        if source.startswith(("http://", "https://")):
+            try:
+                response = requests.get(source, timeout=60)
+                response.raise_for_status()
+                # Get mime type from content-type header
+                content_type = response.headers.get("content-type", "image/jpeg")
+                mime_type = content_type.split(";")[0].strip()
+                return response.content, mime_type
+            except requests.RequestException as e:
+                raise GenerationError(f"Failed to download source image: {e}")
+
+        # Assume local file path
+        if os.path.isfile(source):
+            try:
+                with open(source, "rb") as f:
+                    image_data = f.read()
+
+                # Determine mime type from extension
+                ext = os.path.splitext(source)[1].lower()
+                mime_map = {
+                    ".jpg": "image/jpeg",
+                    ".jpeg": "image/jpeg",
+                    ".png": "image/png",
+                    ".webp": "image/webp",
+                }
+                mime_type = mime_map.get(ext, "image/jpeg")
+                return image_data, mime_type
+            except IOError as e:
+                raise GenerationError(f"Failed to read source image: {e}")
+
+        raise GenerationError(f"Cannot read source image: {source}")
+
+    def _poll_video_completion(
+        self,
+        video_id: str,
+        progress_callback: Optional[ProgressCallback] = None
+    ) -> str:
+        """
+        Poll video generation status until completion.
+
+        Args:
+            video_id: The video job ID
+            progress_callback: Optional callback for progress updates
+
+        Returns:
+            URL of the generated video
 
         Raises:
-            NotImplementedError: Always
+            GenerationError: If generation fails or times out
         """
-        raise NotImplementedError(
-            "OpenAI Image API does not support image-to-video generation. "
-            "Use Leonardo or MidJourney for video generation."
+        headers = self._get_headers()
+        poll_count = 0
+
+        while poll_count < VIDEO_MAX_POLL_ATTEMPTS:
+            poll_count += 1
+
+            try:
+                response = requests.get(
+                    f"{OPENAI_BASE_URL}/videos/{video_id}",
+                    headers=headers,
+                    timeout=60
+                )
+            except requests.RequestException as e:
+                logger.warning(f"[OpenAI/Sora] Poll request failed: {e}")
+                time.sleep(VIDEO_POLL_INTERVAL_SECONDS)
+                continue
+
+            if response.status_code != 200:
+                logger.warning(
+                    f"[OpenAI/Sora] Poll returned {response.status_code}"
+                )
+                time.sleep(VIDEO_POLL_INTERVAL_SECONDS)
+                continue
+
+            status_data = response.json()
+            status = status_data.get("status")
+            progress = status_data.get("progress", 0)
+
+            logger.debug(
+                f"[OpenAI/Sora] Poll #{poll_count}: status={status}, "
+                f"progress={progress}%"
+            )
+
+            if progress_callback:
+                status_msg = f"Generating video... {progress}%"
+                if status == "queued":
+                    status_msg = "Queued, waiting to start..."
+                elif status == "in_progress":
+                    status_msg = f"Rendering video... {progress}%"
+                progress_callback(progress, status_msg)
+
+            if status == "completed":
+                # Download the video content
+                return self._download_video_content(video_id)
+            elif status == "failed":
+                error_msg = status_data.get("error", "Unknown error")
+                raise GenerationError(f"Video generation failed: {error_msg}")
+
+            time.sleep(VIDEO_POLL_INTERVAL_SECONDS)
+
+        raise GenerationError(
+            f"Video generation timed out after {VIDEO_MAX_POLL_ATTEMPTS} polls"
         )
+
+    def _download_video_content(self, video_id: str) -> str:
+        """
+        Download generated video and return the URL.
+
+        The Sora API returns video content via GET /videos/{id}/content.
+        We return this URL directly for the worker to download.
+
+        Args:
+            video_id: The completed video ID
+
+        Returns:
+            URL to download the video content
+        """
+        # The content endpoint requires auth, so we need to fetch it
+        # and return a data URI or temporary URL
+        # For now, return the authenticated URL pattern
+        # The worker's download_media will need the auth header
+
+        # Actually, let's download and return as data URI for consistency
+        # with how images work, but videos are large so let's return the
+        # direct URL and let the worker handle download with auth
+
+        # Return the content URL - the download utility will need to handle auth
+        content_url = f"{OPENAI_BASE_URL}/videos/{video_id}/content"
+
+        # Fetch the actual video to get a direct URL or binary
+        headers = self._get_headers()
+
+        try:
+            # Use streaming to handle large video files
+            response = requests.get(
+                content_url,
+                headers=headers,
+                timeout=300,  # 5 min timeout for video download
+                stream=True
+            )
+        except requests.RequestException as e:
+            raise GenerationError(f"Failed to download video: {e}")
+
+        self._handle_response_error(response)
+
+        # Convert to data URI for consistency with provider interface
+        # Note: This may use significant memory for long videos
+        video_data = response.content
+        content_type = response.headers.get("content-type", "video/mp4")
+
+        video_b64 = base64.b64encode(video_data).decode("utf-8")
+        return f"data:{content_type};base64,{video_b64}"
 
     def get_preview_info(
         self,

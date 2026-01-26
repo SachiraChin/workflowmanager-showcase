@@ -126,6 +126,13 @@
               "enum": ["16:9", "9:16", "1:1"],
               "default": "9:16",
               "_ux": { "input_type": "select" }
+            },
+            "quality": {
+              "type": "string",
+              "title": "Quality",
+              "enum": ["720p", "1080p"],
+              "default": "720p",
+              "_ux": { "input_type": "select" }
             }
           }
         }
