@@ -273,13 +273,12 @@
                 "duration": {
                   "type": "string",
                   "title": "Duration",
-                  "enum": ["5", "10", "15", "20"],
-                  "default": "5",
+                  "enum": ["4", "8", "12"],
+                  "default": "4",
                   "enum_labels": {
-                    "5": "5 sec ($0.50-$2.50)",
-                    "10": "10 sec ($1-$5)",
-                    "15": "15 sec ($1.50-$7.50)",
-                    "20": "20 sec ($2-$10)"
+                    "4": "4 sec",
+                    "8": "8 sec",
+                    "12": "12 sec"
                   },
                   "_ux": { "input_type": "select" }
                 },

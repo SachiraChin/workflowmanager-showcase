@@ -81,8 +81,8 @@ SUPPORTED_VIDEO_SIZES = [
     "1024x1024",  # Square 1:1 (HD)
 ]
 
-# Video duration options (seconds)
-SUPPORTED_VIDEO_DURATIONS = [5, 10, 15, 20]
+# Video duration options (seconds) - Sora supports 4, 8, and 12 seconds
+SUPPORTED_VIDEO_DURATIONS = [4, 8, 12]
 
 # Quality levels
 QUALITY_LEVELS = ["low", "medium", "high"]
@@ -543,7 +543,7 @@ class OpenAIProvider(MediaProviderBase):
                 - model: str ("sora-2" or "sora-2-pro", default "sora-2")
                 - aspect_ratio: str ("16:9", "9:16", "1:1")
                 - quality: str ("720p" or "1080p", default "720p")
-                - duration: int (5, 10, 15, or 20 seconds)
+                - duration: int (4, 8, or 12 seconds)
                 - size: str (direct size, e.g., "1280x720" - overrides ratio+quality)
             progress_callback: Optional callback for progress updates
 
@@ -569,11 +569,11 @@ class OpenAIProvider(MediaProviderBase):
         size = self._resolve_video_size(params)
 
         # Duration - convert string to int if needed
-        duration = params.get("duration", 5)
+        duration = params.get("duration", 4)
         if isinstance(duration, str):
             duration = int(duration)
         if duration not in SUPPORTED_VIDEO_DURATIONS:
-            duration = 5
+            duration = 4
 
         logger.info(
             f"[OpenAI/Sora] Starting img2vid: model={model}, size={size}, "
@@ -897,11 +897,11 @@ class OpenAIProvider(MediaProviderBase):
             quality = "720p"
 
         # Get duration
-        duration = params.get("duration", 5)
+        duration = params.get("duration", 4)
         if isinstance(duration, str):
             duration = int(duration)
         if duration not in SUPPORTED_VIDEO_DURATIONS:
-            duration = 5
+            duration = 4
 
         # Get video size for resolution info
         size = self._resolve_video_size(params)
