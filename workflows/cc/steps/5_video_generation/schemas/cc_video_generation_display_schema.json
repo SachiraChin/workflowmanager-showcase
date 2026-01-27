@@ -78,6 +78,9 @@
                         {"key": "RESOLUTION_480", "label": "480p"},
                         {"key": "RESOLUTION_720", "label": "720p"},
                         {"key": "RESOLUTION_1080", "label": "1080p"}
+                      ],
+                      "durations": [
+                        {"key": "5", "label": "5 sec (fixed)"}
                       ]
                     },
                     {
@@ -86,6 +89,9 @@
                       "resolutions": [
                         {"key": "RESOLUTION_480", "label": "480p"},
                         {"key": "RESOLUTION_720", "label": "720p"}
+                      ],
+                      "durations": [
+                        {"key": "5", "label": "5 sec (fixed)"}
                       ]
                     },
                     {
@@ -119,6 +125,10 @@
                       "resolutions": [
                         {"key": "RESOLUTION_720", "label": "720p"},
                         {"key": "RESOLUTION_1080", "label": "1080p"}
+                      ],
+                      "durations": [
+                        {"key": "5", "label": "5 sec"},
+                        {"key": "10", "label": "10 sec"}
                       ]
                     },
                     {

@@ -183,6 +183,10 @@ class InteractionHandler:
                 file_path=interaction_response.file_path,
                 file_error=interaction_response.file_error,
                 form_data=interaction_response.form_data,
+                # MEDIA_GENERATION response fields
+                selected_content_id=interaction_response.selected_content_id,
+                selected_content=interaction_response.selected_content,
+                generations=interaction_response.generations,
             )
 
             tc3 = time.time()
