@@ -24,7 +24,7 @@ import { getUx } from "./ux-utils";
 import { renderTemplate } from "@/lib/template-service";
 import { useWorkflowStateContext } from "@/state/WorkflowStateContext";
 import { ErrorRenderer } from "../renderers";
-import { useSelectionOptional } from "./SelectionContext";
+import { useSelectionOptional } from "./selection/SelectionContext";
 import {
   Table,
   TableBody,

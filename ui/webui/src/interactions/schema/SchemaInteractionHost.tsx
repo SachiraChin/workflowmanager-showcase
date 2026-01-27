@@ -19,7 +19,7 @@ import {
   useSelection,
   type InteractionMode,
   type VariantStyle,
-} from "./SelectionContext";
+} from "./selection/SelectionContext";
 import { SchemaRenderer } from "../SchemaRenderer";
 
 // =============================================================================

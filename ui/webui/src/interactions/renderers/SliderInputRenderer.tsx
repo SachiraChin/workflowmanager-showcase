@@ -11,7 +11,7 @@
 import { useState, useRef, useEffect } from "react";
 import { cn } from "@/core/utils";
 import { Slider } from "@/components/ui/slider";
-import { useInputSchemaOptional } from "../schema/InputSchemaContext";
+import { useInputSchemaOptional } from "../schema/input/InputSchemaContext";
 
 // =============================================================================
 // Types

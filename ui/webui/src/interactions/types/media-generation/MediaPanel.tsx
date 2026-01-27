@@ -17,7 +17,7 @@ import { useMemo, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { useWorkflowStateContext } from "@/state/WorkflowStateContext";
-import { useInputSchemaOptional } from "../../schema/InputSchemaContext";
+import { useInputSchemaOptional } from "../../schema/input/InputSchemaContext";
 import { MediaGrid } from "./MediaGrid";
 import { useMediaGeneration } from "./MediaGenerationContext";
 import type { SchemaProperty, UxConfig } from "../../schema/types";

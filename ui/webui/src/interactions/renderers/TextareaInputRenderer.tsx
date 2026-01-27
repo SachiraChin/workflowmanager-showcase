@@ -10,7 +10,7 @@
 import { useEffect } from "react";
 import { cn } from "@/core/utils";
 import { Textarea } from "@/components/ui/textarea";
-import { useInputSchemaOptional } from "../schema/InputSchemaContext";
+import { useInputSchemaOptional } from "../schema/input/InputSchemaContext";
 
 // =============================================================================
 // Types

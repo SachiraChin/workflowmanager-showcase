@@ -24,7 +24,7 @@ import {
   getAttr,
   getIndexFromPath,
 } from "./utils";
-import { useSelectable } from "../schema/useSelectable";
+import { useSelectable } from "../schema/selection/useSelectable";
 
 /**
  * Wrap a child with highlight styling if it has data-highlight="true".

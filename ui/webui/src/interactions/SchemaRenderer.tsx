@@ -41,9 +41,9 @@ import { ObjectSchemaRenderer } from "./schema/ObjectSchemaRenderer";
 import { ContentPanelSchemaRenderer } from "./schema/ContentPanelSchemaRenderer";
 import { TableSchemaRenderer } from "./schema/TableSchemaRenderer";
 import { MediaPanel } from "./types/media-generation/MediaPanel";
-import { TabLayout } from "./schema/TabLayout";
+import { TabLayout } from "./schema/tabs/TabLayout";
 import { TabsLayout } from "./layouts/TabsLayout";
-import { InputSchemaComposer } from "./schema/InputSchemaComposer";
+import { InputSchemaComposer } from "./schema/input/InputSchemaComposer";
 
 // Import layouts to trigger registration
 import "./layouts";

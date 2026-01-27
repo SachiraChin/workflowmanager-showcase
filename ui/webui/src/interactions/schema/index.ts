@@ -20,7 +20,7 @@ export {
   type InputSchemaContextValue,
   type InputSchema,
   type DynamicOption,
-} from "./InputSchemaContext";
+} from "./input/InputSchemaContext";
 
 // Utilities
 export { getItemAddon, formatTimeAgo, formatLabel } from "./schema-utils";
@@ -40,11 +40,11 @@ export {
   type InteractionMode,
   type VariantStyle,
   type SelectionContextValue,
-} from "./SelectionContext";
+} from "./selection/SelectionContext";
 
 // Schema rendering
 export { SchemaRenderer } from "../SchemaRenderer";
-export { useSelectable, isSelectable, type SelectableState } from "./useSelectable";
+export { useSelectable, isSelectable, type SelectableState } from "./selection/useSelectable";
 
 // Terminal renderers
 export { TerminalRenderer, ErrorRenderer, ColorSwatch } from "../renderers";

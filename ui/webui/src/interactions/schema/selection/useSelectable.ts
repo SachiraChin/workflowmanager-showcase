@@ -16,10 +16,10 @@
  */
 
 import { useCallback } from "react";
-import type { UxConfig } from "./types";
+import type { UxConfig } from "../types";
 import { useSelectionOptional } from "./SelectionContext";
 import { useInteraction } from "@/state/interaction-context";
-import { getDecorators, type DecoratorInfo } from "./schema-utils";
+import { getDecorators, type DecoratorInfo } from "../schema-utils";
 
 // =============================================================================
 // Types

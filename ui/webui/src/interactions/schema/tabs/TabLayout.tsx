@@ -10,10 +10,10 @@
 
 import { useEffect, type ReactNode } from "react";
 import { useTabsContext } from "./TabsContext";
-import type { SchemaProperty, UxConfig } from "./types";
+import type { SchemaProperty, UxConfig } from "../types";
 
 // Forward declaration to avoid circular import
-import { SchemaRenderer } from "../SchemaRenderer";
+import { SchemaRenderer } from "../../SchemaRenderer";
 
 // =============================================================================
 // Types

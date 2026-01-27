@@ -13,7 +13,7 @@
 import { Check } from "lucide-react";
 import { cn } from "@/core/utils";
 import type { SelectableState } from "./useSelectable";
-import { ColorSwatch, DecoratorBadges } from "../renderers";
+import { ColorSwatch, DecoratorBadges } from "../../renderers";
 
 interface SelectableWrapperProps {
   /** Selection state from useSelectable hook */

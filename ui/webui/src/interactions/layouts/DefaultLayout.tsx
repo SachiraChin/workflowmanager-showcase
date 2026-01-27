@@ -8,8 +8,8 @@
 import React from "react";
 import { registerLayout } from "./registry";
 import type { LayoutProps } from "./types";
-import { useSelectable } from "../schema/useSelectable";
-import { SelectableWrapper } from "../schema/SelectableWrapper";
+import { useSelectable } from "../schema/selection/useSelectable";
+import { SelectableWrapper } from "../schema/selection/SelectableWrapper";
 
 export const DefaultLayout: React.FC<LayoutProps> = ({ schema: _schema, path, data, ux, children }) => {
   // Check if this object should be selectable

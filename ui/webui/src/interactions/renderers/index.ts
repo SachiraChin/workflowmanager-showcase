@@ -5,7 +5,7 @@
  */
 
 // Main router - entry point for primitive rendering
-export { TerminalRenderer } from "./TerminalRenderer";
+export { TerminalRenderer } from "../TerminalRenderer";
 
 // Terminal renderers - one per render_as type
 export { TextRenderer } from "./TextRenderer";

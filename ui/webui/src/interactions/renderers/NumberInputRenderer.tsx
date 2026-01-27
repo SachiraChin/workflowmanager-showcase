@@ -15,7 +15,7 @@
 import { useEffect } from "react";
 import { cn } from "@/core/utils";
 import { Input } from "@/components/ui/input";
-import { useInputSchemaOptional } from "../schema/InputSchemaContext";
+import { useInputSchemaOptional } from "../schema/input/InputSchemaContext";
 
 // =============================================================================
 // Types

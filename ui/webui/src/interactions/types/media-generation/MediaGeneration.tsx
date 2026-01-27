@@ -21,7 +21,7 @@ import {
   MediaGenerationProvider,
   type MediaGenerationContextValue,
 } from "./MediaGenerationContext";
-import { pathToKey } from "../../schema/InputSchemaContext";
+import { pathToKey } from "../../schema/input/InputSchemaContext";
 import type {
   SubActionConfig,
   GenerationResult,

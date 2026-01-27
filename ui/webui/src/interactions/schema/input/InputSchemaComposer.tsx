@@ -14,7 +14,7 @@
  */
 
 import { useState, useMemo, useCallback } from "react";
-import type { SchemaProperty, UxConfig, RenderAs } from "./types";
+import type { SchemaProperty, UxConfig, RenderAs } from "../types";
 import {
   InputSchemaContext,
   type InputSchemaContextValue,
@@ -25,7 +25,7 @@ import { InputSchemaRenderer } from "./InputSchemaRenderer";
 
 // Forward declaration to avoid circular import
 // The actual SchemaRenderer will be imported at runtime
-import { SchemaRenderer } from "../SchemaRenderer";
+import { SchemaRenderer } from "../../SchemaRenderer";
 
 // =============================================================================
 // Types

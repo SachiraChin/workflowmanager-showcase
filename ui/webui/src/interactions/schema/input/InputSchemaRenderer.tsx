@@ -18,11 +18,11 @@
  */
 
 import type { InputSchema } from "./InputSchemaContext";
-import { getUx } from "./ux-utils";
+import { getUx } from "../ux-utils";
 
 // Forward declaration to avoid circular import
 // The actual SchemaRenderer will be imported at runtime
-import { SchemaRenderer } from "../SchemaRenderer";
+import { SchemaRenderer } from "../../SchemaRenderer";
 
 // =============================================================================
 // Types

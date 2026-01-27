@@ -11,15 +11,15 @@
  *   wraps content in SelectableWrapper with selection UI.
  */
 
-import type { SchemaProperty, UxConfig } from "../schema/types";
-import { useSelectable } from "../schema/useSelectable";
-import { SelectableWrapper } from "../schema/SelectableWrapper";
-import { TextRenderer } from "./TextRenderer";
-import { ColorRenderer } from "./ColorRenderer";
-import { UrlRenderer } from "./UrlRenderer";
-import { DateTimeRenderer } from "./DateTimeRenderer";
-import { NumberRenderer } from "./NumberRenderer";
-import { ImageRenderer } from "./ImageRenderer";
+import type { SchemaProperty, UxConfig } from "./schema/types";
+import { useSelectable } from "./schema/selection/useSelectable";
+import { SelectableWrapper } from "./schema/selection/SelectableWrapper";
+import { TextRenderer } from "./renderers/TextRenderer";
+import { ColorRenderer } from "./renderers/ColorRenderer";
+import { UrlRenderer } from "./renderers/UrlRenderer";
+import { DateTimeRenderer } from "./renderers/DateTimeRenderer";
+import { NumberRenderer } from "./renderers/NumberRenderer";
+import { ImageRenderer } from "./renderers/ImageRenderer";
 
 // =============================================================================
 // Types

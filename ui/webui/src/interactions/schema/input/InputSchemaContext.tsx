@@ -15,7 +15,7 @@
  */
 
 import { createContext, useContext } from "react";
-import type { SchemaProperty } from "./types";
+import type { SchemaProperty } from "../types";
 
 // =============================================================================
 // Dynamic Options Types

@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useInputSchemaOptional, type DynamicOption } from "../schema/InputSchemaContext";
+import { useInputSchemaOptional, type DynamicOption } from "../schema/input/InputSchemaContext";
 import type { ControlConfig } from "../schema/types";
 
 // =============================================================================
