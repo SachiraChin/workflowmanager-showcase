@@ -80,7 +80,7 @@
             "source_image": { "resolver": "server" }
           }
         },
-        "prompts": "{{ state.video_prompts.prompts }}",
+        "prompts": "{{ state.video_prompts }}",
         "schema": {
           "$ref": "schemas/cc_video_generation_display_schema.json",
           "type": "json"

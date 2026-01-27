@@ -2,6 +2,14 @@
   "type": "object",
   "_ux.display": "passthrough",
   "properties": {
+    "scene_title": {
+      "type": "string",
+      "_ux.display": false
+    },
+    "motion_summary": {
+      "type": "string",
+      "_ux.display": false
+    },
     "_source_image": {
       "type": "object",
       "_ux.display": "passthrough",
@@ -16,173 +24,279 @@
         }
       }
     },
-    "leonardo": {
+    "prompts": {
       "type": "object",
       "_ux": {
         "display": "visible",
-        "tab_label": "Leonardo",
-        "render_as": "tab.media",
-        "provider": "leonardo",
-        "input_schema": {
-          "type": "object",
-          "_ux": {
-            "layout": "grid",
-            "layout_columns": 3,
-            "layout_columns_sm": 2
-          },
-          "properties": {
-            "_text": {
-              "type": "string",
-              "title": "Prompt",
-              "destination_field": "prompt",
-              "_ux": {
-                "input_type": "textarea",
-                "col_span": "full",
-                "rows": 4,
-                "source_field": "positive_prompt"
-              }
-            },
-            "negative_prompt": {
-              "type": "string",
-              "title": "Negative Prompt",
-              "_ux": {
-                "input_type": "textarea",
-                "col_span": "full",
-                "rows": 2,
-                "source_field": "negative_prompt"
-              }
-            },
-            "motion_strength": {
-              "type": "integer",
-              "title": "Motion Strength",
-              "minimum": 1,
-              "maximum": 10,
-              "default": 5,
-              "step": 1,
-              "_ux": { "input_type": "slider" }
-            }
-          }
-        }
+        "render_as": "tabs"
       },
       "properties": {
-        "positive_prompt": { "type": "string", "_ux.display": false },
-        "negative_prompt": { "type": "string", "_ux.display": false },
-        "motion_strength": {
-          "type": "string",
-          "_ux.display": true,
-          "_ux.display_label": "Motion"
-        },
-        "motion_notes": {
-          "type": "string",
-          "_ux.display": true,
-          "_ux.display_label": "Notes",
-          "_ux.highlight": true,
-          "_ux.highlight_color": "#7B68EE"
-        }
-      }
-    },
-    "sora": {
-      "type": "object",
-      "_ux": {
-        "display": "visible",
-        "tab_label": "Sora 2",
-        "render_as": "tab.media",
-        "provider": "openai",
-        "input_schema": {
+        "leonardo": {
           "type": "object",
           "_ux": {
-            "layout": "grid",
-            "layout_columns": 3,
-            "layout_columns_sm": 2
-          },
-          "properties": {
-            "_text": {
-              "type": "string",
-              "title": "Prompt",
-              "destination_field": "prompt",
+            "display": "visible",
+            "tab_label": "Leonardo",
+            "render_as": "tab.media",
+            "provider": "leonardo",
+            "input_schema": {
+              "type": "object",
               "_ux": {
-                "input_type": "textarea",
-                "col_span": "full",
-                "rows": 4,
-                "source_field": "prompt"
-              }
-            },
-            "model": {
-              "type": "string",
-              "title": "Model",
-              "enum": [
-                {
-                  "key": "sora-2",
-                  "label": "Sora 2 (Fast)",
-                  "qualities": [
-                    {"key": "720p", "label": "720p ($0.10/sec)"}
-                  ]
+                "layout": "grid",
+                "layout_columns": 3,
+                "layout_columns_sm": 2
+              },
+              "properties": {
+                "_text": {
+                  "type": "string",
+                  "title": "Prompt",
+                  "destination_field": "prompt",
+                  "_ux": {
+                    "input_type": "textarea",
+                    "col_span": "full",
+                    "rows": 4,
+                    "source_field": "positive_prompt"
+                  }
                 },
-                {
-                  "key": "sora-2-pro",
-                  "label": "Sora 2 Pro (Quality)",
-                  "qualities": [
-                    {"key": "720p", "label": "720p ($0.30/sec)"},
-                    {"key": "HD", "label": "HD ($0.50/sec)"}
-                  ]
-                }
-              ],
-              "value_key": "key",
-              "label_key": "label",
-              "default": "sora-2",
-              "_ux": { "input_type": "select" },
-              "controls": {
-                "quality": {
-                  "type": "enum",
-                  "enum_path": "qualities",
+                "negative_prompt": {
+                  "type": "string",
+                  "title": "Negative Prompt",
+                  "_ux": {
+                    "input_type": "textarea",
+                    "col_span": "full",
+                    "rows": 2,
+                    "source_field": "negative_prompt"
+                  }
+                },
+                "model": {
+                  "type": "string",
+                  "title": "Model",
+                  "enum": [
+                    {
+                      "key": "MOTION2",
+                      "label": "Motion 2.0",
+                      "resolutions": [
+                        {"key": "RESOLUTION_480", "label": "480p"},
+                        {"key": "RESOLUTION_720", "label": "720p"},
+                        {"key": "RESOLUTION_1080", "label": "1080p"}
+                      ]
+                    },
+                    {
+                      "key": "MOTION2FAST",
+                      "label": "Motion 2.0 Fast",
+                      "resolutions": [
+                        {"key": "RESOLUTION_480", "label": "480p"},
+                        {"key": "RESOLUTION_720", "label": "720p"}
+                      ]
+                    },
+                    {
+                      "key": "VEO3",
+                      "label": "VEO 3",
+                      "resolutions": [
+                        {"key": "RESOLUTION_720", "label": "720p"},
+                        {"key": "RESOLUTION_1080", "label": "1080p"}
+                      ],
+                      "durations": [
+                        {"key": "4", "label": "4 sec"},
+                        {"key": "6", "label": "6 sec"},
+                        {"key": "8", "label": "8 sec"}
+                      ]
+                    },
+                    {
+                      "key": "VEO3FAST",
+                      "label": "VEO 3 Fast",
+                      "resolutions": [
+                        {"key": "RESOLUTION_720", "label": "720p"}
+                      ],
+                      "durations": [
+                        {"key": "4", "label": "4 sec"},
+                        {"key": "6", "label": "6 sec"},
+                        {"key": "8", "label": "8 sec"}
+                      ]
+                    },
+                    {
+                      "key": "KLING2_1",
+                      "label": "Kling 2.1",
+                      "resolutions": [
+                        {"key": "RESOLUTION_720", "label": "720p"},
+                        {"key": "RESOLUTION_1080", "label": "1080p"}
+                      ]
+                    },
+                    {
+                      "key": "KLING2_5",
+                      "label": "Kling 2.5",
+                      "resolutions": [
+                        {"key": "RESOLUTION_720", "label": "720p"},
+                        {"key": "RESOLUTION_1080", "label": "1080p"}
+                      ],
+                      "durations": [
+                        {"key": "5", "label": "5 sec"},
+                        {"key": "10", "label": "10 sec"}
+                      ]
+                    }
+                  ],
                   "value_key": "key",
                   "label_key": "label",
-                  "default_index": 0,
-                  "reset": true
+                  "default": "MOTION2",
+                  "_ux": { "input_type": "select" },
+                  "controls": {
+                    "resolution": {
+                      "type": "enum",
+                      "enum_path": "resolutions",
+                      "value_key": "key",
+                      "label_key": "label",
+                      "default_index": 1,
+                      "reset": true
+                    },
+                    "duration": {
+                      "type": "enum",
+                      "enum_path": "durations",
+                      "value_key": "key",
+                      "label_key": "label",
+                      "default_index": 0,
+                      "reset": true
+                    }
+                  }
+                },
+                "resolution": {
+                  "type": "string",
+                  "title": "Resolution",
+                  "_ux": { "input_type": "select" }
+                },
+                "duration": {
+                  "type": "string",
+                  "title": "Duration",
+                  "_ux": { "input_type": "select" }
+                },
+                "frame_interpolation": {
+                  "type": "boolean",
+                  "title": "Smooth Motion",
+                  "default": true,
+                  "_ux": { "input_type": "toggle" }
                 }
               }
-            },
-            "quality": {
+            }
+          },
+          "properties": {
+            "positive_prompt": { "type": "string", "_ux.display": false },
+            "negative_prompt": { "type": "string", "_ux.display": false },
+            "motion_strength": {
               "type": "string",
-              "title": "Quality",
-              "_ux": { "input_type": "select" }
+              "_ux.display": true,
+              "_ux.display_label": "Motion"
             },
-            "duration": {
+            "motion_notes": {
               "type": "string",
-              "title": "Duration",
-              "enum": ["5", "10", "15", "20"],
-              "default": "5",
-              "enum_labels": {
-                "5": "5 sec ($0.50-$2.50)",
-                "10": "10 sec ($1-$5)",
-                "15": "15 sec ($1.50-$7.50)",
-                "20": "20 sec ($2-$10)"
-              },
-              "_ux": { "input_type": "select" }
-            },
-            "aspect_ratio": {
-              "type": "string",
-              "title": "Aspect Ratio",
-              "enum": ["16:9", "9:16", "1:1"],
-              "default": "9:16",
-              "enum_labels": {
-                "16:9": "16:9 (Landscape)",
-                "9:16": "9:16 (Portrait)",
-                "1:1": "1:1 (Square)"
-              },
-              "_ux": { "input_type": "select" }
+              "_ux.display": true,
+              "_ux.display_label": "Notes",
+              "_ux.highlight": true,
+              "_ux.highlight_color": "#7B68EE"
             }
           }
-        }
-      },
-      "properties": {
-        "prompt": { "type": "string", "_ux.display": false },
-        "style_notes": {
-          "type": "string",
-          "_ux.display": true,
-          "_ux.display_label": "Style",
-          "_ux.highlight": true,
-          "_ux.highlight_color": "#4ECDC4"
+        },
+        "sora": {
+          "type": "object",
+          "_ux": {
+            "display": "visible",
+            "tab_label": "Sora 2",
+            "render_as": "tab.media",
+            "provider": "openai",
+            "input_schema": {
+              "type": "object",
+              "_ux": {
+                "layout": "grid",
+                "layout_columns": 3,
+                "layout_columns_sm": 2
+              },
+              "properties": {
+                "_text": {
+                  "type": "string",
+                  "title": "Prompt",
+                  "destination_field": "prompt",
+                  "_ux": {
+                    "input_type": "textarea",
+                    "col_span": "full",
+                    "rows": 4,
+                    "source_field": "prompt"
+                  }
+                },
+                "model": {
+                  "type": "string",
+                  "title": "Model",
+                  "enum": [
+                    {
+                      "key": "sora-2",
+                      "label": "Sora 2 (Fast)",
+                      "qualities": [
+                        {"key": "720p", "label": "720p ($0.10/sec)"}
+                      ]
+                    },
+                    {
+                      "key": "sora-2-pro",
+                      "label": "Sora 2 Pro (Quality)",
+                      "qualities": [
+                        {"key": "720p", "label": "720p ($0.30/sec)"},
+                        {"key": "HD", "label": "HD ($0.50/sec)"}
+                      ]
+                    }
+                  ],
+                  "value_key": "key",
+                  "label_key": "label",
+                  "default": "sora-2",
+                  "_ux": { "input_type": "select" },
+                  "controls": {
+                    "quality": {
+                      "type": "enum",
+                      "enum_path": "qualities",
+                      "value_key": "key",
+                      "label_key": "label",
+                      "default_index": 0,
+                      "reset": true
+                    }
+                  }
+                },
+                "quality": {
+                  "type": "string",
+                  "title": "Quality",
+                  "_ux": { "input_type": "select" }
+                },
+                "duration": {
+                  "type": "string",
+                  "title": "Duration",
+                  "enum": ["5", "10", "15", "20"],
+                  "default": "5",
+                  "enum_labels": {
+                    "5": "5 sec ($0.50-$2.50)",
+                    "10": "10 sec ($1-$5)",
+                    "15": "15 sec ($1.50-$7.50)",
+                    "20": "20 sec ($2-$10)"
+                  },
+                  "_ux": { "input_type": "select" }
+                },
+                "aspect_ratio": {
+                  "type": "string",
+                  "title": "Aspect Ratio",
+                  "enum": ["16:9", "9:16", "1:1"],
+                  "default": "9:16",
+                  "enum_labels": {
+                    "16:9": "16:9 (Landscape)",
+                    "9:16": "9:16 (Portrait)",
+                    "1:1": "1:1 (Square)"
+                  },
+                  "_ux": { "input_type": "select" }
+                }
+              }
+            }
+          },
+          "properties": {
+            "prompt": { "type": "string", "_ux.display": false },
+            "style_notes": {
+              "type": "string",
+              "_ux.display": true,
+              "_ux.display_label": "Style",
+              "_ux.highlight": true,
+              "_ux.highlight_color": "#4ECDC4"
+            }
+          }
         }
       }
     }
