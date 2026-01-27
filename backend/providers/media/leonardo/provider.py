@@ -804,16 +804,21 @@ class LeonardoProvider(MediaProviderBase):
             "prompt": prompt or "",
         }
 
+        # Models that support variable duration (MOTION models have fixed 5s duration)
+        MODELS_WITH_DURATION = {"VEO3", "VEO3FAST", "KLING2_1", "KLING2_5"}
+
         # Optional parameters
-        if "model" in params:
-            payload["model"] = params["model"]
+        model = params.get("model")
+        if model:
+            payload["model"] = model
         if "resolution" in params:
             payload["resolution"] = params["resolution"]
         if "negative_prompt" in params:
             payload["negativePrompt"] = params["negative_prompt"]
         if "seed" in params:
             payload["seed"] = params["seed"]
-        if "duration" in params:
+        # Only send duration for models that support variable duration
+        if "duration" in params and model in MODELS_WITH_DURATION:
             # Convert string to int if needed
             duration_val = params["duration"]
             if isinstance(duration_val, str):
@@ -984,6 +989,9 @@ class LeonardoProvider(MediaProviderBase):
             "KLING2_5": "KLING2_5_MOTION_VIDEO_GENERATION",
         }
 
+        # Models that support variable duration (MOTION models have fixed 5s duration)
+        MODELS_WITH_DURATION = {"VEO3", "VEO3FAST", "KLING2_1", "KLING2_5"}
+
         try:
             model = params.get("model", "MOTION2")
             resolution = params.get("resolution", "RESOLUTION_720")
@@ -999,8 +1007,8 @@ class LeonardoProvider(MediaProviderBase):
                 "resolution": resolution,
             }
 
-            # Add duration for models that support it
-            if duration:
+            # Add duration only for models that support variable duration
+            if duration and model in MODELS_WITH_DURATION:
                 service_params["duration"] = duration
 
             payload: Dict[str, Any] = {
