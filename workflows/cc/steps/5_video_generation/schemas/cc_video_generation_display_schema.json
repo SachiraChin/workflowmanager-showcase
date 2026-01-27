@@ -168,10 +168,11 @@
                   "_ux": { "input_type": "select" }
                 },
                 "frame_interpolation": {
-                  "type": "boolean",
+                  "type": "string",
                   "title": "Smooth Motion",
-                  "default": true,
-                  "_ux": { "input_type": "toggle" }
+                  "enum": ["true", "false"],
+                  "default": "true",
+                  "_ux": { "input_type": "select" }
                 }
               }
             }
