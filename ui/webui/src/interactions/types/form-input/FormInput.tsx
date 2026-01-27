@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { useInteraction } from "@/state/interaction-context";
-import { SchemaRenderer } from "../SchemaRenderer";
+import { SchemaRenderer } from "../../SchemaRenderer";
 import type { SchemaProperty } from "@/interactions/schema/types";
 import { getUx } from "@/interactions/schema/ux-utils";
 
