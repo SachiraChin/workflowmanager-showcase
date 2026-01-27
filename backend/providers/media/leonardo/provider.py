@@ -957,6 +957,16 @@ class LeonardoProvider(MediaProviderBase):
         """Calculate video generation credits using Leonardo pricing API."""
         credits = 0.0
 
+        # Map our model names to Leonardo's service types
+        MODEL_TO_SERVICE = {
+            "MOTION2": "MOTION_VIDEO_GENERATION",
+            "MOTION2FAST": "MOTION_VIDEO_GENERATION",
+            "VEO3": "VEO3_MOTION_VIDEO_GENERATION",
+            "VEO3FAST": "VEO3_1_FAST_MOTION_VIDEO_GENERATION",
+            "KLING2_1": "KLING2_1_MOTION_VIDEO_GENERATION",
+            "KLING2_5": "KLING2_5_MOTION_VIDEO_GENERATION",
+        }
+
         try:
             model = params.get("model", "MOTION2")
             resolution = params.get("resolution", "RESOLUTION_720")
@@ -964,9 +974,11 @@ class LeonardoProvider(MediaProviderBase):
             if isinstance(duration, str):
                 duration = int(duration)
 
+            # Get the correct service type for this model
+            service_type = MODEL_TO_SERVICE.get(model, "MOTION_VIDEO_GENERATION")
+
             # Build video service params
             service_params: Dict[str, Any] = {
-                "model": model,
                 "resolution": resolution,
             }
 
@@ -975,9 +987,9 @@ class LeonardoProvider(MediaProviderBase):
                 service_params["duration"] = duration
 
             payload: Dict[str, Any] = {
-                "service": "VIDEO_GENERATION",
+                "service": service_type,
                 "serviceParams": {
-                    "VIDEO_GENERATION": service_params
+                    service_type: service_params
                 }
             }
 
