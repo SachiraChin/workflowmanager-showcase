@@ -902,6 +902,58 @@ This means:
 
 ---
 
+## 15. Authentication Rate Limiting and Account Lockout
+
+**Date Identified:** 2026-01-27
+**Severity:** Medium
+**Status:** Open
+
+### Problem
+
+The authentication system lacks rate limiting and account lockout mechanisms.
+Currently:
+- No limit on login attempts per IP or email
+- No account lockout after failed attempts
+- No logging of failed attempts for security monitoring
+
+The password handling itself follows industry standards (HTTPS transport +
+bcrypt hashing), but brute force attacks are not mitigated.
+
+### Impact
+
+1. **Brute force vulnerability**: Attackers can attempt unlimited passwords
+2. **Credential stuffing**: No protection against automated attacks
+3. **No security audit trail**: Failed attempts not logged for monitoring
+4. **Compliance**: May not meet security requirements for some use cases
+
+### Files Affected
+
+- `backend/server/api/routes/auth.py` - Login endpoint needs rate limiting
+- `backend/server/api/auth.py` - May need failed attempt tracking
+- `backend/db/` - May need collection for tracking attempts
+
+### Suggested Fix
+
+1. **Rate limiting** (5-10 attempts per minute per IP):
+   - Use in-memory store (Redis) or database collection
+   - Return 429 Too Many Requests when exceeded
+   - Consider sliding window algorithm
+
+2. **Account lockout** (after 5-10 consecutive failures):
+   - Track failed attempts per email
+   - Temporary lockout (15-30 min) vs permanent until admin unlock
+   - Clear counter on successful login
+
+3. **Security logging**:
+   - Log failed attempts with IP, email, timestamp, user agent
+   - Enable alerting on suspicious patterns
+
+4. **Consider middleware approach**:
+   - FastAPI middleware or dependency for rate limiting
+   - Reusable across other sensitive endpoints
+
+---
+
 ## Template for New Issues
 
 ```markdown
