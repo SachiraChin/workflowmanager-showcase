@@ -1,17 +1,17 @@
 /**
- * MediaGrid - Grid display of generated images with selection.
+ * MediaGrid - Grid display of generated images/videos with selection.
  *
  * Features:
- * - Displays images from all generations for a prompt
+ * - Displays images and videos from all generations for a prompt
  * - Single-select with visual indicator
- * - Full-screen preview on image click
+ * - Full-screen preview on click (image viewer or video player)
  * - Selection via top-right marker
  * - Lazy loading support for readonly/history mode
  */
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { cn } from "@/lib/utils";
-import { Check, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, X, Play } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +19,25 @@ import {
 } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import type { GenerationResult } from "./types";
+
+// =============================================================================
+// Helpers
+// =============================================================================
+
+/** Check if URL points to a video file */
+function isVideoUrl(url: string): boolean {
+  if (!url) return false;
+  const lowercaseUrl = url.toLowerCase();
+  // Check common video extensions
+  return (
+    lowercaseUrl.endsWith('.mp4') ||
+    lowercaseUrl.endsWith('.webm') ||
+    lowercaseUrl.endsWith('.mov') ||
+    lowercaseUrl.endsWith('.avi') ||
+    lowercaseUrl.includes('.mp4?') ||
+    lowercaseUrl.includes('.webm?')
+  );
+}
 
 // =============================================================================
 // Types
@@ -29,6 +48,7 @@ interface ContentItem {
   url: string;
   metadataId: string;
   generationIndex: number; // Track which generation this belongs to
+  isVideo: boolean; // Whether this is a video file
 }
 
 interface MediaGridProps {
@@ -62,12 +82,16 @@ export function MediaGrid({
 
   // Flatten all generations into content items for preview navigation
   const allContent: ContentItem[] = reversedGenerations.flatMap((gen, genIdx) =>
-    gen.content_ids.map((contentId, idx) => ({
-      contentId,
-      url: gen.urls[idx],
-      metadataId: gen.metadata_id,
-      generationIndex: genIdx,
-    }))
+    gen.content_ids.map((contentId, idx) => {
+      const url = gen.urls[idx];
+      return {
+        contentId,
+        url,
+        metadataId: gen.metadata_id,
+        generationIndex: genIdx,
+        isVideo: isVideoUrl(url),
+      };
+    })
   );
 
   if (allContent.length === 0) {
@@ -105,14 +129,16 @@ export function MediaGrid({
           <div key={gen.metadata_id} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
             {gen.content_ids.map((contentId, idx) => {
               const flatIndex = contentIndexMap.get(contentId) ?? 0;
+              const url = gen.urls[idx];
               return (
                 <MediaGridItem
                   key={contentId}
                   item={{
                     contentId,
-                    url: gen.urls[idx],
+                    url,
                     metadataId: gen.metadata_id,
                     generationIndex: genIdx,
+                    isVideo: isVideoUrl(url),
                   }}
                   isSelected={selectedContentId === contentId}
                   onSelect={onSelect}
@@ -133,7 +159,7 @@ export function MediaGrid({
           showCloseButton={false}
         >
           <VisuallyHidden>
-            <DialogTitle>Image Preview</DialogTitle>
+            <DialogTitle>{previewItem?.isVideo ? "Video Preview" : "Image Preview"}</DialogTitle>
           </VisuallyHidden>
 
           {previewItem && (
@@ -156,12 +182,23 @@ export function MediaGrid({
                 </button>
               )}
 
-              {/* Image */}
-              <img
-                src={previewItem.url}
-                alt=""
-                className="max-w-full max-h-[85vh] object-contain"
-              />
+              {/* Video or Image */}
+              {previewItem.isVideo ? (
+                <video
+                  key={previewItem.url}
+                  src={previewItem.url}
+                  controls
+                  autoPlay
+                  loop
+                  className="max-w-full max-h-[85vh] object-contain"
+                />
+              ) : (
+                <img
+                  src={previewItem.url}
+                  alt=""
+                  className="max-w-full max-h-[85vh] object-contain"
+                />
+              )}
 
               {/* Next button */}
               {previewIndex !== null && previewIndex < allContent.length - 1 && (
@@ -185,11 +222,11 @@ export function MediaGrid({
                   )}
                 >
                   <Check className="w-5 h-5" />
-                  {selectedContentId === previewItem.contentId ? "Selected" : "Select this image"}
+                  {selectedContentId === previewItem.contentId ? "Selected" : previewItem.isVideo ? "Select this video" : "Select this image"}
                 </button>
               )}
 
-              {/* Image counter */}
+              {/* Content counter */}
               <div className="absolute bottom-4 right-4 text-white/70 text-sm">
                 {(previewIndex ?? 0) + 1} / {allContent.length}
               </div>
@@ -225,8 +262,10 @@ function MediaGridItem({
   const [loaded, setLoaded] = useState(!lazyLoad);
   const [error, setError] = useState(false);
   const [aspectRatio, setAspectRatio] = useState<number>(1);
+  const [isHovering, setIsHovering] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
-  const handleImageClick = () => {
+  const handleClick = () => {
     onPreview();
   };
 
@@ -243,6 +282,30 @@ function MediaGridItem({
     setLoaded(true);
   };
 
+  const handleVideoLoad = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const video = e.currentTarget;
+    setAspectRatio(video.videoWidth / video.videoHeight);
+    setLoaded(true);
+  };
+
+  // Handle hover play for videos
+  const handleMouseEnter = () => {
+    setIsHovering(true);
+    if (item.isVideo && videoRef.current) {
+      videoRef.current.play().catch(() => {
+        // Ignore autoplay errors (browser restrictions)
+      });
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovering(false);
+    if (item.isVideo && videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0;
+    }
+  };
+
   return (
     <div
       className={cn(
@@ -252,13 +315,40 @@ function MediaGridItem({
           : "border-transparent hover:border-muted-foreground/50"
       )}
       style={{ aspectRatio: loaded ? aspectRatio : 1 }}
-      onClick={handleImageClick}
+      onClick={handleClick}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
-      {/* Image */}
+      {/* Content - Video or Image */}
       {error ? (
         <div className="w-full h-full flex items-center justify-center bg-muted">
           <span className="text-xs text-muted-foreground">Failed to load</span>
         </div>
+      ) : item.isVideo ? (
+        <>
+          <video
+            ref={videoRef}
+            src={item.url}
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            onLoadedMetadata={handleVideoLoad}
+            onError={() => setError(true)}
+            className={cn(
+              "w-full h-full object-contain transition-opacity",
+              loaded ? "opacity-100" : "opacity-0"
+            )}
+          />
+          {/* Play icon overlay for videos (hidden on hover) */}
+          {loaded && !isHovering && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="bg-black/50 rounded-full p-3">
+                <Play className="w-6 h-6 text-white fill-white" />
+              </div>
+            </div>
+          )}
+        </>
       ) : (
         <img
           src={item.url}
@@ -283,7 +373,7 @@ function MediaGridItem({
         <button
           onClick={handleSelectClick}
           className={cn(
-            "absolute top-2 right-2 rounded-full p-1 shadow-lg transition-all",
+            "absolute top-2 right-2 rounded-full p-1 shadow-lg transition-all z-10",
             isSelected
               ? "bg-primary text-primary-foreground"
               : "bg-black/50 text-white opacity-0 group-hover:opacity-100 hover:bg-black/70"
@@ -296,7 +386,7 @@ function MediaGridItem({
 
       {/* Show selection indicator even when disabled (readonly) */}
       {disabled && isSelected && (
-        <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-1 shadow-lg">
+        <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-1 shadow-lg z-10">
           <Check className="w-4 h-4" />
         </div>
       )}
