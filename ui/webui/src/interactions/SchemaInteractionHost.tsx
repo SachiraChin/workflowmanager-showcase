@@ -12,15 +12,15 @@
  */
 
 import { useEffect } from "react";
-import type { SchemaProperty } from "./types";
+import type { SchemaProperty } from "./schema/types";
 import type { SelectionItem } from "@/core/types";
 import {
   SelectionProvider,
   useSelection,
   type InteractionMode,
   type VariantStyle,
-} from "./selection/SelectionContext";
-import { SchemaRenderer } from "../SchemaRenderer";
+} from "./schema/selection/SelectionContext";
+import { SchemaRenderer } from "./SchemaRenderer";
 
 // =============================================================================
 // Types

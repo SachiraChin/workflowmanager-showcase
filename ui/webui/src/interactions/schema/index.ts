@@ -30,7 +30,7 @@ export {
   SchemaInteractionHost,
   type SchemaInteractionResult,
   type SchemaInteractionState,
-} from "./SchemaInteractionHost";
+} from "../SchemaInteractionHost";
 
 // Context
 export {
@@ -53,14 +53,14 @@ export { TerminalRenderer, ErrorRenderer, ColorSwatch } from "../renderers";
 export const schemaInteractionControlledVariants = {
   cards: {
     Component: async () => {
-      const { SchemaInteractionHost } = await import("./SchemaInteractionHost");
+      const { SchemaInteractionHost } = await import("../SchemaInteractionHost");
       return { default: SchemaInteractionHost };
     },
     defaultProps: { variant: "cards" as const },
   },
   list: {
     Component: async () => {
-      const { SchemaInteractionHost } = await import("./SchemaInteractionHost");
+      const { SchemaInteractionHost } = await import("../SchemaInteractionHost");
       return { default: SchemaInteractionHost };
     },
     defaultProps: { variant: "list" as const },
