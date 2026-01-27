@@ -648,6 +648,15 @@ class LeonardoProvider(MediaProviderBase):
         presigned_url = upload_data.get("url")
         presigned_fields = upload_data.get("fields")
 
+        # Handle fields being a JSON string (from some API versions)
+        if isinstance(presigned_fields, str):
+            import json as json_module
+            try:
+                presigned_fields = json_module.loads(presigned_fields)
+            except json_module.JSONDecodeError:
+                logger.warning(f"[Leonardo] Could not parse presigned_fields as JSON: {presigned_fields}")
+                presigned_fields = {}
+
         if not image_id or not presigned_url:
             raise GenerationError("Failed to get presigned URL from Leonardo")
 
@@ -805,9 +814,17 @@ class LeonardoProvider(MediaProviderBase):
         if "seed" in params:
             payload["seed"] = params["seed"]
         if "duration" in params:
-            payload["duration"] = params["duration"]
+            # Convert string to int if needed
+            duration_val = params["duration"]
+            if isinstance(duration_val, str):
+                duration_val = int(duration_val)
+            payload["duration"] = duration_val
         if "frame_interpolation" in params:
-            payload["frameInterpolation"] = params["frame_interpolation"]
+            # Convert string "true"/"false" to boolean
+            fi_value = params["frame_interpolation"]
+            if isinstance(fi_value, str):
+                fi_value = fi_value.lower() == "true"
+            payload["frameInterpolation"] = fi_value
 
         logger.info(f"[Leonardo] Starting img2vid generation from image_id={image_id}")
 
