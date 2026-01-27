@@ -887,14 +887,29 @@ class LeonardoProvider(MediaProviderBase):
         action_type: str,
         params: Dict[str, Any]
     ) -> ResolutionInfo:
-        """
-        Calculate expected output resolution for given parameters.
+        """Calculate expected output resolution for given parameters."""
+        match action_type:
+            case "img2vid":
+                return self._calculate_video_resolution(params)
+            case "txt2img" | "img2img":
+                return self._calculate_image_resolution(params)
+            case _:
+                return self._calculate_image_resolution(params)
 
-        Takes into account:
-        - aspect_ratio + size -> base input dimensions
-        - generation_mode -> output multiplier (quality=1.5x, ultra=2x)
-        """
-        # Get base dimensions from aspect_ratio + size
+    def _calculate_video_resolution(self, params: Dict[str, Any]) -> ResolutionInfo:
+        """Calculate video output resolution from resolution param."""
+        resolution = params.get("resolution", "RESOLUTION_720")
+        video_resolutions = {
+            "RESOLUTION_480": (854, 480),
+            "RESOLUTION_720": (1280, 720),
+            "RESOLUTION_1080": (1920, 1080),
+        }
+        width, height = video_resolutions.get(resolution, (1280, 720))
+        megapixels = round((width * height) / 1_000_000, 2)
+        return ResolutionInfo(width=width, height=height, megapixels=megapixels)
+
+    def _calculate_image_resolution(self, params: Dict[str, Any]) -> ResolutionInfo:
+        """Calculate image output resolution from aspect_ratio, size, and mode."""
         aspect_ratio = params.get("aspect_ratio", "1:1")
 
         # Support both "size" (preferred) and "quality" (legacy) parameters
@@ -906,7 +921,6 @@ class LeonardoProvider(MediaProviderBase):
         if aspect_ratio in BASE_DIMENSIONS:
             base_width, base_height = get_dimensions(aspect_ratio, size)
         else:
-            # Fallback to explicit dimensions or defaults
             base_width = params.get("width", 1024)
             base_height = params.get("height", 1024)
 
@@ -914,10 +928,8 @@ class LeonardoProvider(MediaProviderBase):
         generation_mode = params.get("generation_mode", "fast")
         output_multiplier = OUTPUT_MULTIPLIERS.get(generation_mode, 1.0)
 
-        # Calculate final output dimensions
         output_width = _round_to_multiple(int(base_width * output_multiplier))
         output_height = _round_to_multiple(int(base_height * output_multiplier))
-
         megapixels = round((output_width * output_height) / 1_000_000, 2)
 
         return ResolutionInfo(
@@ -932,16 +944,80 @@ class LeonardoProvider(MediaProviderBase):
         params: Dict[str, Any],
         resolution: ResolutionInfo
     ) -> CreditInfo:
-        """
-        Calculate credit cost for generation using Leonardo pricing API.
+        """Calculate credit cost using Leonardo pricing API."""
+        match action_type:
+            case "img2vid":
+                return self._calculate_video_credits(params)
+            case "txt2img" | "img2img":
+                return self._calculate_image_credits(params)
+            case _:
+                return self._calculate_image_credits(params)
 
-        Falls back to 0 if API call fails.
-        """
+    def _calculate_video_credits(self, params: Dict[str, Any]) -> CreditInfo:
+        """Calculate video generation credits using Leonardo pricing API."""
         credits = 0.0
 
         try:
-            # Build pricing calculator request
-            # Use input dimensions (before output multiplier) for API call
+            model = params.get("model", "MOTION2")
+            resolution = params.get("resolution", "RESOLUTION_720")
+            duration = params.get("duration")
+            if isinstance(duration, str):
+                duration = int(duration)
+
+            # Build video service params
+            service_params: Dict[str, Any] = {
+                "model": model,
+                "resolution": resolution,
+            }
+
+            # Add duration for models that support it
+            if duration:
+                service_params["duration"] = duration
+
+            payload: Dict[str, Any] = {
+                "service": "VIDEO_GENERATION",
+                "serviceParams": {
+                    "VIDEO_GENERATION": service_params
+                }
+            }
+
+            response = requests.post(
+                f"{LEONARDO_BASE_URL}/pricing-calculator",
+                json=payload,
+                headers=self._get_headers(),
+                timeout=10
+            )
+
+            if response.status_code == 200:
+                result = response.json()
+                credits = result.get("calculateProductionApiServiceCost", {}).get("cost", 0)
+            else:
+                logger.warning(
+                    f"[Leonardo] Video pricing API returned {response.status_code}: {response.text}"
+                )
+
+        except Exception as e:
+            logger.warning(f"[Leonardo] Failed to get video pricing: {e}")
+
+        total_cost = credits * COST_PER_CREDIT_USD
+
+        return CreditInfo(
+            credits=credits,
+            cost_per_credit=COST_PER_CREDIT_USD,
+            total_cost_usd=round(total_cost, 4),
+            num_images=1,
+            credits_per_image=credits,
+            cost_per_image_usd=round(total_cost, 4)
+        )
+
+    def _calculate_image_credits(self, params: Dict[str, Any]) -> CreditInfo:
+        """Calculate image generation credits using Leonardo pricing API."""
+        credits = 0.0
+        num_images = params.get("num_images", 4)
+        if isinstance(num_images, str):
+            num_images = int(num_images)
+
+        try:
             aspect_ratio = params.get("aspect_ratio", "1:1")
             size = params.get("size")
             if not size:
@@ -954,25 +1030,12 @@ class LeonardoProvider(MediaProviderBase):
                 width = params.get("width", 1024)
                 height = params.get("height", 1024)
 
-            num_images = params.get("num_images", 4)
-            if isinstance(num_images, str):
-                num_images = int(num_images)
-
             generation_mode = params.get("generation_mode", "fast")
 
-            # Determine service type based on action
-            if action_type == "img2vid":
-                service = "VIDEO_GENERATION"
-            else:
-                # txt2img and img2img both use IMAGE_GENERATION
-                service = "IMAGE_GENERATION"
-
-            # Get inference steps from params or use default
             inference_steps = params.get("num_inference_steps", 15)
             if isinstance(inference_steps, str):
                 inference_steps = int(inference_steps)
 
-            # Get prompt magic settings
             prompt_magic = params.get("prompt_magic", False)
             if isinstance(prompt_magic, str):
                 prompt_magic = prompt_magic.lower() == "true"
@@ -981,16 +1044,13 @@ class LeonardoProvider(MediaProviderBase):
                 prompt_magic_strength = float(prompt_magic_strength)
             prompt_magic_version = params.get("prompt_magic_version", "v3")
 
-            # Determine alchemy/ultra mode from generation_mode
             is_alchemy = generation_mode in ("quality", "ultra")
             is_ultra = generation_mode == "ultra"
 
-            # Determine model type from model_id for pricing
             model_id = params.get("model_id", "")
             is_phoenix = model_id in PHOENIX_MODEL_IDS
             is_sdxl = model_id in SDXL_MODEL_IDS
 
-            # Build service params - ALL fields are required by pricing API
             service_params: Dict[str, Any] = {
                 "imageWidth": width,
                 "imageHeight": height,
@@ -1005,19 +1065,17 @@ class LeonardoProvider(MediaProviderBase):
                 "isPhoenix": is_phoenix,
             }
 
-            # Add prompt magic details if enabled
             if prompt_magic:
                 service_params["promptMagicStrength"] = prompt_magic_strength
                 service_params["promptMagicVersion"] = prompt_magic_version
 
             payload: Dict[str, Any] = {
-                "service": service,
+                "service": "IMAGE_GENERATION",
                 "serviceParams": {
-                    service: service_params
+                    "IMAGE_GENERATION": service_params
                 }
             }
 
-            # Make pricing API request
             response = requests.post(
                 f"{LEONARDO_BASE_URL}/pricing-calculator",
                 json=payload,
@@ -1027,7 +1085,6 @@ class LeonardoProvider(MediaProviderBase):
 
             if response.status_code == 200:
                 result = response.json()
-                # API returns apiCreditCost in the response
                 credits = result.get("calculateProductionApiServiceCost", {}).get("cost", 0)
             else:
                 logger.warning(
