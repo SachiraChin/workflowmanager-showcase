@@ -13,5 +13,6 @@ export default defineConfig({
   },
   server: {
     allowedHosts: ["arandomsitein.space"],
+    host: "0.0.0.0",
   },
 })

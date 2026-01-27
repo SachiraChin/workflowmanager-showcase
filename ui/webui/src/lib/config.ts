@@ -15,7 +15,7 @@ export function getApiUrl(): string {
   const { hostname, protocol } = window.location;
 
   // Local development
-  if (hostname === "localhost" || hostname === "127.0.0.1") {
+  if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "192.168.1.163" || hostname === "192.168.1.181" || hostname === "192.168.1.225") {
     return import.meta.env.VITE_API_LOCAL_URL || "http://localhost:9000";
   }
 
