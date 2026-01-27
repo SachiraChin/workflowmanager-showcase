@@ -13,15 +13,17 @@
  * replacing the implicit ContentPanelSchemaRenderer check.
  */
 
-import { useMemo, useEffect, useState } from "react";
+import { useMemo, useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, Crop, X } from "lucide-react";
 import { useWorkflowStateContext } from "@/state/WorkflowStateContext";
 import { useInputSchemaOptional } from "../../schema/input/InputSchemaContext";
 import { MediaGrid } from "./MediaGrid";
+import { CropSelectionModal } from "./CropSelectionModal";
 import { useMediaGeneration } from "./MediaGenerationContext";
+import { toMediaUrl } from "@/core/config";
 import type { SchemaProperty, UxConfig } from "../../schema/types";
-import type { SubActionConfig } from "./types";
+import type { SubActionConfig, CropRegion } from "./types";
 
 // =============================================================================
 // Types
@@ -76,9 +78,12 @@ export function MediaPanel({
     getPreview,
     isPreviewLoading,
     fetchPreview,
-    getDataAtPath: _getDataAtPath,
+    getDataAtPath,
+    // Crop selection state
+    savedCrop,
+    setSavedCrop,
+    clearSavedCrop,
   } = mediaContext;
-  void _getDataAtPath; // Reserved for nested data access
 
   // Header from display_label
   const header = ux.display_label || path[path.length - 1];
@@ -97,6 +102,18 @@ export function MediaPanel({
 
   // Validation state
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+  // Crop modal state (for img2vid)
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [cropModalViewOnly, setCropModalViewOnly] = useState(false);
+  const [pendingAction, setPendingAction] = useState<SubActionConfig | null>(null);
+  const [pendingParams, setPendingParams] = useState<Record<string, unknown> | null>(null);
+
+  // Get source image data for crop modal
+  const sourceImageData = getDataAtPath(["_source_image"]) as {
+    url?: string;
+    local_path?: string;
+  } | undefined;
 
   // Extract required fields from schema
   const requiredFields = useMemo(() => {
@@ -143,6 +160,57 @@ export function MediaPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [readonly, path.join("."), provider, defaultActionType, paramValuesKey, promptId]);
 
+  // Execute sub-action with optional crop region
+  const executeWithCrop = useCallback(
+    (action: SubActionConfig, params: Record<string, unknown>, cropRegion: CropRegion | null) => {
+      const finalParams = { ...params };
+
+      // Add source_image to params for img2vid
+      if (action.action_type === "img2vid" && sourceImageData) {
+        finalParams.source_image = sourceImageData;
+      }
+
+      // Add crop region if provided
+      if (cropRegion) {
+        finalParams.crop_region = cropRegion;
+      }
+
+      executeSubAction(path, action, finalParams, { provider, promptId });
+    },
+    [executeSubAction, path, provider, promptId, sourceImageData]
+  );
+
+  // Handle crop modal confirm
+  const handleCropConfirm = useCallback(
+    (cropRegion: CropRegion | null, savePreference: boolean, aspectRatio: string) => {
+      setShowCropModal(false);
+
+      if (!pendingAction || !pendingParams) return;
+
+      // Save crop preference if requested
+      if (savePreference && cropRegion) {
+        setSavedCrop({
+          region: cropRegion,
+          aspectRatio,
+        });
+      }
+
+      // Execute the action
+      executeWithCrop(pendingAction, pendingParams, cropRegion);
+
+      // Clear pending state
+      setPendingAction(null);
+      setPendingParams(null);
+    },
+    [pendingAction, pendingParams, executeWithCrop, setSavedCrop]
+  );
+
+  // Handle view crop button click
+  const handleViewCrop = useCallback(() => {
+    setCropModalViewOnly(true);
+    setShowCropModal(true);
+  }, []);
+
   // Handle generate button click
   const handleGenerate = (action: SubActionConfig) => {
     if (!inputSchemaContext) {
@@ -174,7 +242,23 @@ export function MediaPanel({
     }
 
     setValidationErrors([]);
-    executeSubAction(path, action, params, { provider, promptId });
+
+    // For img2vid, show crop modal or use saved crop
+    if (action.action_type === "img2vid" && sourceImageData?.url) {
+      if (savedCrop) {
+        // Use saved crop, skip modal
+        executeWithCrop(action, params, savedCrop.region);
+      } else {
+        // Show crop modal
+        setPendingAction(action);
+        setPendingParams(params);
+        setCropModalViewOnly(false);
+        setShowCropModal(true);
+      }
+    } else {
+      // txt2img/img2img or no source image - proceed directly
+      executeSubAction(path, action, params, { provider, promptId });
+    }
   };
 
   return (
@@ -218,6 +302,33 @@ export function MediaPanel({
                     <span className="flex items-center gap-1.5">
                       <span className="font-medium text-foreground">Cost:</span>
                       ${preview.credits.total_cost_usd.toFixed(4)} (${preview.credits.cost_per_image_usd.toFixed(4)}/img)
+                    </span>
+                  </>
+                )}
+                {/* Crop selection info (for img2vid) */}
+                {savedCrop && (
+                  <>
+                    <span className="text-muted-foreground/50">•</span>
+                    <span className="flex items-center gap-1.5">
+                      <Crop className="w-3 h-3" />
+                      <span className="font-medium text-foreground">Crop:</span>
+                      {savedCrop.region.width} × {savedCrop.region.height}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 px-1.5 text-xs"
+                        onClick={handleViewCrop}
+                      >
+                        View
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 px-1.5 text-xs"
+                        onClick={clearSavedCrop}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
                     </span>
                   </>
                 )}
@@ -276,6 +387,23 @@ export function MediaPanel({
           />
         )}
       </div>
+
+      {/* Crop Selection Modal (for img2vid) */}
+      {sourceImageData?.url && (
+        <CropSelectionModal
+          open={showCropModal}
+          onClose={() => {
+            setShowCropModal(false);
+            setCropModalViewOnly(false);
+            setPendingAction(null);
+            setPendingParams(null);
+          }}
+          imageUrl={toMediaUrl(sourceImageData.url)}
+          onConfirm={handleCropConfirm}
+          initialCrop={savedCrop || undefined}
+          viewOnly={cropModalViewOnly}
+        />
+      )}
     </div>
   );
 }

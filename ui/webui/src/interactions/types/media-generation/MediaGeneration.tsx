@@ -27,6 +27,7 @@ import type {
   GenerationResult,
   ProgressState,
   PreviewInfo,
+  CropState,
 } from "./types";
 import type { SchemaProperty } from "../../schema/types";
 import type { SubActionRequest, SSEEventType } from "@/core/types";
@@ -59,6 +60,10 @@ export function MediaGeneration() {
   // Preview state
   const [previewByPrompt, setPreviewByPrompt] = useState<Record<string, PreviewInfo>>({});
   const [previewLoadingPrompts, setPreviewLoadingPrompts] = useState<Set<string>>(new Set());
+
+  // Crop selection state (global, session-only)
+  const [savedCrop, setSavedCrop] = useState<CropState | null>(null);
+  const clearSavedCrop = useCallback(() => setSavedCrop(null), []);
 
   // Refs for getResponse closure
   const generationsRef = useRef(generations);
@@ -380,6 +385,8 @@ export function MediaGeneration() {
               delete next[promptKey];
               return next;
             });
+            // Clear saved crop on generation error
+            clearSavedCrop();
             break;
         }
       };
@@ -399,11 +406,13 @@ export function MediaGeneration() {
           delete next[promptKey];
           return next;
         });
+        // Clear saved crop on generation error
+        clearSavedCrop();
       };
 
       api.streamSubAction(subActionRequest, handleEvent, handleError);
     },
-    [data, workflowRunId, request.interaction_id]
+    [data, workflowRunId, request.interaction_id, clearSavedCrop]
   );
 
   // Fetch preview for a prompt
@@ -491,6 +500,10 @@ export function MediaGeneration() {
         }
         return current;
       },
+      // Crop selection state
+      savedCrop,
+      setSavedCrop,
+      clearSavedCrop,
     }),
     [
       subActions,
@@ -506,6 +519,8 @@ export function MediaGeneration() {
       previewLoadingPrompts,
       fetchPreview,
       data,
+      savedCrop,
+      clearSavedCrop,
     ]
   );
 

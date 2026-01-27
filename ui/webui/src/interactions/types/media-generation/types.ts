@@ -182,3 +182,46 @@ export interface PreviewInfo {
   resolution: ResolutionInfo;
   credits: CreditInfo;
 }
+
+// =============================================================================
+// Crop Selection Types
+// =============================================================================
+
+/**
+ * Crop region coordinates in pixels.
+ * Coordinates are relative to the original image dimensions.
+ */
+export interface CropRegion {
+  /** X offset from left edge in pixels */
+  x: number;
+  /** Y offset from top edge in pixels */
+  y: number;
+  /** Width of crop region in pixels */
+  width: number;
+  /** Height of crop region in pixels */
+  height: number;
+}
+
+/**
+ * Saved crop state including region and aspect ratio.
+ */
+export interface CropState {
+  /** The crop region coordinates */
+  region: CropRegion;
+  /** The aspect ratio used for this crop (e.g., "9:16", "16:9", "free") */
+  aspectRatio: string;
+}
+
+/**
+ * Available aspect ratio options for crop selection.
+ */
+export const CROP_ASPECT_RATIOS = [
+  { key: "9:16", label: "9:16 (Portrait)", value: 9 / 16 },
+  { key: "16:9", label: "16:9 (Landscape)", value: 16 / 9 },
+  { key: "2:3", label: "2:3 (Portrait)", value: 2 / 3 },
+  { key: "3:2", label: "3:2 (Landscape)", value: 3 / 2 },
+  { key: "3:4", label: "3:4 (Portrait)", value: 3 / 4 },
+  { key: "4:3", label: "4:3 (Landscape)", value: 4 / 3 },
+  { key: "1:1", label: "1:1 (Square)", value: 1 },
+  { key: "free", label: "Free Selection", value: undefined },
+] as const;

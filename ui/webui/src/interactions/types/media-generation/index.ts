@@ -24,4 +24,8 @@ export type {
   PreviewInfo,
   ResolutionInfo,
   CreditInfo,
+  CropRegion,
+  CropState,
 } from "./types";
+
+export { CROP_ASPECT_RATIOS } from "./types";

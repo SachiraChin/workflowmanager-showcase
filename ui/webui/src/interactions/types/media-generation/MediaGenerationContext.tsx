@@ -21,6 +21,7 @@ import type {
   GenerationResult,
   ProgressState,
   PreviewInfo,
+  CropState,
 } from "./types";
 
 // =============================================================================
@@ -79,6 +80,19 @@ export interface MediaGenerationContextValue {
 
   /** Get data at a given path (for accessing sibling fields) */
   getDataAtPath: (path: string[]) => unknown;
+
+  // =============================================================================
+  // Crop Selection State (for img2vid)
+  // =============================================================================
+
+  /** Saved crop selection (global, applies to all providers) */
+  savedCrop: CropState | null;
+
+  /** Set saved crop selection */
+  setSavedCrop: (crop: CropState | null) => void;
+
+  /** Clear saved crop selection */
+  clearSavedCrop: () => void;
 }
 
 export interface MediaGenerationProviderProps {
