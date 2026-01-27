@@ -32,4 +32,4 @@ export {
 export { SliderInputRenderer } from "./SliderInputRenderer";
 
 // Re-export shared types
-export type { ControlConfig } from "../types";
+export type { ControlConfig } from "../schema/types";

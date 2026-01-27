@@ -16,7 +16,7 @@
  */
 
 import { useEffect, useMemo, useRef } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/core/utils";
 import {
   Select,
   SelectContent,
@@ -24,8 +24,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useInputSchemaOptional, type DynamicOption } from "../InputSchemaContext";
-import type { ControlConfig } from "../types";
+import { useInputSchemaOptional, type DynamicOption } from "../schema/InputSchemaContext";
+import type { ControlConfig } from "../schema/types";
 
 // =============================================================================
 // Types

@@ -10,7 +10,7 @@
  */
 
 import { useState, useRef } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/core/utils";
 import { Check, ChevronLeft, ChevronRight, X, Play } from "lucide-react";
 import {
   Dialog,

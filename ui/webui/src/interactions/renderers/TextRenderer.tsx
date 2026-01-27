@@ -3,9 +3,9 @@
  * Renders plain text values with optional nudges.
  */
 
-import { cn } from "@/lib/utils";
+import { cn } from "@/core/utils";
 import { CopyButton } from "./nudges";
-import type { Nudge } from "../types";
+import type { Nudge } from "../schema/types";
 
 interface TextRendererProps {
   /** The text value to display */

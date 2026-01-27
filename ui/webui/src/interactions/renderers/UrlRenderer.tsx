@@ -3,9 +3,9 @@
  * Renders clickable URLs with optional nudges.
  */
 
-import { cn } from "@/lib/utils";
+import { cn } from "@/core/utils";
 import { CopyButton, ExternalLink } from "./nudges";
-import type { Nudge } from "../types";
+import type { Nudge } from "../schema/types";
 
 interface UrlRendererProps {
   /** The URL value */

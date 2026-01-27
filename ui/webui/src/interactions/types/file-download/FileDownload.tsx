@@ -14,7 +14,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useInteraction, ActionSlot } from "@/lib/interaction-context";
+import { useInteraction, ActionSlot } from "@/state/interaction-context";
 
 interface DownloadState {
   downloaded: boolean;

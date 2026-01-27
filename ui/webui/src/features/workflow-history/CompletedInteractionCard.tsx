@@ -13,9 +13,9 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { InteractionHost } from "../interactions/InteractionHost";
-import type { CompletedInteraction } from "@/lib/types";
+import { cn } from "@/core/utils";
+import { InteractionHost } from "@/interactions/InteractionHost";
+import type { CompletedInteraction } from "@/core/types";
 
 interface CompletedInteractionCardProps {
   interaction: CompletedInteraction;

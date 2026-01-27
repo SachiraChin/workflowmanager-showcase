@@ -12,24 +12,24 @@
  */
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { useInteraction } from "@/lib/interaction-context";
-import { useWorkflowStore } from "@/lib/workflow-store";
-import { api } from "@/lib/api";
-import { toMediaUrl } from "@/lib/config";
-import { SchemaRenderer } from "../schema-interaction/SchemaRenderer";
+import { useInteraction } from "@/state/interaction-context";
+import { useWorkflowStore } from "@/state/workflow-store";
+import { api } from "@/core/api";
+import { toMediaUrl } from "@/core/config";
+import { SchemaRenderer } from "../../SchemaRenderer";
 import {
   MediaGenerationProvider,
   type MediaGenerationContextValue,
 } from "./MediaGenerationContext";
-import { pathToKey } from "../schema-interaction/InputSchemaContext";
+import { pathToKey } from "../../schema/InputSchemaContext";
 import type {
   SubActionConfig,
   GenerationResult,
   ProgressState,
   PreviewInfo,
 } from "./types";
-import type { SchemaProperty } from "../schema-interaction/types";
-import type { SubActionRequest, SSEEventType } from "@/lib/types";
+import type { SchemaProperty } from "../../schema/types";
+import type { SubActionRequest, SSEEventType } from "@/core/types";
 
 // =============================================================================
 // Component

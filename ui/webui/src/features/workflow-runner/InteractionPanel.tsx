@@ -6,8 +6,8 @@
  */
 
 import { Card, CardContent } from "@/components/ui/card";
-import { InteractionHost } from "../interactions/InteractionHost";
-import type { InteractionRequest, InteractionResponseData } from "@/lib/types";
+import { InteractionHost } from "@/interactions/InteractionHost";
+import type { InteractionRequest, InteractionResponseData } from "@/core/types";
 
 // =============================================================================
 // Types

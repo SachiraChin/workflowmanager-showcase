@@ -15,14 +15,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MagneticScrollContainer, MagneticScrollCard } from "@/components/ui/magnetic-scroll-container";
 import { Loader2, Database, FolderTree } from "lucide-react";
-import { VersionDiffDialog } from "@/components/workflow/start/VersionDiffDialog";
-import { WorkflowSidebar, StateTreeView, FilesTreeView } from "@/components/workflow/state";
-import { InteractionPanel, WorkflowCompletion } from "@/components/workflow/runner";
-import { CompletedInteractionCard } from "@/components/workflow/history";
-import { useWorkflowExecution } from "@/hooks/useWorkflowExecution";
-import { WorkflowStateProvider } from "@/contexts/WorkflowStateContext";
-// import { api } from "@/lib/api";  // TEMPORARILY DISABLED - status display polling
-import type { CompletedInteraction, InteractionResponseData } from "@/lib/types";
+import { VersionDiffDialog } from "@/features/workflow-start/VersionDiffDialog";
+import { WorkflowSidebar, StateTreeView, FilesTreeView } from "@/features/workflow-state";
+import { InteractionPanel, WorkflowCompletion } from "@/features/workflow-runner";
+import { CompletedInteractionCard } from "@/features/workflow-history";
+import { useWorkflowExecution } from "@/state/hooks/useWorkflowExecution";
+import { WorkflowStateProvider } from "@/state/WorkflowStateContext";
+// import { api } from "@/core/api";  // TEMPORARILY DISABLED - status display polling
+import type { CompletedInteraction, InteractionResponseData } from "@/core/types";
 
 /** Interaction with step context for rendering */
 interface InteractionWithStep extends CompletedInteraction {

@@ -12,7 +12,7 @@
 
 import React, { useState, type ReactElement } from "react";
 import { ChevronRight } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/core/utils";
 import { registerLayout } from "./registry";
 import type { LayoutProps } from "./types";
 import {

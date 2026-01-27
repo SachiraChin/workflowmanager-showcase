@@ -5,7 +5,7 @@
 
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/core/utils";
 
 interface CopyButtonProps {
   /** Value to copy to clipboard */

@@ -15,7 +15,7 @@
 
 import React, { type ReactElement } from "react";
 import { Check } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/core/utils";
 import { registerLayout } from "./registry";
 import type { LayoutProps } from "./types";
 import {
@@ -24,7 +24,7 @@ import {
   getAttr,
   getIndexFromPath,
 } from "./utils";
-import { useSelectable } from "../useSelectable";
+import { useSelectable } from "../schema/useSelectable";
 
 /**
  * Wrap a child with highlight styling if it has data-highlight="true".

@@ -20,10 +20,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
-import { useInteraction } from "@/lib/interaction-context";
-import { SchemaRenderer } from "@/components/workflow/interactions/schema-interaction/SchemaRenderer";
-import type { SchemaProperty } from "@/components/workflow/interactions/schema-interaction/types";
-import { getUx } from "@/components/workflow/interactions/schema-interaction/ux-utils";
+import { useInteraction } from "@/state/interaction-context";
+import { SchemaRenderer } from "../SchemaRenderer";
+import type { SchemaProperty } from "@/interactions/schema/types";
+import { getUx } from "@/interactions/schema/ux-utils";
 
 // =============================================================================
 // Types

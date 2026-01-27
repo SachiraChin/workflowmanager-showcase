@@ -24,15 +24,15 @@ import { Loader2, Play, Upload, FileJson, History } from "lucide-react";
 import {
   WorkflowUploader,
   type UploadedWorkflow,
-} from "@/components/workflow/start/WorkflowUploader";
-import { TemplateSelector } from "@/components/workflow/start/TemplateSelector";
+} from "@/features/workflow-start/WorkflowUploader";
+import { TemplateSelector } from "@/features/workflow-start/TemplateSelector";
 import {
   WorkflowRunsList,
   type WorkflowRun,
-} from "@/components/workflow/start/WorkflowRunsList";
-import { VersionDiffDialog } from "@/components/workflow/start/VersionDiffDialog";
-import { useWorkflowExecution } from "@/hooks/useWorkflowExecution";
-import { api } from "@/lib/api";
+} from "@/features/workflow-start/WorkflowRunsList";
+import { VersionDiffDialog } from "@/features/workflow-start/VersionDiffDialog";
+import { useWorkflowExecution } from "@/state/hooks/useWorkflowExecution";
+import { api } from "@/core/api";
 
 // =============================================================================
 // Types

@@ -4,7 +4,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { API_URL } from "@/lib/config";
+import { API_URL } from "@/core/config";
 
 interface UseWorkflowStateOptions {
   baseUrl?: string;

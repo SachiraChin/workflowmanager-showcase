@@ -8,9 +8,9 @@
  */
 
 import { useEffect } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/core/utils";
 import { Textarea } from "@/components/ui/textarea";
-import { useInputSchemaOptional } from "../InputSchemaContext";
+import { useInputSchemaOptional } from "../schema/InputSchemaContext";
 
 // =============================================================================
 // Types

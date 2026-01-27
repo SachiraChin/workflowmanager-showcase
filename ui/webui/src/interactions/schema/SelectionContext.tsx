@@ -8,7 +8,7 @@
  */
 
 import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from "react";
-import type { SelectionItem } from "@/lib/types";
+import type { SelectionItem } from "@/core/types";
 
 // =============================================================================
 // Types

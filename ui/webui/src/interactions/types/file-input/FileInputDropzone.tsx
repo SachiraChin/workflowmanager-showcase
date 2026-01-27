@@ -14,8 +14,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Upload, X, Image as ImageIcon, File } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { useInteraction } from "@/lib/interaction-context";
+import { cn } from "@/core/utils";
+import { useInteraction } from "@/state/interaction-context";
 
 // Default image types if none specified in request
 const DEFAULT_ACCEPTED_TYPES = [

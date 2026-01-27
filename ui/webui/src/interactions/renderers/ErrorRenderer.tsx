@@ -4,7 +4,7 @@
  */
 
 import { AlertTriangle } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/core/utils";
 
 interface ErrorRendererProps {
   /** Field key that has the error */

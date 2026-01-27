@@ -14,11 +14,11 @@
  */
 
 import type { SchemaProperty, UxConfig } from "./types";
-import { cn } from "@/lib/utils";
+import { cn } from "@/core/utils";
 
 // Import SchemaRenderer for body delegation
 // This creates a controlled recursion - we strip render_as to prevent infinite loop
-import { SchemaRenderer } from "./SchemaRenderer";
+import { SchemaRenderer } from "../SchemaRenderer";
 
 // =============================================================================
 // Types

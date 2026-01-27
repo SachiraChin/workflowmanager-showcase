@@ -25,22 +25,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
-import type { InteractionRequest, InteractionResponseData, InteractionMode } from "@/lib/types";
+import { cn } from "@/core/utils";
+import type { InteractionRequest, InteractionResponseData, InteractionMode } from "@/core/types";
 import {
   InteractionProvider,
   useInteractionHostInternal,
   ActionSlotTarget,
-} from "@/lib/interaction-context";
+} from "@/state/interaction-context";
 
 // Import interaction components
-import { TextInputEnhanced } from "./text-input";
-import { FileInputDropzone } from "./file-input";
-import { FileDownload } from "./file-download";
-import { StructuredSelect } from "./structured-select";
-import { ReviewGrouped } from "./review-grouped";
-import { FormInput } from "./form-input";
-import { MediaGeneration } from "./media-generation";
+import { TextInputEnhanced } from "./types/text-input";
+import { FileInputDropzone } from "./types/file-input";
+import { FileDownload } from "./types/file-download";
+import { StructuredSelect } from "./types/structured-select";
+import { ReviewGrouped } from "./types/review-grouped";
+import { FormInput } from "./types/form-input";
+import { MediaGeneration } from "./types/media-generation";
 
 // =============================================================================
 // Types
@@ -323,7 +323,7 @@ function InteractionFooterInner({
 }
 
 // Helper hook to access request from footer
-import { useInteraction } from "@/lib/interaction-context";
+import { useInteraction } from "@/state/interaction-context";
 
 function useInteractionFooterContext() {
   const { request, disabled } = useInteraction();

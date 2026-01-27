@@ -10,10 +10,10 @@
  */
 
 import React, { useState, useCallback, useMemo, type ReactNode } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/core/utils";
 import { registerLayout } from "./registry";
 import type { LayoutProps } from "./types";
-import { TabsContext, type TabInfo } from "../TabsContext";
+import { TabsContext, type TabInfo } from "../schema/TabsContext";
 import { SchemaRenderer } from "../SchemaRenderer";
 
 // =============================================================================

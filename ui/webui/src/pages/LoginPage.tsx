@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, LogIn } from "lucide-react";
-import { API_URL } from "@/lib/config";
+import { API_URL } from "@/core/config";
 
 interface LoginPageProps {
   onLoginSuccess: (user: { user_id: string; email: string; username: string }) => void;

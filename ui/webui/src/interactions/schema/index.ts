@@ -43,11 +43,11 @@ export {
 } from "./SelectionContext";
 
 // Schema rendering
-export { SchemaRenderer } from "./SchemaRenderer";
+export { SchemaRenderer } from "../SchemaRenderer";
 export { useSelectable, isSelectable, type SelectableState } from "./useSelectable";
 
 // Terminal renderers
-export { TerminalRenderer, ErrorRenderer, ColorSwatch } from "./renderers";
+export { TerminalRenderer, ErrorRenderer, ColorSwatch } from "../renderers";
 
 // Controlled variants for InteractionHost lazy loading
 export const schemaInteractionControlledVariants = {

@@ -6,7 +6,7 @@
  */
 
 import { CompletedInteractionCard } from "./CompletedInteractionCard";
-import type { CompletedInteraction } from "@/lib/types";
+import type { CompletedInteraction } from "@/core/types";
 
 interface StepGroupProps {
   stepId: string;

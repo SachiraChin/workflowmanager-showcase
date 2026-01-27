@@ -10,12 +10,12 @@
 import type { SchemaProperty, UxConfig } from "./types";
 import { normalizeDisplay } from "./types";
 import { getUx } from "./ux-utils";
-import { getLayout } from "./layouts";
-import { ErrorRenderer } from "./renderers";
+import { getLayout } from "../layouts";
+import { ErrorRenderer } from "../renderers";
 
 // Forward declaration to avoid circular import
 // The actual SchemaRenderer will be imported at runtime
-import { SchemaRenderer } from "./SchemaRenderer";
+import { SchemaRenderer } from "../SchemaRenderer";
 
 // =============================================================================
 // Types

@@ -16,11 +16,11 @@
 import { useMemo, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-import { useWorkflowStateContext } from "@/contexts/WorkflowStateContext";
-import { useInputSchemaOptional } from "../schema-interaction/InputSchemaContext";
+import { useWorkflowStateContext } from "@/state/WorkflowStateContext";
+import { useInputSchemaOptional } from "../../schema/InputSchemaContext";
 import { MediaGrid } from "./MediaGrid";
 import { useMediaGeneration } from "./MediaGenerationContext";
-import type { SchemaProperty, UxConfig } from "../schema-interaction/types";
+import type { SchemaProperty, UxConfig } from "../../schema/types";
 import type { SubActionConfig } from "./types";
 
 // =============================================================================

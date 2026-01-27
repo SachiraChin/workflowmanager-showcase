@@ -9,7 +9,7 @@ import type {
   InteractionRequest,
   WorkflowProgress,
   CompletedInteraction,
-} from "./types";
+} from "@/core/types";
 
 // =============================================================================
 // Types

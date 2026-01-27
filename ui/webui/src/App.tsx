@@ -12,8 +12,8 @@ import { Loader2 } from "lucide-react";
 import { WorkflowStartPage } from "@/pages/WorkflowStartPage";
 import { WorkflowRunnerPage } from "@/pages/WorkflowRunnerPage";
 import { LoginPage } from "@/pages/LoginPage";
-import { api } from "@/lib/api";
-import { useWorkflowExecution } from "@/hooks/useWorkflowExecution";
+import { api } from "@/core/api";
+import { useWorkflowExecution } from "@/state/hooks/useWorkflowExecution";
 
 interface User {
   user_id: string;

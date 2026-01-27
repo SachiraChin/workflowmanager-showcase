@@ -4,8 +4,8 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { SSEEventType, InteractionRequest } from "@/lib/types";
-import { API_URL } from "@/lib/config";
+import type { SSEEventType, InteractionRequest } from "@/core/types";
+import { API_URL } from "@/core/config";
 
 export interface StreamEvent {
   type: SSEEventType;

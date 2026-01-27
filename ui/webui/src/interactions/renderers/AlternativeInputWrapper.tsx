@@ -13,10 +13,10 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { ArrowLeftRight } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/core/utils";
 import { Button } from "@/components/ui/button";
-import { useInputSchemaOptional } from "../InputSchemaContext";
-import type { AlternativeConfig, AlternativeField } from "../types";
+import { useInputSchemaOptional } from "../schema/InputSchemaContext";
+import type { AlternativeConfig, AlternativeField } from "../schema/types";
 import { NumberInputRenderer } from "./NumberInputRenderer";
 import { TextareaInputRenderer } from "./TextareaInputRenderer";
 

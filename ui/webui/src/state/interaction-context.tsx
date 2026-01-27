@@ -20,7 +20,7 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
-import type { InteractionRequest, InteractionResponseData, InteractionMode } from "./types";
+import type { InteractionRequest, InteractionResponseData, InteractionMode } from "@/core/types";
 
 // =============================================================================
 // Types

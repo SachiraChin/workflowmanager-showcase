@@ -6,9 +6,9 @@
 import { useCallback, useState } from "react";
 import { Upload, X, Image as ImageIcon, File } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import type { ControlledFileInputProps } from "../types";
-import type { FileInputState } from "@/lib/interaction-state";
+import { cn } from "@/core/utils";
+import type { ControlledFileInputProps } from "../../types";
+import type { FileInputState } from "@/state/interaction-state";
 
 // Default image types if none specified in request
 const DEFAULT_ACCEPTED_TYPES = [

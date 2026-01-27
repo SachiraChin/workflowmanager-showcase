@@ -14,8 +14,8 @@ import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
-import { useInteraction } from "@/lib/interaction-context";
+import { cn } from "@/core/utils";
+import { useInteraction } from "@/state/interaction-context";
 
 export function TextInputEnhanced() {
   const { request, disabled, updateProvider, mode } = useInteraction();

@@ -2,13 +2,13 @@
  * Shared types for interaction components.
  */
 
-import type { InteractionRequest, InteractionResponseData, SelectOption } from "@/lib/types";
+import type { InteractionRequest, InteractionResponseData, SelectOption } from "@/core/types";
 import type {
   TextInputState,
   StructuredSelectState,
   ReviewGroupedState,
   FileInputState,
-} from "@/lib/interaction-state";
+} from "@/state/interaction-state";
 
 // =============================================================================
 // Base Props (Uncontrolled - with submit button)

@@ -5,9 +5,9 @@
 
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import type { ReactNode } from "react";
-import { useWorkflowState } from "@/hooks/useWorkflowState";
-import { api } from "@/lib/api";
-import type { WorkflowDefinition, ModuleConfig, FileTree, WorkflowFileContent } from "@/lib/types";
+import { useWorkflowState } from "@/state/hooks/useWorkflowState";
+import { api } from "@/core/api";
+import type { WorkflowDefinition, ModuleConfig, FileTree, WorkflowFileContent } from "@/core/types";
 
 interface WorkflowStateContextValue {
   /** Current workflow state */

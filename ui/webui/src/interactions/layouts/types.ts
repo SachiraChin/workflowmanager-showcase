@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { SchemaProperty, UxConfig } from "../types";
+import type { SchemaProperty, UxConfig } from "../schema/types";
 
 /**
  * Props for all layout components.

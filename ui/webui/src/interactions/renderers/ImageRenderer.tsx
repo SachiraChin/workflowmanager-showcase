@@ -5,9 +5,9 @@
 
 import { useState } from "react";
 import { Image as ImageIcon, Download, Eye } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/core/utils";
 import { CopyButton } from "./nudges";
-import type { Nudge } from "../types";
+import type { Nudge } from "../schema/types";
 
 interface ImageRendererProps {
   /** The image URL */

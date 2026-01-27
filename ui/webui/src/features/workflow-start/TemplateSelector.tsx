@@ -19,11 +19,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { api } from "@/lib/api";
+import { api } from "@/core/api";
 import type {
   WorkflowTemplate,
   WorkflowTemplatesResponse,
-} from "@/lib/types";
+} from "@/core/types";
 
 // =============================================================================
 // Types

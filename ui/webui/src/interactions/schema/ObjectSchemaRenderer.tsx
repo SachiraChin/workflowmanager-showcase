@@ -11,13 +11,13 @@
 import type { SchemaProperty, UxConfig } from "./types";
 import { normalizeDisplay } from "./types";
 import { getUx } from "./ux-utils";
-import { getLayout } from "./layouts";
+import { getLayout } from "../layouts";
 import { renderTemplate } from "@/lib/template-service";
-import { useWorkflowStateContext } from "@/contexts/WorkflowStateContext";
-import { ErrorRenderer } from "./renderers";
+import { useWorkflowStateContext } from "@/state/WorkflowStateContext";
+import { ErrorRenderer } from "../renderers";
 
 // Forward declaration to avoid circular import
-import { SchemaRenderer } from "./SchemaRenderer";
+import { SchemaRenderer } from "../SchemaRenderer";
 
 // =============================================================================
 // Types

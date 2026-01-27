@@ -12,7 +12,7 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { ChevronRight, ChevronDown, ChevronUp, Focus } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/core/utils";
 import {
   Dialog,
   DialogContent,

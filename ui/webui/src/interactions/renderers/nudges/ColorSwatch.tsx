@@ -3,7 +3,7 @@
  * Shows a small colored square representing a hex color.
  */
 
-import { cn } from "@/lib/utils";
+import { cn } from "@/core/utils";
 
 interface ColorSwatchProps {
   /** Hex color value (e.g., "#FF0000") */

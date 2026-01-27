@@ -11,9 +11,9 @@
  *   wraps content in SelectableWrapper with selection UI.
  */
 
-import type { SchemaProperty, UxConfig } from "../types";
-import { useSelectable } from "../useSelectable";
-import { SelectableWrapper } from "../SelectableWrapper";
+import type { SchemaProperty, UxConfig } from "../schema/types";
+import { useSelectable } from "../schema/useSelectable";
+import { SelectableWrapper } from "../schema/SelectableWrapper";
 import { TextRenderer } from "./TextRenderer";
 import { ColorRenderer } from "./ColorRenderer";
 import { UrlRenderer } from "./UrlRenderer";

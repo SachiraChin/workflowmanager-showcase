@@ -25,7 +25,7 @@ import { InputSchemaRenderer } from "./InputSchemaRenderer";
 
 // Forward declaration to avoid circular import
 // The actual SchemaRenderer will be imported at runtime
-import { SchemaRenderer } from "./SchemaRenderer";
+import { SchemaRenderer } from "../SchemaRenderer";
 
 // =============================================================================
 // Types

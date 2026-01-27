@@ -16,7 +16,7 @@
  * and alternative input modes.
  */
 
-import type { SchemaProperty, UxConfig, ControlConfig, AlternativeConfig } from "./types";
+import type { SchemaProperty, UxConfig, ControlConfig, AlternativeConfig } from "./schema/types";
 import { SelectInputRenderer } from "./renderers/SelectInputRenderer";
 import { SliderInputRenderer } from "./renderers/SliderInputRenderer";
 import { TextareaInputRenderer } from "./renderers/TextareaInputRenderer";

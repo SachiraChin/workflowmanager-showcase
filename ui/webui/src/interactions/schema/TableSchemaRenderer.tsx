@@ -17,13 +17,13 @@
 
 import { useMemo } from "react";
 import { Check } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/core/utils";
 import type { SchemaProperty, ComputedField, UxConfig } from "./types";
 import { normalizeDisplay } from "./types";
 import { getUx } from "./ux-utils";
 import { renderTemplate } from "@/lib/template-service";
-import { useWorkflowStateContext } from "@/contexts/WorkflowStateContext";
-import { ErrorRenderer } from "./renderers";
+import { useWorkflowStateContext } from "@/state/WorkflowStateContext";
+import { ErrorRenderer } from "../renderers";
 import { useSelectionOptional } from "./SelectionContext";
 import {
   Table,
@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/table";
 
 // Forward declaration - will be imported at runtime to avoid circular dependency
-import { SchemaRenderer } from "./SchemaRenderer";
+import { SchemaRenderer } from "../SchemaRenderer";
 
 // =============================================================================
 // Types

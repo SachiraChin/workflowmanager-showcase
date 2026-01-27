@@ -11,10 +11,10 @@
  */
 
 import { useCallback, useRef, useState } from "react";
-import { useWorkflowStore } from "@/lib/workflow-store";
+import { useWorkflowStore } from "@/state/workflow-store";
 import { useShallow } from "zustand/react/shallow";
-import { api } from "@/lib/api";
-import { API_URL } from "@/lib/config";
+import { api } from "@/core/api";
+import { API_URL } from "@/core/config";
 import type {
   CompletedInteraction,
   InteractionRequest,
@@ -23,7 +23,7 @@ import type {
   StartWorkflowRequest,
   StartWorkflowByVersionRequest,
   VersionDiff,
-} from "@/lib/types";
+} from "@/core/types";
 import { WEBUI_CAPABILITIES } from "@/lib/capabilities";
 
 export interface VersionConfirmationState {

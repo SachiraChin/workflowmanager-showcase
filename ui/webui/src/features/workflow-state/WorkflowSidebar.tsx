@@ -11,7 +11,7 @@ import { LogOut, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ExecutionStatus } from "./ExecutionStatus";
-import type { WorkflowProgress, WorkflowStatus } from "@/lib/types";
+import type { WorkflowProgress, WorkflowStatus } from "@/core/types";
 
 // =============================================================================
 // Types

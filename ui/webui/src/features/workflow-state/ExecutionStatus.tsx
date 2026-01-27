@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, CheckCircle2, XCircle, Clock, Zap } from "lucide-react";
-import type { WorkflowStatus, WorkflowProgress } from "@/lib/types";
+import type { WorkflowStatus, WorkflowProgress } from "@/core/types";
 
 interface StatusDisplayField {
   id: string;

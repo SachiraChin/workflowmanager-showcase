@@ -3,9 +3,9 @@
  * Renders numeric values with formatting.
  */
 
-import { cn } from "@/lib/utils";
+import { cn } from "@/core/utils";
 import { CopyButton } from "./nudges";
-import type { Nudge } from "../types";
+import type { Nudge } from "../schema/types";
 
 interface NumberRendererProps {
   /** The numeric value */

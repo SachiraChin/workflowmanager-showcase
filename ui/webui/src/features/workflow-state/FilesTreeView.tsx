@@ -30,9 +30,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { JsonTreeView } from "@/components/ui/json-tree-view";
-import { useWorkflowStateContext } from "@/contexts/WorkflowStateContext";
-import { cn } from "@/lib/utils";
-import type { WorkflowFile, FileGroup } from "@/lib/types";
+import { useWorkflowStateContext } from "@/state/WorkflowStateContext";
+import { cn } from "@/core/utils";
+import type { WorkflowFile, FileGroup } from "@/core/types";
 
 // =============================================================================
 // Types

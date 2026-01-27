@@ -25,25 +25,25 @@
  */
 
 import type { ReactNode } from "react";
-import type { SchemaProperty, RenderAs } from "./types";
-import { normalizeDisplay } from "./types";
-import { getUx } from "./ux-utils";
+import type { SchemaProperty, RenderAs } from "./schema/types";
+import { normalizeDisplay } from "./schema/types";
+import { getUx } from "./schema/ux-utils";
 import { TerminalRenderer } from "./renderers";
 import { InputRenderer } from "./InputRenderer";
 import { renderTemplate } from "@/lib/template-service";
-import { useWorkflowStateContext } from "@/contexts/WorkflowStateContext";
+import { useWorkflowStateContext } from "@/state/WorkflowStateContext";
 
 // Import the type-specific renderers
-import { ArraySchemaRenderer } from "./ArraySchemaRenderer";
-import { ObjectSchemaRenderer } from "./ObjectSchemaRenderer";
+import { ArraySchemaRenderer } from "./schema/ArraySchemaRenderer";
+import { ObjectSchemaRenderer } from "./schema/ObjectSchemaRenderer";
 
 // Import special renderers (handled before type routing)
-import { ContentPanelSchemaRenderer } from "./ContentPanelSchemaRenderer";
-import { TableSchemaRenderer } from "./TableSchemaRenderer";
-import { MediaPanel } from "../media-generation/MediaPanel";
-import { TabLayout } from "./TabLayout";
+import { ContentPanelSchemaRenderer } from "./schema/ContentPanelSchemaRenderer";
+import { TableSchemaRenderer } from "./schema/TableSchemaRenderer";
+import { MediaPanel } from "./types/media-generation/MediaPanel";
+import { TabLayout } from "./schema/TabLayout";
 import { TabsLayout } from "./layouts/TabsLayout";
-import { InputSchemaComposer } from "./InputSchemaComposer";
+import { InputSchemaComposer } from "./schema/InputSchemaComposer";
 
 // Import layouts to trigger registration
 import "./layouts";
@@ -52,7 +52,7 @@ import "./layouts";
 // Types
 // =============================================================================
 
-import type { UxConfig } from "./types";
+import type { UxConfig } from "./schema/types";
 
 interface SchemaRendererProps {
   /** The data to render */

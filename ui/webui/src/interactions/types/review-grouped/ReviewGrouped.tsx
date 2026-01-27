@@ -10,11 +10,11 @@
  */
 
 import { useCallback, useEffect, useRef } from "react";
-import { useInteraction, type ResponseParams } from "@/lib/interaction-context";
+import { useInteraction, type ResponseParams } from "@/state/interaction-context";
 import {
   SchemaInteractionHost,
   type SchemaInteractionState,
-} from "../schema-interaction";
+} from "../../schema";
 
 /**
  * Build review response based on action and feedback

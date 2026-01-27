@@ -6,12 +6,12 @@
  */
 
 import { useCallback, useEffect, useRef, useMemo } from "react";
-import { useInteraction } from "@/lib/interaction-context";
-import type { SelectionItem } from "@/lib/types";
+import { useInteraction } from "@/state/interaction-context";
+import type { SelectionItem } from "@/core/types";
 import {
   SchemaInteractionHost,
   type SchemaInteractionState,
-} from "../schema-interaction";
+} from "../../schema";
 
 /**
  * Convert selection state to server response format

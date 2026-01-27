@@ -3,9 +3,9 @@
  * Renders date/time values in human-readable format.
  */
 
-import { cn } from "@/lib/utils";
+import { cn } from "@/core/utils";
 import { CopyButton } from "./nudges";
-import type { Nudge } from "../types";
+import type { Nudge } from "../schema/types";
 
 interface DateTimeRendererProps {
   /** The date/time value (ISO string or timestamp) */

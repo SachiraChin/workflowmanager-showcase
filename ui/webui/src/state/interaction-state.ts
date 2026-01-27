@@ -3,7 +3,7 @@
  * All interaction variants use these shared state shapes.
  */
 
-import type { SelectOption, InteractionResponseData } from "./types";
+import type { SelectOption, InteractionResponseData } from "@/core/types";
 
 // =============================================================================
 // Base State

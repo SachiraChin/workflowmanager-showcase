@@ -3,9 +3,9 @@
  * Renders hex color values with swatch and optional nudges.
  */
 
-import { cn } from "@/lib/utils";
+import { cn } from "@/core/utils";
 import { CopyButton, ColorSwatch } from "./nudges";
-import type { Nudge } from "../types";
+import type { Nudge } from "../schema/types";
 
 interface ColorRendererProps {
   /** The hex color value (e.g., "#FF0000") */
