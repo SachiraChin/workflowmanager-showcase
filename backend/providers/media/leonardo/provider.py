@@ -989,27 +989,18 @@ class LeonardoProvider(MediaProviderBase):
             "KLING2_5": "KLING2_5_MOTION_VIDEO_GENERATION",
         }
 
-        # Models that support variable duration (MOTION models have fixed 5s duration)
-        MODELS_WITH_DURATION = {"VEO3", "VEO3FAST", "KLING2_1", "KLING2_5"}
-
         try:
             model = params.get("model", "MOTION2")
             resolution = params.get("resolution", "RESOLUTION_720")
-            duration = params.get("duration")
-            if isinstance(duration, str):
-                duration = int(duration)
 
             # Get the correct service type for this model
             service_type = MODEL_TO_SERVICE.get(model, "MOTION_VIDEO_GENERATION")
 
-            # Build video service params
+            # Build video service params - pricing API only needs resolution
+            # Duration is not accepted by the pricing calculator API
             service_params: Dict[str, Any] = {
                 "resolution": resolution,
             }
-
-            # Add duration only for models that support variable duration
-            if duration and model in MODELS_WITH_DURATION:
-                service_params["duration"] = duration
 
             payload: Dict[str, Any] = {
                 "service": service_type,
