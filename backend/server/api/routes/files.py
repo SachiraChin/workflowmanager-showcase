@@ -12,6 +12,7 @@ from fastapi import APIRouter, HTTPException, Query, Depends
 from fastapi.responses import FileResponse
 
 from ..dependencies import get_db, get_current_user_id
+from backend.db.path_utils import resolve_local_path
 
 router = APIRouter(prefix="/workflow", tags=["files"])
 
@@ -168,10 +169,12 @@ async def get_media_file(
     if stored_extension != extension:
         raise HTTPException(status_code=404, detail="Content not found")
 
-    # Get local path
-    local_path = content.get("local_path")
-    if not local_path:
+    # Get local path and resolve to full path
+    relative_path = content.get("local_path")
+    if not relative_path:
         raise HTTPException(status_code=404, detail="Content not downloaded")
+
+    local_path = resolve_local_path(relative_path)
 
     # Verify file exists
     if not os.path.exists(local_path):

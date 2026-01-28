@@ -33,6 +33,7 @@ from backend.providers.media import (
 from api.dependencies import get_media_images_path, get_media_videos_path
 from utils import uuid7_str
 from .image_utils import crop_image
+from backend.db.path_utils import make_relative_path
 
 logger = logging.getLogger(__name__)
 
@@ -222,7 +223,7 @@ async def execute_media_sub_action(
                 yield SubActionError(message=f"Download failed: {e}")
                 return
 
-            # Store content record with extension and local path
+            # Store content record with extension and local path (relative)
             db.content_repo.store_content_with_download(
                 content_id=content_id,
                 metadata_id=metadata_id,
@@ -231,7 +232,7 @@ async def execute_media_sub_action(
                 provider_url=provider_url,
                 content_type=content_type,
                 extension=download_result.extension,
-                local_path=download_result.local_path,
+                local_path=make_relative_path(download_result.local_path),
             )
 
             content_ids.append(content_id)

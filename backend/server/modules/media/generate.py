@@ -14,6 +14,7 @@ The module works with the WebUI MediaGeneration component to:
 from typing import Dict, Any, List, Optional
 
 from utils import uuid7_str
+from backend.db.path_utils import resolve_local_path
 
 from engine.module_interface import (
     InteractiveModule, ModuleInput, ModuleOutput, ModuleExecutionError,
@@ -192,7 +193,10 @@ class MediaGenerateModule(InteractiveModule):
                     selected_content_id
                 )
                 if content_record and content_record.get('local_path'):
-                    selected_content['local_path'] = content_record['local_path']
+                    # Resolve relative path to full path using MEDIA_BASE_PATH
+                    selected_content['local_path'] = resolve_local_path(
+                        content_record['local_path']
+                    )
 
         if hasattr(context, 'logger'):
             context.logger.debug(

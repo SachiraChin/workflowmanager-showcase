@@ -26,6 +26,7 @@ from backend.providers.media import (
 # Import Database for content repository access
 # The worker creates its own DB connection
 from backend.db import Database
+from backend.db.path_utils import make_relative_path
 
 logger = logging.getLogger("worker.actors.media")
 
@@ -65,14 +66,15 @@ class MediaActor(ActorBase):
         db_name = os.environ.get("MONGODB_DATABASE", "workflow_db")
         self._db = Database(connection_string=mongo_uri, database_name=db_name)
 
-        # Media storage paths from environment
-        self._images_path = os.environ.get("MEDIA_IMAGES_PATH")
-        self._videos_path = os.environ.get("MEDIA_VIDEOS_PATH")
-
-        if not self._images_path:
-            logger.warning("MEDIA_IMAGES_PATH not set - image downloads will fail")
-        if not self._videos_path:
-            logger.warning("MEDIA_VIDEOS_PATH not set - video downloads will fail")
+        # Media storage paths derived from MEDIA_BASE_PATH
+        media_base_path = os.environ.get("MEDIA_BASE_PATH")
+        if media_base_path:
+            self._images_path = os.path.join(media_base_path, "images")
+            self._videos_path = os.path.join(media_base_path, "videos")
+        else:
+            self._images_path = None
+            self._videos_path = None
+            logger.warning("MEDIA_BASE_PATH not set - media downloads will fail")
 
     @property
     def name(self) -> str:
@@ -233,7 +235,7 @@ class MediaActor(ActorBase):
                     )
                     raise GenerationError(f"Download failed: {e}")
 
-                # Store content record with download info and seed
+                # Store content record with download info and seed (relative path)
                 self._db.content_repo.store_content_with_download(
                     content_id=content_id,
                     metadata_id=metadata_id,
@@ -242,7 +244,7 @@ class MediaActor(ActorBase):
                     provider_url=item.url,
                     content_type=content_type,
                     extension=download_result.extension,
-                    local_path=download_result.local_path,
+                    local_path=make_relative_path(download_result.local_path),
                     seed=item.seed,
                 )
 

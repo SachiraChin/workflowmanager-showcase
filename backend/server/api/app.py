@@ -103,15 +103,14 @@ async def startup():
     dependencies.set_db(db)
     dependencies.set_processor(processor)
 
-    # Set media storage paths from environment
-    media_images_path = os.environ.get("MEDIA_IMAGES_PATH")
-    media_videos_path = os.environ.get("MEDIA_VIDEOS_PATH")
-    dependencies.set_media_paths(media_images_path, media_videos_path)
+    # Set media base path from environment
+    media_base_path = os.environ.get("MEDIA_BASE_PATH")
+    dependencies.set_media_base_path(media_base_path)
 
-    if media_images_path:
-        logger.info(f"[STARTUP] Media images path: {media_images_path}")
-    if media_videos_path:
-        logger.info(f"[STARTUP] Media videos path: {media_videos_path}")
+    if media_base_path:
+        logger.info(f"[STARTUP] Media base path: {media_base_path}")
+        logger.info(f"[STARTUP] Media images: {media_base_path}/images")
+        logger.info(f"[STARTUP] Media videos: {media_base_path}/videos")
 
     # Set server base URL for constructing media URLs
     server_base_url = os.environ.get("SERVER_BASE_URL", "http://localhost:9000")

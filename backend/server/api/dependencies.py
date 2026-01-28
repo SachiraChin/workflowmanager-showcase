@@ -4,6 +4,7 @@ Shared dependencies for FastAPI routes.
 Provides dependency injection functions for database access, authentication, etc.
 """
 
+import os
 from typing import Optional
 from fastapi import Request, Header, HTTPException
 
@@ -12,8 +13,7 @@ from .auth import verify_access_token
 # Module-level references set by workflow_api on startup
 _db = None
 _processor = None
-_media_images_path = None
-_media_videos_path = None
+_media_base_path = None
 _server_base_url = None
 
 
@@ -29,11 +29,10 @@ def set_processor(processor):
     _processor = processor
 
 
-def set_media_paths(images_path: Optional[str], videos_path: Optional[str]):
-    """Set the media storage paths. Called during app startup."""
-    global _media_images_path, _media_videos_path
-    _media_images_path = images_path
-    _media_videos_path = videos_path
+def set_media_base_path(base_path: Optional[str]):
+    """Set the media base path. Called during app startup."""
+    global _media_base_path
+    _media_base_path = base_path
 
 
 def set_server_base_url(base_url: Optional[str]):
@@ -64,14 +63,23 @@ def get_processor():
     return _processor
 
 
+def get_media_base_path() -> Optional[str]:
+    """Get the configured media base path."""
+    return _media_base_path
+
+
 def get_media_images_path() -> Optional[str]:
-    """Get the configured media images storage path."""
-    return _media_images_path
+    """Get the media images storage path (base_path/images)."""
+    if not _media_base_path:
+        return None
+    return os.path.join(_media_base_path, "images")
 
 
 def get_media_videos_path() -> Optional[str]:
-    """Get the configured media videos storage path."""
-    return _media_videos_path
+    """Get the media videos storage path (base_path/videos)."""
+    if not _media_base_path:
+        return None
+    return os.path.join(_media_base_path, "videos")
 
 
 def get_server_base_url() -> Optional[str]:
