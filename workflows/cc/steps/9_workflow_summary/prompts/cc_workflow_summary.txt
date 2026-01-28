@@ -20,10 +20,6 @@ Visual Tone:
 Video Duration: {{ state.duration_selection.video_duration }} seconds
 Audio Duration: {{ state.duration_selection.sound_track_duration }} seconds
 
-{% if state.user_direction %}
-User Direction: {{ state.user_direction }}
-{% endif %}
-
 ================================================================================
 SCENE CONCEPT
 ================================================================================

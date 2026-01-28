@@ -18,11 +18,6 @@ Generate 3 scene concepts for a {{ state.duration_selection.video_duration }}-se
 - {{ angle }}
 {% endfor %}
 
-{% if state.user_direction %}
-**User's Specific Direction:**
-{{ state.user_direction }}
-{% endif %}
-
 ---
 
 ## Keyword Avoidance

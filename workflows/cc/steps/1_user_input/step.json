@@ -118,17 +118,6 @@
         "selected_data": "duration_selection"
       },
       "name": "select_duration"
-    },
-    {
-      "module_id": "user.text_input",
-      "inputs": {
-        "prompt": "Optional: Any specific direction for your pet video? (pet name, specific scenario, mood, etc.)",
-        "allow_empty": true
-      },
-      "outputs_to_state": {
-        "value": "user_direction"
-      },
-      "name": "get_user_direction"
     }
   ]
 }

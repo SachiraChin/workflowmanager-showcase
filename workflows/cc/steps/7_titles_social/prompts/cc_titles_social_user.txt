@@ -20,8 +20,4 @@ Generate titles and descriptions for this pet video:
 **Sentences:** {{ state.selected_text_overlay.paragraphs[0].sentences | join(' ') }}
 {% endif %}
 
-{% if state.user_direction %}
-**User Direction:** {{ state.user_direction }}
-{% endif %}
-
 Generate 5 titles and 5 descriptions that capture this pet story and connect with pet lovers on social media.

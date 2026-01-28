@@ -16,8 +16,4 @@ Generate text overlays for this pet video:
 **Duration:** {{ state.duration_selection.video_duration }} seconds
 **Sentences per paragraph:** {{ state.duration_selection.paragraph_line_count }}
 
-{% if state.user_direction %}
-**User Direction:** {{ state.user_direction }}
-{% endif %}
-
 Generate 3 text sets (heartfelt, playful, reflective), each with paragraphs containing {{ state.duration_selection.paragraph_line_count }} sentences that match the scene and duration.
