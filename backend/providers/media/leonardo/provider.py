@@ -788,6 +788,7 @@ class LeonardoProvider(MediaProviderBase):
                 # Check if cropping is needed
                 crop_region = params.get("crop_region")
                 if crop_region:
+                    logger.info(f"[Leonardo] Crop region received: {crop_region}")
                     # Use the source image's directory for output
                     output_dir = os.path.dirname(local_path)
                     # Import here to avoid circular dependency

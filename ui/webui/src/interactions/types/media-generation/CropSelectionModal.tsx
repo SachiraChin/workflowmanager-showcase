@@ -13,7 +13,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import ReactCrop, { type Crop, type PixelCrop, centerCrop, makeAspectCrop } from "react-image-crop";
+import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 
 import {
@@ -97,23 +97,37 @@ function createCenteredCrop(
 }
 
 /**
- * Convert percentage crop to pixel crop region.
+ * Convert crop to pixel region in original image coordinates.
+ *
+ * Handles both percentage and pixel units from react-image-crop.
+ * When unit is "px", values are in displayed image coordinates and must be
+ * scaled to original image coordinates.
  */
-function cropToPixelRegion(crop: Crop, imageWidth: number, imageHeight: number): CropRegion {
-  if (crop.unit === "%") {
+function cropToPixelRegion(
+  crop: Crop,
+  naturalWidth: number,
+  naturalHeight: number,
+  displayedWidth: number,
+  displayedHeight: number
+): CropRegion {
+  if (crop.unit === "px") {
+    // Crop is in displayed pixel coordinates - scale to natural image coordinates
+    const scaleX = naturalWidth / displayedWidth;
+    const scaleY = naturalHeight / displayedHeight;
     return {
-      x: Math.round((crop.x / 100) * imageWidth),
-      y: Math.round((crop.y / 100) * imageHeight),
-      width: Math.round((crop.width / 100) * imageWidth),
-      height: Math.round((crop.height / 100) * imageHeight),
+      x: Math.round(crop.x * scaleX),
+      y: Math.round(crop.y * scaleY),
+      width: Math.round(crop.width * scaleX),
+      height: Math.round(crop.height * scaleY),
     };
   }
-  // Already in pixels
+
+  // Percentage-based (unit is "%" or undefined)
   return {
-    x: Math.round(crop.x),
-    y: Math.round(crop.y),
-    width: Math.round(crop.width),
-    height: Math.round(crop.height),
+    x: Math.round((crop.x / 100) * naturalWidth),
+    y: Math.round((crop.y / 100) * naturalHeight),
+    width: Math.round((crop.width / 100) * naturalWidth),
+    height: Math.round((crop.height / 100) * naturalHeight),
   };
 }
 
@@ -143,9 +157,13 @@ export function CropSelectionModal({
   viewOnly = false,
 }: CropSelectionModalProps) {
   const imgRef = useRef<HTMLImageElement>(null);
-  const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
+  const [imageDimensions, setImageDimensions] = useState<{
+    naturalWidth: number;
+    naturalHeight: number;
+    displayedWidth: number;
+    displayedHeight: number;
+  } | null>(null);
   const [crop, setCrop] = useState<Crop>();
-  const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
   const [aspectRatio, setAspectRatio] = useState<string>(initialCrop?.aspectRatio || "9:16");
   const [savePreference, setSavePreference] = useState(true);
 
@@ -160,15 +178,15 @@ export function CropSelectionModal({
       // Use initial crop if aspect ratio matches
       const percentCrop = pixelRegionToCrop(
         initialCrop.region,
-        imageDimensions.width,
-        imageDimensions.height
+        imageDimensions.naturalWidth,
+        imageDimensions.naturalHeight
       );
       setCrop(percentCrop);
     } else {
       // Create new centered crop
       const newCrop = createCenteredCrop(
-        imageDimensions.width,
-        imageDimensions.height,
+        imageDimensions.naturalWidth,
+        imageDimensions.naturalHeight,
         aspectValue
       );
       setCrop(newCrop);
@@ -186,8 +204,8 @@ export function CropSelectionModal({
   useEffect(() => {
     if (imageDimensions && crop) {
       const newCrop = createCenteredCrop(
-        imageDimensions.width,
-        imageDimensions.height,
+        imageDimensions.naturalWidth,
+        imageDimensions.naturalHeight,
         aspectValue
       );
       setCrop(newCrop);
@@ -198,18 +216,44 @@ export function CropSelectionModal({
 
   // Handle image load
   const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
-    const { naturalWidth, naturalHeight } = e.currentTarget;
-    setImageDimensions({ width: naturalWidth, height: naturalHeight });
+    const { naturalWidth, naturalHeight, width, height } = e.currentTarget;
+    console.log("[CropSelectionModal] Image loaded:", {
+      naturalWidth,
+      naturalHeight,
+      displayedWidth: width,
+      displayedHeight: height,
+    });
+    setImageDimensions({
+      naturalWidth,
+      naturalHeight,
+      displayedWidth: width,
+      displayedHeight: height,
+    });
   }, []);
 
   // Handle confirm with selection
   const handleConfirmWithSelection = () => {
-    if (!completedCrop || !imageDimensions) {
+    if (!crop || !imageDimensions) {
       onConfirm(null, savePreference, aspectRatio);
       return;
     }
 
-    const region = cropToPixelRegion(completedCrop, imageDimensions.width, imageDimensions.height);
+    // Convert crop to original image pixel coordinates
+    const region = cropToPixelRegion(
+      crop,
+      imageDimensions.naturalWidth,
+      imageDimensions.naturalHeight,
+      imageDimensions.displayedWidth,
+      imageDimensions.displayedHeight
+    );
+
+    // Debug logging to diagnose crop issues
+    console.log("[CropSelectionModal] Crop debug:", {
+      crop,
+      imageDimensions,
+      calculatedRegion: region,
+    });
+
     onConfirm(region, savePreference, aspectRatio);
   };
 
@@ -218,9 +262,15 @@ export function CropSelectionModal({
     onConfirm(null, false, aspectRatio);
   };
 
-  // Calculate display dimensions for the crop region
-  const displayCropInfo = completedCrop && imageDimensions
-    ? cropToPixelRegion(completedCrop, imageDimensions.width, imageDimensions.height)
+  // Calculate display dimensions for the crop region (in original image pixels)
+  const displayCropInfo = crop && imageDimensions
+    ? cropToPixelRegion(
+        crop,
+        imageDimensions.naturalWidth,
+        imageDimensions.naturalHeight,
+        imageDimensions.displayedWidth,
+        imageDimensions.displayedHeight
+      )
     : null;
 
   return (
@@ -268,7 +318,6 @@ export function CropSelectionModal({
             <ReactCrop
               crop={crop}
               onChange={(c) => setCrop(c)}
-              onComplete={(c) => setCompletedCrop(c)}
               aspect={aspectValue}
               disabled={viewOnly}
               className="max-h-[60vh]"

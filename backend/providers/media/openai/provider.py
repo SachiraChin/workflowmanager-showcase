@@ -572,6 +572,8 @@ class OpenAIProvider(MediaProviderBase):
 
         # Handle crop + resize for Sora (requires specific input dimensions)
         crop_region = params.get("crop_region")
+        if crop_region:
+            logger.info(f"[OpenAI/Sora] Crop region received: {crop_region}")
         if crop_region and os.path.isfile(local_path):
             # Parse target size from video size
             size_parts = size.split("x")
