@@ -1,0 +1,33 @@
+{
+  "type": "array",
+  "_ux.display": "visible",
+  "_ux.render_as": "card-stack",
+  "items": {
+    "type": "object",
+    "_ux": {
+      "display": "visible",
+      "render_as": "card",
+      "selectable": true
+    },
+    "properties": {
+      "id": {
+        "type": "integer",
+        "_ux.display": false
+      },
+      "label": {
+        "type": "string",
+        "_ux.display": true,
+        "_ux.render_as": "card-title"
+      },
+      "description": {
+        "type": "string",
+        "_ux.display": true,
+        "_ux.render_as": "card-subtitle"
+      },
+      "video_duration": {
+        "type": "integer",
+        "_ux.display": false
+      }
+    }
+  }
+}

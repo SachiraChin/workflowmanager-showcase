@@ -12,7 +12,6 @@ Generate video/motion prompts for this pet scene:
 
 **Pet Type:** {{ state.pet_type_selection.label }}
 **Visual Tone:** {{ state.aesthetic_selection.visual_tone.mood }}
-**Duration Target:** {{ state.duration_selection.video_duration }} seconds
 
 ## Image Analysis
 

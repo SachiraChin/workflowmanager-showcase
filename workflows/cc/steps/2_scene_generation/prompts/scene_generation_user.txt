@@ -1,4 +1,4 @@
-Generate 3 scene concepts for a {{ state.duration_selection.video_duration }}-second pet video.
+Generate 3 scene concepts for a pet video.
 
 ## User Selections
 
