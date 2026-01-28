@@ -107,7 +107,11 @@ export function useWorkflowExecution() {
   // Stable Callbacks (dependencies are only stable refs and actions)
   // ==========================================================================
 
+  // Track if we're disconnected to prevent processing stale events
+  const isDisconnectedRef = useRef(false);
+
   const disconnect = useCallback(() => {
+    isDisconnectedRef.current = true;
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
       eventSourceRef.current = null;
@@ -121,6 +125,20 @@ export function useWorkflowExecution() {
 
   const handleSSEEvent = useCallback(
     (eventType: SSEEventType, data: Record<string, unknown>) => {
+      // Ignore events if we've disconnected (prevents stale events from old workflows)
+      if (isDisconnectedRef.current) {
+        console.log(`[SSE] Ignoring stale event after disconnect: ${eventType}`);
+        return;
+      }
+
+      // Validate workflow_run_id matches current workflow (prevents cross-workflow contamination)
+      const eventWorkflowId = data.workflow_run_id as string | undefined;
+      const currentWorkflowId = workflowRunIdRef.current;
+      if (eventWorkflowId && currentWorkflowId && eventWorkflowId !== currentWorkflowId) {
+        console.warn(`[SSE] Ignoring event for wrong workflow: expected ${currentWorkflowId}, got ${eventWorkflowId}`);
+        return;
+      }
+
       // Skip logging progress events (too noisy)
       if (eventType !== "progress") {
         console.log(`[SSE] Received event: ${eventType}`, data);
@@ -181,6 +199,7 @@ export function useWorkflowExecution() {
   const connectToStream = useCallback(
     (streamWorkflowRunId: string) => {
       disconnect();
+      isDisconnectedRef.current = false;  // Reset for new connection
 
       const url = `${API_URL}/workflow/${streamWorkflowRunId}/stream`;
       const eventSource = new EventSource(url, { withCredentials: true });
@@ -403,6 +422,7 @@ export function useWorkflowExecution() {
       // Keep the interaction until we confirm the request succeeded
       const previousInteraction = interaction;
       actions.setProcessing(true);
+      isDisconnectedRef.current = false;  // Reset for new connection
 
       const url = `${API_URL}/workflow/${currentWorkflowRunId}/stream/respond`;
       const controller = new AbortController();

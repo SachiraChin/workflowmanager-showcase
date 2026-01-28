@@ -770,6 +770,8 @@ class LeonardoProvider(MediaProviderBase):
                 - seed: int
                 - duration: int - video length in seconds
                 - frame_interpolation: bool
+                - crop_region: dict - Optional crop region {x, y, width, height}
+                - images_path: str - Directory for saving cropped images
             progress_callback: Optional callback for progress updates
 
         Returns:
@@ -783,6 +785,22 @@ class LeonardoProvider(MediaProviderBase):
             # Source image from workflow - has local_path, url, content_id, etc.
             local_path = source_image.get('local_path')
             if local_path:
+                # Check if cropping is needed
+                crop_region = params.get("crop_region")
+                if crop_region:
+                    # Use the source image's directory for output
+                    output_dir = os.path.dirname(local_path)
+                    # Import here to avoid circular dependency
+                    from ..image_utils import crop_image
+                    try:
+                        if progress_callback:
+                            progress_callback(0, "Cropping image...")
+                        local_path = crop_image(local_path, crop_region, output_dir)
+                        logger.info(f"[Leonardo] Cropped image: {local_path}")
+                    except Exception as e:
+                        logger.error(f"[Leonardo] Failed to crop image: {e}")
+                        raise GenerationError(f"Failed to crop image: {e}")
+
                 # Upload the local image to Leonardo
                 if progress_callback:
                     progress_callback(0, "Uploading source image...")

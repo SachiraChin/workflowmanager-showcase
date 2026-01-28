@@ -184,10 +184,12 @@ async def get_media_file(
     content_type = MEDIA_CONTENT_TYPES.get(extension.lower(), "application/octet-stream")
 
     # Return file with cache headers (1 year - content is immutable)
+    # Include CORS headers explicitly for cross-origin image requests with credentials
     return FileResponse(
         path=local_path,
         media_type=content_type,
         headers={
             "Cache-Control": "public, max-age=31536000, immutable",
+            "Access-Control-Allow-Credentials": "true",
         }
     )

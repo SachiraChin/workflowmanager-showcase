@@ -545,6 +545,8 @@ class OpenAIProvider(MediaProviderBase):
                 - quality: str ("720p" or "1080p", default "720p")
                 - duration: int (4, 8, or 12 seconds)
                 - size: str (direct size, e.g., "1280x720" - overrides ratio+quality)
+                - crop_region: dict - Optional crop region {x, y, width, height}
+                - images_path: str - Directory for saving processed images
             progress_callback: Optional callback for progress updates
 
         Returns:
@@ -567,6 +569,36 @@ class OpenAIProvider(MediaProviderBase):
             model = "sora-2"
 
         size = self._resolve_video_size(params)
+
+        # Handle crop + resize for Sora (requires specific input dimensions)
+        crop_region = params.get("crop_region")
+        if crop_region and os.path.isfile(local_path):
+            # Parse target size from video size
+            size_parts = size.split("x")
+            target_width = int(size_parts[0])
+            target_height = int(size_parts[1])
+
+            # Use the source image's directory for output
+            output_dir = os.path.dirname(local_path)
+
+            # Import here to avoid circular dependency
+            from ..image_utils import crop_and_resize
+            try:
+                if progress_callback:
+                    progress_callback(0, "Cropping and resizing image...")
+                local_path = crop_and_resize(
+                    local_path,
+                    crop_region,
+                    (target_width, target_height),
+                    output_dir
+                )
+                logger.info(
+                    f"[OpenAI/Sora] Cropped and resized image to {target_width}x{target_height}: "
+                    f"{local_path}"
+                )
+            except Exception as e:
+                logger.error(f"[OpenAI/Sora] Failed to crop/resize image: {e}")
+                raise GenerationError(f"Failed to crop/resize image: {e}")
 
         # Duration - convert string to int if needed
         duration = params.get("duration", 4)

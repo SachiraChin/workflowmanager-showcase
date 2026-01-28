@@ -18,9 +18,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-# Cancel check interval - configurable via environment variable
-CANCEL_CHECK_INTERVAL = float(os.environ.get("CANCEL_CHECK_INTERVAL", "0.1"))
-
 from ...base import LLMProviderBase, Message, MessageContent, ContentType
 from ...registry import register
 from ...call_logger import get_api_call_logger

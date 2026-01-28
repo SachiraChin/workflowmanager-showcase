@@ -10,11 +10,14 @@ from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, Generator, List, Optional, Tuple
 from dataclasses import dataclass, field
 from enum import Enum
+import os
 import threading
 import time
 
-# Interval for checking cancellation during streaming (seconds)
-CANCEL_CHECK_INTERVAL = 0.1
+
+# Interval for checking cancellation during streaming - read at runtime
+def get_cancel_check_interval() -> float:
+    return float(os.environ.get("CANCEL_CHECK_INTERVAL", "0.1"))
 
 
 class ContentType(Enum):
@@ -430,7 +433,7 @@ class LLMProviderBase(ABC):
 
             # Wait for chunk with periodic cancel checks
             while chunk_thread.is_alive():
-                chunk_thread.join(timeout=CANCEL_CHECK_INTERVAL)
+                chunk_thread.join(timeout=get_cancel_check_interval())
                 if cancel_event and cancel_event.is_set():
                     context.logger.info(f"[AI STREAMING] {provider_name} request cancelled while waiting")
                     if close_stream:

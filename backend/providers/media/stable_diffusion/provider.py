@@ -35,7 +35,6 @@ from ..registry import register
 logger = logging.getLogger(__name__)
 
 # API Configuration
-DEFAULT_BASE_URL = "http://localhost:7860"
 POLL_INTERVAL_SECONDS = 2
 MAX_POLL_TIMEOUT_SECONDS = 600  # 10 minutes (local generation can be slow)
 MAX_POLL_ATTEMPTS = MAX_POLL_TIMEOUT_SECONDS // POLL_INTERVAL_SECONDS
@@ -46,14 +45,17 @@ class StableDiffusionProvider(MediaProviderBase):
     """
     Stable Diffusion provider via local WebUI Forge Remote API.
 
-    Uses SD_FORGE_API_URL environment variable for base URL.
-    Default: http://localhost:7860
+    Requires SD_FORGE_API_URL environment variable for base URL.
+    Example: SD_FORGE_API_URL=http://192.168.1.100:7860
 
     No authentication required (local API).
     """
 
     def __init__(self):
-        self.base_url = os.environ.get("SD_FORGE_API_URL", DEFAULT_BASE_URL).rstrip("/")
+        self.base_url = os.environ.get("SD_FORGE_API_URL")
+        if not self.base_url:
+            raise GenerationError("SD_FORGE_API_URL environment variable is required for Stable Diffusion provider")
+        self.base_url = self.base_url.rstrip("/")
         self.api_url = f"{self.base_url}/wm-api"
 
     @property

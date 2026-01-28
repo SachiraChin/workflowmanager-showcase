@@ -79,10 +79,15 @@ export function WorkflowUploader({
           const zip = await JSZip.loadAsync(arrayBuffer);
 
           // Collect all file paths (normalize to forward slashes)
+          // Filter out __MACOSX metadata files that macOS adds when compressing folders
           const allFiles: string[] = [];
           zip.forEach((relativePath, zipEntry) => {
             if (!zipEntry.dir) {
-              allFiles.push(relativePath.replace(/\\/g, "/"));
+              const normalizedPath = relativePath.replace(/\\/g, "/");
+              // Skip macOS metadata files
+              if (!normalizedPath.startsWith("__MACOSX/")) {
+                allFiles.push(normalizedPath);
+              }
             }
           });
 

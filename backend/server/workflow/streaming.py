@@ -25,9 +25,12 @@ from .workflow_utils import get_workflow_def, rebuild_services
 if TYPE_CHECKING:
     from .processor import WorkflowProcessor
 
-# SSE intervals - configurable via environment variables
-PROGRESS_INTERVAL = float(os.environ.get("PROGRESS_INTERVAL", "0.1"))
-POLL_INTERVAL = float(os.environ.get("POLL_INTERVAL", "0.05"))
+# SSE intervals - read at runtime to ensure env vars are set by server.py
+def get_progress_interval() -> float:
+    return float(os.environ.get("PROGRESS_INTERVAL", "0.1"))
+
+def get_poll_interval() -> float:
+    return float(os.environ.get("POLL_INTERVAL", "0.05"))
 
 
 class WorkflowStreamingMixin:
@@ -49,7 +52,7 @@ class WorkflowStreamingMixin:
         """
         workflow = self.db.workflow_repo.get_workflow(workflow_run_id)
         if not workflow:
-            yield SSEEvent(type=SSEEventType.ERROR, data={"message": "Workflow not found"})
+            yield SSEEvent(type=SSEEventType.ERROR, data={"workflow_run_id": workflow_run_id, "message": "Workflow not found"})
             return
 
         # Check for pending interaction first
@@ -61,6 +64,8 @@ class WorkflowStreamingMixin:
             )
             if last_interaction:
                 interaction_data = last_interaction.get('data', {})
+                # Ensure workflow_run_id is in the interaction data
+                interaction_data["workflow_run_id"] = workflow_run_id
                 yield SSEEvent(
                     type=SSEEventType.INTERACTION,
                     data=interaction_data
@@ -70,7 +75,7 @@ class WorkflowStreamingMixin:
         # Resume from current position
         workflow_def = get_workflow_def(workflow, self.db, self.logger)
         if workflow_def is None:
-            yield SSEEvent(type=SSEEventType.ERROR, data={"error": "Workflow definition not found"})
+            yield SSEEvent(type=SSEEventType.ERROR, data={"workflow_run_id": workflow_run_id, "error": "Workflow definition not found"})
             return
         services = rebuild_services(workflow, workflow_def, self.db, self.logger)
 
@@ -108,12 +113,12 @@ class WorkflowStreamingMixin:
 
         yield SSEEvent(
             type=SSEEventType.PROGRESS,
-            data={"elapsed_ms": 0, "message": "Processing response..."}
+            data={"workflow_run_id": workflow_run_id, "elapsed_ms": 0, "message": "Processing response..."}
         )
 
         workflow = self.db.workflow_repo.get_workflow(workflow_run_id)
         if not workflow:
-            yield SSEEvent(type=SSEEventType.ERROR, data={"message": "Workflow not found"})
+            yield SSEEvent(type=SSEEventType.ERROR, data={"workflow_run_id": workflow_run_id, "message": "Workflow not found"})
             return
 
         # Check for retry response
@@ -151,7 +156,7 @@ class WorkflowStreamingMixin:
         position = self.db.state_repo.get_workflow_position(workflow_run_id)
         workflow_def = get_workflow_def(workflow, self.db, self.logger)
         if workflow_def is None:
-            yield SSEEvent(type=SSEEventType.ERROR, data={"error": "Workflow definition not found"})
+            yield SSEEvent(type=SSEEventType.ERROR, data={"workflow_run_id": workflow_run_id, "error": "Workflow definition not found"})
             return
         services = rebuild_services(workflow, workflow_def, self.db, self.logger)
         module_outputs = self.db.state_repo.get_module_outputs(workflow_run_id)
@@ -187,14 +192,15 @@ class WorkflowStreamingMixin:
         result = self.navigator.handle_retry_from_response(workflow_run_id, workflow, response)
 
         if result.status == WorkflowStatus.AWAITING_INPUT and result.interaction_request:
+            # interaction_request already contains workflow_run_id from model_dump()
             yield SSEEvent(
                 type=SSEEventType.INTERACTION,
                 data=result.interaction_request.model_dump()
             )
         elif result.status == WorkflowStatus.COMPLETED:
-            yield SSEEvent(type=SSEEventType.COMPLETE, data=result.result or {})
+            yield SSEEvent(type=SSEEventType.COMPLETE, data={"workflow_run_id": workflow_run_id, **(result.result or {})})
         elif result.status == WorkflowStatus.ERROR:
-            yield SSEEvent(type=SSEEventType.ERROR, data={"message": result.error})
+            yield SSEEvent(type=SSEEventType.ERROR, data={"workflow_run_id": workflow_run_id, "message": result.error})
 
     async def _continue_after_interaction_stream(
         self: "WorkflowProcessor",
@@ -212,10 +218,11 @@ class WorkflowStreamingMixin:
 
         yield SSEEvent(
             type=SSEEventType.PROGRESS,
-            data={"elapsed_ms": 0, "message": "Starting execution..."}
+            data={"workflow_run_id": workflow_run_id, "elapsed_ms": 0, "message": "Starting execution..."}
         )
 
         async for event in self._run_sync_with_progress(
+            workflow_run_id=workflow_run_id,
             start_time=start_time,
             cancel_event=cancel_event,
             sync_func=lambda: self.interaction_handler.continue_after_interaction(
@@ -244,10 +251,11 @@ class WorkflowStreamingMixin:
 
         yield SSEEvent(
             type=SSEEventType.PROGRESS,
-            data={"elapsed_ms": 0, "message": "Starting execution..."}
+            data={"workflow_run_id": workflow_run_id, "elapsed_ms": 0, "message": "Starting execution..."}
         )
 
         async for event in self._run_sync_with_progress(
+            workflow_run_id=workflow_run_id,
             start_time=start_time,
             cancel_event=cancel_event,
             sync_func=lambda: self.executor.execute_from_position(
@@ -262,6 +270,7 @@ class WorkflowStreamingMixin:
 
     async def _run_sync_with_progress(
         self: "WorkflowProcessor",
+        workflow_run_id: str,
         start_time: float,
         cancel_event: asyncio.Event,
         sync_func
@@ -282,47 +291,48 @@ class WorkflowStreamingMixin:
                     future.cancel()
                     yield SSEEvent(
                         type=SSEEventType.CANCELLED,
-                        data={"reason": "user_cancelled"}
+                        data={"workflow_run_id": workflow_run_id, "reason": "user_cancelled"}
                     )
                     return
 
                 now = time.time()
-                if now - last_progress_time >= PROGRESS_INTERVAL:
+                if now - last_progress_time >= get_progress_interval():
                     progress_count += 1
                     elapsed_ms = int((now - start_time) * 1000)
                     yield SSEEvent(
                         type=SSEEventType.PROGRESS,
-                        data={"elapsed_ms": elapsed_ms, "message": "Processing..."}
+                        data={"workflow_run_id": workflow_run_id, "elapsed_ms": elapsed_ms, "message": "Processing..."}
                     )
                     last_progress_time = now
 
-                await asyncio.sleep(POLL_INTERVAL)
+                await asyncio.sleep(get_poll_interval())
 
             result = future.result()
             elapsed_ms = int((time.time() - start_time) * 1000)
             self.logger.info(f"[SSE STREAM] Complete, status={result.status}, elapsed={elapsed_ms}ms")
 
-            async for event in self._result_to_events(result):
+            async for event in self._result_to_events(workflow_run_id, result):
                 yield event
 
         except concurrent.futures.CancelledError:
             self.logger.info("[SSE STREAM] Execution cancelled")
             yield SSEEvent(
                 type=SSEEventType.CANCELLED,
-                data={"reason": "execution_cancelled"}
+                data={"workflow_run_id": workflow_run_id, "reason": "execution_cancelled"}
             )
         except Exception as e:
             self.logger.error(f"[SSE STREAM] Error: {e}")
             yield SSEEvent(
                 type=SSEEventType.ERROR,
-                data={"message": sanitize_error_message(str(e))}
+                data={"workflow_run_id": workflow_run_id, "message": sanitize_error_message(str(e))}
             )
         finally:
             executor.shutdown(wait=False)
 
-    async def _result_to_events(self: "WorkflowProcessor", result):
+    async def _result_to_events(self: "WorkflowProcessor", workflow_run_id: str, result):
         """Convert WorkflowResponse to SSE events."""
         if result.status == WorkflowStatus.AWAITING_INPUT and result.interaction_request:
+            # interaction_request already contains workflow_run_id from model_dump()
             yield SSEEvent(
                 type=SSEEventType.INTERACTION,
                 data=result.interaction_request.model_dump()
@@ -330,16 +340,16 @@ class WorkflowStreamingMixin:
         elif result.status == WorkflowStatus.COMPLETED:
             yield SSEEvent(
                 type=SSEEventType.COMPLETE,
-                data=result.result or {}
+                data={"workflow_run_id": workflow_run_id, **(result.result or {})}
             )
         elif result.status == WorkflowStatus.ERROR:
             yield SSEEvent(
                 type=SSEEventType.ERROR,
-                data={"message": result.error or "Unknown error"}
+                data={"workflow_run_id": workflow_run_id, "message": result.error or "Unknown error"}
             )
         else:
             self.logger.warning(f"[SSE STREAM] Unexpected status: {result.status}")
             yield SSEEvent(
                 type=SSEEventType.PROGRESS,
-                data={"message": f"Status: {result.status}"}
+                data={"workflow_run_id": workflow_run_id, "message": f"Status: {result.status}"}
             )

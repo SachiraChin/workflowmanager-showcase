@@ -32,7 +32,6 @@ from backend.providers.media import (
 )
 from api.dependencies import get_media_images_path, get_media_videos_path
 from utils import uuid7_str
-from .image_utils import crop_image
 from backend.db.path_utils import make_relative_path
 
 logger = logging.getLogger(__name__)
@@ -139,24 +138,7 @@ async def execute_media_sub_action(
             )
         elif request.action_type == "img2vid":
             source_image = request.params.get("source_image", "")
-            crop_region = request.params.get("crop_region")
-
-            # If crop_region provided, crop the image before passing to provider
-            if crop_region and isinstance(source_image, dict):
-                local_path = source_image.get("local_path")
-                if local_path:
-                    try:
-                        images_path = get_media_images_path()
-                        cropped_path = crop_image(local_path, crop_region, images_path)
-                        # Update source_image to use cropped version
-                        source_image = {**source_image, "local_path": cropped_path}
-                        logger.info(
-                            f"[MediaSubAction] Cropped image for img2vid: {cropped_path}"
-                        )
-                    except Exception as e:
-                        logger.error(f"[MediaSubAction] Failed to crop image: {e}")
-                        raise GenerationError(f"Failed to crop image: {e}")
-
+            # Provider handles cropping/resizing using source_image.local_path directory
             future = loop.run_in_executor(
                 executor,
                 lambda: method(source_image, prompt, params, progress_callback=progress_callback)

@@ -20,7 +20,14 @@ import logging
 # Load .env file if it exists (before other imports that might use env vars)
 try:
     from dotenv import load_dotenv
-    load_dotenv()
+    from pathlib import Path
+    # Look for .env in the server directory (parent of api/)
+    env_path = Path(__file__).parent.parent / ".env"
+    if env_path.exists():
+        load_dotenv(env_path)
+        print(f"[ENV] Loaded .env from {env_path}")
+    else:
+        load_dotenv()  # Fall back to current directory
 except ImportError:
     pass
 
@@ -73,6 +80,7 @@ app = FastAPI(
 # Set CORS_ORIGINS env var as comma-separated list
 cors_origins_str = os.environ.get("CORS_ORIGINS", "")
 CORS_ORIGINS = [origin.strip() for origin in cors_origins_str.split(",") if origin.strip()] if cors_origins_str else ["http://localhost:5173", "http://localhost:3000"]
+print(f"[CORS] Allowed origins: {CORS_ORIGINS}")
 
 app.add_middleware(
     CORSMiddleware,

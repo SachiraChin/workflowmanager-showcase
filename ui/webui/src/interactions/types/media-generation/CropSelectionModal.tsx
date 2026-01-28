@@ -279,7 +279,6 @@ export function CropSelectionModal({
                 alt="Source"
                 onLoad={onImageLoad}
                 className="max-h-[60vh] object-contain"
-                crossOrigin="anonymous"
               />
             </ReactCrop>
           </div>
