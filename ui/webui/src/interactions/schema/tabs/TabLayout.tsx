@@ -28,7 +28,7 @@ interface TabLayoutProps {
   path: string[];
   /** UX configuration */
   ux: UxConfig;
-  /** Children from compound parsing (e.g., tab.media passes MediaPanel as children) */
+  /** Children from compound parsing (e.g., tab.media[...] passes inner content as children) */
   children?: ReactNode;
 }
 

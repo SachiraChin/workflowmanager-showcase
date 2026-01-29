@@ -6,10 +6,6 @@
  * - Header: from ux.display_label
  * - Body: delegated to SchemaRenderer (with display_label stripped)
  *
- * Note: Media generation now uses render_as: "media" explicitly,
- * which routes to MediaPanel. This component no longer checks for
- * MediaGenerationContext.
- *
  * The -panel suffix convention indicates special SchemaRenderer-level handling.
  */
 

@@ -11,7 +11,7 @@
  * Used by:
  * - InputSchemaComposer (provides the context)
  * - Input renderers (read/write values, display errors, get dynamic options)
- * - MediaPanel (validate and submit values)
+ * - Consumers (validate and submit values via getMappedValues)
  */
 
 import { createContext, useContext } from "react";
