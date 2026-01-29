@@ -1,20 +1,20 @@
 /**
- * InputSchemaComposer - Extension to SchemaRenderer for handling input_schema.
+ * InputSchemaComposer - Context provider for input_schema handling.
  *
- * This component is invoked by SchemaRenderer when it detects input_schema in UX config.
+ * This component is invoked by SchemaRenderer's bracket syntax parsing when
+ * "input_schema" is a sibling (e.g., "media[input_schema,image_generation]").
  * It:
  * 1. Provides InputSchemaContext for value/error management
  * 2. Renders InputSchemaRenderer for the input fields
- * 3. Renders remaining schema via SchemaRenderer (without input_schema)
- * 4. Handles compound render_as composition (e.g., tab.media)
+ * 3. Renders children (other siblings like ImageGeneration)
  *
  * The context is shared between:
  * - Input renderers (read/write values, display error styling)
- * - MediaPanel or other consumers (validate, submit values, display error messages)
+ * - Generation components (validate, submit values via getMappedValues)
  */
 
-import { useState, useMemo, useCallback } from "react";
-import type { SchemaProperty, UxConfig, RenderAs } from "../types";
+import { useState, useMemo, useCallback, type ReactNode } from "react";
+import type { SchemaProperty, UxConfig } from "../types";
 import {
   InputSchemaContext,
   type InputSchemaContextValue,
@@ -22,10 +22,6 @@ import {
   type DynamicOption,
 } from "./InputSchemaContext";
 import { InputSchemaRenderer } from "./InputSchemaRenderer";
-
-// Forward declaration to avoid circular import
-// The actual SchemaRenderer will be imported at runtime
-import { SchemaRenderer } from "../../SchemaRenderer";
 
 // =============================================================================
 // Types
@@ -44,6 +40,8 @@ interface InputSchemaComposerProps {
   disabled?: boolean;
   /** Whether inputs are readonly */
   readonly?: boolean;
+  /** Children from bracket syntax (other siblings like ImageGeneration) */
+  children?: ReactNode;
 }
 
 // =============================================================================
@@ -52,12 +50,14 @@ interface InputSchemaComposerProps {
 
 export function InputSchemaComposer({
   data,
-  schema,
+  schema: _schema,
   path,
   ux,
   disabled = false,
   readonly = false,
+  children,
 }: InputSchemaComposerProps) {
+  void _schema; // Schema is available but we use ux.input_schema
   const inputSchema = ux.input_schema as InputSchema;
 
   // Initialize values from data, handling source_data/source_field
@@ -178,58 +178,18 @@ export function InputSchemaComposer({
     inputSchema,
   }), [values, errors, getDynamicOptions, setDynamicOptions, alternativeMode, isAlternativeMode, setAlternativeMode, disabled, readonly, inputSchema]);
 
-  // Create UX without input_schema for remaining content
-  const remainingUx: UxConfig = { ...ux, input_schema: undefined };
-
-  // Render InputSchemaRenderer - data passed directly (1:1 map)
-  const inputComponent = (
-    <InputSchemaRenderer
-      schema={inputSchema}
-      data={(data || {}) as Record<string, unknown>}
-      path={[...path, "_inputs"]}
-    />
-  );
-
-  // Handle compound render_as (e.g., tab.media)
-  if (ux.render_as && typeof ux.render_as === "string" && ux.render_as.includes(".")) {
-    const dotIndex = ux.render_as.indexOf(".");
-    const outerRenderAs = ux.render_as.slice(0, dotIndex) as RenderAs;
-    const innerRenderAs = ux.render_as.slice(dotIndex + 1) as RenderAs;
-
-    // Outer wraps both input and inner content
-    return (
-      <InputSchemaContext.Provider value={contextValue}>
-        <SchemaRenderer
-          schema={schema}
-          data={data}
-          path={path}
-          ux={{ ...remainingUx, render_as: outerRenderAs }}
-        >
-          <div className="space-y-4">
-            {inputComponent}
-            <SchemaRenderer
-              schema={schema}
-              data={data}
-              path={path}
-              ux={{ ...remainingUx, render_as: innerRenderAs }}
-            />
-          </div>
-        </SchemaRenderer>
-      </InputSchemaContext.Provider>
-    );
-  }
-
-  // Simple render_as - fragment composition
+  // Render input fields + children (other siblings from bracket syntax)
   return (
     <InputSchemaContext.Provider value={contextValue}>
       <div className="space-y-4">
-        {inputComponent}
-        <SchemaRenderer
-          schema={schema}
-          data={data}
-          path={path}
-          ux={remainingUx}
+        {/* Render input fields */}
+        <InputSchemaRenderer
+          schema={inputSchema}
+          data={(data || {}) as Record<string, unknown>}
+          path={[...path, "_inputs"]}
         />
+        {/* Render other siblings (e.g., ImageGeneration) */}
+        {children}
       </div>
     </InputSchemaContext.Provider>
   );
