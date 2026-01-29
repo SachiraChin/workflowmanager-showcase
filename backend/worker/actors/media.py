@@ -139,7 +139,7 @@ class MediaActor(ActorBase):
         # Get provider instance
         try:
             provider = MediaProviderRegistry.get(provider_name)
-        except ValueError as e:
+        except (ValueError, GenerationError) as e:
             raise GenerationError(str(e))
 
         # Get the method to call

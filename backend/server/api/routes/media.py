@@ -12,6 +12,7 @@ from pydantic import BaseModel
 
 from ..dependencies import get_db, get_current_user_id
 from modules.media import MediaProviderRegistry
+from backend.providers.media.base import GenerationError
 
 logger = logging.getLogger('workflow.api')
 
@@ -76,7 +77,7 @@ async def get_media_preview(
     # Get provider
     try:
         provider = MediaProviderRegistry.get(request.provider)
-    except ValueError as e:
+    except (ValueError, GenerationError) as e:
         raise HTTPException(status_code=400, detail=str(e))
 
     # Get preview info

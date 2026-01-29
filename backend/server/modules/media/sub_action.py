@@ -94,7 +94,7 @@ async def execute_media_sub_action(
         # Get provider instance
         try:
             provider = MediaProviderRegistry.get(request.provider)
-        except ValueError as e:
+        except (ValueError, GenerationError) as e:
             raise GenerationError(str(e))
 
         # Get the method to call
