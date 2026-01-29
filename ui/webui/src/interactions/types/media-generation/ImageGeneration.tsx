@@ -88,7 +88,7 @@ export function ImageGeneration({
 
   // Load existing generations on mount
   useEffect(() => {
-    if (!mediaContext || !workflowRunId || !request.interaction_id || readonly) {
+    if (!mediaContext || !workflowRunId || !request.interaction_id || readonly || !provider) {
       return;
     }
 
@@ -124,7 +124,7 @@ export function ImageGeneration({
 
   // Fetch preview when input values change (debounced)
   useEffect(() => {
-    if (!mediaContext || readonly || !workflowRunId) return;
+    if (!mediaContext || readonly || !workflowRunId || !provider) return;
 
     const params = inputContext?.getMappedValues() || {};
     params.prompt_id = promptId;
@@ -152,7 +152,7 @@ export function ImageGeneration({
   // Execute generation via SSE
   const handleGenerate = useCallback(
     async (action: SubActionConfig) => {
-      if (!mediaContext || !workflowRunId || !inputContext) return;
+      if (!mediaContext || !workflowRunId || !inputContext || !provider) return;
 
       const params = inputContext.getMappedValues();
 

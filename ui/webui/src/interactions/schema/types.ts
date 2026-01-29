@@ -31,9 +31,11 @@ export type LayoutType = "card" | "section";
  * These need direct data/schema access for coordinated rendering.
  * - content-panel: Header from display_label, body via SchemaRenderer
  * - table: Coordinated table rendering with column discovery from schema
- * - media: Dedicated media generation panel
+ * - media: Card chrome wrapper for media generation
+ * - image_generation: Self-contained image generation component
+ * - video_generation: Self-contained video generation component
  */
-export type SpecialRendererType = "content-panel" | "table" | "media";
+export type SpecialRendererType = "content-panel" | "table" | "media" | "image_generation" | "video_generation";
 
 // =============================================================================
 // Display Mode
@@ -70,7 +72,7 @@ export const CONTAINER_TYPES: ContainerType[] = ["grid", "list", "section-list",
 export const ROLE_TYPES: RoleType[] = ["column", "row", "cell", "section-header", "section-title", "section-badge", "section-summary", "card-title", "card-subtitle", "tab"];
 
 /** Array of special renderer types for runtime checking */
-export const SPECIAL_RENDERER_TYPES: SpecialRendererType[] = ["content-panel", "table", "media"];
+export const SPECIAL_RENDERER_TYPES: SpecialRendererType[] = ["content-panel", "table", "media", "image_generation", "video_generation"];
 
 /** Check if a render_as value is a special renderer type */
 export function isSpecialRendererType(value: string | undefined): value is SpecialRendererType {

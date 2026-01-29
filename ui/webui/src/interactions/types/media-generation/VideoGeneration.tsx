@@ -113,7 +113,7 @@ export function VideoGeneration({
 
   // Load existing generations on mount
   useEffect(() => {
-    if (!mediaContext || !workflowRunId || !request.interaction_id || readonly) {
+    if (!mediaContext || !workflowRunId || !request.interaction_id || readonly || !provider) {
       return;
     }
 
@@ -148,7 +148,7 @@ export function VideoGeneration({
 
   // Fetch preview when input values change
   useEffect(() => {
-    if (!mediaContext || readonly || !workflowRunId) return;
+    if (!mediaContext || readonly || !workflowRunId || !provider) return;
 
     const params = inputContext?.getMappedValues() || {};
     params.prompt_id = promptId;
@@ -161,7 +161,6 @@ export function VideoGeneration({
           provider,
           action_type: "img2vid",
           params,
-          content_type: "video",
         });
         setPreview(previewResult);
       } catch {
@@ -177,7 +176,7 @@ export function VideoGeneration({
   // Execute generation with crop
   const executeWithCrop = useCallback(
     async (action: SubActionConfig, params: Record<string, unknown>, cropRegion?: CropRegion) => {
-      if (!mediaContext || !workflowRunId) return;
+      if (!mediaContext || !workflowRunId || !provider) return;
 
       const finalParams = { ...params };
 
@@ -264,13 +263,13 @@ export function VideoGeneration({
 
   // Handle crop modal confirm
   const handleCropConfirm = useCallback(
-    (region: CropRegion, aspectRatio: string, saveForSession: boolean) => {
-      if (saveForSession) {
-        setSavedCrop({ region, aspectRatio });
+    (cropRegion: CropRegion | null, savePreference: boolean, aspectRatio: string) => {
+      if (cropRegion && savePreference) {
+        setSavedCrop({ region: cropRegion, aspectRatio });
       }
 
-      if (pendingAction && pendingParams) {
-        executeWithCrop(pendingAction, pendingParams, region);
+      if (pendingAction && pendingParams && cropRegion) {
+        executeWithCrop(pendingAction, pendingParams, cropRegion);
       }
 
       setShowCropModal(false);
@@ -283,7 +282,7 @@ export function VideoGeneration({
   // Handle generate click
   const handleGenerate = useCallback(
     async (action: SubActionConfig) => {
-      if (!mediaContext || !workflowRunId || !inputContext) return;
+      if (!mediaContext || !workflowRunId || !inputContext || !provider) return;
 
       const params = inputContext.getMappedValues();
 
