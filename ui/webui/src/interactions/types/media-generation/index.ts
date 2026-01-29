@@ -5,6 +5,7 @@
  */
 
 export { MediaGeneration } from "./MediaGeneration";
+export { Media } from "./Media";
 
 // Context exports
 export {
