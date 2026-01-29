@@ -40,7 +40,7 @@ import { FileDownload } from "./types/file-download";
 import { StructuredSelect } from "./types/structured-select";
 import { ReviewGrouped } from "./types/review-grouped";
 import { FormInput } from "./types/form-input";
-import { MediaGeneration } from "./types/media-generation";
+import { MediaGenerationHost } from "./types/media-generation";
 
 // =============================================================================
 // Types
@@ -148,7 +148,7 @@ function InteractionContent({ type }: { type: string }) {
     case "form_input":
       return <FormInput />;
     case "media_generation":
-      return <MediaGeneration />;
+      return <MediaGenerationHost />;
     default:
       return (
         <div className="p-4 text-center text-muted-foreground">

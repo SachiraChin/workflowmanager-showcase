@@ -4,7 +4,7 @@
  * Handles media_generation interaction type for image/video generation workflows.
  */
 
-export { MediaGeneration } from "./MediaGeneration";
+export { MediaGenerationHost } from "./MediaGenerationHost";
 export { Media } from "./Media";
 
 // Context exports

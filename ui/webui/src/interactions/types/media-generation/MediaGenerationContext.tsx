@@ -1,28 +1,18 @@
 /**
- * MediaGenerationContext - State management for media generation interaction.
+ * MediaGenerationContext - Shared state for media generation interaction.
  *
- * Provides generation-specific state to descendant components:
- * - Generations by prompt path
- * - Loading/progress state
- * - Selected content
- * - Sub-action execution
+ * Provides only truly shared state to descendant components:
+ * - Selected content ID (global selection across all tabs)
+ * - Sub-actions (from workflow config)
+ * - Register generation callback (for collecting response)
+ * - Readonly/disabled flags
  *
- * Used by ContentPanelSchemaRenderer to detect when it should render
- * with media generation capabilities.
+ * Individual state (generations, loading, progress, error, preview) is
+ * managed locally by ImageGeneration and VideoGeneration components.
  */
 
-import {
-  createContext,
-  useContext,
-  type ReactNode,
-} from "react";
-import type {
-  SubActionConfig,
-  GenerationResult,
-  ProgressState,
-  PreviewInfo,
-  CropState,
-} from "./types";
+import { createContext, useContext, type ReactNode } from "react";
+import type { SubActionConfig, GenerationResult } from "./types";
 
 // =============================================================================
 // Types
@@ -32,67 +22,20 @@ export interface MediaGenerationContextValue {
   /** Available sub-actions (from workflow config) */
   subActions: SubActionConfig[];
 
-  /** Get generations for a given path */
-  getGenerations: (path: string[]) => GenerationResult[];
-
-  /** Check if a prompt is currently loading */
-  isLoading: (path: string[]) => boolean;
-
-  /** Get progress for a loading prompt */
-  getProgress: (path: string[]) => ProgressState | undefined;
-
-  /** Get error for a prompt */
-  getError: (path: string[]) => string | undefined;
-
-  /** Currently selected content ID (global) */
+  /** Currently selected content ID (global across all tabs) */
   selectedContentId: string | null;
 
   /** Select content */
   onSelectContent: (contentId: string) => void;
 
-  /** Execute sub-action for a prompt */
-  executeSubAction: (
-    path: string[],
-    action: SubActionConfig,
-    params: Record<string, unknown>,
-    metadata: { provider: string; promptId: string }
-  ) => void;
+  /** Register a generation result (for response collection) */
+  registerGeneration: (path: string, result: GenerationResult) => void;
 
   /** Readonly mode */
   readonly: boolean;
 
   /** Disabled mode */
   disabled: boolean;
-
-  /** Get preview info for a prompt */
-  getPreview: (path: string[]) => PreviewInfo | undefined;
-
-  /** Check if preview is loading for a prompt */
-  isPreviewLoading: (path: string[]) => boolean;
-
-  /** Fetch preview for a prompt with given params */
-  fetchPreview: (
-    path: string[],
-    provider: string,
-    actionType: string,
-    params: Record<string, unknown>
-  ) => void;
-
-  /** Get data at a given path (for accessing sibling fields) */
-  getDataAtPath: (path: string[]) => unknown;
-
-  // =============================================================================
-  // Crop Selection State (for img2vid)
-  // =============================================================================
-
-  /** Saved crop selection (global, applies to all providers) */
-  savedCrop: CropState | null;
-
-  /** Set saved crop selection */
-  setSavedCrop: (crop: CropState | null) => void;
-
-  /** Clear saved crop selection */
-  clearSavedCrop: () => void;
 }
 
 export interface MediaGenerationProviderProps {
@@ -104,7 +47,9 @@ export interface MediaGenerationProviderProps {
 // Context
 // =============================================================================
 
-const MediaGenerationContext = createContext<MediaGenerationContextValue | null>(null);
+const MediaGenerationContext = createContext<MediaGenerationContextValue | null>(
+  null
+);
 
 // =============================================================================
 // Hooks
