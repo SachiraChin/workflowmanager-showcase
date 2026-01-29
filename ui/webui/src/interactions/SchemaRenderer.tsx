@@ -40,7 +40,7 @@ import { ObjectSchemaRenderer } from "./schema/ObjectSchemaRenderer";
 // Import special renderers (handled before type routing)
 import { ContentPanelSchemaRenderer } from "./schema/ContentPanelSchemaRenderer";
 import { TableSchemaRenderer } from "./schema/TableSchemaRenderer";
-import { MediaPanel } from "./types/media-generation/MediaPanel";
+import { Media } from "./types/media-generation/Media";
 import { TabLayout } from "./schema/tabs/TabLayout";
 import { TabsLayout } from "./layouts/TabsLayout";
 import { InputSchemaComposer } from "./schema/input/InputSchemaComposer";
@@ -119,28 +119,91 @@ export function SchemaRenderer({
   }
 
   // ==========================================================================
-  // 2. Compound render_as parsing (e.g., "tab.media")
+  // 2. Compound render_as parsing (e.g., "tab.media" or "tab.media[...]")
   // ==========================================================================
-  // Split compound render_as into outer and inner, wrap recursively.
-  // This allows "tab.media" to become <TabLayout><MediaPanel /></TabLayout>
+  // Step 1: Handle dots - split hierarchy using reduceRight.
+  // Each part may have brackets which are handled when that part renders.
+  // This allows "tab.media[input_schema,image_generation]" to become:
+  // <TabLayout><SchemaRenderer render_as="media[input_schema,image_generation]"/></TabLayout>
   if (ux.render_as && typeof ux.render_as === "string" && ux.render_as.includes(".")) {
-    const dotIndex = ux.render_as.indexOf(".");
-    const outerRenderAs = ux.render_as.slice(0, dotIndex) as RenderAs;
-    const innerRenderAs = ux.render_as.slice(dotIndex + 1) as RenderAs;
+    const parts = ux.render_as.split(".");
 
-    return (
-      <SchemaRenderer
-        schema={schema}
-        data={data}
-        path={path}
-        ux={{ ...ux, render_as: outerRenderAs }}
-      >
+    // reduceRight: innermost part renders first, each outer part wraps it
+    return parts.reduceRight<ReactNode>(
+      (innerChildren, part) => (
         <SchemaRenderer
           schema={schema}
           data={data}
           path={path}
-          ux={{ ...ux, render_as: innerRenderAs }}
+          ux={{ ...ux, render_as: part as RenderAs }}
+        >
+          {innerChildren}
+        </SchemaRenderer>
+      ),
+      null // Initial value: innermost part has no children
+    );
+  }
+
+  // ==========================================================================
+  // 2.5. Bracket syntax parsing (e.g., "media[input_schema,image_generation]")
+  // ==========================================================================
+  // Step 2: Handle brackets per-node - extract siblings and render inside cleaned node.
+  // If "input_schema" is a sibling, wrap other siblings in InputSchemaComposer.
+  if (ux.render_as && typeof ux.render_as === "string" && ux.render_as.includes("[")) {
+    const bracketStart = ux.render_as.indexOf("[");
+    const bracketEnd = ux.render_as.indexOf("]");
+
+    const cleanedNode = ux.render_as.slice(0, bracketStart) as RenderAs; // "media"
+    const siblings = ux.render_as
+      .slice(bracketStart + 1, bracketEnd)
+      .split(",")
+      .map((s) => s.trim()); // ["input_schema", "image_generation"]
+
+    // Build sibling elements (excluding input_schema which is handled specially)
+    const otherSiblings = siblings
+      .filter((sib) => sib !== "input_schema")
+      .map((sib) => (
+        <SchemaRenderer
+          key={sib}
+          data={data}
+          schema={schema}
+          path={path}
+          ux={{ ...ux, render_as: sib as RenderAs, input_schema: undefined }}
         />
+      ));
+
+    // If input_schema is a sibling, wrap others in InputSchemaComposer
+    if (siblings.includes("input_schema")) {
+      return (
+        <SchemaRenderer
+          data={data}
+          schema={schema}
+          path={path}
+          ux={{ ...ux, render_as: cleanedNode, input_schema: undefined }}
+        >
+          <InputSchemaComposer
+            ux={ux}
+            data={data as Record<string, unknown>}
+            schema={schema}
+            path={path}
+            disabled={disabled}
+            readonly={readonly}
+          >
+            {otherSiblings}
+          </InputSchemaComposer>
+        </SchemaRenderer>
+      );
+    }
+
+    // No input_schema - just render siblings inside cleaned node
+    return (
+      <SchemaRenderer
+        data={data}
+        schema={schema}
+        path={path}
+        ux={{ ...ux, render_as: cleanedNode }}
+      >
+        {otherSiblings}
       </SchemaRenderer>
     );
   }
@@ -185,15 +248,17 @@ export function SchemaRenderer({
     );
   }
 
-  // media: Dedicated media generation panel with inputs and generation grid
+  // media: Card chrome wrapper for media generation (children from bracket syntax)
   if (ux.render_as === "media") {
     return (
-      <MediaPanel
+      <Media
         data={data}
         schema={schema}
         path={path}
         ux={ux}
-      />
+      >
+        {children}
+      </Media>
     );
   }
 
