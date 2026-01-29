@@ -163,8 +163,8 @@ export function VideoGeneration({
           params,
         });
         setPreview(previewResult);
-      } catch {
-        // Preview not critical
+      } catch (err) {
+        console.error("[VideoGeneration] Preview fetch failed:", err);
       } finally {
         setPreviewLoading(false);
       }
@@ -372,13 +372,23 @@ export function VideoGeneration({
               <span className="flex items-center gap-1.5">
                 <span className="font-medium text-foreground">Resolution:</span>
                 {preview.resolution.width} × {preview.resolution.height}
+                <span className="text-xs">({preview.resolution.megapixels}MP)</span>
               </span>
               {preview.credits.credits > 0 && (
                 <>
                   <span className="text-muted-foreground/50">•</span>
                   <span className="flex items-center gap-1.5">
                     <span className="font-medium text-foreground">Credits:</span>
-                    {preview.credits.credits}
+                    {preview.credits.credits} ({preview.credits.credits_per_image}/vid)
+                  </span>
+                </>
+              )}
+              {preview.credits.total_cost_usd > 0 && (
+                <>
+                  <span className="text-muted-foreground/50">•</span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="font-medium text-foreground">Cost:</span>
+                    ${preview.credits.total_cost_usd.toFixed(4)} (${preview.credits.cost_per_image_usd.toFixed(4)}/vid)
                   </span>
                 </>
               )}

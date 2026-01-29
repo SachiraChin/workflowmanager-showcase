@@ -139,8 +139,8 @@ export function ImageGeneration({
           params,
         });
         setPreview(previewResult);
-      } catch {
-        // Preview is not critical, ignore errors
+      } catch (err) {
+        console.error("[ImageGeneration] Preview fetch failed:", err);
       } finally {
         setPreviewLoading(false);
       }
