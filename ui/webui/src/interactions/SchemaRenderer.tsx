@@ -99,26 +99,6 @@ export function SchemaRenderer({
   }
 
   // ==========================================================================
-  // 1.5. Input schema handling - delegate to InputSchemaComposer
-  // ==========================================================================
-  // When input_schema is present, InputSchemaComposer handles:
-  // - Providing InputSchemaContext for value/error management
-  // - Rendering InputSchemaRenderer for input fields
-  // - Rendering remaining schema (handles compound render_as internally)
-  if (ux.input_schema) {
-    return (
-      <InputSchemaComposer
-        data={data}
-        schema={schema}
-        path={path}
-        ux={ux}
-        disabled={disabled}
-        readonly={readonly}
-      />
-    );
-  }
-
-  // ==========================================================================
   // 2. Compound render_as parsing (e.g., "tab.media" or "tab.media[...]")
   // ==========================================================================
   // Step 1: Handle dots - split hierarchy using reduceRight.
@@ -135,7 +115,7 @@ export function SchemaRenderer({
           schema={schema}
           data={data}
           path={path}
-          ux={{ ...ux, render_as: part as RenderAs }}
+          ux={{ ...ux, render_as: part as RenderAs, }}
         >
           {innerChildren}
         </SchemaRenderer>
@@ -354,6 +334,25 @@ export function SchemaRenderer({
         path={path}
         schema={schema}
         ux={ux}
+      />
+    );
+  }
+
+  // ==========================================================================
+  // 2.6. Input schema handling (after compound parsing)
+  // ==========================================================================
+  // When input_schema is present without bracket syntax, delegate to InputSchemaComposer.
+  // Note: If render_as had brackets with input_schema (e.g., "media[input_schema,...]"),
+  // that was already handled in section 2.5 above.
+  if (ux.input_schema) {
+    return (
+      <InputSchemaComposer
+        data={data}
+        schema={schema}
+        path={path}
+        ux={ux}
+        disabled={disabled}
+        readonly={readonly}
       />
     );
   }

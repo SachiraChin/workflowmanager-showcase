@@ -106,10 +106,11 @@ export function MediaGenerationHost() {
       selectedContentId,
       onSelectContent: setSelectedContentId,
       registerGeneration,
+      rootData: data,
       readonly: isReadonly,
       disabled: disabled || isReadonly,
     }),
-    [subActions, selectedContentId, registerGeneration, isReadonly, disabled]
+    [subActions, selectedContentId, registerGeneration, data, isReadonly, disabled]
   );
 
   // If no data or schema, show placeholder

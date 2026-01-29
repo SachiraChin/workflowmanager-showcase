@@ -31,6 +31,9 @@ export interface MediaGenerationContextValue {
   /** Register a generation result (for response collection) */
   registerGeneration: (path: string, result: GenerationResult) => void;
 
+  /** Root data from the interaction (for accessing parent-level values) */
+  rootData: Record<string, unknown>;
+
   /** Readonly mode */
   readonly: boolean;
 

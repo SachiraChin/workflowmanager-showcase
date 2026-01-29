@@ -94,17 +94,17 @@ export function VideoGeneration({
   const selectedContentId = mediaContext?.selectedContentId ?? null;
   const onSelectContent = mediaContext?.onSelectContent ?? (() => {});
   const registerGeneration = mediaContext?.registerGeneration ?? (() => {});
+  const rootData = mediaContext?.rootData ?? {};
   const readonly = mediaContext?.readonly ?? false;
   const disabled = mediaContext?.disabled ?? false;
 
-  // Get source image from data (for img2vid)
-  const dataRecord = data as Record<string, unknown> | null;
-  const sourceImageData = dataRecord?._source_image as {
+  // Get source image from root data (for img2vid)
+  const sourceImageData = rootData._source_image as {
     url?: string;
     local_path?: string;
   } | undefined;
 
-  // Update source image URL when data changes
+  // Update source image URL when source image changes
   useEffect(() => {
     if (sourceImageData?.url) {
       setSourceImageUrl(toMediaUrl(sourceImageData.url));
