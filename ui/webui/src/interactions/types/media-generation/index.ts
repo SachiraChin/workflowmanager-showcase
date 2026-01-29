@@ -6,6 +6,7 @@
 
 export { MediaGenerationHost } from "./MediaGenerationHost";
 export { Media } from "./Media";
+export { ImageGeneration } from "./ImageGeneration";
 
 // Context exports
 export {
