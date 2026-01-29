@@ -40,7 +40,7 @@ import { ObjectSchemaRenderer } from "./schema/ObjectSchemaRenderer";
 // Import special renderers (handled before type routing)
 import { ContentPanelSchemaRenderer } from "./schema/ContentPanelSchemaRenderer";
 import { TableSchemaRenderer } from "./schema/TableSchemaRenderer";
-import { Media, ImageGeneration } from "./types/media-generation";
+import { Media, ImageGeneration, VideoGeneration } from "./types/media-generation";
 import { TabLayout } from "./schema/tabs/TabLayout";
 import { TabsLayout } from "./layouts/TabsLayout";
 import { InputSchemaComposer } from "./schema/input/InputSchemaComposer";
@@ -266,6 +266,18 @@ export function SchemaRenderer({
   if (ux.render_as === "image_generation") {
     return (
       <ImageGeneration
+        data={data}
+        schema={schema}
+        path={path}
+        ux={ux}
+      />
+    );
+  }
+
+  // video_generation: Self-contained video generation component with crop
+  if (ux.render_as === "video_generation") {
+    return (
+      <VideoGeneration
         data={data}
         schema={schema}
         path={path}
