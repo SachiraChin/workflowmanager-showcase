@@ -23,7 +23,7 @@
           "_ux": {
             "display": "visible",
             "tab_label": "Midjourney",
-            "render_as": "tab.media",
+            "render_as": "tab.media[input_schema,image_generation]",
             "provider": "midjourney",
             "input_schema": {
               "type": "object",
@@ -158,7 +158,7 @@
               "type": "object",
               "_ux": {
                 "display": true,
-                "render_as": "media",
+                "render_as": "media[input_schema,image_generation]",
                 "display_label": "Leonardo",
                 "provider": "leonardo",
                 "prompt_id": "phoenix_1_0",
@@ -776,7 +776,7 @@
           "_ux": {
             "display": "visible",
             "tab_label": "OpenAI",
-            "render_as": "tab.media",
+            "render_as": "tab.media[input_schema,image_generation]",
             "provider": "openai",
             "input_schema": {
               "type": "object",
@@ -907,7 +907,7 @@
           "_ux": {
             "display": "visible",
             "tab_label": "Stable Diffusion",
-            "render_as": "tab.media",
+            "render_as": "tab.media[input_schema,image_generation]",
             "provider": "stable_diffusion",
             "input_schema": {
               "type": "object",

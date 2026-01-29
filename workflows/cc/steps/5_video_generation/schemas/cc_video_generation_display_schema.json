@@ -36,7 +36,7 @@
           "_ux": {
             "display": "visible",
             "tab_label": "Leonardo",
-            "render_as": "tab.media",
+            "render_as": "tab.media[input_schema,video_generation]",
             "provider": "leonardo",
             "input_schema": {
               "type": "object",
@@ -209,7 +209,7 @@
           "_ux": {
             "display": "visible",
             "tab_label": "Sora 2",
-            "render_as": "tab.media",
+            "render_as": "tab.media[input_schema,video_generation]",
             "provider": "openai",
             "input_schema": {
               "type": "object",
