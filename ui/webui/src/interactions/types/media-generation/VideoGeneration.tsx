@@ -187,7 +187,7 @@ export function VideoGeneration({
 
       // Add crop region if provided
       if (cropRegion) {
-        finalParams.crop = cropRegion;
+        finalParams.crop_region = cropRegion;
       }
 
       setLoading(true);
