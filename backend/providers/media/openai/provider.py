@@ -563,6 +563,9 @@ class OpenAIProvider(MediaProviderBase):
         else:
             local_path = source_image
 
+        # Track cropped image path for preview
+        cropped_image_path: Optional[str] = None
+
         # Resolve parameters
         model = params.get("model", "sora-2")
         if model not in SUPPORTED_VIDEO_MODELS:
@@ -594,6 +597,7 @@ class OpenAIProvider(MediaProviderBase):
                     (target_width, target_height),
                     output_dir
                 )
+                cropped_image_path = local_path  # Track for preview
                 logger.info(
                     f"[OpenAI/Sora] Cropped and resized image to {target_width}x{target_height}: "
                     f"{local_path}"
@@ -675,7 +679,8 @@ class OpenAIProvider(MediaProviderBase):
         return GenerationResult(
             content=[ContentItem(url=video_url, seed=-1)],
             raw_response=job_result,
-            provider_task_id=video_id
+            provider_task_id=video_id,
+            preview_local_path=cropped_image_path
         )
 
     def _read_image_for_upload(self, source: str) -> tuple:

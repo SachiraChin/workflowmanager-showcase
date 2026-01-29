@@ -87,6 +87,9 @@ export function MediaGeneration() {
     }
   }, [isReadonly, mode]);
 
+  // Determine content type from sub_actions - if any action is img2vid, we want video
+  const contentType = subActions.some(a => a.action_type === "img2vid") ? "video" : "image";
+
   // Load previously generated content on mount
   useEffect(() => {
     if (!workflowRunId || !request.interaction_id || isReadonly) {
@@ -97,7 +100,8 @@ export function MediaGeneration() {
       try {
         const response = await api.getInteractionGenerations(
           workflowRunId,
-          request.interaction_id
+          request.interaction_id,
+          contentType
         );
 
         if (response.generations.length > 0) {
@@ -130,7 +134,7 @@ export function MediaGeneration() {
     };
 
     loadGenerations();
-  }, [workflowRunId, request.interaction_id, isReadonly]);
+  }, [workflowRunId, request.interaction_id, isReadonly, contentType]);
 
   // Reconnect to in-progress tasks on mount
   useEffect(() => {

@@ -780,6 +780,7 @@ class LeonardoProvider(MediaProviderBase):
         # Handle source_image - can be Leonardo ID string or dict with local_path
         image_id: str
         image_type: str
+        cropped_image_path: Optional[str] = None
 
         if isinstance(source_image, dict):
             # Source image from workflow - has local_path, url, content_id, etc.
@@ -797,6 +798,7 @@ class LeonardoProvider(MediaProviderBase):
                         if progress_callback:
                             progress_callback(0, "Cropping image...")
                         local_path = crop_image(local_path, crop_region, output_dir)
+                        cropped_image_path = local_path  # Track for preview
                         logger.info(f"[Leonardo] Cropped image: {local_path}")
                     except Exception as e:
                         logger.error(f"[Leonardo] Failed to crop image: {e}")
@@ -895,7 +897,8 @@ class LeonardoProvider(MediaProviderBase):
         return GenerationResult(
             content=content,
             raw_response=generation_data,
-            provider_task_id=generation_id
+            provider_task_id=generation_id,
+            preview_local_path=cropped_image_path
         )
 
     def get_preview_info(

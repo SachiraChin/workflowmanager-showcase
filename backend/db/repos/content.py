@@ -175,6 +175,7 @@ class ContentRepository(BaseRepository):
         local_path: str,
         provider_content_id: Optional[str] = None,
         seed: Optional[int] = None,
+        preview_content_id: Optional[str] = None,
     ) -> None:
         """
         Store a generated content item with download information.
@@ -192,8 +193,9 @@ class ContentRepository(BaseRepository):
             local_path: Local file path where content was saved
             provider_content_id: Provider's content identifier
             seed: Generation seed (-1 if not available)
+            preview_content_id: Content ID of preview image (for videos)
         """
-        self.content.insert_one({
+        doc = {
             "generated_content_id": content_id,
             "workflow_run_id": workflow_run_id,
             "content_generation_metadata_id": metadata_id,
@@ -205,7 +207,10 @@ class ContentRepository(BaseRepository):
             "local_path": local_path,
             "downloaded_at": datetime.utcnow(),
             "seed": seed,
-        })
+        }
+        if preview_content_id:
+            doc["preview_content_id"] = preview_content_id
+        self.content.insert_one(doc)
 
     def get_generation(self, metadata_id: str) -> Optional[Dict[str, Any]]:
         """
@@ -221,10 +226,15 @@ class ContentRepository(BaseRepository):
 
     def get_generations_for_interaction(
         self,
-        interaction_id: str
+        interaction_id: str,
+        content_type: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
         Get all generations for an interaction.
+
+        Args:
+            interaction_id: The interaction ID to query
+            content_type: Optional filter for content type (e.g., "image", "video")
 
         Returns:
             List of generation metadata dicts with their content items
@@ -236,8 +246,14 @@ class ContentRepository(BaseRepository):
 
         # Attach content items to each generation
         for gen in generations:
+            content_query = {
+                "content_generation_metadata_id": gen["content_generation_metadata_id"]
+            }
+            if content_type:
+                content_query["content_type"] = content_type
+
             gen["content_items"] = list(self.content.find(
-                {"content_generation_metadata_id": gen["content_generation_metadata_id"]},
+                content_query,
                 {"_id": 0}
             ).sort("index", ASCENDING))
 
@@ -280,6 +296,48 @@ class ContentRepository(BaseRepository):
             {"generated_content_id": content_id},
             {"$set": update_fields}
         )
+
+    def get_content_with_preview(self, content_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get a content item with its preview resolved.
+
+        If the content has a preview_content_id, fetches the preview
+        content and includes it as a nested 'preview' field.
+
+        Returns:
+            Content item dict with resolved preview, or None if not found
+        """
+        content = self.get_content_by_id(content_id)
+        if not content:
+            return None
+
+        preview_id = content.get("preview_content_id")
+        if preview_id:
+            preview = self.get_content_by_id(preview_id)
+            if preview:
+                content["preview"] = preview
+
+        return content
+
+    def resolve_preview_for_content(self, content: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Resolve preview for a content item dict.
+
+        If the content has a preview_content_id, fetches the preview
+        content and includes it as a nested 'preview' field.
+
+        Args:
+            content: Content item dict (modified in place)
+
+        Returns:
+            The same content dict with preview resolved
+        """
+        preview_id = content.get("preview_content_id")
+        if preview_id:
+            preview = self.get_content_by_id(preview_id)
+            if preview:
+                content["preview"] = preview
+        return content
 
     def delete_workflow_content(self, workflow_run_id: str) -> Dict[str, int]:
         """

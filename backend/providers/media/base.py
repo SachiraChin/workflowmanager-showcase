@@ -38,10 +38,12 @@ class GenerationResult:
         content: List of generated content items (url, seed, etc.)
         raw_response: Full response from provider for storage
         provider_task_id: Provider's task/generation ID
+        preview_local_path: Local path to preview image (for img2vid, the cropped source)
     """
     content: List[ContentItem]
     raw_response: Dict[str, Any]
     provider_task_id: Optional[str] = None
+    preview_local_path: Optional[str] = None
 
 
 @dataclass

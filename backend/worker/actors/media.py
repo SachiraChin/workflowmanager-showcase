@@ -212,6 +212,28 @@ class MediaActor(ActorBase):
             filenames = []
             content_type = "video" if action_type == "img2vid" else "image"
 
+            # For img2vid with cropped preview, store preview image first
+            preview_content_id = None
+            if action_type == "img2vid" and result.preview_local_path:
+                preview_content_id = _generate_content_id()
+                preview_extension = os.path.splitext(result.preview_local_path)[1].lstrip(".")
+
+                # Store preview image as its own content entry
+                self._db.content_repo.store_content_with_download(
+                    content_id=preview_content_id,
+                    metadata_id=metadata_id,
+                    workflow_run_id=workflow_run_id,
+                    index=0,
+                    provider_url="",  # No provider URL for cropped image
+                    content_type="video.preview",
+                    extension=preview_extension,
+                    local_path=make_relative_path(result.preview_local_path),
+                    seed=-1,
+                )
+                logger.info(
+                    f"[MediaActor] Stored preview image: {preview_content_id}"
+                )
+
             for index, item in enumerate(result.content):
                 content_id = _generate_content_id()
 
@@ -246,6 +268,7 @@ class MediaActor(ActorBase):
                     extension=download_result.extension,
                     local_path=make_relative_path(download_result.local_path),
                     seed=item.seed,
+                    preview_content_id=preview_content_id,
                 )
 
                 content_ids.append(content_id)

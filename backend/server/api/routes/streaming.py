@@ -272,6 +272,7 @@ async def execute_sub_action(
 async def get_interaction_generations(
     workflow_run_id: str,
     interaction_id: str,
+    content_type: str = Query(..., description="Content type to filter by (e.g., 'image', 'video')"),
     db = Depends(get_db),
     user_id: str = Depends(get_current_user_id)
 ):
@@ -281,6 +282,10 @@ async def get_interaction_generations(
     Used to restore previously generated content when returning to
     a media generation interaction.
 
+    Args:
+        content_type: Required filter for content type (e.g., "image", "video").
+                     Each step declares what it wants.
+
     Returns:
         List of generations with their content items, formatted for
         the MediaGeneration component.
@@ -289,31 +294,63 @@ async def get_interaction_generations(
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
 
-    # Get generations from content repository
-    generations = db.content_repo.get_generations_for_interaction(interaction_id)
+    # Get generations from content repository, filtered by content_type
+    generations = db.content_repo.get_generations_for_interaction(
+        interaction_id, content_type=content_type
+    )
 
     # Transform to frontend format
     result = []
     for gen in generations:
-        content_items = gen.get("content_items", [])
+        raw_content_items = gen.get("content_items", [])
         # Only include completed generations with content
-        if gen.get("status") == "completed" and content_items:
+        if gen.get("status") == "completed" and raw_content_items:
             # Build URLs - prefer server path if downloaded, fallback to provider URL
             urls = []
-            for item in content_items:
+            content_items = []
+
+            for item in raw_content_items:
+                content_id = item.get("generated_content_id")
+
                 if item.get("local_path") and item.get("extension"):
                     # Return relative path - client will prepend API_URL
-                    content_id = item.get("generated_content_id")
                     extension = item.get("extension")
-                    urls.append(f"/workflow/{workflow_run_id}/media/{content_id}.{extension}")
+                    url = f"/workflow/{workflow_run_id}/media/{content_id}.{extension}"
+                    urls.append(url)
+
+                    # Build content item with resolved preview
+                    content_item = {
+                        "content_id": content_id,
+                        "url": url,
+                        "content_type": item.get("content_type"),
+                    }
+
+                    # Resolve preview if present
+                    preview_id = item.get("preview_content_id")
+                    if preview_id:
+                        preview = db.content_repo.get_content_by_id(preview_id)
+                        if preview:
+                            content_item["preview"] = {
+                                "content_id": preview.get("generated_content_id"),
+                                "url": f"/workflow/{workflow_run_id}/media/{preview.get('generated_content_id')}.{preview.get('extension')}",
+                                "content_type": preview.get("content_type"),
+                            }
+
+                    content_items.append(content_item)
                 else:
                     # Fallback to provider URL for non-downloaded content
                     urls.append(item.get("provider_url"))
+                    content_items.append({
+                        "content_id": content_id,
+                        "url": item.get("provider_url"),
+                        "content_type": item.get("content_type"),
+                    })
 
             result.append({
                 "urls": urls,
                 "metadata_id": gen.get("content_generation_metadata_id"),
-                "content_ids": [item.get("generated_content_id") for item in content_items],
+                "content_ids": [item.get("generated_content_id") for item in raw_content_items],
+                "content_items": content_items,
                 "prompt_id": gen.get("prompt_id"),
                 "provider": gen.get("provider"),
             })

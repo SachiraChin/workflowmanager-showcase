@@ -259,10 +259,13 @@ class ApiClient {
   /**
    * Get all generations for a media generation interaction.
    * Used to restore previously generated content on page refresh.
+   *
+   * @param contentType - Required filter for content type (e.g., "image", "video")
    */
   async getInteractionGenerations(
     workflowRunId: string,
-    interactionId: string
+    interactionId: string,
+    contentType: string
   ): Promise<{
     generations: Array<{
       urls: string[];
@@ -280,7 +283,7 @@ class ApiClient {
         prompt_id: string;
         provider: string;
       }>;
-    }>(`/workflow/${workflowRunId}/interaction/${interactionId}/generations`);
+    }>(`/workflow/${workflowRunId}/interaction/${interactionId}/generations?content_type=${encodeURIComponent(contentType)}`);
   }
 
   /**
