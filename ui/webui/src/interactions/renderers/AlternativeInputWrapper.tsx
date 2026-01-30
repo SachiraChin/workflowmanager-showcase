@@ -37,6 +37,10 @@ interface AlternativeInputWrapperProps {
   label?: string;
   /** Additional CSS classes */
   className?: string;
+  /** Whether inputs are disabled */
+  disabled?: boolean;
+  /** Whether inputs are readonly */
+  readonly?: boolean;
 }
 
 // =============================================================================
@@ -103,6 +107,8 @@ export function AlternativeInputWrapper({
   primaryInput,
   label,
   className,
+  disabled = false,
+  readonly = false,
 }: AlternativeInputWrapperProps) {
   const ctx = useInputSchemaOptional();
 
@@ -225,6 +231,47 @@ export function AlternativeInputWrapper({
       ? "flex flex-col gap-2"
       : "flex items-end gap-2";
 
+  // Get display value for readonly mode
+  const getReadonlyDisplayValue = (): string => {
+    if (!storedValue || typeof storedValue !== "object") {
+      return "";
+    }
+    const valueRecord = storedValue as Record<string, unknown>;
+
+    // If alternative mode was used, show the composed value
+    // Check if 'text' key exists (from compose template)
+    if (valueRecord.text !== undefined) {
+      return String(valueRecord.text);
+    }
+
+    // Otherwise, try to compose from field values
+    if (alternative.compose) {
+      const composed = runCompose(alternative.compose, altValues);
+      if (composed.text) {
+        return String(composed.text);
+      }
+    }
+
+    // Fallback: stringify the value
+    return JSON.stringify(storedValue);
+  };
+
+  // Readonly mode: show simple text display
+  if (readonly) {
+    return (
+      <div className={cn("space-y-1", className)}>
+        {label && (
+          <label className="text-sm font-medium text-foreground">
+            {label}
+          </label>
+        )}
+        <div className="text-sm text-muted-foreground py-1.5">
+          {getReadonlyDisplayValue()}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={cn("space-y-1", className)}>
       {/* Label row with toggle */}
@@ -240,6 +287,7 @@ export function AlternativeInputWrapper({
           size="sm"
           className="h-6 w-6 p-0"
           onClick={handleToggle}
+          disabled={disabled}
           title={isAltMode ? "Switch to preset" : "Switch to custom"}
         >
           <ArrowLeftRight className="h-3.5 w-3.5" />

@@ -183,6 +183,8 @@ export function InputRenderer({
         primaryInput={primaryInput}
         label={label}
         className={className}
+        disabled={disabled}
+        readonly={readonly}
       />
     );
   }
