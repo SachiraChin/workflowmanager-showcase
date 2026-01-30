@@ -35,13 +35,23 @@ interface InputSchemaRendererProps {
   data: Record<string, unknown>;
   /** Path for tracking in the component tree */
   path: string[];
+  /** Whether inputs are disabled */
+  disabled?: boolean;
+  /** Whether inputs are readonly */
+  readonly?: boolean;
 }
 
 // =============================================================================
 // Component
 // =============================================================================
 
-export function InputSchemaRenderer({ schema, data, path }: InputSchemaRendererProps) {
+export function InputSchemaRenderer({
+  schema,
+  data,
+  path,
+  disabled = false,
+  readonly = false,
+}: InputSchemaRendererProps) {
   const properties = schema.properties || {};
   const ux = schema._ux || {};
 
@@ -110,6 +120,8 @@ export function InputSchemaRenderer({ schema, data, path }: InputSchemaRendererP
                 schema={fieldSchema}
                 data={initialValue}
                 path={[...path, key]}
+                disabled={disabled}
+                readonly={readonly}
               />
             </div>
           );

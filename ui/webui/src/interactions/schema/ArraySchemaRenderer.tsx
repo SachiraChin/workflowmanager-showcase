@@ -30,6 +30,10 @@ interface ArraySchemaRendererProps {
   path: string[];
   /** Pre-extracted UX config */
   ux: UxConfig;
+  /** Whether inputs are disabled */
+  disabled?: boolean;
+  /** Whether inputs are readonly */
+  readonly?: boolean;
 }
 
 // =============================================================================
@@ -41,6 +45,8 @@ export function ArraySchemaRenderer({
   schema,
   path,
   ux,
+  disabled = false,
+  readonly = false,
 }: ArraySchemaRendererProps) {
   const displayMode = normalizeDisplay(ux.display);
 
@@ -72,6 +78,8 @@ export function ArraySchemaRenderer({
       schema={itemsSchema}
       path={[...path, String(index)]}
       ux={itemsUx}
+      disabled={disabled}
+      readonly={readonly}
     />
   ));
 

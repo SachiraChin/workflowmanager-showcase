@@ -20,12 +20,14 @@ import { SchemaRenderer } from "../SchemaRenderer";
 // Component
 // =============================================================================
 
-export const TabsLayout: React.FC<LayoutProps & { children?: ReactNode }> = ({
+export const TabsLayout: React.FC<LayoutProps & { children?: ReactNode; disabled?: boolean; readonly?: boolean }> = ({
   schema,
   path,
   data,
   ux,
   children,
+  disabled = false,
+  readonly = false,
 }) => {
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const [tabs, setTabs] = useState<TabInfo[]>([]);
@@ -118,6 +120,8 @@ export const TabsLayout: React.FC<LayoutProps & { children?: ReactNode }> = ({
               data={data}
               path={path}
               ux={{ ...ux, display: "passthrough", render_as: undefined }}
+              disabled={disabled}
+              readonly={readonly}
             />
           )}
         </div>

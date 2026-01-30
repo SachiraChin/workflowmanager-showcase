@@ -116,6 +116,8 @@ export function SchemaRenderer({
           data={data}
           path={path}
           ux={{ ...ux, render_as: part as RenderAs, }}
+          disabled={disabled}
+          readonly={readonly}
         >
           {innerChildren}
         </SchemaRenderer>
@@ -149,6 +151,8 @@ export function SchemaRenderer({
           schema={schema}
           path={path}
           ux={{ ...ux, render_as: sib as RenderAs, input_schema: undefined }}
+          disabled={disabled}
+          readonly={readonly}
         />
       ));
 
@@ -160,6 +164,8 @@ export function SchemaRenderer({
           schema={schema}
           path={path}
           ux={{ ...ux, render_as: cleanedNode, input_schema: undefined }}
+          disabled={disabled}
+          readonly={readonly}
         >
           <InputSchemaComposer
             ux={ux}
@@ -182,6 +188,8 @@ export function SchemaRenderer({
         schema={schema}
         path={path}
         ux={{ ...ux, render_as: cleanedNode }}
+        disabled={disabled}
+        readonly={readonly}
       >
         {otherSiblings}
       </SchemaRenderer>
@@ -193,7 +201,7 @@ export function SchemaRenderer({
   // ==========================================================================
   if (ux.render_as === "tab") {
     return (
-      <TabLayout schema={schema} data={data} path={path} ux={ux}>
+      <TabLayout schema={schema} data={data} path={path} ux={ux} disabled={disabled} readonly={readonly}>
         {children}
       </TabLayout>
     );
@@ -204,7 +212,7 @@ export function SchemaRenderer({
   // ==========================================================================
   if (ux.render_as === "tabs") {
     return (
-      <TabsLayout schema={schema} data={data} path={path} ux={ux}>
+      <TabsLayout schema={schema} data={data} path={path} ux={ux} disabled={disabled} readonly={readonly}>
         {children}
       </TabsLayout>
     );
@@ -224,6 +232,8 @@ export function SchemaRenderer({
         schema={schema}
         path={path}
         ux={ux}
+        disabled={disabled}
+        readonly={readonly}
       />
     );
   }
@@ -236,6 +246,8 @@ export function SchemaRenderer({
         schema={schema}
         path={path}
         ux={ux}
+        disabled={disabled}
+        readonly={readonly}
       >
         {children}
       </Media>
@@ -250,6 +262,8 @@ export function SchemaRenderer({
         schema={schema}
         path={path}
         ux={ux}
+        disabled={disabled}
+        readonly={readonly}
       />
     );
   }
@@ -262,6 +276,8 @@ export function SchemaRenderer({
         schema={schema}
         path={path}
         ux={ux}
+        disabled={disabled}
+        readonly={readonly}
       />
     );
   }
@@ -274,6 +290,8 @@ export function SchemaRenderer({
         schema={schema}
         path={path}
         ux={ux}
+        disabled={disabled}
+        readonly={readonly}
       />
     );
   }
@@ -307,6 +325,8 @@ export function SchemaRenderer({
         schema={schema}
         path={path}
         ux={ux}
+        disabled={disabled}
+        readonly={readonly}
       />
     );
   }
@@ -318,6 +338,8 @@ export function SchemaRenderer({
         schema={schema}
         path={path}
         ux={ux}
+        disabled={disabled}
+        readonly={readonly}
       />
     );
   }
@@ -334,6 +356,8 @@ export function SchemaRenderer({
         path={path}
         schema={schema}
         ux={ux}
+        disabled={disabled}
+        readonly={readonly}
       />
     );
   }

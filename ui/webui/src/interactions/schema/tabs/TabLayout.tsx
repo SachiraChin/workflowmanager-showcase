@@ -30,6 +30,10 @@ interface TabLayoutProps {
   ux: UxConfig;
   /** Children from compound parsing (e.g., tab.media[...] passes inner content as children) */
   children?: ReactNode;
+  /** Whether inputs are disabled */
+  disabled?: boolean;
+  /** Whether inputs are readonly */
+  readonly?: boolean;
 }
 
 // =============================================================================
@@ -69,6 +73,8 @@ export function TabLayout({
   path,
   ux,
   children,
+  disabled = false,
+  readonly = false,
 }: TabLayoutProps) {
   const tabsContext = useTabsContext();
   const tabId = path.join(".");
@@ -105,6 +111,8 @@ export function TabLayout({
       data={data}
       path={path}
       ux={{ ...ux, render_as: undefined }}
+      disabled={disabled}
+      readonly={readonly}
     />
   );
 }

@@ -29,6 +29,10 @@ interface ContentPanelSchemaRendererProps {
   path: string[];
   /** Pre-extracted UX config */
   ux: UxConfig;
+  /** Whether inputs are disabled */
+  disabled?: boolean;
+  /** Whether inputs are readonly */
+  readonly?: boolean;
 }
 
 // =============================================================================
@@ -40,6 +44,8 @@ export function ContentPanelSchemaRenderer({
   schema,
   path,
   ux,
+  disabled = false,
+  readonly = false,
 }: ContentPanelSchemaRendererProps) {
   // Standard content-panel rendering
   // Header from display_label
@@ -65,7 +71,7 @@ export function ContentPanelSchemaRenderer({
 
       {/* Body - delegated to SchemaRenderer */}
       <div className={cn("p-4", !header && "pt-4")}>
-        <SchemaRenderer data={data} schema={schema} path={path} ux={bodyUx} />
+        <SchemaRenderer data={data} schema={schema} path={path} ux={bodyUx} disabled={disabled} readonly={readonly} />
       </div>
     </div>
   );

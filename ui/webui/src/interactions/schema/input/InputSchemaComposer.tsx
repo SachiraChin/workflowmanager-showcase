@@ -187,6 +187,8 @@ export function InputSchemaComposer({
           schema={inputSchema}
           data={(data || {}) as Record<string, unknown>}
           path={[...path, "_inputs"]}
+          disabled={disabled}
+          readonly={readonly}
         />
         {/* Render other siblings (e.g., ImageGeneration) */}
         {children}

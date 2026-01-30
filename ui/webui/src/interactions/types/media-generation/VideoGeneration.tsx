@@ -46,6 +46,10 @@ interface VideoGenerationProps {
   path: string[];
   /** Pre-extracted UX config */
   ux: UxConfig;
+  /** Whether inputs are disabled */
+  disabled?: boolean;
+  /** Whether inputs are readonly */
+  readonly?: boolean;
 }
 
 // =============================================================================
@@ -57,7 +61,11 @@ export function VideoGeneration({
   schema: _schema,
   path,
   ux,
+  disabled: _disabled,
+  readonly: _readonly,
 }: VideoGenerationProps) {
+  void _disabled; // Props accepted for API consistency - component reads from useInteraction()
+  void _readonly;
   void _schema;
 
   // All hooks must be called unconditionally

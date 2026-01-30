@@ -116,6 +116,7 @@ export function ReviewGrouped() {
       mode="review"
       variant="cards"
       disabled={disabled || isReadonly}
+      readonly={isReadonly}
       onStateChange={handleStateChange}
     />
   );

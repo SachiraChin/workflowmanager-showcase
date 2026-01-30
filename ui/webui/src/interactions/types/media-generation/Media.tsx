@@ -25,13 +25,19 @@ interface MediaProps {
   ux: UxConfig;
   /** Children from bracket syntax (e.g., InputSchemaComposer + ImageGeneration) */
   children?: ReactNode;
+  /** Whether inputs are disabled */
+  disabled?: boolean;
+  /** Whether inputs are readonly */
+  readonly?: boolean;
 }
 
 // =============================================================================
 // Component
 // =============================================================================
 
-export function Media({ path, ux, children }: MediaProps) {
+export function Media({ path, ux, children, disabled: _disabled, readonly: _readonly }: MediaProps) {
+  void _disabled; // Props accepted for API consistency
+  void _readonly; // Children handle their own disabled/readonly state
   // Header from display_label or path
   const header = ux.display_label || path[path.length - 1];
 

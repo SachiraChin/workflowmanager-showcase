@@ -38,6 +38,10 @@ interface InputRendererProps {
   ux: UxConfig;
   /** Additional CSS classes */
   className?: string;
+  /** Whether inputs are disabled */
+  disabled?: boolean;
+  /** Whether inputs are readonly */
+  readonly?: boolean;
 }
 
 // =============================================================================
@@ -50,6 +54,8 @@ export function InputRenderer({
   schema,
   ux,
   className,
+  disabled = false,
+  readonly = false,
 }: InputRendererProps) {
   const inputType = ux.input_type;
 
@@ -88,6 +94,8 @@ export function InputRenderer({
           labelFormat={labelFormat}
           controls={controls}
           className={className}
+          disabled={disabled}
+          readonly={readonly}
         />
       );
       break;
@@ -107,6 +115,8 @@ export function InputRenderer({
           max={max}
           step={step}
           className={className}
+          disabled={disabled}
+          readonly={readonly}
         />
       );
       break;
@@ -119,6 +129,8 @@ export function InputRenderer({
           value={value as string | undefined}
           label={primaryLabel}
           className={className}
+          disabled={disabled}
+          readonly={readonly}
         />
       );
       break;
@@ -137,6 +149,8 @@ export function InputRenderer({
           max={max}
           step={step}
           className={className}
+          disabled={disabled}
+          readonly={readonly}
         />
       );
       break;
@@ -152,6 +166,8 @@ export function InputRenderer({
           label={primaryLabel}
           minRows={1}
           className={className}
+          disabled={disabled}
+          readonly={readonly}
         />
       );
       break;

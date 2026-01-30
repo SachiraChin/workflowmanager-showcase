@@ -50,6 +50,10 @@ interface TableSchemaRendererProps {
   path: string[];
   /** Pre-extracted UX config */
   ux: UxConfig;
+  /** Whether inputs are disabled */
+  disabled?: boolean;
+  /** Whether inputs are readonly */
+  readonly?: boolean;
 }
 
 /** Column definition extracted from schema */
@@ -209,6 +213,8 @@ export function TableSchemaRenderer({
   schema,
   path,
   ux,
+  disabled = false,
+  readonly = false,
 }: TableSchemaRendererProps) {
   const selection = useSelectionOptional();
   const { state: workflowState } = useWorkflowStateContext();
@@ -328,11 +334,11 @@ export function TableSchemaRenderer({
             const rowPath = [...path, row.key];
             const isSelected = isSelectable && selection?.isSelected(rowPath);
             const canSelectRow = isSelectable && selection?.canSelect(rowPath);
-            const disabled = isSelectable && !canSelectRow && !isSelected;
+            const rowDisabled = isSelectable && !canSelectRow && !isSelected;
 
             const handleRowClick = () => {
               if (!isSelectable || selection?.mode === "review") return;
-              if (disabled) return;
+              if (rowDisabled) return;
               selection?.toggleSelection(rowPath, row.data);
             };
 
@@ -343,7 +349,7 @@ export function TableSchemaRenderer({
                   isSelectable && "cursor-pointer",
                   isSelected && "bg-primary/10",
                   isSelectable && !isSelected && "hover:bg-muted/50",
-                  disabled && "opacity-50 cursor-not-allowed"
+                  rowDisabled && "opacity-50 cursor-not-allowed"
                 )}
                 onClick={handleRowClick}
               >
@@ -389,6 +395,8 @@ export function TableSchemaRenderer({
                         schema={col.schema}
                         path={cellPath}
                         ux={cellUx}
+                        disabled={disabled}
+                        readonly={readonly}
                       />
                     </TableCell>
                   );

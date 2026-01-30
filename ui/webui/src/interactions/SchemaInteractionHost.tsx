@@ -57,6 +57,8 @@ interface SchemaInteractionHostProps {
   variant: VariantStyle;
   /** Whether interaction is disabled */
   disabled?: boolean;
+  /** Whether inputs are readonly (viewing history) */
+  readonly?: boolean;
   /** Called when selection state changes */
   onStateChange?: (state: SchemaInteractionState) => void;
   /** Initial selected items for readonly mode (from history) */
@@ -83,6 +85,7 @@ export function SchemaInteractionHost({
   mode,
   variant,
   disabled = false,
+  readonly = false,
   onStateChange,
   initialSelectedItems,
 }: SchemaInteractionHostProps) {
@@ -110,6 +113,7 @@ export function SchemaInteractionHost({
         minSelections={minSelections}
         maxSelections={maxSelections}
         disabled={disabled}
+        readonly={readonly}
         onStateChange={onStateChange}
       />
     </SelectionProvider>
@@ -128,6 +132,7 @@ interface SchemaInteractionContentProps {
   minSelections: number;
   maxSelections: number;
   disabled: boolean;
+  readonly: boolean;
   onStateChange?: (state: SchemaInteractionState) => void;
 }
 
@@ -138,6 +143,8 @@ function SchemaInteractionContent({
   multiSelect,
   minSelections,
   maxSelections,
+  disabled,
+  readonly,
   onStateChange,
 }: SchemaInteractionContentProps) {
   const {
@@ -165,7 +172,7 @@ function SchemaInteractionContent({
     <div className="h-full flex flex-col">
       {/* Content - fills available space */}
       <div className="flex-1 min-h-0 overflow-y-auto scrollbar-inner pr-2">
-        <SchemaRenderer data={data} schema={schema} path={[]} />
+        <SchemaRenderer data={data} schema={schema} path={[]} disabled={disabled} readonly={readonly} />
 
         {data === null || data === undefined ? (
           <div className="text-center text-muted-foreground py-8">

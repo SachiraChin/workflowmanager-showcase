@@ -176,7 +176,7 @@ export function FormInput() {
               {data.map((item, index) => (
                 <tr key={index} className="border-b last:border-b-0">
                   <td className="p-3 align-middle">
-                    <SchemaRenderer data={item} schema={schema} />
+                    <SchemaRenderer data={item} schema={schema} disabled={disabled} readonly={isReadonly} />
                   </td>
                   {columns.map((col) => (
                     <td key={col.key} className="p-3 min-w-[120px] align-middle">
@@ -202,7 +202,7 @@ export function FormInput() {
     <div className="space-y-4">
       {data.map((item, index) => (
         <div key={index} className="border rounded-lg p-4 space-y-3">
-          <SchemaRenderer data={item} schema={schema} />
+          <SchemaRenderer data={item} schema={schema} disabled={disabled} readonly={isReadonly} />
           <div className="grid gap-3">
             {columns.map((col) => (
               <div key={col.key} className="space-y-1">

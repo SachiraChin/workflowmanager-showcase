@@ -32,6 +32,10 @@ interface ObjectSchemaRendererProps {
   path: string[];
   /** Pre-extracted UX config */
   ux: UxConfig;
+  /** Whether inputs are disabled */
+  disabled?: boolean;
+  /** Whether inputs are readonly */
+  readonly?: boolean;
 }
 
 interface RenderableItem {
@@ -50,6 +54,8 @@ export function ObjectSchemaRenderer({
   schema,
   path,
   ux,
+  disabled = false,
+  readonly = false,
 }: ObjectSchemaRendererProps) {
   const { state: workflowState } = useWorkflowStateContext();
   const templateState = (workflowState.state_mapped || {}) as Record<string, unknown>;
@@ -167,6 +173,8 @@ export function ObjectSchemaRenderer({
           schema={itemSchema}
           path={childPath}
           ux={itemUx}
+          disabled={disabled}
+          readonly={readonly}
         />
       </div>
     );

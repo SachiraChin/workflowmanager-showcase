@@ -70,6 +70,9 @@ export function StructuredSelect() {
   const displayData = request.display_data || {};
   const multiSelect = displayData.multi_select === true;
 
+  // Check if we're in readonly mode (viewing history)
+  const isReadonly = mode.type === "readonly";
+
   // Extract initial selection from readonly response
   const initialSelectedItems = useMemo<SelectionItem[] | undefined>(() => {
     if (mode.type !== "readonly") return undefined;
@@ -148,6 +151,7 @@ export function StructuredSelect() {
         mode="select"
         variant="cards"
         disabled={disabled}
+        readonly={isReadonly}
         onStateChange={handleStateChange}
         initialSelectedItems={initialSelectedItems}
       />
