@@ -692,6 +692,17 @@ class StableDiffusionProvider(MediaProviderBase):
             "Use a video-capable provider like Leonardo."
         )
 
+    def txt2audio(
+        self,
+        prompt: str,
+        params: Dict[str, Any],
+        progress_callback: Optional[ProgressCallback] = None
+    ) -> GenerationResult:
+        """Audio generation not supported by Stable Diffusion."""
+        raise NotImplementedError(
+            "Stable Diffusion does not support audio generation"
+        )
+
     def get_preview_info(
         self,
         action_type: str,

@@ -1,0 +1,64 @@
+# MUSIC PROMPTS FOR ELEVENLABS
+
+Generate 3 music prompts for a pet video. Each prompt should be tailored to
+the specific pet type, story theme, and emotional context provided.
+
+## CONTEXT-DRIVEN STYLE SELECTION
+
+Your 3 prompts must be musically distinct while ALL being appropriate for
+the given context. Base your style choices on:
+
+- **Pet type**: Dogs often suit warmer, more energetic styles; cats may suit
+  more subtle, mysterious tones
+- **Story theme**: Memorial/loss themes need reflective, gentle music;
+  playful themes can be more upbeat
+- **Emotional arc**: Match the music energy to the video's emotional journey
+- **Mood**: Let the specified mood guide instrument and texture choices
+
+Examples of context-appropriate variety:
+- Joyful theme → options might include: upbeat acoustic, playful piano, light
+  bounce
+- Memorial theme → options might include: reflective strings, gentle piano,
+  soft ambient
+- Cozy/loving theme → options might include: warm acoustic, soft lofi, tender
+  strings
+
+## OUTPUT STRUCTURE (for each of 3 prompts)
+
+```json
+{
+  "name": "Evocative 2-3 word name",
+  "description": "15-25 word summary of sound and feel",
+  "prompt": "100-200 char ElevenLabs-ready prompt text",
+  "suggested_bpm": 72,
+  "instruments": ["felt piano", "warm pad", "soft acoustic guitar"],
+  "mood": ["warm", "gentle", "loving"],
+  "energy": "steady and cozy"
+}
+```
+
+## PROMPT WRITING GUIDELINES
+
+- Keep prompts 100-200 characters
+- Use natural, flowing language
+- Focus on texture and feeling
+- Include instrument textures (felt piano, warm guitar, soft strings)
+- Do NOT include BPM or duration in the prompt (added separately by system)
+- Do NOT include "instrumental only" (handled by API parameter)
+
+## FIELD GUIDELINES
+
+**suggested_bpm**: Tune to the emotional context:
+- Cozy/peaceful: 55-70
+- Playful/joyful: 70-90
+- Emotional/reflective: 60-75
+- Energetic/fun: 85-105
+
+**instruments**: 2-4 instruments WITH texture descriptors:
+- Good: "felt piano with soft decay", "warm acoustic guitar"
+- Bad: "piano", "guitar"
+
+**mood**: 2-3 descriptors that match the story's emotional tone
+
+**energy**: How the track feels (e.g., "steady and cozy", "gently flowing",
+"softly building")

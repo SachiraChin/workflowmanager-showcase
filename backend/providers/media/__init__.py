@@ -4,7 +4,7 @@ Media Providers Package - Media generation provider implementations.
 This package provides:
     - MediaProviderBase: Abstract base class for media providers
     - MediaProviderRegistry: Registry for provider instances with concurrency config
-    - Provider implementations: Leonardo, MidJourney (midapi)
+    - Provider implementations: Leonardo, MidJourney (midapi), OpenAI, ElevenLabs
     - download_media: Utility for downloading generated media
 
 Usage:
@@ -18,6 +18,10 @@ Usage:
 
     # Generate an image
     result = provider.txt2img(prompt, params, progress_callback)
+
+    # Generate audio (ElevenLabs)
+    provider = MediaProviderRegistry.get("elevenlabs")
+    result = provider.txt2audio(prompt, params, progress_callback)
 """
 
 # Base class, types, and exceptions
@@ -45,6 +49,7 @@ from .leonardo.provider import LeonardoProvider
 from .midapi.provider import MidAPIProvider
 from .stable_diffusion.provider import StableDiffusionProvider
 from .openai.provider import OpenAIProvider
+from .elevenlabs.provider import ElevenLabsProvider
 
 # Download utility
 from .download import download_media, DownloadResult, DownloadError
@@ -73,6 +78,7 @@ __all__ = [
     'MidAPIProvider',
     'StableDiffusionProvider',
     'OpenAIProvider',
+    'ElevenLabsProvider',
     # Download
     'download_media',
     'DownloadResult',

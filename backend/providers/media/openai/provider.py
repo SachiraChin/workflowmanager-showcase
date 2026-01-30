@@ -856,6 +856,17 @@ class OpenAIProvider(MediaProviderBase):
         video_b64 = base64.b64encode(video_data).decode("utf-8")
         return f"data:{content_type};base64,{video_b64}"
 
+    def txt2audio(
+        self,
+        prompt: str,
+        params: Dict[str, Any],
+        progress_callback: Optional[ProgressCallback] = None
+    ) -> GenerationResult:
+        """Audio generation not supported by OpenAI provider."""
+        raise NotImplementedError(
+            "OpenAI provider does not support audio generation"
+        )
+
     def get_preview_info(
         self,
         action_type: str,

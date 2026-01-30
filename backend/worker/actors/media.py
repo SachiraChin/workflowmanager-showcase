@@ -45,7 +45,7 @@ class MediaActor(ActorBase):
     """
     Actor for media generation tasks.
 
-    Handles txt2img, img2img, and img2vid operations by:
+    Handles txt2img, img2img, img2vid, and txt2audio operations by:
     1. Calling the appropriate provider
     2. Downloading generated content
     3. Storing metadata and content records in the database
@@ -53,8 +53,8 @@ class MediaActor(ActorBase):
     Required payload fields:
         - workflow_run_id: str
         - interaction_id: str
-        - provider: str (e.g., "leonardo", "midjourney")
-        - action_type: str (e.g., "txt2img", "img2img", "img2vid")
+        - provider: str (e.g., "leonardo", "midjourney", "elevenlabs")
+        - action_type: str (e.g., "txt2img", "img2img", "img2vid", "txt2audio")
         - prompt_id: str
         - params: dict (provider-specific parameters including "prompt")
         - source_data: Any (original prompt data from workflow)
@@ -71,9 +71,11 @@ class MediaActor(ActorBase):
         if media_base_path:
             self._images_path = os.path.join(media_base_path, "images")
             self._videos_path = os.path.join(media_base_path, "videos")
+            self._audios_path = os.path.join(media_base_path, "audios")
         else:
             self._images_path = None
             self._videos_path = None
+            self._audios_path = None
             logger.warning("MEDIA_BASE_PATH not set - media downloads will fail")
 
     @property
@@ -196,6 +198,9 @@ class MediaActor(ActorBase):
                     raise GenerationError(f"{action_type} requires source_image")
 
                 result = method(source_image, prompt, method_params, progress_callback=progress_callback)
+            elif action_type == "txt2audio":
+                # Pass prompt and params to provider - provider handles assembly
+                result = method(prompt, method_params, progress_callback=progress_callback)
             else:
                 raise GenerationError(f"Unknown action type: {action_type}")
 
@@ -210,7 +215,12 @@ class MediaActor(ActorBase):
             # Download and store content items
             content_ids = []
             filenames = []
-            content_type = "video" if action_type == "img2vid" else "image"
+            if action_type == "img2vid":
+                content_type = "video"
+            elif action_type == "txt2audio":
+                content_type = "audio"
+            else:
+                content_type = "image"
 
             # For img2vid with cropped preview, store preview image first
             preview_content_id = None
@@ -247,6 +257,7 @@ class MediaActor(ActorBase):
                         content_type=content_type,
                         images_path=self._images_path,
                         videos_path=self._videos_path,
+                        audios_path=self._audios_path,
                     )
                 except DownloadError as e:
                     logger.error(f"[MediaActor] Download failed: {e}")

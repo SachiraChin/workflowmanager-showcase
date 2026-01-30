@@ -30,6 +30,11 @@ CONTENT_TYPE_EXTENSIONS = {
     "video/mp4": "mp4",
     "video/webm": "webm",
     "video/quicktime": "mov",
+    "audio/mpeg": "mp3",
+    "audio/mp3": "mp3",
+    "audio/wav": "wav",
+    "audio/ogg": "ogg",
+    "audio/flac": "flac",
 }
 
 # URL extension to normalize
@@ -42,6 +47,10 @@ URL_EXTENSIONS = {
     ".mp4": "mp4",
     ".webm": "webm",
     ".mov": "mov",
+    ".mp3": "mp3",
+    ".wav": "wav",
+    ".ogg": "ogg",
+    ".flac": "flac",
 }
 
 
@@ -96,14 +105,16 @@ def _get_storage_path(
     content_type: str,
     images_path: Optional[str],
     videos_path: Optional[str],
+    audios_path: Optional[str] = None,
 ) -> str:
     """
     Get storage path based on content type.
 
     Args:
-        content_type: Type of content ("image" or "video")
+        content_type: Type of content ("image", "video", or "audio")
         images_path: Absolute path to images storage directory
         videos_path: Absolute path to videos storage directory
+        audios_path: Absolute path to audios storage directory
 
     Returns:
         Storage path string
@@ -119,6 +130,10 @@ def _get_storage_path(
         if not videos_path:
             raise DownloadError("MEDIA_VIDEOS_PATH not configured")
         return videos_path
+    elif content_type == "audio":
+        if not audios_path:
+            raise DownloadError("MEDIA_AUDIOS_PATH not configured")
+        return audios_path
     else:
         raise DownloadError(f"Unknown content type: {content_type}")
 
@@ -131,6 +146,7 @@ def _download_from_url(
     content_type: str,
     images_path: Optional[str],
     videos_path: Optional[str],
+    audios_path: Optional[str] = None,
 ) -> DownloadResult:
     """
     Download media from HTTP/HTTPS URL and save to local storage.
@@ -140,9 +156,10 @@ def _download_from_url(
         metadata_id: Content generation metadata ID (for filename)
         content_id: Generated content ID (for filename)
         index: Index within the generation batch (for filename)
-        content_type: Type of content ("image" or "video")
+        content_type: Type of content ("image", "video", or "audio")
         images_path: Absolute path to images storage directory
         videos_path: Absolute path to videos storage directory
+        audios_path: Absolute path to audios storage directory
 
     Returns:
         DownloadResult with local_path and extension
@@ -150,7 +167,7 @@ def _download_from_url(
     Raises:
         DownloadError: If download fails or storage path not configured
     """
-    storage_path = _get_storage_path(content_type, images_path, videos_path)
+    storage_path = _get_storage_path(content_type, images_path, videos_path, audios_path)
     os.makedirs(storage_path, exist_ok=True)
 
     # Download the file
@@ -175,7 +192,12 @@ def _download_from_url(
 
     if not extension:
         # Default based on content type
-        extension = "mp4" if content_type == "video" else "png"
+        if content_type == "video":
+            extension = "mp4"
+        elif content_type == "audio":
+            extension = "mp3"
+        else:
+            extension = "png"
         logger.warning(
             f"[MediaDownload] Could not determine extension, defaulting to {extension}"
         )
@@ -205,6 +227,7 @@ def _download_from_base64(
     content_type: str,
     images_path: Optional[str],
     videos_path: Optional[str],
+    audios_path: Optional[str] = None,
 ) -> DownloadResult:
     """
     Save media from a base64-encoded data URI to local storage.
@@ -214,9 +237,10 @@ def _download_from_base64(
         metadata_id: Content generation metadata ID (for filename)
         content_id: Generated content ID (for filename)
         index: Index within the generation batch (for filename)
-        content_type: Type of content ("image" or "video")
+        content_type: Type of content ("image", "video", or "audio")
         images_path: Absolute path to images storage directory
         videos_path: Absolute path to videos storage directory
+        audios_path: Absolute path to audios storage directory
 
     Returns:
         DownloadResult with local_path and extension
@@ -224,7 +248,7 @@ def _download_from_base64(
     Raises:
         DownloadError: If decoding fails or storage path not configured
     """
-    storage_path = _get_storage_path(content_type, images_path, videos_path)
+    storage_path = _get_storage_path(content_type, images_path, videos_path, audios_path)
     os.makedirs(storage_path, exist_ok=True)
 
     logger.info(f"[MediaDownload] Decoding base64 {content_type}...")
@@ -246,7 +270,12 @@ def _download_from_base64(
 
     if not extension:
         # Default based on content type
-        extension = "mp4" if content_type == "video" else "png"
+        if content_type == "video":
+            extension = "mp4"
+        elif content_type == "audio":
+            extension = "mp3"
+        else:
+            extension = "png"
         logger.warning(
             f"[MediaDownload] Could not determine extension from data URI, "
             f"defaulting to {extension}"
@@ -282,22 +311,24 @@ def download_media(
     content_type: str,
     images_path: Optional[str],
     videos_path: Optional[str],
+    audios_path: Optional[str] = None,
 ) -> DownloadResult:
     """
     Download media from URL or data URI and save to local storage.
 
     Supports:
     - HTTP/HTTPS URLs (standard download from providers like Leonardo, MidAPI)
-    - Data URIs with base64 encoding (for providers like OpenAI)
+    - Data URIs with base64 encoding (for providers like OpenAI, ElevenLabs)
 
     Args:
         url: Provider URL or data URI to download from
         metadata_id: Content generation metadata ID (for filename)
         content_id: Generated content ID (for filename)
         index: Index within the generation batch (for filename)
-        content_type: Type of content ("image" or "video")
+        content_type: Type of content ("image", "video", or "audio")
         images_path: Absolute path to images storage directory
         videos_path: Absolute path to videos storage directory
+        audios_path: Absolute path to audios storage directory
 
     Returns:
         DownloadResult with local_path and extension
@@ -308,10 +339,10 @@ def download_media(
     if url.startswith("data:"):
         return _download_from_base64(
             url, metadata_id, content_id, index,
-            content_type, images_path, videos_path
+            content_type, images_path, videos_path, audios_path
         )
     else:
         return _download_from_url(
             url, metadata_id, content_id, index,
-            content_type, images_path, videos_path
+            content_type, images_path, videos_path, audios_path
         )

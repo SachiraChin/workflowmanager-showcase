@@ -462,6 +462,17 @@ class MidAPIProvider(MediaProviderBase):
             provider_task_id=task_id
         )
 
+    def txt2audio(
+        self,
+        prompt: str,
+        params: Dict[str, Any],
+        progress_callback: Optional[ProgressCallback] = None
+    ) -> GenerationResult:
+        """Audio generation not supported by MidJourney."""
+        raise NotImplementedError(
+            "MidJourney does not support audio generation"
+        )
+
     def get_preview_info(
         self,
         action_type: str,

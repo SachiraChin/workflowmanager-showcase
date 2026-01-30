@@ -148,6 +148,19 @@ Architecture documents should include:
 - **API Contracts**: If applicable
 - **Questions for Review**: Open items for operator feedback
 
+### Comment Block Rules
+
+HTML comment blocks (`<!-- -->`) in architecture and issue documents are
+**reserved exclusively for operator feedback**.
+
+**NEVER pre-fill comment blocks** with your own questions, notes, or placeholder
+text. Leave them empty or do not include them at all. The operator will add
+their comments/questions inside these blocks when reviewing.
+
+- **Wrong**: `<!-- Should we use approach A or B? -->`
+- **Right**: Leave the section without comment blocks; ask questions in the
+  document text itself or in conversation
+
 ### Issue Document Content
 
 Issue documents must contain comprehensive analysis:

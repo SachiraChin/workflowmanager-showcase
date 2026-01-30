@@ -2,8 +2,9 @@
 Media Provider Base Class - Abstraction for media generation providers
 
 This module defines the base interface for all media generation providers
-(MidJourney/MidAPI, Leonardo, etc.). Each provider implements the same
-interface for text-to-image, image-to-image, and image-to-video operations.
+(MidJourney/MidAPI, Leonardo, ElevenLabs, etc.). Each provider implements the
+same interface for text-to-image, image-to-image, image-to-video, and
+text-to-audio operations.
 """
 
 from abc import ABC, abstractmethod
@@ -109,6 +110,7 @@ class MediaProviderBase(ABC):
     - txt2img: Generate images from text prompt
     - img2img: Generate variations from existing image
     - img2vid: Generate video from image (if supported)
+    - txt2audio: Generate audio from text prompt (if supported)
     """
 
     @property
@@ -198,6 +200,32 @@ class MediaProviderBase(ABC):
         pass
 
     @abstractmethod
+    def txt2audio(
+        self,
+        prompt: str,
+        params: Dict[str, Any],
+        progress_callback: Optional[ProgressCallback] = None
+    ) -> GenerationResult:
+        """
+        Generate audio from a text prompt.
+
+        Args:
+            prompt: Text description (for music/SFX) or text content (for TTS)
+            params: Provider-specific parameters including:
+                - audio_type: str ("music", "tts", "sfx")
+                - Additional type-specific params
+            progress_callback: Optional callback for progress updates
+
+        Returns:
+            GenerationResult with audio URLs/data URIs in content list
+
+        Raises:
+            NotImplementedError: If provider doesn't support audio generation
+            ProviderError: On API errors
+        """
+        pass
+
+    @abstractmethod
     def get_preview_info(
         self,
         action_type: str,
@@ -210,8 +238,10 @@ class MediaProviderBase(ABC):
         without actually performing the generation. Used for UI preview.
 
         Args:
-            action_type: Type of generation ("txt2img", "img2img", "img2vid")
-            params: Generation parameters (same as would be passed to generation methods)
+            action_type: Type of generation ("txt2img", "img2img", "img2vid",
+                "txt2audio")
+            params: Generation parameters (same as would be passed to generation
+                methods)
 
         Returns:
             PreviewInfo with resolution and credit information

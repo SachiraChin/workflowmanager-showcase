@@ -901,6 +901,17 @@ class LeonardoProvider(MediaProviderBase):
             preview_local_path=cropped_image_path
         )
 
+    def txt2audio(
+        self,
+        prompt: str,
+        params: Dict[str, Any],
+        progress_callback: Optional[ProgressCallback] = None
+    ) -> GenerationResult:
+        """Audio generation not supported by Leonardo."""
+        raise NotImplementedError(
+            "Leonardo does not support audio generation"
+        )
+
     def get_preview_info(
         self,
         action_type: str,
