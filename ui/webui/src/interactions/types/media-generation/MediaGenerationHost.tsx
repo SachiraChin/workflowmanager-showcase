@@ -124,7 +124,7 @@ export function MediaGenerationHost() {
 
   return (
     <MediaGenerationProvider value={contextValue}>
-      <div className="h-full overflow-auto">
+      <div className="h-full overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-black/20 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent dark:[&::-webkit-scrollbar-thumb]:bg-white/30">
         <SchemaRenderer
           data={data}
           schema={schema}
