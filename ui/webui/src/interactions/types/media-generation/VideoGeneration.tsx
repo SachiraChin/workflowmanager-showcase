@@ -111,9 +111,9 @@ export function VideoGeneration({
     }
   }, [sourceImageData?.url]);
 
-  // Load existing generations on mount
+  // Load existing generations on mount (also in readonly mode to show history)
   useEffect(() => {
-    if (!mediaContext || !workflowRunId || !request.interaction_id || readonly || !provider) {
+    if (!mediaContext || !workflowRunId || !request.interaction_id || !provider) {
       return;
     }
 
