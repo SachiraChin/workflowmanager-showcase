@@ -2,7 +2,7 @@
  * AudioGeneration - Self-contained component for audio generation.
  *
  * Similar to ImageGeneration but for audio:
- * - Uses AudioVisualizer for waveform display
+ * - Uses WaveSurfer.js for waveform display
  * - Audio player with play/pause, progress
  * - Track list instead of image grid
  *
@@ -14,7 +14,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2, Play, Pause, Volume2 } from "lucide-react";
-import { AudioVisualizer } from "react-audio-visualize";
+import WaveSurfer from "wavesurfer.js";
 import { useInteraction } from "@/state/interaction-context";
 import { useWorkflowStore } from "@/state/workflow-store";
 import { api } from "@/core/api";
@@ -29,7 +29,7 @@ import type {
   PreviewInfo,
 } from "./types";
 import type { SubActionRequest, SSEEventType } from "@/core/types";
-import { cn } from "@/lib/utils";
+import { cn } from "@/core/utils";
 
 // =============================================================================
 // Types
@@ -54,7 +54,6 @@ interface AudioTrack {
   url: string;
   contentId: string;
   metadataId: string;
-  blob?: Blob;
 }
 
 // =============================================================================
@@ -65,11 +64,9 @@ interface AudioTrackItemProps {
   track: AudioTrack;
   isSelected: boolean;
   isPlaying: boolean;
-  currentTime: number;
   onSelect: () => void;
   onPlay: () => void;
   onPause: () => void;
-  onTimeUpdate: (time: number) => void;
   disabled?: boolean;
 }
 
@@ -77,51 +74,65 @@ function AudioTrackItem({
   track,
   isSelected,
   isPlaying,
-  currentTime,
   onSelect,
   onPlay,
   onPause,
-  onTimeUpdate,
   disabled,
 }: AudioTrackItemProps) {
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const wavesurferRef = useRef<WaveSurfer | null>(null);
   const [duration, setDuration] = useState(0);
-  const [localBlob, setLocalBlob] = useState<Blob | null>(track.blob || null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [isReady, setIsReady] = useState(false);
 
-  // Fetch blob for visualization if not already available
+  // Initialize WaveSurfer
   useEffect(() => {
-    if (!localBlob && track.url) {
-      fetch(track.url)
-        .then((res) => res.blob())
-        .then((blob) => setLocalBlob(blob))
-        .catch((err) => console.error("[AudioTrackItem] Failed to fetch blob:", err));
-    }
-  }, [track.url, localBlob]);
+    if (!containerRef.current) return;
 
-  // Handle play/pause
+    const wavesurfer = WaveSurfer.create({
+      container: containerRef.current,
+      waveColor: "rgb(148, 163, 184)",
+      progressColor: "rgb(59, 130, 246)",
+      cursorColor: "rgb(59, 130, 246)",
+      barWidth: 2,
+      barGap: 1,
+      barRadius: 2,
+      height: 64,
+      normalize: true,
+      url: track.url,
+    });
+
+    wavesurfer.on("ready", () => {
+      setDuration(wavesurfer.getDuration());
+      setIsReady(true);
+    });
+
+    wavesurfer.on("timeupdate", (time) => {
+      setCurrentTime(time);
+    });
+
+    wavesurfer.on("finish", () => {
+      onPause();
+    });
+
+    wavesurferRef.current = wavesurfer;
+
+    return () => {
+      wavesurfer.destroy();
+      wavesurferRef.current = null;
+    };
+  }, [track.url, onPause]);
+
+  // Handle play/pause from parent
   useEffect(() => {
-    if (!audioRef.current) return;
+    if (!wavesurferRef.current || !isReady) return;
 
     if (isPlaying) {
-      audioRef.current.play().catch(console.error);
+      wavesurferRef.current.play();
     } else {
-      audioRef.current.pause();
+      wavesurferRef.current.pause();
     }
-  }, [isPlaying]);
-
-  // Time update handler
-  const handleTimeUpdate = useCallback(() => {
-    if (audioRef.current) {
-      onTimeUpdate(audioRef.current.currentTime);
-    }
-  }, [onTimeUpdate]);
-
-  // Duration loaded
-  const handleLoadedMetadata = useCallback(() => {
-    if (audioRef.current) {
-      setDuration(audioRef.current.duration);
-    }
-  }, []);
+  }, [isPlaying, isReady]);
 
   // Format time as mm:ss
   const formatTime = (seconds: number) => {
@@ -141,30 +152,11 @@ function AudioTrackItem({
       )}
       onClick={() => !disabled && onSelect()}
     >
-      {/* Hidden audio element */}
-      <audio
-        ref={audioRef}
-        src={track.url}
-        onTimeUpdate={handleTimeUpdate}
-        onLoadedMetadata={handleLoadedMetadata}
-        onEnded={onPause}
-      />
-
-      {/* Waveform visualization */}
+      {/* Waveform container */}
       <div className="w-full h-16 bg-muted/30 rounded overflow-hidden">
-        {localBlob ? (
-          <AudioVisualizer
-            blob={localBlob}
-            width={400}
-            height={64}
-            barWidth={2}
-            gap={1}
-            barColor="rgb(148, 163, 184)"
-            barPlayedColor="rgb(59, 130, 246)"
-            currentTime={currentTime}
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
+        <div ref={containerRef} className="w-full h-full" />
+        {!isReady && (
+          <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground -mt-16">
             <Loader2 className="w-4 h-4 animate-spin mr-2" />
             Loading waveform...
           </div>
@@ -185,7 +177,7 @@ function AudioTrackItem({
               onPlay();
             }
           }}
-          disabled={disabled}
+          disabled={disabled || !isReady}
         >
           {isPlaying ? (
             <Pause className="w-4 h-4" />
@@ -238,7 +230,6 @@ export function AudioGeneration({
 
   // Audio-specific state
   const [playingId, setPlayingId] = useState<string | null>(null);
-  const [trackTimes, setTrackTimes] = useState<Record<string, number>>({});
 
   // Extract config
   const provider = ux.provider;
@@ -450,14 +441,6 @@ export function AudioGeneration({
   // Filter for audio action types
   const audioActions = subActions.filter((a) => a.action_type === "txt2audio");
 
-  // Format duration for preview
-  const formatDuration = (ms: number) => {
-    const seconds = Math.floor(ms / 1000);
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
-
   return (
     <div className="space-y-4">
       {/* Preview Info */}
@@ -521,13 +504,12 @@ export function AudioGeneration({
       {/* Generated Audio Tracks */}
       {tracks.length > 0 && (
         <div className="space-y-3">
-          {tracks.map((track, idx) => (
+          {tracks.map((track) => (
             <AudioTrackItem
               key={track.contentId}
               track={track}
               isSelected={selectedContentId === track.contentId}
               isPlaying={playingId === track.contentId}
-              currentTime={trackTimes[track.contentId] || 0}
               onSelect={() => onSelectContent(track.contentId)}
               onPlay={() => {
                 // Stop any currently playing track
@@ -535,12 +517,6 @@ export function AudioGeneration({
               }}
               onPause={() => {
                 setPlayingId(null);
-              }}
-              onTimeUpdate={(time) => {
-                setTrackTimes((prev) => ({
-                  ...prev,
-                  [track.contentId]: time,
-                }));
               }}
               disabled={readonly}
             />

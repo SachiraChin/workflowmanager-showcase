@@ -37,11 +37,11 @@
     "lucide-react": "^0.562.0",
     "nunjucks": "^3.2.4",
     "react": "^19.2.0",
-    "react-audio-visualize": "^1.2.0",
     "react-dom": "^19.2.0",
     "react-image-crop": "^11.0.10",
     "react-router-dom": "^7.11.0",
     "tailwind-merge": "^3.4.0",
+    "wavesurfer.js": "^7.12.1",
     "zustand": "^5.0.9"
   },
   "devDependencies": {
