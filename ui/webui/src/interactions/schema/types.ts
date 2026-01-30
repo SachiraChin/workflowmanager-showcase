@@ -34,8 +34,9 @@ export type LayoutType = "card" | "section";
  * - media: Card chrome wrapper for media generation
  * - image_generation: Self-contained image generation component
  * - video_generation: Self-contained video generation component
+ * - audio_generation: Self-contained audio generation component
  */
-export type SpecialRendererType = "content-panel" | "table" | "media" | "image_generation" | "video_generation";
+export type SpecialRendererType = "content-panel" | "table" | "media" | "image_generation" | "video_generation" | "audio_generation";
 
 // =============================================================================
 // Display Mode
@@ -72,7 +73,7 @@ export const CONTAINER_TYPES: ContainerType[] = ["grid", "list", "section-list",
 export const ROLE_TYPES: RoleType[] = ["column", "row", "cell", "section-header", "section-title", "section-badge", "section-summary", "card-title", "card-subtitle", "tab"];
 
 /** Array of special renderer types for runtime checking */
-export const SPECIAL_RENDERER_TYPES: SpecialRendererType[] = ["content-panel", "table", "media", "image_generation", "video_generation"];
+export const SPECIAL_RENDERER_TYPES: SpecialRendererType[] = ["content-panel", "table", "media", "image_generation", "video_generation", "audio_generation"];
 
 /** Check if a render_as value is a special renderer type */
 export function isSpecialRendererType(value: string | undefined): value is SpecialRendererType {
