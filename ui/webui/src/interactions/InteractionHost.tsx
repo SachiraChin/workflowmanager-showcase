@@ -13,7 +13,7 @@
  * trigger feedback popups via openFeedbackPopup().
  */
 
-import { Check, RotateCcw, MessageSquare } from "lucide-react";
+import { Check, RotateCcw, MessageSquare, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -78,6 +78,8 @@ interface InteractionHostProps {
   disabled?: boolean;
   /** Interaction mode - defaults to active (interactive) */
   mode?: InteractionMode;
+  /** Optional timestamp to display next to title (for readonly mode) */
+  timestamp?: string;
 }
 
 // =============================================================================
@@ -92,6 +94,7 @@ export function InteractionHost({
   onCancel,
   disabled = false,
   mode = DEFAULT_MODE,
+  timestamp,
 }: InteractionHostProps) {
   // Same structure for both active and readonly modes
   // Readonly mode just has disabled inputs and no retryable buttons
@@ -105,8 +108,14 @@ export function InteractionHost({
       <div className="h-full flex flex-col">
         {/* Title - fixed at top */}
         {request.title && (
-          <div className="flex-shrink-0 pb-4">
+          <div className="flex-shrink-0 pb-4 flex items-center justify-between">
             <h3 className="text-lg font-semibold">{request.title}</h3>
+            {timestamp && (
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <Clock className="h-3.5 w-3.5" />
+                <span>{timestamp}</span>
+              </div>
+            )}
           </div>
         )}
 

@@ -7,10 +7,11 @@
  * - Project info (project name, run ID)
  */
 
-import { LogOut, RefreshCw } from "lucide-react";
+import { LogOut, RefreshCw, Layers, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ExecutionStatus } from "./ExecutionStatus";
+import { useWorkflowStore } from "@/state/workflow-store";
 import type { WorkflowProgress, WorkflowStatus } from "@/core/types";
 
 // =============================================================================
@@ -70,6 +71,9 @@ export function WorkflowSidebar({
   onCancel,
   onRestart,
 }: WorkflowSidebarProps) {
+  const viewMode = useWorkflowStore((s) => s.viewMode);
+  const toggleViewMode = useWorkflowStore((s) => s.toggleViewMode);
+
   return (
     <div className="space-y-4">
       {/* Execution Status */}
@@ -89,6 +93,20 @@ export function WorkflowSidebar({
         <Button variant="outline" onClick={onCancel} size="sm">
           <LogOut className="mr-2 h-4 w-4" />
           Exit
+        </Button>
+        {/* View mode toggle */}
+        <Button
+          variant="outline"
+          onClick={toggleViewMode}
+          size="sm"
+          title={viewMode === "scroll" ? "Switch to single view" : "Switch to scroll view"}
+        >
+          {viewMode === "scroll" ? (
+            <Square className="mr-2 h-4 w-4" />
+          ) : (
+            <Layers className="mr-2 h-4 w-4" />
+          )}
+          {viewMode === "scroll" ? "Single" : "Scroll"}
         </Button>
         {/* Start New button - only when workflow finished */}
         {(pageState === "completed" || pageState === "error") && (

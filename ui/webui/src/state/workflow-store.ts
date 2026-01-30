@@ -15,6 +15,9 @@ import type {
 // Types
 // =============================================================================
 
+/** View mode for workflow steps */
+export type ViewMode = "scroll" | "single";
+
 export interface WorkflowExecutionState {
   // Workflow identity
   workflowRunId: string | null;
@@ -44,6 +47,10 @@ export interface WorkflowExecutionState {
 
   // Event log
   events: WorkflowEvent[];
+
+  // View mode (scroll = all cards visible, single = one card at a time)
+  viewMode: ViewMode;
+  currentViewIndex: number;
 }
 
 export interface WorkflowEvent {
@@ -81,6 +88,38 @@ export interface WorkflowActions {
   // Event logging
   addEvent: (type: string, data: Record<string, unknown>) => void;
   clearEvents: () => void;
+
+  // View mode
+  setViewMode: (mode: ViewMode) => void;
+  toggleViewMode: () => void;
+  setCurrentViewIndex: (index: number) => void;
+  navigateView: (direction: "prev" | "next", maxIndex: number) => void;
+}
+
+// =============================================================================
+// LocalStorage helpers
+// =============================================================================
+
+const VIEW_MODE_STORAGE_KEY = "workflow-view-mode";
+
+function getStoredViewMode(): ViewMode {
+  try {
+    const stored = localStorage.getItem(VIEW_MODE_STORAGE_KEY);
+    if (stored === "scroll" || stored === "single") {
+      return stored;
+    }
+  } catch {
+    // localStorage not available
+  }
+  return "single"; // default
+}
+
+function saveViewMode(mode: ViewMode): void {
+  try {
+    localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode);
+  } catch {
+    // localStorage not available
+  }
 }
 
 // =============================================================================
@@ -103,6 +142,8 @@ const initialState: WorkflowExecutionState = {
   lastMessage: null,
   moduleOutputs: {},
   events: [],
+  viewMode: getStoredViewMode(),
+  currentViewIndex: 0,
 };
 
 // =============================================================================
@@ -187,6 +228,27 @@ export const useWorkflowStore = create<WorkflowExecutionState & WorkflowActions>
     },
 
     clearEvents: () => set({ events: [] }),
+
+    // View mode
+    setViewMode: (mode) => {
+      saveViewMode(mode);
+      set({ viewMode: mode });
+    },
+
+    toggleViewMode: () => set((state) => {
+      const newMode = state.viewMode === "scroll" ? "single" : "scroll";
+      saveViewMode(newMode);
+      return { viewMode: newMode };
+    }),
+
+    setCurrentViewIndex: (index) => set({ currentViewIndex: index }),
+
+    navigateView: (direction, maxIndex) => set((state) => {
+      const newIndex = direction === "prev"
+        ? Math.max(0, state.currentViewIndex - 1)
+        : Math.min(maxIndex, state.currentViewIndex + 1);
+      return { currentViewIndex: newIndex };
+    }),
   })
 );
 
@@ -202,3 +264,5 @@ export const selectCompletedInteractions = (state: WorkflowExecutionState) => st
 export const selectIsProcessing = (state: WorkflowExecutionState) => state.isProcessing;
 export const selectError = (state: WorkflowExecutionState) => state.error;
 export const selectModuleOutputs = (state: WorkflowExecutionState) => state.moduleOutputs;
+export const selectViewMode = (state: WorkflowExecutionState) => state.viewMode;
+export const selectCurrentViewIndex = (state: WorkflowExecutionState) => state.currentViewIndex;
