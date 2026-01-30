@@ -70,9 +70,9 @@ function RunnerPageRoute() {
 
 function AppContent({ user, onLogout }: { user: User; onLogout: () => void }) {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-screen flex flex-col bg-background overflow-hidden">
       <Header user={user} onLogout={onLogout} />
-      <main>
+      <main className="flex-1 min-h-0 overflow-hidden">
         <Routes>
           <Route path="/" element={<StartPageRoute />} />
           <Route path="/run/:runId" element={<RunnerPageRoute />} />
