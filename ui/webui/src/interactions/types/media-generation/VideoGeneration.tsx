@@ -138,6 +138,16 @@ export function VideoGeneration({
         );
 
         if (myGenerations.length > 0) {
+          // Restore input values from most recent generation's request_params
+          const latestGen = myGenerations[myGenerations.length - 1];
+          if (latestGen.request_params && inputContext) {
+            for (const [key, value] of Object.entries(latestGen.request_params)) {
+              // Skip internal fields that shouldn't be restored to inputs
+              if (key === "prompt_id" || key === "prompt") continue;
+              inputContext.setValue(key, value);
+            }
+          }
+
           setGenerations(
             myGenerations.map((g) => ({
               urls: g.urls.map(toMediaUrl),

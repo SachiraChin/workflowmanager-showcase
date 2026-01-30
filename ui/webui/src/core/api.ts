@@ -273,6 +273,7 @@ class ApiClient {
       content_ids: string[];
       prompt_id: string;
       provider: string;
+      request_params?: Record<string, unknown>;
     }>;
   }> {
     return this.request<{
@@ -282,6 +283,7 @@ class ApiClient {
         content_ids: string[];
         prompt_id: string;
         provider: string;
+        request_params?: Record<string, unknown>;
       }>;
     }>(`/workflow/${workflowRunId}/interaction/${interactionId}/generations?content_type=${encodeURIComponent(contentType)}`);
   }

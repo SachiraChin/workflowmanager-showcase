@@ -353,6 +353,7 @@ async def get_interaction_generations(
                 "content_items": content_items,
                 "prompt_id": gen.get("prompt_id"),
                 "provider": gen.get("provider"),
+                "request_params": gen.get("request_params"),
             })
 
     return {"generations": result}
