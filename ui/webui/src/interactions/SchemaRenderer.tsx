@@ -330,7 +330,26 @@ export function SchemaRenderer({
   }
 
   // ==========================================================================
-  // 7. Route by schema type
+  // 7. Input types - route to InputRenderer (BEFORE type routing)
+  // ==========================================================================
+  // Input types manage their own state via context and can render without data.
+  // Must be checked before schema.type routing, otherwise array/object inputs
+  // (like tag_input with type: "array") get routed to ArraySchemaRenderer.
+  if (ux.input_type) {
+    return (
+      <InputRenderer
+        value={data}
+        path={path}
+        schema={schema}
+        ux={ux}
+        disabled={disabled}
+        readonly={readonly}
+      />
+    );
+  }
+
+  // ==========================================================================
+  // 8. Route by schema type
   // ==========================================================================
   if (schema.type === "array") {
     return (
@@ -351,24 +370,6 @@ export function SchemaRenderer({
         data={data}
         schema={schema}
         path={path}
-        ux={ux}
-        disabled={disabled}
-        readonly={readonly}
-      />
-    );
-  }
-
-  // ==========================================================================
-  // 8. Input types - route to InputRenderer
-  // ==========================================================================
-  // Input types manage their own state via context and can render without data.
-  // They are handled separately from display types.
-  if (ux.input_type) {
-    return (
-      <InputRenderer
-        value={data}
-        path={path}
-        schema={schema}
         ux={ux}
         disabled={disabled}
         readonly={readonly}
