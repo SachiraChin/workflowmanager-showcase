@@ -35,24 +35,15 @@ interface MediaProps {
 // Component
 // =============================================================================
 
-export function Media({ path, ux, children, disabled: _disabled, readonly: _readonly }: MediaProps) {
-  void _disabled; // Props accepted for API consistency
+export function Media({ path: _path, ux: _ux, children, disabled: _disabled, readonly: _readonly }: MediaProps) {
+  void _path; // Props accepted for API consistency
+  void _ux;
+  void _disabled;
   void _readonly; // Children handle their own disabled/readonly state
-  // Header from display_label or path
-  const header = ux.display_label || path[path.length - 1];
 
   return (
     <div className="rounded-lg border bg-card overflow-hidden shadow-sm">
-      {/* Header */}
-      {header && (
-        <div className="px-4 py-2.5 bg-muted/50 border-b">
-          <span className="font-medium text-sm text-foreground capitalize">
-            {String(header).replace(/_/g, " ")}
-          </span>
-        </div>
-      )}
-
-      {/* Body */}
+      {/* Body - no header since tabs already show the context */}
       <div className="p-4 space-y-4">{children}</div>
     </div>
   );
