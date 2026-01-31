@@ -33,6 +33,8 @@ export interface TabsContextValue {
   tabs: TabInfo[];
   /** Currently active tab ID (null = first tab) */
   activeTabId: string | null;
+  /** Field name to use for tab labels (from parent array's tab_key) */
+  tabKey?: string;
 }
 
 // =============================================================================

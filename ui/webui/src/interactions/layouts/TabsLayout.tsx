@@ -74,8 +74,9 @@ export const TabsLayout: React.FC<LayoutProps & { children?: ReactNode; disabled
       setActive: setActiveTabId,
       tabs,
       activeTabId,
+      tabKey: ux.tab_key,
     }),
-    [register, unregister, isActive, tabs, activeTabId]
+    [register, unregister, isActive, tabs, activeTabId, ux.tab_key]
   );
 
   // Determine effective active tab for header styling

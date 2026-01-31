@@ -41,16 +41,21 @@ interface TabLayoutProps {
 // =============================================================================
 
 /**
- * Resolve tab label from ux config and data.
- * Priority: tab_label > tab_label_field > fallback
+ * Resolve tab label from ux config, context, and data.
+ * Priority: tab_label > tab_label_field > tabKey (from context) > fallback
  */
-function resolveTabLabel(ux: UxConfig, data: unknown, fallback: string): string {
+function resolveTabLabel(
+  ux: UxConfig,
+  data: unknown,
+  fallback: string,
+  tabKey?: string
+): string {
   // 1. Static tab_label
   if (ux.tab_label) {
     return ux.tab_label;
   }
 
-  // 2. Dynamic tab_label_field
+  // 2. Dynamic tab_label_field (item-level config)
   if (ux.tab_label_field && typeof data === "object" && data !== null) {
     const dataObj = data as Record<string, unknown>;
     const fieldValue = dataObj[ux.tab_label_field];
@@ -59,7 +64,16 @@ function resolveTabLabel(ux: UxConfig, data: unknown, fallback: string): string 
     }
   }
 
-  // 3. Fallback to path-based label
+  // 3. tab_key from parent TabsContext (array-level config)
+  if (tabKey && typeof data === "object" && data !== null) {
+    const dataObj = data as Record<string, unknown>;
+    const fieldValue = dataObj[tabKey];
+    if (fieldValue !== undefined && fieldValue !== null) {
+      return String(fieldValue);
+    }
+  }
+
+  // 4. Fallback to path-based label
   return fallback;
 }
 
@@ -79,8 +93,8 @@ export function TabLayout({
   const tabsContext = useTabsContext();
   const tabId = path.join(".");
 
-  // Resolve label
-  const label = resolveTabLabel(ux, data, path[path.length - 1] || "Tab");
+  // Resolve label (tabKey from context provides array-level tab_key)
+  const label = resolveTabLabel(ux, data, path[path.length - 1] || "Tab", tabsContext.tabKey);
 
   // Extract stable functions to avoid dependency on whole context
   const { register, unregister } = tabsContext;
