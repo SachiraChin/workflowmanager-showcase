@@ -70,10 +70,12 @@ export function MediaGenerationHost() {
   selectedContentIdRef.current = selectedContentId;
 
   // Register provider with InteractionHost
+  // Note: isValid is always true - selection is optional for media generation
+  // workflows. The retryable config controls whether to require selection.
   useEffect(() => {
     updateProvider({
       getState: () => ({
-        isValid: selectedContentIdRef.current !== null,
+        isValid: true,
         selectedCount: selectedContentIdRef.current ? 1 : 0,
         selectedGroupIds: [],
       }),
@@ -88,7 +90,7 @@ export function MediaGenerationHost() {
   useEffect(() => {
     updateProvider({
       getState: () => ({
-        isValid: selectedContentId !== null,
+        isValid: true,
         selectedCount: selectedContentId ? 1 : 0,
         selectedGroupIds: [],
       }),

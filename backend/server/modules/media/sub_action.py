@@ -30,7 +30,7 @@ from backend.providers.media import (
     download_media,
     DownloadError,
 )
-from api.dependencies import get_media_images_path, get_media_videos_path
+from api.dependencies import get_media_images_path, get_media_videos_path, get_media_audio_path
 from utils import uuid7_str
 from backend.db.path_utils import make_relative_path
 
@@ -143,6 +143,16 @@ async def execute_media_sub_action(
                 executor,
                 lambda: method(source_image, prompt, params, progress_callback=progress_callback)
             )
+        elif request.action_type == "txt2audio":
+            logger.info(
+                f"[MediaSubAction] txt2audio params: duration_seconds={params.get('duration_seconds')}, "
+                f"force_instrumental={params.get('force_instrumental')}, "
+                f"output_format={params.get('output_format')}"
+            )
+            future = loop.run_in_executor(
+                executor,
+                lambda: method(prompt, params, progress_callback=progress_callback)
+            )
         else:
             raise GenerationError(f"Unknown action type: {request.action_type}")
 
@@ -174,11 +184,17 @@ async def execute_media_sub_action(
         # Store individual content items and download files
         content_ids: List[str] = []
         server_urls: List[str] = []
-        content_type = "video" if request.action_type == "img2vid" else "image"
+        if request.action_type == "img2vid":
+            content_type = "video"
+        elif request.action_type == "txt2audio":
+            content_type = "audio"
+        else:
+            content_type = "image"
 
         # Get media storage paths
         images_path = get_media_images_path()
         videos_path = get_media_videos_path()
+        audio_path = get_media_audio_path()
 
         for index, provider_url in enumerate(result.urls):
             # Generate content_id first so we can use it for both filename and DB
@@ -194,6 +210,7 @@ async def execute_media_sub_action(
                     content_type=content_type,
                     images_path=images_path,
                     videos_path=videos_path,
+                    audios_path=audio_path,
                 )
             except DownloadError as e:
                 logger.error(f"[MediaSubAction] Download failed: {e}")

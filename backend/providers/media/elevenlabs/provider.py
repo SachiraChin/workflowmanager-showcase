@@ -283,11 +283,11 @@ class ElevenLabsProvider(MediaProviderBase):
             logger.info(f"[ElevenLabs] Assembled prompt: {assembled_prompt[:300]}...")
             payload["prompt"] = assembled_prompt[:4100]  # Max prompt length
 
-        # Optional parameters
-        if "duration_ms" in params:
-            duration_ms = params["duration_ms"]
-            # Clamp to valid range
-            duration_ms = max(3000, min(600000, int(duration_ms)))
+        # Optional parameters - duration in seconds from UI
+        if "duration_seconds" in params:
+            duration_ms = int(params["duration_seconds"]) * 1000
+            # Clamp to valid range (3s - 10min)
+            duration_ms = max(3000, min(600000, duration_ms))
             payload["music_length_ms"] = duration_ms
 
         if params.get("force_instrumental"):
@@ -395,9 +395,9 @@ class ElevenLabsProvider(MediaProviderBase):
 
     def _get_music_preview_info(self, params: Dict[str, Any]) -> PreviewInfo:
         """Calculate cost estimate for music generation."""
-        # Get duration (default to 60 seconds if not specified)
-        duration_ms = params.get("duration_ms", 60000)
-        duration_minutes = duration_ms / 60000
+        # Get duration in seconds (default to 60 seconds if not specified)
+        duration_seconds = int(params.get("duration_seconds", 60))
+        duration_minutes = duration_seconds / 60
 
         total_cost = duration_minutes * MUSIC_COST_PER_MINUTE_USD
 

@@ -116,7 +116,14 @@ class MediaGenerateModule(InteractiveModule):
         source_image = inputs.get('source_image')
 
         # Build data object - include source_image if present for schema-driven rendering
-        data = dict(prompts) if isinstance(prompts, dict) else {}
+        # Handle both array (new style) and dict (legacy grouped by provider) prompt formats
+        if isinstance(prompts, list):
+            # Array of prompts - wrap in object for schema (expects data.prompts)
+            data = {"prompts": prompts}
+        elif isinstance(prompts, dict):
+            data = dict(prompts)
+        else:
+            data = {}
         if source_image:
             data["_source_image"] = source_image
 

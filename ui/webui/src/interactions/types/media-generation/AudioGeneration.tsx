@@ -85,9 +85,15 @@ function AudioTrackItem({
   const [currentTime, setCurrentTime] = useState(0);
   const [isReady, setIsReady] = useState(false);
 
-  // Initialize WaveSurfer
+  // Store onPause in a ref to avoid re-creating the effect
+  const onPauseRef = useRef(onPause);
+  onPauseRef.current = onPause;
+
+  // Initialize WaveSurfer - manually fetch audio to handle credentials properly
   useEffect(() => {
     if (!containerRef.current) return;
+
+    let cancelled = false;
 
     const wavesurfer = WaveSurfer.create({
       container: containerRef.current,
@@ -99,8 +105,21 @@ function AudioTrackItem({
       barRadius: 2,
       height: 64,
       normalize: true,
-      url: track.url,
     });
+
+    // Manually fetch audio with credentials and load as blob
+    fetch(track.url, { credentials: "include", mode: "cors" })
+      .then((response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.blob();
+      })
+      .then((blob) => {
+        if (cancelled) return;
+        wavesurfer.loadBlob(blob);
+      })
+      .catch((err) => {
+        console.error("[AudioTrackItem] Failed to load audio:", err);
+      });
 
     wavesurfer.on("ready", () => {
       setDuration(wavesurfer.getDuration());
@@ -112,23 +131,28 @@ function AudioTrackItem({
     });
 
     wavesurfer.on("finish", () => {
-      onPause();
+      onPauseRef.current();
     });
 
     wavesurferRef.current = wavesurfer;
 
     return () => {
+      cancelled = true;
       wavesurfer.destroy();
       wavesurferRef.current = null;
     };
-  }, [track.url, onPause]);
+  }, [track.url]);
 
   // Handle play/pause from parent
   useEffect(() => {
+    console.log("[AudioTrackItem] play/pause effect:", { isPlaying, isReady, hasWavesurfer: !!wavesurferRef.current });
     if (!wavesurferRef.current || !isReady) return;
 
     if (isPlaying) {
-      wavesurferRef.current.play();
+      console.log("[AudioTrackItem] Calling wavesurfer.play()");
+      wavesurferRef.current.play().catch((err: Error) => {
+        console.error("[AudioTrackItem] Play failed:", err);
+      });
     } else {
       wavesurferRef.current.pause();
     }

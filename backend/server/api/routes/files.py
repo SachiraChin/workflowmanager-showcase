@@ -8,7 +8,7 @@ Also serves downloaded media files (images/videos).
 
 import os
 from typing import Dict, Any, Optional
-from fastapi import APIRouter, HTTPException, Query, Depends
+from fastapi import APIRouter, HTTPException, Query, Depends, Request
 from fastapi.responses import FileResponse
 
 from ..dependencies import get_db, get_current_user_id
@@ -124,15 +124,41 @@ async def get_api_call_files(
 
 # Content-Type mapping for media files
 MEDIA_CONTENT_TYPES = {
+    # Images
     "png": "image/png",
     "jpg": "image/jpeg",
     "jpeg": "image/jpeg",
     "webp": "image/webp",
     "gif": "image/gif",
+    # Videos
     "mp4": "video/mp4",
     "webm": "video/webm",
     "mov": "video/quicktime",
+    # Audio
+    "mp3": "audio/mpeg",
+    "wav": "audio/wav",
+    "ogg": "audio/ogg",
+    "m4a": "audio/mp4",
+    "aac": "audio/aac",
 }
+
+
+@router.options("/{workflow_run_id}/media/{content_id}.{extension}")
+async def media_file_options(
+    request: Request,
+):
+    """Handle CORS preflight for media files."""
+    origin = request.headers.get("origin", "")
+    headers = {
+        "Access-Control-Allow-Methods": "GET, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Max-Age": "86400",
+    }
+    if origin:
+        headers["Access-Control-Allow-Origin"] = origin
+    from fastapi.responses import Response
+    return Response(status_code=204, headers=headers)
 
 
 @router.get("/{workflow_run_id}/media/{content_id}.{extension}")
@@ -140,6 +166,7 @@ async def get_media_file(
     workflow_run_id: str,
     content_id: str,
     extension: str,
+    request: Request,
     db = Depends(get_db),
     user_id: str = Depends(get_current_user_id)
 ):
@@ -184,12 +211,18 @@ async def get_media_file(
     content_type = MEDIA_CONTENT_TYPES.get(extension.lower(), "application/octet-stream")
 
     # Return file with cache headers (1 year - content is immutable)
-    # Include CORS headers explicitly for cross-origin image requests with credentials
+    # Include CORS headers explicitly for cross-origin requests with credentials
+    # (needed for WaveSurfer audio waveform decoding via Web Audio API)
+    origin = request.headers.get("origin", "")
+    cors_headers = {
+        "Cache-Control": "public, max-age=31536000, immutable",
+        "Access-Control-Allow-Credentials": "true",
+    }
+    if origin:
+        cors_headers["Access-Control-Allow-Origin"] = origin
+
     return FileResponse(
         path=local_path,
         media_type=content_type,
-        headers={
-            "Cache-Control": "public, max-age=31536000, immutable",
-            "Access-Control-Allow-Credentials": "true",
-        }
+        headers=cors_headers
     )

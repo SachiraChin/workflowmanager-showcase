@@ -82,6 +82,13 @@ def get_media_videos_path() -> Optional[str]:
     return os.path.join(_media_base_path, "videos")
 
 
+def get_media_audio_path() -> Optional[str]:
+    """Get the media audio storage path (base_path/audio)."""
+    if not _media_base_path:
+        return None
+    return os.path.join(_media_base_path, "audio")
+
+
 def get_server_base_url() -> Optional[str]:
     """Get the configured server base URL."""
     return _server_base_url

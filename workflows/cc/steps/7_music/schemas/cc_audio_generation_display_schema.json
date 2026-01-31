@@ -5,12 +5,14 @@
     "prompts": {
       "type": "array",
       "_ux": {
+        "display": "visible",
         "render_as": "tabs",
         "tab_key": "name"
       },
       "items": {
         "type": "object",
         "_ux": {
+          "display": "visible",
           "render_as": "tab.media[input_schema,audio_generation]",
           "provider": "elevenlabs",
           "prompt_id_field": "name",
@@ -33,16 +35,15 @@
                   "source_field": "prompt"
                 }
               },
-              "duration_ms": {
+              "duration_seconds": {
                 "type": "integer",
                 "title": "Duration (seconds)",
-                "minimum": 10000,
-                "maximum": 120000,
-                "step": 5000,
+                "minimum": 10,
+                "maximum": 120,
+                "default": 15,
+                "step": 1,
                 "_ux": {
-                  "input_type": "slider",
-                  "format": "duration_seconds",
-                  "source_data": "{{ state.duration_selection.sound_track_duration * 1000 }}"
+                  "input_type": "slider"
                 }
               },
               "bpm": {
@@ -61,7 +62,8 @@
                 "title": "Instruments",
                 "_ux": {
                   "input_type": "tag_input",
-                  "source_field": "instruments"
+                  "source_field": "instruments",
+                  "placeholder": "e.g. piano, strings, acoustic guitar"
                 }
               },
               "mood": {
@@ -69,7 +71,8 @@
                 "title": "Mood",
                 "_ux": {
                   "input_type": "tag_input",
-                  "source_field": "mood"
+                  "source_field": "mood",
+                  "placeholder": "e.g. peaceful, reflective, warm"
                 }
               },
               "force_instrumental": {
@@ -119,6 +122,11 @@
           "suggested_bpm": {
             "type": "integer",
             "_ux.display": false
+          },
+          "duration_seconds": {
+            "type": "integer",
+            "_ux.display": false,
+            "display_format": "{{ state.duration_selection.sound_track_duration }}"
           },
           "instruments": {
             "type": "array",
