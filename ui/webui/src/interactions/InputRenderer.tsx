@@ -21,6 +21,8 @@ import { SelectInputRenderer } from "./renderers/SelectInputRenderer";
 import { SliderInputRenderer } from "./renderers/SliderInputRenderer";
 import { TextareaInputRenderer } from "./renderers/TextareaInputRenderer";
 import { NumberInputRenderer } from "./renderers/NumberInputRenderer";
+import { CheckboxInputRenderer } from "./renderers/CheckboxInputRenderer";
+import { TagInputRenderer } from "./renderers/TagInputRenderer";
 import { AlternativeInputWrapper } from "./renderers/AlternativeInputWrapper";
 
 // =============================================================================
@@ -155,6 +157,33 @@ export function InputRenderer({
       );
       break;
     }
+
+    case "checkbox":
+      primaryInput = (
+        <CheckboxInputRenderer
+          path={path}
+          value={value as boolean | undefined}
+          label={primaryLabel}
+          className={className}
+          disabled={disabled}
+          readonly={readonly}
+        />
+      );
+      break;
+
+    case "tag_input":
+      primaryInput = (
+        <TagInputRenderer
+          path={path}
+          value={value as string[] | undefined}
+          label={primaryLabel}
+          placeholder={ux.placeholder}
+          className={className}
+          disabled={disabled}
+          readonly={readonly}
+        />
+      );
+      break;
 
     case "text":
     default:

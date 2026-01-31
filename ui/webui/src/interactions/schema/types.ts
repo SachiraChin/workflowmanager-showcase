@@ -143,6 +143,7 @@ export interface UxConfig {
   enum_labels?: Record<string, string>;
   source_field?: string;  // Field name in data to get initial value from
   source_data?: string;   // Template string with {field} placeholders
+  placeholder?: string;   // Placeholder text for inputs
 
   // Layout configuration (for input_schema container)
   layout?: LayoutMode;
@@ -177,7 +178,7 @@ export interface UxConfig {
 export type LayoutMode = "grid" | "flex" | "stack";
 
 /** Input type for editable fields */
-export type InputType = "textarea" | "select" | "slider" | "checkbox" | "text" | "number";
+export type InputType = "textarea" | "select" | "slider" | "checkbox" | "text" | "number" | "tag_input";
 
 /** Config for a controlled field - used by select and other input components */
 export interface ControlConfig {
