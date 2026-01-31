@@ -12,6 +12,7 @@ See: architecture/2025_12_17_workflow_state_validation_proposal.md
 """
 
 import logging
+from datetime import datetime
 from typing import Dict, Any
 from jinja2 import Environment, BaseLoader, TemplateSyntaxError, UndefinedError, Undefined
 from contracts.template_validator import TemplateValidator
@@ -262,7 +263,8 @@ class Jinja2Resolver:
             'state': state_dict,
             'module': module_outputs,
             'step': self.state.get_step_config() if hasattr(self.state, 'get_step_config') else {},
-            'config': self.config
+            'config': self.config,
+            'now': datetime.now,  # Callable: {{ now().strftime('%Y-%m-%d') }}
         }
 
 

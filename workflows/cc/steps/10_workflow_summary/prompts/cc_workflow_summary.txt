@@ -100,44 +100,36 @@ Text:
 TITLES & SOCIAL
 ================================================================================
 
-{% if state.selected_title %}
-Selected Title: {{ state.selected_title }}
-{% endif %}
+{% if state.selected_title_description %}
+Selected Title: {{ state.selected_title_description.title }}
 
-{% if state.selected_description %}
 Selected Description:
-{{ state.selected_description.text }}
-{{ state.selected_description.emojis }}
+{{ state.selected_title_description.description }}
+{{ state.selected_title_description.emojis }}
 {% endif %}
 
 ================================================================================
 MUSIC
 ================================================================================
 
-{% if state.selected_music_option %}
-Selected Style: {{ state.selected_music_option.name }}
-{{ state.selected_music_option.description }}
+{% if state.music_prompts %}
+--- Music Prompts ---
+{% for prompt in state.music_prompts.prompts %}
+Style: {{ prompt.name }}
+{{ prompt.description }}
+Prompt: {{ prompt.prompt }}
+BPM: {{ prompt.suggested_bpm }}
+Instruments: {{ prompt.instruments | join(', ') }}
+Mood: {{ prompt.mood | join(', ') }}
+Energy: {{ prompt.energy }}
+{% if not loop.last %}
 
-BPM: {{ state.selected_music_option.bpm }}
-Key: {{ state.selected_music_option.key }}
-Instruments: {{ state.selected_music_option.instruments | join(', ') }}
-Mood: {{ state.selected_music_option.mood | join(', ') }}
-Energy: {{ state.selected_music_option.energy }}
+{% endif %}
+{% endfor %}
 {% endif %}
 
-{% if state.elevenlabs_prompts_response %}
---- ElevenLabs Prompts ---
-
-Track Title: {{ state.elevenlabs_prompts_response.track_title }}
-
-Precise Prompt:
-{{ state.elevenlabs_prompts_response.elevenlabs_prompt_precise }}
-
-Evocative Prompt:
-{{ state.elevenlabs_prompts_response.elevenlabs_prompt_evocative }}
-
-Voiceover Prompt:
-{{ state.elevenlabs_prompts_response.elevenlabs_prompt_voiceover }}
+{% if state.selected_audio_id %}
+Selected Audio ID: {{ state.selected_audio_id }}
 {% endif %}
 
 ================================================================================
