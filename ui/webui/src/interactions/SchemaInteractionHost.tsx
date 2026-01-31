@@ -94,7 +94,10 @@ export function SchemaInteractionHost({
   const data = displayData.data;
   const multiSelect = displayData.multi_select === true;
   const minSelections = request.min_selections || 1;
-  const maxSelections = multiSelect ? 999 : (request.max_selections || 1);
+  // -1 means unlimited selections
+  const maxSelections = request.max_selections === -1
+    ? Number.MAX_SAFE_INTEGER
+    : (request.max_selections || 1);
 
   return (
     <SelectionProvider
@@ -186,7 +189,12 @@ function SchemaInteractionContent({
         {mode === "select" && (
           <p className="text-sm text-muted-foreground">
             {selectedPaths.length} of{" "}
-            {multiSelect ? `${minSelections}-${maxSelections}` : "1"} selected
+            {multiSelect
+              ? maxSelections >= Number.MAX_SAFE_INTEGER
+                ? `${minSelections}+`
+                : `${minSelections}-${maxSelections}`
+              : "1"}{" "}
+            selected
           </p>
         )}
         {mode === "review" && (

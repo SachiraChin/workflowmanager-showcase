@@ -1,6 +1,6 @@
-Generate titles and descriptions for a pet video to be published on social media platforms.
+Generate 10 title/description combinations for a pet video to be published on social media platforms.
 
-CRITICAL: These must ENGAGE viewers emotionally, not just describe the video.
+CRITICAL: Each combination must work together - the title and description should complement each other and ENGAGE viewers emotionally.
 
 === TITLES - EMOTIONAL HOOKS ===
 
@@ -15,7 +15,7 @@ TITLE PSYCHOLOGY:
 - EMOTIONAL HOOK: Lead with feeling, not description
 - CURIOSITY: Make them want to see the moment
 
-TITLE REQUIREMENTS (5 total):
+TITLE REQUIREMENTS:
 - 20-40 characters each
 - Sentence case (capitalize first word and proper nouns only)
 - Must trigger emotional response in pet lovers
@@ -26,14 +26,14 @@ TITLE REQUIREMENTS (5 total):
 
 DESCRIPTION PURPOSE:
 - Often read AFTER viewing - influences follow/save decisions
-- Extends the emotional experience
+- Extends the emotional experience of the title
 - Invites viewers into the pet-loving community
 - Helps with discoverability
 
 DESCRIPTION STRUCTURE (3 parts):
 
 PART 1 - WELCOMING:
-Open by inviting viewers into the moment. Use welcoming language ("Join us", "Welcome to", "This is"). Connect to the emotional theme.
+Open by inviting viewers into the moment. Use welcoming language ("Join us", "Welcome to", "This is"). Connect to the emotional theme of the paired title.
 
 PART 2 - RESONANCE:
 Speak to what pet owners feel - the joy, the chaos, the unconditional love. Include natural keywords (pet love, furry friend, best friend, companion, etc.).
@@ -41,12 +41,12 @@ Speak to what pet owners feel - the joy, the chaos, the unconditional love. Incl
 PART 3 - AFFIRMATION:
 End with validation of the pet-owner bond. Leave them feeling understood as pet parents.
 
-DESCRIPTION REQUIREMENTS (5 total):
+DESCRIPTION REQUIREMENTS:
 - Follow the 3-part structure
 - 3-4 complete sentences with proper punctuation
 - Written in second person ("you") or universal voice
 - End text with '....' (4 dots)
-- Separate "emojis" field with exactly 3 pet-appropriate emojis
+- Must complement and extend the paired title's theme
 
 PUNCTUATION RULES:
 - Every sentence MUST end with a period
@@ -54,9 +54,15 @@ PUNCTUATION RULES:
 - ASCII only - straight apostrophes (') not curly ones
 - Must read naturally when spoken aloud
 
-EMOJI GUIDELINES:
-- 3 emojis per description
-- Match the pet type and emotional tone
+=== EMOJIS ===
+
+EMOJI REQUIREMENTS:
+- 3 emojis per combination
+- Match the pet type and emotional tone of the title/description
 - Cat-appropriate: heart, sparkle, cat face, paw, etc.
 - Dog-appropriate: heart, sparkle, dog face, paw, bone, etc.
-- Vary across descriptions
+- Vary across combinations
+
+=== OUTPUT ===
+
+Generate 10 unique combinations. Each combination should have a distinct angle or emotional approach so users have variety to choose from.

@@ -97,6 +97,20 @@ class SelectModule(InteractiveModule):
                 required=False,
                 default="select",
                 description="Mode: 'select' for selection, 'review' for review with retry option"
+            ),
+            ModuleInput(
+                name="min_selections",
+                type="integer",
+                required=False,
+                default=1,
+                description="Minimum number of selections required"
+            ),
+            ModuleInput(
+                name="max_selections",
+                type="integer",
+                required=False,
+                default=None,
+                description="Maximum number of selections allowed (None = unlimited for multi_select)"
             )
         ]
 
@@ -158,6 +172,8 @@ class SelectModule(InteractiveModule):
         prompt = self.get_input_value(inputs, 'prompt')
         multi_select = self.get_input_value(inputs, 'multi_select')
         mode = self.get_input_value(inputs, 'mode')
+        min_selections = self.get_input_value(inputs, 'min_selections')
+        max_selections = self.get_input_value(inputs, 'max_selections')
 
         # Get retryable config from context (set by workflow processor)
         retryable = getattr(context, 'retryable', None)
@@ -174,12 +190,19 @@ class SelectModule(InteractiveModule):
         else:
             interaction_type = InteractionType.SELECT_FROM_STRUCTURED
 
+        # Determine effective max_selections (-1 means unlimited)
+        effective_max = max_selections
+        if effective_max is None:
+            effective_max = -1 if multi_select else 1
+
         return InteractionRequest(
             interaction_type=interaction_type,
             interaction_id=f"select_{uuid6.uuid7().hex}",
             title=prompt,
             options=[],  # TUI will build options from data + schema
             extra_options=[],
+            min_selections=min_selections,
+            max_selections=effective_max,
             display_data={
                 "data": data,
                 "schema": schema,

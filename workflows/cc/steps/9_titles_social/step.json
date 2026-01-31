@@ -54,42 +54,18 @@
             "data": { "resolver": "server" }
           }
         },
-        "prompt": "Select a title for your pet video",
-        "data": "{{ state.titles_social_response.titles }}",
+        "prompt": "Select a title and description for your pet video",
+        "data": "{{ state.titles_social_response.options }}",
         "schema": {
-          "$ref": "schemas/cc_titles_display_schema.json",
+          "$ref": "schemas/cc_titles_social_display_schema.json",
           "type": "json"
         },
         "multi_select": false,
         "mode": "select"
       },
       "outputs_to_state": {
-        "selected_indices": "selected_title_indices",
-        "selected_data": "selected_title"
-      },
-      "name": "select_title"
-    },
-    {
-      "module_id": "user.select",
-      "inputs": {
-        "resolver_schema": {
-          "type": "object",
-          "properties": {
-            "data": { "resolver": "server" }
-          }
-        },
-        "prompt": "Select a description for your pet video",
-        "data": "{{ state.titles_social_response.descriptions }}",
-        "schema": {
-          "$ref": "schemas/cc_descriptions_display_schema.json",
-          "type": "json"
-        },
-        "multi_select": false,
-        "mode": "select"
-      },
-      "outputs_to_state": {
-        "selected_indices": "selected_description_indices",
-        "selected_data": "selected_description"
+        "selected_indices": "selected_title_description_index",
+        "selected_data": "selected_title_description"
       },
       "retryable": {
         "default_option": "continue",
@@ -113,7 +89,7 @@
           }
         ]
       },
-      "name": "select_description"
+      "name": "select_title_description"
     }
   ]
 }

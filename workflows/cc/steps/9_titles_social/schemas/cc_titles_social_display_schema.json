@@ -1,0 +1,44 @@
+{
+  "type": "array",
+  "_ux": {
+    "display": "visible",
+    "render_as": "card-stack"
+  },
+  "items": {
+    "type": "object",
+    "_ux": {
+      "display": "visible",
+      "render_as": "card",
+      "selectable": true,
+      "computed": {
+        "description_display": {
+          "display": true,
+          "display_label": "Description",
+          "display_format": "{{ description }} {{ emojis }}",
+          "display_order": 2
+        }
+      }
+    },
+    "properties": {
+      "_ux": {
+      },
+      "title": {
+        "type": "string",
+        "_ux": {
+          "display": true,
+          "display_label": "Title",
+          "render_as": "card-title",
+          "display_order": 1
+        }
+      },
+      "description": {
+        "type": "string",
+        "_ux.display": false
+      },
+      "emojis": {
+        "type": "string",
+        "_ux.display": false
+      }
+    }
+  }
+}
