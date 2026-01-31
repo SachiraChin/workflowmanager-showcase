@@ -908,23 +908,55 @@ interface CopyButtonProps {
 function CopyButton({ value, className }: CopyButtonProps) {
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = useCallback(async () => {
-    try {
-      const text = ((value !== null && typeof value === "object")
-        ? JSON.stringify(value, null, 2)
-        : String(value))
-        .replace(/\r\n/g, "\n")
-        .replace(/\r/g, "\n");
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy:", err);
+  const handleCopy = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const text = ((value !== null && typeof value === "object")
+      ? JSON.stringify(value, null, 2)
+      : String(value))
+      .replace(/\r\n/g, "\n")
+      .replace(/\r/g, "\n");
+
+    // Try modern clipboard API first, fallback to execCommand
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+      navigator.clipboard.writeText(text).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }).catch((err) => {
+        console.error("Clipboard API failed:", err);
+        fallbackCopy(text);
+      });
+    } else {
+      fallbackCopy(text);
+    }
+
+    function fallbackCopy(str: string) {
+      const textarea = document.createElement("textarea");
+      textarea.value = str;
+      textarea.style.cssText = "position:fixed;top:0;left:0;width:2em;height:2em;padding:0;border:none;outline:none;box-shadow:none;background:transparent;";
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      textarea.setSelectionRange(0, str.length);
+      try {
+        const success = document.execCommand("copy");
+        if (success) {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        } else {
+          console.error("execCommand returned false");
+        }
+      } catch (err) {
+        console.error("Fallback copy failed:", err);
+      }
+      document.body.removeChild(textarea);
     }
   }, [value]);
 
   return (
     <button
+      type="button"
       onClick={handleCopy}
       className={cn(
         "p-1.5 hover:bg-muted rounded opacity-70 hover:opacity-100 transition-opacity",
@@ -1103,7 +1135,7 @@ export function StateTreeView() {
       {/* Value Popup Dialog */}
       <Dialog open={popup.open} onOpenChange={handleClosePopup}>
         <DialogContent size="medium" className="flex flex-col overflow-hidden">
-          <CopyButton value={popup.value} className="absolute top-4 right-12" />
+          <CopyButton value={popup.value} className="absolute top-4 right-12 z-50" />
           <DialogHeader className="shrink-0">
             <DialogTitle className="font-mono text-sm pr-16">{popup.path}</DialogTitle>
           </DialogHeader>
@@ -1130,7 +1162,7 @@ export function StateTreeView() {
       {/* Module/Group Config Popup Dialog */}
       <Dialog open={configPopup.open} onOpenChange={handleCloseConfigPopup}>
         <DialogContent size="medium" className="flex flex-col overflow-hidden">
-          {currentModuleConfig && <CopyButton value={currentModuleConfig} className="absolute top-4 right-12" />}
+          {currentModuleConfig && <CopyButton value={currentModuleConfig} className="absolute top-4 right-12 z-50" />}
           <DialogHeader className="shrink-0">
             <DialogTitle className="font-mono text-sm pr-16">
               {configPopup.isGroup ? "Group" : "Module"}: {configPopup.moduleName}
