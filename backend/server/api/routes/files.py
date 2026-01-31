@@ -167,6 +167,7 @@ async def get_media_file(
     content_id: str,
     extension: str,
     request: Request,
+    download: bool = Query(False, description="Force download with Content-Disposition: attachment"),
     db = Depends(get_db),
     user_id: str = Depends(get_current_user_id)
 ):
@@ -180,6 +181,7 @@ async def get_media_file(
     - Local file exists
 
     Returns the file with appropriate Content-Type and cache headers.
+    Use ?download=true to force browser download instead of inline display.
     """
     # Look up content in database
     content = db.content_repo.get_content_by_id(content_id)
@@ -214,15 +216,20 @@ async def get_media_file(
     # Include CORS headers explicitly for cross-origin requests with credentials
     # (needed for WaveSurfer audio waveform decoding via Web Audio API)
     origin = request.headers.get("origin", "")
-    cors_headers = {
+    headers = {
         "Cache-Control": "public, max-age=31536000, immutable",
         "Access-Control-Allow-Credentials": "true",
     }
     if origin:
-        cors_headers["Access-Control-Allow-Origin"] = origin
+        headers["Access-Control-Allow-Origin"] = origin
+
+    # Add Content-Disposition: attachment when download=true
+    if download:
+        filename = f"{content_id}.{extension}"
+        headers["Content-Disposition"] = f'attachment; filename="{filename}"'
 
     return FileResponse(
         path=local_path,
         media_type=content_type,
-        headers=cors_headers
+        headers=headers
     )

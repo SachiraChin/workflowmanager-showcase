@@ -13,7 +13,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Loader2, Play, Pause, Volume2 } from "lucide-react";
+import { Loader2, Play, Pause, Volume2, Download } from "lucide-react";
 import WaveSurfer from "wavesurfer.js";
 import { useInteraction } from "@/state/interaction-context";
 import { useWorkflowStore } from "@/state/workflow-store";
@@ -217,6 +217,19 @@ function AudioTrackItem({
         </div>
 
         <Volume2 className="w-4 h-4 text-muted-foreground" />
+
+        {/* Download link - always available */}
+        <a
+          href={`${track.url}?download=true`}
+          download={track.url.split('/').pop() || 'audio.mp3'}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="p-1.5 rounded-md hover:bg-muted transition-colors"
+          title="Download"
+        >
+          <Download className="w-4 h-4 text-muted-foreground hover:text-foreground" />
+        </a>
       </div>
     </div>
   );

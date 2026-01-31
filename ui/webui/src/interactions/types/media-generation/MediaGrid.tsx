@@ -11,7 +11,7 @@
 
 import { useState, useRef } from "react";
 import { cn } from "@/core/utils";
-import { Check, ChevronLeft, ChevronRight, X, Play } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, X, Play, Download } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -37,6 +37,13 @@ function isVideoUrl(url: string): boolean {
     lowercaseUrl.includes('.mp4?') ||
     lowercaseUrl.includes('.webm?')
   );
+}
+
+/** Extract filename from URL for download */
+function getFilenameFromUrl(url: string): string {
+  // Extract the last segment of the URL path (e.g., "gc_abc123.png")
+  const urlPath = url.split('?')[0];
+  return urlPath.split('/').pop() || 'download';
 }
 
 // =============================================================================
@@ -390,6 +397,19 @@ function MediaGridItem({
           <Check className="w-4 h-4" />
         </div>
       )}
+
+      {/* Download link - always visible (dimmed), bottom-right */}
+      <a
+        href={`${item.url}?download=true`}
+        download={getFilenameFromUrl(item.url)}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        className="absolute bottom-2 right-2 bg-black/40 text-white/70 rounded-full p-1.5 shadow-lg opacity-60 hover:opacity-100 hover:bg-black/70 hover:text-white transition-all z-10"
+        title="Download"
+      >
+        <Download className="w-4 h-4" />
+      </a>
     </div>
   );
 }
