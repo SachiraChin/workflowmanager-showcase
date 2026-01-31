@@ -5,36 +5,32 @@
     "text_sets": {
       "type": "array",
       "_ux.display": "visible",
-      "_ux.render_as": "section-list",
+      "_ux.render_as": "card-stack",
       "items": {
         "type": "object",
-        "_ux.display": "visible",
-        "_ux.render_as": "section",
+        "_ux": {
+          "display": "visible",
+          "render_as": "card",
+          "selectable": true
+        },
         "properties": {
           "set_id": {
             "type": "string",
-            "_ux.display": true,
-            "_ux.render_as": "section-title"
+            "_ux.display": false
           },
           "set_description": {
             "type": "string",
             "_ux": {
               "display": true,
-              "render_as": "section-summary",
-              "highlight": true
+              "render_as": "card-title"
             }
           },
           "paragraphs": {
             "type": "array",
-            "_ux.display": "visible",
-            "_ux.render_as": "card-stack",
+            "_ux.display": "passthrough",
             "items": {
               "type": "object",
-              "_ux": {
-                "display": "visible",
-                "render_as": "card",
-                "selectable": true
-              },
+              "_ux.display": "passthrough",
               "properties": {
                 "paragraph_id": {
                   "type": "integer",
@@ -44,7 +40,6 @@
                   "type": "array",
                   "_ux": {
                     "display": true,
-                    "display_label": "Text",
                     "display_format": "{{ value | join('\n') }}"
                   }
                 }
