@@ -7,7 +7,7 @@
  * - Variant: cards vs list styling
  */
 
-import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useMemo, useEffect, type ReactNode } from "react";
 import type { SelectionItem } from "@/core/types";
 
 // =============================================================================
@@ -113,6 +113,16 @@ export function SelectionProvider({
     () => initialSelectedItems.map(item => item.data)
   );
   const [isDirty, setIsDirty] = useState(false);
+
+  // Sync state when initialSelectedItems changes (e.g., switching between history items)
+  // This is needed because useState initializer only runs on first mount
+  useEffect(() => {
+    if (initialSelectedItems.length > 0) {
+      setSelectedPaths(initialSelectedItems.map(item => item.path));
+      setSelectedData(initialSelectedItems.map(item => item.data));
+      setIsDirty(false);
+    }
+  }, [initialSelectedItems]);
 
   // Feedback state
   const [feedbackByPath, setFeedbackByPath] = useState<Record<string, string>>({});
