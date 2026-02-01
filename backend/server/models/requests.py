@@ -100,14 +100,16 @@ class SubActionRequest(BaseModel):
     """
     Request to execute a sub-action within an interaction.
 
-    Sub-actions are operations (like image generation) that can be triggered
-    from within an interactive module without completing the interaction.
+    Sub-actions are operations that can be triggered from within an interactive
+    module without completing the interaction.
+
+    The action_id references a sub_action definition in the module's schema.
+    The sub_action schema defines what type of action to execute:
+    - target_sub_action: Execute a chain of modules as a child workflow
+    - self_sub_action: Invoke the module's own sub_action() method
 
     The response is streamed via SSE with progress updates.
     """
     interaction_id: str  # ID of the current interaction
-    provider: str  # Provider name: "midjourney", "leonardo"
-    action_type: str  # Operation type: "txt2img", "img2img", "img2vid"
-    prompt_id: str  # Identifier for the prompt being processed
-    params: Dict[str, Any]  # Generation parameters (includes 'prompt')
-    source_data: Any = None  # Original prompt data from workflow (for storage)
+    action_id: str  # References sub_action.id in module schema
+    params: Dict[str, Any] = Field(default_factory=dict)  # Action-specific params

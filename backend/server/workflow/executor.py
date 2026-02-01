@@ -70,6 +70,99 @@ class WorkflowExecutor:
         addon_processor = AddonProcessor(resolved_addon_configs, context)
         module.set_addon_processor(addon_processor)
 
+    def resolve_interaction_display_data(
+        self,
+        workflow_run_id: str,
+        step_id: str,
+        module_name: str,
+        module_id: str,
+        module_config: Dict[str, Any],
+        workflow_def: Dict[str, Any],
+        services: Dict[str, Any],
+        user_id: str = None,
+    ) -> Dict[str, Any]:
+        """
+        Resolve and return display_data for an interaction using current state.
+
+        This re-resolves module inputs against current workflow state and calls
+        get_interaction_request to get fresh display_data. Used by the API
+        to refresh interaction data after sub-actions modify state.
+
+        Args:
+            workflow_run_id: Workflow run ID
+            step_id: Step containing the module
+            module_name: Module name
+            module_id: Module ID (e.g., "user.select")
+            module_config: Module configuration from step
+            workflow_def: Full workflow definition
+            services: Rebuilt services dict
+            user_id: Optional user ID for context
+
+        Returns:
+            display_data dict from the resolved interaction request
+        """
+        # Get current state
+        module_outputs = self.db.state_repo.get_module_outputs(workflow_run_id)
+
+        # Get workflow metadata
+        workflow = self.db.workflow_repo.get_workflow(workflow_run_id)
+        workflow_path = workflow.get("workflow_path", "") if workflow else ""
+
+        # Find step config for state proxy
+        step_config = None
+        for step in workflow_def.get("steps", []):
+            if step.get("step_id") == step_id:
+                step_config = step
+                break
+
+        # Create state proxy for resolver
+        state_proxy = StateProxy(module_outputs, workflow_run_id, workflow_path)
+        if step_config:
+            state_proxy.set_step_config(step_config)
+
+        # Create resolver with state proxy
+        config = workflow_def.get("config", {})
+        resolver = ParameterResolver(state_proxy, config=config)
+
+        # Resolve inputs
+        raw_inputs = module_config.get("inputs", {}).copy()
+        resolved_inputs = resolver.resolve_with_schema(raw_inputs, module_outputs)
+
+        # Get module instance
+        module = self.registry.get_module(module_id)
+        if not isinstance(module, InteractiveModule):
+            raise ValueError(f"Module {module_id} is not interactive")
+
+        # Create minimal context
+        context = WorkflowExecutionContext(
+            workflow_run_id=workflow_run_id,
+            db=self.db,
+            module_outputs=module_outputs,
+            services=services,
+            config=workflow_def.get("config", {}),
+            workflow_dir=workflow_path,
+            workflow_path=workflow_path,
+            workflow_template_name=workflow_def.get("workflow_id"),
+            user_id=user_id,
+            branch_id=workflow.get("current_branch_id") if workflow else None,
+            logger=self.logger,
+        )
+        context.step_id = step_id
+        context.current_module_name = module_name
+        context.retryable = module_config.get("retryable")
+        context.sub_actions = module_config.get("sub_actions")
+
+        # Setup addon processor if module supports it
+        self.setup_addon_processor(module, module_config, resolver, module_outputs, context)
+
+        # Get fresh interaction request
+        interaction_request = module.get_interaction_request(resolved_inputs, context)
+
+        if not interaction_request:
+            raise ValueError("Module did not return interaction request")
+
+        return interaction_request.display_data
+
     def execute_from_position(
         self,
         workflow_run_id: str,

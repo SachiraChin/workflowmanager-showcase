@@ -86,7 +86,7 @@ function tryParseJson(value: unknown): { isJson: true; parsed: object } | { isJs
   if (typeof value === "string") {
     const trimmed = value.trim();
     if ((trimmed.startsWith("{") && trimmed.endsWith("}")) ||
-        (trimmed.startsWith("[") && trimmed.endsWith("]"))) {
+      (trimmed.startsWith("[") && trimmed.endsWith("]"))) {
       try {
         const parsed = JSON.parse(trimmed);
         if (typeof parsed === "object" && parsed !== null) {
@@ -1033,9 +1033,9 @@ export function StateTreeView() {
   }, [configPopup, getModuleConfig, getRawModuleConfig]);
 
   // Build root nodes from state - only show steps and state_mapped
-  const allowedKeys = ["steps", "state_mapped"];
+  const disallowedKeys = ["files"];
   const rootNodes: TreeNodeData[] = Object.entries(state)
-    .filter(([key]) => allowedKeys.includes(key))
+    .filter(([key]) => !disallowedKeys.includes(key))
     .map(([key, value]) => ({
       key,
       value,

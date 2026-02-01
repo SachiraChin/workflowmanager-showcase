@@ -74,6 +74,7 @@ export function WorkflowRunnerPage({ onRestart }: WorkflowRunnerPageProps) {
     respond,
     disconnect,
     reset,
+    refreshInteractionDisplayData,
     // Version confirmation
     versionConfirmation,
     confirmVersionAndStart,
@@ -206,6 +207,13 @@ export function WorkflowRunnerPage({ onRestart }: WorkflowRunnerPageProps) {
     }
   }, [confirmVersionAndStart]);
 
+  // Handle sub-action completion - refresh display data
+  const handleSubActionComplete = useCallback(() => {
+    if (workflowRunId && currentInteraction?.interaction_id) {
+      refreshInteractionDisplayData(workflowRunId, currentInteraction.interaction_id);
+    }
+  }, [workflowRunId, currentInteraction?.interaction_id, refreshInteractionDisplayData]);
+
   // Handle version confirmation cancel
   const handleCancelVersion = useCallback(() => {
     cancelVersionConfirmation();
@@ -290,6 +298,7 @@ export function WorkflowRunnerPage({ onRestart }: WorkflowRunnerPageProps) {
                       request={currentInteraction}
                       onSubmit={handleInteractionSubmit}
                       disabled={isProcessing}
+                      onSubActionComplete={handleSubActionComplete}
                     />
                   </MagneticScrollCard>
                 )}
@@ -378,6 +387,7 @@ export function WorkflowRunnerPage({ onRestart }: WorkflowRunnerPageProps) {
                         request={currentInteraction}
                         onSubmit={handleInteractionSubmit}
                         disabled={isProcessing}
+                        onSubActionComplete={handleSubActionComplete}
                       />
                     </div>
                   )}

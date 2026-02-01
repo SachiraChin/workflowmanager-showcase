@@ -21,6 +21,7 @@ from engine.module_registry import ModuleRegistry
 from .executor import WorkflowExecutor
 from .interaction import InteractionHandler
 from .navigation import NavigationHandler
+from .sub_action import SubActionHandler
 from .streaming import WorkflowStreamingMixin
 from .workflow_utils import (
     convert_interaction_request,
@@ -60,6 +61,7 @@ class WorkflowProcessor(WorkflowStreamingMixin):
         self.interaction_handler = InteractionHandler(
             db, self.registry, self.logger, self.executor, self.navigator
         )
+        self.sub_action_handler = SubActionHandler(db, self.registry)
 
     def start_workflow(
         self,

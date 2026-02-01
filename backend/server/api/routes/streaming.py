@@ -31,7 +31,7 @@ from models import (
     RespondRequest,
     SubActionRequest,
 )
-from backend.db import DbEventType, TaskQueue
+from backend.db import DbEventType
 
 logger = logging.getLogger('workflow.api')
 
@@ -180,92 +180,50 @@ async def cancel_workflow(
         return {"message": "No active stream found", "workflow_run_id": workflow_run_id}
 
 
-# Singleton TaskQueue for sub-action endpoint
-_sub_action_queue = None
-
-
-def _get_sub_action_queue() -> TaskQueue:
-    """Get singleton TaskQueue for sub-actions."""
-    global _sub_action_queue
-    if _sub_action_queue is None:
-        _sub_action_queue = TaskQueue()
-    return _sub_action_queue
-
-
 @router.post("/{workflow_run_id}/sub-action")
 async def execute_sub_action(
     workflow_run_id: str,
     request: SubActionRequest,
     db = Depends(get_db),
+    processor = Depends(get_processor),
     user_id: str = Depends(get_current_user_id)
 ):
     """
-    Create a sub-action task and return the task_id.
+    Execute a sub-action via SSE streaming.
 
-    Sub-actions allow triggering operations (like image generation) from
-    within an interactive module without completing the interaction.
+    Sub-actions allow triggering operations from within an interactive module
+    without completing the interaction. The action_id references a sub_action
+    definition in the module's schema.
 
-    The task is processed by a separate worker process. Use the
-    /api/task/{task_id}/stream endpoint to get progress updates.
+    Two sub-action types:
+    - target_sub_action: Execute a chain of modules as a child workflow
+    - self_sub_action: Invoke the module's own sub_action() method
 
-    Returns:
-        task_id: The ID of the created task
-
-    The client should then connect to /api/task/{task_id}/stream for SSE updates.
+    Returns SSE stream with progress and completion events.
     """
-    import time
-    request_start = time.time()
-    logger.info(f"[Task] Sub-action handler ENTERED for workflow {workflow_run_id[:8]}...")
+    logger.info(
+        f"[SubAction] Request for workflow {workflow_run_id[:8]}..., "
+        f"action_id={request.action_id}, interaction={request.interaction_id}"
+    )
 
     workflow = db.workflow_repo.get_workflow(workflow_run_id)
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
 
-    # Look up module_id from interaction event
-    interaction_event = db.events.find_one({
-        "workflow_run_id": workflow_run_id,
-        "event_type": DbEventType.INTERACTION_REQUESTED.value,
-        "data.interaction_id": request.interaction_id
-    })
+    async def event_generator():
+        try:
+            async for event in processor.sub_action_handler.execute_sub_action(
+                workflow_run_id=workflow_run_id,
+                interaction_id=request.interaction_id,
+                action_id=request.action_id,
+                params=request.params,
+            ):
+                yield {"event": event.type.value, "data": json.dumps(event.data)}
+        except Exception as e:
+            logger.error(f"[SubAction] Error for workflow {workflow_run_id[:8]}: {e}")
+            yield {"event": "error", "data": json.dumps({"message": sanitize_error_message(str(e))})}
 
-    if not interaction_event:
-        raise HTTPException(status_code=404, detail="Interaction not found")
-
-    module_id = interaction_event.get("data", {}).get("module_id")
-    if not module_id:
-        raise HTTPException(status_code=400, detail="Interaction missing module_id")
-
-    logger.info(
-        f"[Task] Sub-action for module={module_id}, provider={request.provider}, "
-        f"action={request.action_type}, prompt={request.prompt_id}"
-    )
-
-    # Route to appropriate actor based on module_id
-    if module_id == "media.generate":
-        # Enqueue task for media actor
-        queue = _get_sub_action_queue()
-        task_id = queue.enqueue(
-            actor="media",
-            payload={
-                "workflow_run_id": workflow_run_id,
-                "interaction_id": request.interaction_id,
-                "provider": request.provider,
-                "action_type": request.action_type,
-                "prompt_id": request.prompt_id,
-                "params": request.params,
-                "source_data": request.source_data,
-            }
-        )
-
-        elapsed = time.time() - request_start
-        logger.info(f"[Task] Created task {task_id} for sub-action (took {elapsed:.3f}s)")
-
-        return {"task_id": task_id}
-    else:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Module '{module_id}' does not support sub-actions"
-        )
+    return EventSourceResponse(event_generator(), send_timeout=30)
 
 
 @router.get("/{workflow_run_id}/interaction/{interaction_id}/generations")

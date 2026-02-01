@@ -70,6 +70,7 @@ export interface WorkflowActions {
 
   // Interaction handling
   setCurrentInteraction: (interaction: InteractionRequest | null) => void;
+  updateCurrentInteractionDisplayData: (displayData: Record<string, unknown>) => void;
   addToInteractionHistory: (interaction: InteractionRequest) => void;
 
   // Completed interactions (history)
@@ -176,6 +177,18 @@ export const useWorkflowStore = create<WorkflowExecutionState & WorkflowActions>
     // Interaction handling
     setCurrentInteraction: (interaction) => {
       set({ currentInteraction: interaction, isProcessing: false });
+    },
+
+    updateCurrentInteractionDisplayData: (displayData) => {
+      set((state) => {
+        if (!state.currentInteraction) return state;
+        return {
+          currentInteraction: {
+            ...state.currentInteraction,
+            display_data: displayData,
+          },
+        };
+      });
     },
 
     addToInteractionHistory: (interaction) => {

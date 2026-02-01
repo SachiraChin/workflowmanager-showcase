@@ -39,18 +39,9 @@ from backend.providers.media import (
 # Server-specific modules
 from .generate import MediaGenerateModule
 
-# Sub-action handler (will be replaced by task queue)
-from .sub_action import (
-    execute_media_sub_action,
-    MediaSubActionRequest,
-)
-
 __all__ = [
     # Server module
     'MediaGenerateModule',
-    # Sub-action (legacy, will be replaced)
-    'execute_media_sub_action',
-    'MediaSubActionRequest',
     # Re-exports from providers.media
     'MidAPIProvider',
     'LeonardoProvider',

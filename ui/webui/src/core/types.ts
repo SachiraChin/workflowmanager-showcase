@@ -396,24 +396,49 @@ export interface WorkflowDefinition {
 // =============================================================================
 
 /**
- * Request body for sub-action API call.
+ * Generic sub-action request.
  * Matches server SubActionRequest model.
  */
 export interface SubActionRequest {
-  /** Workflow run ID */
-  workflow_run_id: string;
   /** ID of the current interaction */
   interaction_id: string;
-  /** Provider name: "midjourney", "leonardo" */
-  provider: string;
-  /** Operation type: "txt2img", "img2img", "img2vid" */
-  action_type: string;
-  /** Identifier for the prompt being processed */
-  prompt_id: string;
-  /** Generation parameters (includes 'prompt') */
-  params: Record<string, unknown>;
-  /** Original prompt data from workflow (for storage) */
-  source_data?: unknown;
+  /** References sub_action.id in module schema */
+  action_id: string;
+  /** Action-specific params (e.g., feedback) */
+  params?: Record<string, unknown>;
+}
+
+/**
+ * Sub-action definition from module config.
+ * Defines a button that triggers an operation without completing the interaction.
+ */
+export interface SubActionDef {
+  /** Unique identifier for this sub-action */
+  id: string;
+  /** Button label */
+  label: string;
+  /** Keyboard shortcut (e.g., "r") */
+  shortcut?: string;
+  /** Loading state label */
+  loading_label?: string;
+  /** Actions to execute (target_sub_action or self_sub_action) */
+  actions: Array<{
+    type: "target_sub_action" | "self_sub_action";
+    ref?: { step_id: string; module_name: string };
+    params?: Record<string, unknown>;
+  }>;
+  /** How to map results back to parent state */
+  result_mapping?: Array<{
+    source: string;
+    target: string;
+    mode: "replace" | "merge";
+  }>;
+  /** Feedback configuration */
+  feedback?: {
+    enabled?: boolean;
+    prompt?: string;
+    state_key?: string;
+  };
 }
 
 // =============================================================================

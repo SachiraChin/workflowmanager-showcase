@@ -149,28 +149,49 @@
         "selected_indices": "selected_scene_indices",
         "selected_data": "selected_scene"
       },
-      "retryable": {
-        "default_option": "continue",
-        "options": [
-          {
-            "id": "continue",
-            "mode": "continue",
-            "label": "Continue"
-          },
-          {
-            "id": "retry",
-            "mode": "retry",
-            "label": "Generate new scenes",
-            "shortcut": "r",
-            "target_module": "generate_scenes",
-            "feedback": {
-              "enabled": true,
-              "prompt": "What would you like different in the new scenes?",
-              "default_message": "Please generate 3 completely different scene concepts. Avoid similar themes or settings to the previous options."
+      "sub_actions": [
+        {
+          "id": "regenerate_scenes",
+          "label": "Generate New Scenes",
+          "shortcut": "r",
+          "loading_label": "Generating new scenes...",
+          "actions": [
+            {
+              "type": "target_sub_action",
+              "ref": {
+                "step_id": "scene_generation",
+                "module_name": "generate_scenes"
+              }
+            },
+            {
+              "type": "target_sub_action",
+              "ref": {
+                "step_id": "scene_generation",
+                "module_name": "flatten_keywords"
+              }
+            },
+            {
+              "type": "target_sub_action",
+              "ref": {
+                "step_id": "scene_generation",
+                "module_name": "save_keywords"
+              }
             }
+          ],
+          "result_mapping": [
+            {
+              "source": "scene_concepts.scenes",
+              "target": "scene_concepts.scenes",
+              "mode": "merge"
+            }
+          ],
+          "feedback": {
+            "enabled": true,
+            "prompt": "What would you like different in the new scenes?",
+            "state_key": "_retry_feedback"
           }
-        ]
-      },
+        }
+      ],
       "name": "select_scene"
     },
     {

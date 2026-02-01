@@ -387,14 +387,17 @@ export function AudioGeneration({
       setProgress({ elapsed_ms: 0, message: "Starting..." });
       setError(null);
 
+      // Build generic sub-action request with all params
       const subActionRequest: SubActionRequest = {
-        workflow_run_id: workflowRunId,
         interaction_id: request.interaction_id,
-        provider,
-        action_type: action.action_type,
-        prompt_id: promptId,
-        params,
-        source_data: data,
+        action_id: action.id,
+        params: {
+          provider,
+          action_type: action.action_type,
+          prompt_id: promptId,
+          params,
+          source_data: data,
+        },
       };
 
       const handleEvent = (
@@ -436,7 +439,7 @@ export function AudioGeneration({
         setProgress(null);
       };
 
-      api.streamSubAction(subActionRequest, handleEvent, handleError);
+      api.streamSubAction(workflowRunId, subActionRequest, handleEvent, handleError);
     },
     [
       mediaContext,

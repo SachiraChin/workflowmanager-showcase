@@ -65,6 +65,10 @@ class DbEventType(str, Enum):
     RETRY_REQUESTED = "retry_requested"
     JUMP_REQUESTED = "jump_requested"
 
+    # Sub-actions
+    SUB_ACTION_STARTED = "sub_action_started"
+    SUB_ACTION_COMPLETED = "sub_action_completed"
+
     # Data events
     OUTPUT_STORED = "output_stored"
 

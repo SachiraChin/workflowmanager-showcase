@@ -396,6 +396,93 @@ async def get_interaction_history(
     )
 
 
+@router.get("/{workflow_run_id}/interaction/{interaction_id}/data")
+async def get_interaction_data(
+    workflow_run_id: str,
+    interaction_id: str,
+    db = Depends(get_db),
+    processor = Depends(get_processor),
+    user_id: str = Depends(get_current_user_id)
+):
+    """
+    Get resolved display_data for an interaction using current workflow state.
+
+    This endpoint re-resolves the module's inputs against the current state,
+    ensuring the returned display_data includes any updates from sub-actions.
+
+    Used by WebUI:
+    - On page load after getting pending interaction
+    - After sub-action completes to refresh the view
+
+    Returns:
+        display_data dict with resolved data from current state
+    """
+    from workflow.workflow_utils import get_workflow_def, rebuild_services
+
+    # Verify access
+    user_owns, exists = db.workflow_repo.workflow_run_exists(user_id, workflow_run_id)
+    if not exists:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+    if not user_owns:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # Find the interaction_requested event
+    interaction_event = db.events.find_one({
+        "workflow_run_id": workflow_run_id,
+        "event_type": "interaction_requested",
+        "data.interaction_id": interaction_id,
+    })
+    if not interaction_event:
+        raise HTTPException(status_code=404, detail="Interaction not found")
+
+    step_id = interaction_event.get("step_id")
+    module_name = interaction_event.get("module_name")
+    event_data = interaction_event.get("data", {})
+    module_id = event_data.get("module_id")
+
+    if not module_id:
+        raise HTTPException(status_code=400, detail="Interaction missing module_id")
+
+    # Get workflow and definition
+    workflow = db.workflow_repo.get_workflow(workflow_run_id)
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+
+    workflow_def = get_workflow_def(workflow, db, logger)
+
+    # Find module config in workflow definition
+    module_config = None
+    for step in workflow_def.get("steps", []):
+        if step.get("step_id") == step_id:
+            for mod in step.get("modules", []):
+                if mod.get("name") == module_name:
+                    module_config = mod
+                    break
+            break
+
+    if not module_config:
+        raise HTTPException(status_code=404, detail=f"Module config not found: {step_id}/{module_name}")
+
+    # Rebuild services for resolution
+    services = rebuild_services(workflow, workflow_def, db, logger)
+
+    try:
+        # Use executor helper to resolve display_data
+        display_data = processor.executor.resolve_interaction_display_data(
+            workflow_run_id=workflow_run_id,
+            step_id=step_id,
+            module_name=module_name,
+            module_id=module_id,
+            module_config=module_config,
+            workflow_def=workflow_def,
+            services=services,
+            user_id=user_id,
+        )
+        return {"display_data": display_data}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.delete("/{workflow_run_id}")
 async def delete_workflow(
     workflow_run_id: str,

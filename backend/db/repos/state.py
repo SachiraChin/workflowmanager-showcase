@@ -129,7 +129,11 @@ class StateRepository(BaseRepository):
         self, workflow_run_id: str, branch_id: str = None
     ) -> Dict[str, Any]:
         """
-        Reconstruct all module outputs by replaying MODULE_COMPLETED events.
+        Reconstruct all module outputs by replaying events.
+
+        Includes:
+        - MODULE_COMPLETED events from normal execution
+        - SUB_ACTION_COMPLETED events from sub-action execution
 
         Returns dict containing:
         - Raw module outputs keyed by module_name
@@ -138,21 +142,24 @@ class StateRepository(BaseRepository):
         events = self.get_lineage_events(
             workflow_run_id=workflow_run_id,
             branch_id=branch_id,
-            event_type="module_completed",
+            event_type=["module_completed", "sub_action_completed"],
         )
 
         outputs = {}
         for event in events:
+            event_type = event.get("event_type")
             module_name = event.get("module_name")
             data = event.get("data", {})
 
-            if module_name:
+            # Store raw module output only for module_completed events
+            # (sub_action_completed events shouldn't overwrite module data)
+            if event_type == "module_completed" and module_name:
                 outputs[module_name] = data
 
-                # Extract state-mapped values
-                state_mapped = data.get("_state_mapped", {})
-                for state_key, value in state_mapped.items():
-                    outputs[state_key] = value
+            # Extract state-mapped values from both event types
+            state_mapped = data.get("_state_mapped", {})
+            for state_key, value in state_mapped.items():
+                outputs[state_key] = value
 
         return outputs
 
@@ -168,11 +175,6 @@ class StateRepository(BaseRepository):
         events = self.get_lineage_events(
             workflow_run_id=workflow_run_id,
             branch_id=branch_id,
-            event_type=[
-                "interaction_requested",
-                "interaction_response",
-                "module_completed",
-            ],
         )
 
         result = {
@@ -203,20 +205,25 @@ class StateRepository(BaseRepository):
                 **data,
             }
 
-            # Store data under appropriate key
-            if event_type == "interaction_requested":
-                result["steps"][step_id][module_name]["interaction_requested"] = data_with_metadata
-            elif event_type == "interaction_response":
-                result["steps"][step_id][module_name]["interaction_response"] = data_with_metadata
-            elif event_type == "module_completed":
-                result["steps"][step_id][module_name]["module_completed"] = data_with_metadata
+            # Handle duplicate event types by appending .N suffix
+            module_data = result["steps"][step_id][module_name]
+            if event_type not in module_data:
+                # First occurrence - use event_type as key
+                module_data[event_type] = data_with_metadata
+            else:
+                # Find next available numbered key
+                n = 1
+                while f"{event_type}.{n}" in module_data:
+                    n += 1
+                module_data[f"{event_type}.{n}"] = data_with_metadata
 
+            if event_type == "module_completed" or event_type == "sub_action_completed":
                 # Extract state-mapped values
                 state_mapped = data.get("_state_mapped")
                 if state_mapped:
                     for state_key, value in state_mapped.items():
                         result["state_mapped"][state_key] = value
-
+                
         return result
 
     def get_full_workflow_state(
@@ -240,6 +247,7 @@ class StateRepository(BaseRepository):
 
         # Add file tree (includes all branches, organized appropriately)
         state["files"] = self._build_file_tree(workflow_run_id)
+        state["state_server"] = self.get_module_outputs(workflow_run_id, branch_id)
 
         return state
 

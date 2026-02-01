@@ -11,10 +11,15 @@ The module works with the WebUI MediaGeneration component to:
 4. Return selected content ID and data to workflow state
 """
 
+import asyncio
+import logging
 from typing import Dict, Any, List, Optional
 
 from utils import uuid7_str
+from backend.db import TaskQueue
 from backend.db.path_utils import resolve_local_path
+
+logger = logging.getLogger("modules.media.generate")
 
 from engine.module_interface import (
     InteractiveModule, ModuleInput, ModuleOutput, ModuleExecutionError,
@@ -245,3 +250,111 @@ class MediaGenerateModule(InteractiveModule):
                         'prompt_key': prompt_key
                     }
         return None
+
+    async def sub_action(self, context):
+        """
+        Execute media generation sub-action.
+
+        Creates a task via TaskQueue, polls for completion while yielding
+        progress events, and finally yields the result.
+
+        Args:
+            context: SubActionContext with params for generation
+
+        Yields:
+            Tuples of (event_type, data):
+            - ("progress", {...}) for progress updates
+            - ("result", {...}) for the final result
+        """
+        params = context.params
+        workflow_run_id = context.workflow_run_id
+        interaction_id = context.interaction_id
+
+        # Extract generation parameters
+        provider = params.get("provider")
+        action_type = params.get("action_type")
+        prompt_id = params.get("prompt_id")
+        generation_params = params.get("params", {})
+        source_data = params.get("source_data")
+
+        logger.info(
+            f"[MediaGenerate] sub_action: provider={provider}, "
+            f"action_type={action_type}, prompt_id={prompt_id}"
+        )
+
+        # Create task via TaskQueue
+        queue = TaskQueue()
+        task_id = queue.enqueue(
+            actor="media",
+            payload={
+                "workflow_run_id": workflow_run_id,
+                "interaction_id": interaction_id,
+                "provider": provider,
+                "action_type": action_type,
+                "prompt_id": prompt_id,
+                "params": generation_params,
+                "source_data": source_data,
+            }
+        )
+
+        logger.info(f"[MediaGenerate] Created task {task_id}")
+
+        # Poll for completion, yielding progress events
+        poll_interval = 1.0
+        last_progress_hash = None
+
+        while True:
+            task = queue.get_task(task_id)
+
+            if not task:
+                raise ValueError(f"Task {task_id} not found")
+
+            # Yield progress if changed (same format as tasks.py stream endpoint)
+            progress = task.get("progress", {})
+            current_hash = f"{task['status']}:{progress.get('elapsed_ms', 0)}:{progress.get('message', '')}"
+
+            if current_hash != last_progress_hash:
+                progress_data = {
+                    "elapsed_ms": progress.get("elapsed_ms", 0),
+                    "message": progress.get("message", ""),
+                }
+                if progress.get("updated_at"):
+                    updated_at = progress["updated_at"]
+                    if hasattr(updated_at, 'isoformat'):
+                        progress_data["updated_at"] = updated_at.isoformat()
+                    else:
+                        progress_data["updated_at"] = str(updated_at)
+
+                yield ("progress", {
+                    "status": task["status"],
+                    "progress": progress_data,
+                })
+                last_progress_hash = current_hash
+
+            if task["status"] == "completed":
+                result = task.get("result", {})
+
+                # Transform filenames to URLs (same as tasks.py)
+                if "filenames" in result and "workflow_run_id" in result:
+                    wf_id = result["workflow_run_id"]
+                    urls = [
+                        f"/workflow/{wf_id}/media/{filename}"
+                        for filename in result["filenames"]
+                    ]
+                    result = {
+                        "metadata_id": result.get("metadata_id"),
+                        "content_ids": result.get("content_ids", []),
+                        "urls": urls,
+                        "prompt_id": prompt_id,
+                    }
+
+                yield ("result", result)
+                return
+
+            if task["status"] == "failed":
+                error = task.get("error", {})
+                raise ValueError(
+                    f"Media generation failed: {error.get('message', 'Unknown error')}"
+                )
+
+            await asyncio.sleep(poll_interval)

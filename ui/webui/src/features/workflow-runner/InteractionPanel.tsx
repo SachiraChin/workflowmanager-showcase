@@ -22,6 +22,8 @@ interface InteractionPanelProps {
   onCancel?: () => void;
   /** Whether the interaction is disabled */
   disabled?: boolean;
+  /** Called when a sub-action completes to refresh display data */
+  onSubActionComplete?: () => void;
 }
 
 // =============================================================================
@@ -33,6 +35,7 @@ export function InteractionPanel({
   onSubmit,
   onCancel,
   disabled,
+  onSubActionComplete,
 }: InteractionPanelProps) {
   return (
     <Card className="h-full flex flex-col">
@@ -42,6 +45,7 @@ export function InteractionPanel({
           onSubmit={onSubmit}
           onCancel={onCancel}
           disabled={disabled}
+          onSubActionComplete={onSubActionComplete}
         />
       </CardContent>
     </Card>

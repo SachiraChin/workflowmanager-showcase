@@ -257,6 +257,25 @@ class ApiClient {
   }
 
   /**
+   * Get resolved display_data for an interaction using current workflow state.
+   *
+   * Re-resolves module inputs against current state, ensuring display_data
+   * includes any updates from sub-actions.
+   *
+   * Used:
+   * - On page load after getting pending interaction
+   * - After sub-action completes to refresh the view
+   */
+  async getInteractionData(
+    workflowRunId: string,
+    interactionId: string
+  ): Promise<{ display_data: Record<string, unknown> }> {
+    return this.request<{ display_data: Record<string, unknown> }>(
+      `/workflow/${workflowRunId}/interaction/${interactionId}/data`
+    );
+  }
+
+  /**
    * Get all generations for a media generation interaction.
    * Used to restore previously generated content on page refresh.
    *
@@ -540,186 +559,89 @@ class ApiClient {
   }
 
   // ============================================================
-  // Task Queue API
+  // Sub-Action Streaming
   // ============================================================
 
   /**
-   * Create a sub-action task and get the task_id.
-   * The sub-action endpoint now returns a task_id instead of streaming directly.
-   */
-  async createSubActionTask(request: SubActionRequest): Promise<{ task_id: string }> {
-    return this.request<{ task_id: string }>(`/workflow/${request.workflow_run_id}/sub-action`, {
-      method: "POST",
-      body: JSON.stringify(request),
-    });
-  }
-
-  /**
-   * Get task status and details.
-   */
-  async getTask(taskId: string): Promise<{
-    task_id: string;
-    actor: string;
-    status: string;
-    priority: number;
-    payload: Record<string, unknown>;
-    result?: Record<string, unknown>;
-    error?: {
-      type: string;
-      message: string;
-      details: Record<string, unknown>;
-      stack_trace: string;
-    };
-    progress?: {
-      elapsed_ms: number;
-      message: string;
-      updated_at?: string;
-    };
-    created_at?: string;
-    started_at?: string;
-    completed_at?: string;
-    worker_id?: string;
-    retry_count: number;
-    max_retries: number;
-  }> {
-    return this.request(`/api/task/${taskId}`);
-  }
-
-  /**
-   * Get all tasks for a workflow.
-   * Used to check for in-progress tasks when reconnecting.
-   */
-  async getTasksForWorkflow(workflowRunId: string): Promise<{
-    tasks: Array<{
-      task_id: string;
-      actor: string;
-      status: string;
-      payload: Record<string, unknown>;
-      result?: Record<string, unknown>;
-      error?: Record<string, unknown>;
-      progress?: {
-        elapsed_ms: number;
-        message: string;
-      };
-    }>;
-  }> {
-    return this.request(`/api/task/workflow/${workflowRunId}`);
-  }
-
-  /**
-   * Stream task progress via SSE.
-   * Returns cleanup function to close the stream.
-   */
-  streamTask(
-    taskId: string,
-    onProgress: (status: string, progress: { elapsed_ms: number; message: string }) => void,
-    onComplete: (result: Record<string, unknown>) => void,
-    onError: (error: { type?: string; message: string; details?: Record<string, unknown> }) => void
-  ): () => void {
-    const url = `${this.baseUrl}/api/task/${taskId}/stream`;
-    const eventSource = new EventSource(url, { withCredentials: true });
-
-    eventSource.addEventListener("progress", (event) => {
-      try {
-        const data = JSON.parse((event as MessageEvent).data);
-        onProgress(data.status, data.progress);
-      } catch (e) {
-        console.error("[Task] Failed to parse progress event", e);
-      }
-    });
-
-    eventSource.addEventListener("complete", (event) => {
-      try {
-        const data = JSON.parse((event as MessageEvent).data);
-        onComplete(data.result);
-        eventSource.close();
-      } catch (e) {
-        console.error("[Task] Failed to parse complete event", e);
-      }
-    });
-
-    eventSource.addEventListener("error", (event) => {
-      try {
-        // Check if this is an SSE error with data
-        const messageEvent = event as MessageEvent;
-        if (messageEvent.data) {
-          const data = JSON.parse(messageEvent.data);
-          onError(data.error || { message: data.message || "Unknown error" });
-        } else {
-          onError({ message: "Task stream connection failed" });
-        }
-      } catch {
-        onError({ message: "Task stream connection failed" });
-      }
-      eventSource.close();
-    });
-
-    eventSource.onerror = () => {
-      // Connection error - the error event listener above handles data errors
-      eventSource.close();
-    };
-
-    return () => {
-      eventSource.close();
-    };
-  }
-
-  /**
-   * Execute a sub-action and stream the results.
-   * Uses the new task-based flow:
-   * 1. Create task via /sub-action
-   * 2. Stream progress via /api/task/{task_id}/stream
+   * Execute a sub-action and stream the results via SSE.
    *
-   * Returns an object with cleanup function and task_id promise.
+   * Sub-actions allow triggering operations from within an interactive module
+   * without completing the interaction. Results are mapped back to parent state.
+   *
+   * Events:
+   * - progress: { workflow_run_id, sub_action_id, message }
+   * - complete: { sub_action_id, updated_state }
+   * - error: { message, sub_action_id? }
+   *
+   * @param workflowRunId - The workflow run ID
+   * @param request - SubActionRequest with interaction_id, action_id, params
+   * @param onEvent - Callback for SSE events
+   * @param onError - Callback for connection errors
+   * @returns Cleanup function to abort the stream
    */
   streamSubAction(
+    workflowRunId: string,
     request: SubActionRequest,
     onEvent: (eventType: SSEEventType, data: Record<string, unknown>) => void,
     onError?: (error: Error) => void
   ): () => void {
+    const url = `${this.baseUrl}/workflow/${workflowRunId}/sub-action`;
     const controller = new AbortController();
 
     (async () => {
       try {
-        // Step 1: Create task
-        const { task_id } = await this.createSubActionTask(request);
+        const doFetch = async () => {
+          const response = await fetch(url, {
+            method: "POST",
+            headers: this.getHeaders(),
+            body: JSON.stringify(request),
+            signal: controller.signal,
+            credentials: "include",
+          });
 
-        // Emit started event with task_id
-        onEvent("started" as SSEEventType, { task_id });
-
-        if (controller.signal.aborted) return;
-
-        // Step 2: Stream task progress
-        const cleanup = this.streamTask(
-          task_id,
-          // onProgress
-          (status, progress) => {
-            onEvent("progress" as SSEEventType, {
-              status,
-              elapsed_ms: progress.elapsed_ms,
-              message: progress.message,
-            });
-          },
-          // onComplete
-          (result) => {
-            onEvent("complete" as SSEEventType, {
-              urls: result.urls,
-              metadata_id: result.metadata_id,
-              content_ids: result.content_ids,
-            });
-          },
-          // onError
-          (error) => {
-            onEvent("error" as SSEEventType, {
-              message: error.message,
-            });
+          if (!response.ok) {
+            throw new ApiError(response.status, response.statusText);
           }
-        );
+          return response;
+        };
 
-        // If aborted, close the stream
-        controller.signal.addEventListener("abort", cleanup);
+        const response = await this.withAuth(doFetch);
+
+        const reader = response.body?.getReader();
+        if (!reader) {
+          throw new Error("No response body");
+        }
+
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          // Parse SSE events from buffer
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+
+          let currentEventType: SSEEventType | null = null;
+          for (const line of lines) {
+            if (line.startsWith("event: ")) {
+              currentEventType = line.slice(7).trim() as SSEEventType;
+            } else if (line.startsWith("data: ") && currentEventType) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                onEvent(currentEventType, data);
+              } catch (e) {
+                console.error("[SubAction] Failed to parse SSE data", e);
+              }
+              currentEventType = null;
+            }
+          }
+        }
       } catch (error) {
-        if (!controller.signal.aborted) {
+        if ((error as Error).name !== "AbortError") {
           onError?.(error as Error);
         }
       }

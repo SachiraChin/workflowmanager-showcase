@@ -71,6 +71,7 @@ export function useWorkflowExecution() {
       setError: state.setError,
       reset: state.reset,
       setCurrentInteraction: state.setCurrentInteraction,
+      updateCurrentInteractionDisplayData: state.updateCurrentInteractionDisplayData,
       addToInteractionHistory: state.addToInteractionHistory,
       setCompletedInteractions: state.setCompletedInteractions,
       addCompletedInteraction: state.addCompletedInteraction,
@@ -97,6 +98,22 @@ export function useWorkflowExecution() {
   // Keep refs in sync with state
   workflowRunIdRef.current = workflowRunId;
   currentInteractionRef.current = currentInteraction;
+
+  /**
+   * Refresh current interaction's display_data from server.
+   * Fetches resolved data using current workflow state (includes sub-action results).
+   */
+  const refreshInteractionDisplayData = useCallback(
+    async (wfRunId: string, interactionId: string) => {
+      try {
+        const result = await api.getInteractionData(wfRunId, interactionId);
+        actions.updateCurrentInteractionDisplayData(result.display_data);
+      } catch (e) {
+        console.error("[refreshInteractionDisplayData] Failed:", e);
+      }
+    },
+    [actions]
+  );
 
   // Version confirmation state
   const [versionConfirmation, setVersionConfirmation] = useState<VersionConfirmationState>({
@@ -582,6 +599,11 @@ export function useWorkflowExecution() {
           // Pending interaction - display immediately, no SSE needed
           actions.setCurrentInteraction(data.interaction_request);
           actions.addToInteractionHistory(data.interaction_request);
+          // Fetch latest display_data (includes sub-action results)
+          refreshInteractionDisplayData(
+            resumeWorkflowRunId,
+            data.interaction_request.interaction_id
+          );
         } else if (data.status === "processing") {
           // Only connect to SSE if actively processing
           connectToStream(resumeWorkflowRunId);
@@ -597,7 +619,7 @@ export function useWorkflowExecution() {
         actions.setError((error as Error).message);
       }
     },
-    [actions, disconnect, connectToStream]
+    [actions, disconnect, connectToStream, refreshInteractionDisplayData]
   );
 
   /**
@@ -758,6 +780,7 @@ export function useWorkflowExecution() {
     disconnect,
     reset: actions.reset,
     clearEvents: actions.clearEvents,
+    refreshInteractionDisplayData,
 
     // Version confirmation actions
     confirmVersionAndStart,

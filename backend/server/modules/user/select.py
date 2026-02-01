@@ -175,8 +175,9 @@ class SelectModule(InteractiveModule):
         min_selections = self.get_input_value(inputs, 'min_selections')
         max_selections = self.get_input_value(inputs, 'max_selections')
 
-        # Get retryable config from context (set by workflow processor)
+        # Get retryable and sub_actions config from context (set by workflow processor)
         retryable = getattr(context, 'retryable', None)
+        sub_actions = getattr(context, 'sub_actions', None)
 
         # Process addons and embed _metadata into items
         if self._addon_processor:
@@ -208,7 +209,8 @@ class SelectModule(InteractiveModule):
                 "schema": schema,
                 "multi_select": multi_select,
                 "mode": mode,
-                "retryable": retryable
+                "retryable": retryable,
+                "sub_actions": sub_actions
             },
             context={
                 "module_id": self.module_id
