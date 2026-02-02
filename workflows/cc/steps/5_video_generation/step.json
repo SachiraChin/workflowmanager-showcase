@@ -95,11 +95,15 @@
       },
       "sub_actions": [
         {
-          "id": "generate",
+          "id": "video_generation",
           "label": "Generate Videos",
-          "action_type": "img2vid",
-          "loading_label": "Generating video...",
-          "result_key": "generations"
+          "loading_label": "Generating...",
+          "hidden": true,
+          "actions": [
+            {
+              "type": "self_sub_action"
+            }
+          ]
         }
       ],
       "retryable": {
