@@ -69,10 +69,18 @@ function RunnerPageRoute() {
 // =============================================================================
 
 function AppContent({ user, onLogout }: { user: User; onLogout: () => void }) {
+  // Key to force re-render when debug mode changes
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Handle debug mode toggle - increment key to force remount of all components
+  const handleDebugModeChange = useCallback(() => {
+    setRefreshKey((prev) => prev + 1);
+  }, []);
+
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
-      <Header user={user} onLogout={onLogout} />
-      <main className="flex-1 min-h-0 overflow-hidden">
+      <Header user={user} onLogout={onLogout} onDebugModeChange={handleDebugModeChange} />
+      <main key={refreshKey} className="flex-1 min-h-0 overflow-hidden">
         <Routes>
           <Route path="/" element={<StartPageRoute />} />
           <Route path="/run/:runId" element={<RunnerPageRoute />} />
