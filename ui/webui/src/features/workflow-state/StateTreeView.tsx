@@ -8,9 +8,12 @@
  * - Modules from execution_groups are displayed nested under their parent group
  */
 
-import { useState, useCallback, useMemo } from "react";
-import { ChevronRight, ChevronDown, Circle, Search, Settings, Maximize2, Copy, Check, Layers, Expand } from "lucide-react";
+import { useState, useCallback, useMemo, useRef } from "react";
+import { ChevronRight, ChevronDown, Circle, Search, Settings, Maximize2, Copy, Check, Layers, Expand, Pencil, Save, X } from "lucide-react";
+import Editor, { type OnMount } from "@monaco-editor/react";
+import type { editor } from "monaco-editor";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -20,6 +23,8 @@ import {
 } from "@/components/ui/dialog";
 import { JsonTreeView } from "@/components/ui/json-tree-view";
 import { useWorkflowStateContext } from "@/state/WorkflowStateContext";
+import { useWorkflowStore } from "@/state/workflow-store";
+import { useDebugMode } from "@/state/hooks/useDebugMode";
 import { cn } from "@/core/utils";
 import type { ModuleConfig, WorkflowDefinition } from "@/core/types";
 
@@ -37,6 +42,8 @@ interface ValuePopupState {
   open: boolean;
   path: string;
   value: unknown;
+  isEditing: boolean;
+  editError: string | null;
 }
 
 interface ConfigPopupState {
@@ -67,37 +74,6 @@ function isLeafNode(value: unknown): boolean {
   if (Array.isArray(value) && value.length === 0) return true;
   if (typeof value === "object" && Object.keys(value).length === 0) return true;
   return false;
-}
-
-function formatValue(value: unknown): string {
-  if (value === null) return "null";
-  if (value === undefined) return "undefined";
-  if (typeof value === "string") return value;
-  return JSON.stringify(value, null, 2);
-}
-
-/**
- * Try to parse a value as JSON if it's a string.
- */
-function tryParseJson(value: unknown): { isJson: true; parsed: object } | { isJson: false; original: unknown } {
-  if (value !== null && typeof value === "object") {
-    return { isJson: true, parsed: value as object };
-  }
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if ((trimmed.startsWith("{") && trimmed.endsWith("}")) ||
-      (trimmed.startsWith("[") && trimmed.endsWith("]"))) {
-      try {
-        const parsed = JSON.parse(trimmed);
-        if (typeof parsed === "object" && parsed !== null) {
-          return { isJson: true, parsed };
-        }
-      } catch {
-        // Not valid JSON
-      }
-    }
-  }
-  return { isJson: false, original: value };
 }
 
 function getValuePreview(value: unknown): string {
@@ -984,8 +960,15 @@ export function StateTreeView() {
     workflowDefinition,
     rawWorkflowDefinition,
     getModuleConfig,
-    getRawModuleConfig
+    getRawModuleConfig,
+    updateStateAtPath,
   } = useWorkflowStateContext();
+
+  const currentInteraction = useWorkflowStore((s) => s.currentInteraction);
+  const updateCurrentInteractionDisplayData = useWorkflowStore((s) => s.updateCurrentInteractionDisplayData);
+
+  // Debug mode - only show edit functionality when enabled
+  const { isDebugMode } = useDebugMode();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isMaximized, setIsMaximized] = useState(false);
@@ -993,7 +976,10 @@ export function StateTreeView() {
     open: false,
     path: "",
     value: null,
+    isEditing: false,
+    editError: null,
   });
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const [configPopup, setConfigPopup] = useState<ConfigPopupState>({
     open: false,
     stepId: "",
@@ -1002,12 +988,96 @@ export function StateTreeView() {
   });
 
   const handleLeafDoubleClick = useCallback((path: string, value: unknown) => {
-    setPopup({ open: true, path, value });
+    setPopup({ open: true, path, value, isEditing: false, editError: null });
   }, []);
 
   const handleClosePopup = useCallback(() => {
-    setPopup((prev) => ({ ...prev, open: false }));
+    setPopup((prev) => ({ ...prev, open: false, isEditing: false, editError: null }));
   }, []);
+
+  // Check if path is editable (contains "display_data")
+  const isPathEditable = useCallback((path: string) => {
+    return path.includes("display_data");
+  }, []);
+
+  // Enter edit mode
+  const handleStartEdit = useCallback(() => {
+    setPopup((prev) => ({ ...prev, isEditing: true, editError: null }));
+  }, []);
+
+  // Cancel edit mode
+  const handleCancelEdit = useCallback(() => {
+    setPopup((prev) => ({ ...prev, isEditing: false, editError: null }));
+  }, []);
+
+  // Monaco editor mount handler
+  const handleEditorMount: OnMount = useCallback((editor) => {
+    editorRef.current = editor;
+    // Format document on mount
+    setTimeout(() => {
+      editor.getAction("editor.action.formatDocument")?.run();
+    }, 100);
+  }, []);
+
+  // Save edited value
+  const handleSaveEdit = useCallback(() => {
+    if (!editorRef.current) return;
+
+    const editorValue = editorRef.current.getValue();
+    try {
+      const parsed = JSON.parse(editorValue);
+
+      // Update workflow state context
+      updateStateAtPath(popup.path, parsed);
+
+      // Also update Zustand store if this is display_data related
+      // This ensures the interaction UI re-renders
+      if (popup.path.includes("display_data") && currentInteraction) {
+        const pathParts = popup.path.split(".");
+        const displayDataIndex = pathParts.indexOf("display_data");
+
+        if (displayDataIndex !== -1) {
+          // Get sub-path within display_data (if any)
+          const subPath = pathParts.slice(displayDataIndex + 1);
+
+          if (subPath.length === 0) {
+            // Editing the entire display_data object
+            updateCurrentInteractionDisplayData(parsed as Record<string, unknown>);
+          } else {
+            // Editing a nested path within display_data
+            // Clone current display_data and update the nested path
+            const newDisplayData = JSON.parse(
+              JSON.stringify(currentInteraction.display_data || {})
+            );
+
+            let current: Record<string, unknown> = newDisplayData;
+            for (let i = 0; i < subPath.length - 1; i++) {
+              const key = subPath[i];
+              if (!(key in current)) {
+                current[key] = {};
+              }
+              current = current[key] as Record<string, unknown>;
+            }
+            current[subPath[subPath.length - 1]] = parsed;
+
+            updateCurrentInteractionDisplayData(newDisplayData);
+          }
+        }
+      }
+
+      setPopup((prev) => ({
+        ...prev,
+        value: parsed,
+        isEditing: false,
+        editError: null,
+      }));
+    } catch (e) {
+      setPopup((prev) => ({
+        ...prev,
+        editError: `Invalid JSON: ${(e as Error).message}`,
+      }));
+    }
+  }, [popup.path, updateStateAtPath, currentInteraction, updateCurrentInteractionDisplayData]);
 
   const handleShowModuleConfig = useCallback((stepId: string, moduleName: string, isGroup: boolean) => {
     setConfigPopup({ open: true, stepId, moduleName, isGroup });
@@ -1132,29 +1202,85 @@ export function StateTreeView() {
         </CardContent>
       </Card>
 
-      {/* Value Popup Dialog */}
+      {/* Value Popup Dialog - Uses Monaco for both viewing (readonly) and editing */}
       <Dialog open={popup.open} onOpenChange={handleClosePopup}>
         <DialogContent size="medium" className="flex flex-col overflow-hidden">
-          <CopyButton value={popup.value} className="absolute top-4 right-12 z-50" />
+          {/* Action buttons - top right */}
+          <div className="absolute top-4 right-12 z-50 flex items-center gap-1">
+            {popup.isEditing ? (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCancelEdit}
+                  className="h-8 px-2"
+                  title="Cancel"
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Cancel
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleSaveEdit}
+                  className="h-8 px-2"
+                  title="Save changes"
+                >
+                  <Save className="h-4 w-4 mr-1" />
+                  Save
+                </Button>
+              </>
+            ) : (
+              <>
+                {isDebugMode && isPathEditable(popup.path) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleStartEdit}
+                    className="h-8 px-2 text-orange-600 hover:text-orange-700 hover:bg-orange-100 dark:text-orange-400 dark:hover:bg-orange-900/30"
+                    title="Edit value (Debug Mode)"
+                  >
+                    <Pencil className="h-4 w-4 mr-1" />
+                    Edit
+                  </Button>
+                )}
+                <CopyButton value={popup.value} />
+              </>
+            )}
+          </div>
           <DialogHeader className="shrink-0">
-            <DialogTitle className="font-mono text-sm pr-16">{popup.path}</DialogTitle>
+            <DialogTitle className="font-mono text-sm pr-32">{popup.path}</DialogTitle>
           </DialogHeader>
-          <div className="flex-1 min-h-0 overflow-y-auto scrollbar-inner">
-            {(() => {
-              const result = tryParseJson(popup.value);
-              if (result.isJson) {
-                return (
-                  <div className="bg-muted p-4 rounded">
-                    <JsonTreeView data={result.parsed} defaultExpandDepth={2} />
-                  </div>
-                );
-              }
-              return (
-                <pre className="text-sm bg-muted p-4 rounded whitespace-pre-wrap break-words">
-                  {formatValue(result.original)}
-                </pre>
-              );
-            })()}
+          <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+            <div className="border rounded overflow-hidden" style={{ height: "50vh", minHeight: "300px" }}>
+              <Editor
+                key={popup.isEditing ? "edit" : "view"}
+                height="100%"
+                defaultLanguage="json"
+                defaultValue={JSON.stringify(popup.value, null, 2)}
+                onMount={handleEditorMount}
+                options={{
+                  minimap: { enabled: false },
+                  fontSize: 13,
+                  lineNumbers: "on",
+                  scrollBeyondLastLine: false,
+                  wordWrap: "on",
+                  folding: true,
+                  foldingStrategy: "indentation",
+                  automaticLayout: true,
+                  formatOnPaste: true,
+                  formatOnType: true,
+                  tabSize: 2,
+                  readOnly: !popup.isEditing,
+                }}
+                theme="vs-dark"
+              />
+            </div>
+            {popup.editError && (
+              <div className="mt-2 p-2 bg-destructive/10 border border-destructive/30 rounded text-destructive text-sm">
+                {popup.editError}
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
