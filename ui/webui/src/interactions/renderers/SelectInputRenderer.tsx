@@ -81,6 +81,8 @@ interface SelectInputRendererProps {
   controls?: Record<string, ControlConfig>;
   /** Enum labels map (for string enums) */
   enumLabels?: Record<string, string>;
+  /** Path to resolve enum options from sourceData (e.g., "_provider_metadata.categories") */
+  enumSource?: string;
 }
 
 // =============================================================================
@@ -209,12 +211,13 @@ export function SelectInputRenderer({
   path,
   value: propValue,
   options: propOptions,
-  enumData,
+  enumData: propEnumData,
   valueKey,
   labelKey,
   labelFormat,
   controls,
   enumLabels,
+  enumSource,
   label,
   placeholder = "Select...",
   className,
@@ -223,6 +226,20 @@ export function SelectInputRenderer({
   readonly: propReadonly,
 }: SelectInputRendererProps) {
   const inputSchemaContext = useInputSchemaOptional();
+
+  // Resolve enumData from enumSource if provided
+  // enumSource is a dot-notated path like "_provider_metadata.categories"
+  const enumData = useMemo(() => {
+    if (propEnumData) return propEnumData;
+    if (!enumSource || !inputSchemaContext?.sourceData) return undefined;
+
+    // Resolve the path from sourceData
+    const resolved = getByPath(inputSchemaContext.sourceData, enumSource);
+    if (Array.isArray(resolved)) {
+      return resolved;
+    }
+    return undefined;
+  }, [propEnumData, enumSource, inputSchemaContext?.sourceData]);
 
   // Get the field key (last element of path) for InputSchemaContext
   const fieldKey = path[path.length - 1];

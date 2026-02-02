@@ -7,10 +7,11 @@
  * - calls setValue on change via InputSchemaContext
  */
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { cn } from "@/core/utils";
 import { Textarea } from "@/components/ui/textarea";
 import { useInputSchemaOptional } from "../schema/input/InputSchemaContext";
+import { getDebugMode } from "@/state/hooks/useDebugMode";
 
 // =============================================================================
 // Types
@@ -67,6 +68,9 @@ export function TextareaInputRenderer({
   const rawValue = useContext ? (inputSchemaContext?.getValue(fieldKey) as string | undefined) : undefined;
   const value = rawValue ?? propValue ?? "";
 
+  // Track previous prop value for debug mode sync
+  const prevPropValueRef = useRef(propValue);
+
   // Initialize context with prop value on mount (if context value is undefined)
   useEffect(() => {
     if (useContext && inputSchemaContext?.getValue(fieldKey) === undefined && propValue !== undefined) {
@@ -75,6 +79,20 @@ export function TextareaInputRenderer({
     // Only run on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Debug mode: sync external value changes to context
+  // This allows editing display_data from the state tree view to update inputs
+  useEffect(() => {
+    const isDebug = getDebugMode();
+    if (!isDebug) return;
+    if (!useContext || !inputSchemaContext) return;
+
+    // Only sync if propValue actually changed from external source
+    if (propValue !== prevPropValueRef.current) {
+      inputSchemaContext.setValue(fieldKey, propValue ?? "");
+      prevPropValueRef.current = propValue;
+    }
+  }, [useContext, fieldKey, propValue, inputSchemaContext]);
 
   // Determine state from InputSchemaContext, fall back to props
   const disabled = (useContext ? inputSchemaContext?.disabled : undefined) ?? propDisabled ?? false;

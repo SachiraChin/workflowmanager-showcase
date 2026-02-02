@@ -13,8 +13,9 @@
  * - Generation components (validate, submit values via getMappedValues)
  */
 
-import { useState, useMemo, useCallback, type ReactNode } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef, type ReactNode } from "react";
 import type { SchemaProperty, UxConfig } from "../types";
+import { getDebugMode } from "@/state/hooks/useDebugMode";
 import {
   InputSchemaContext,
   type InputSchemaContextValue,
@@ -60,6 +61,19 @@ export function InputSchemaComposer({
   void _schema; // Schema is available but we use ux.input_schema
   const inputSchema = ux.input_schema as InputSchema;
 
+  // Helper: Get nested value by dot-notated path (e.g., "nested.field.path")
+  const getNestedValue = (obj: Record<string, unknown>, path: string): unknown => {
+    const parts = path.split(".");
+    let current: unknown = obj;
+    for (const part of parts) {
+      if (current === null || current === undefined || typeof current !== "object") {
+        return undefined;
+      }
+      current = (current as Record<string, unknown>)[part];
+    }
+    return current;
+  };
+
   // Initialize values from data, handling source_data/source_field
   const [values, setValues] = useState<Record<string, unknown>>(() => {
     const initial: Record<string, unknown> = {};
@@ -79,8 +93,14 @@ export function InputSchemaComposer({
           const value = dataRecord[field];
           return value !== undefined ? String(value) : "";
         });
-      } else if (sourceField && dataRecord[sourceField] !== undefined) {
-        initial[key] = dataRecord[sourceField];
+      } else if (sourceField) {
+        // Support dot-notated paths (e.g., "nested.field.path")
+        const nestedValue = getNestedValue(dataRecord, sourceField);
+        if (nestedValue !== undefined) {
+          initial[key] = nestedValue;
+        } else {
+          initial[key] = dataRecord[key] ?? schemaRecord.default;
+        }
       } else {
         initial[key] = dataRecord[key] ?? schemaRecord.default;
       }
@@ -89,6 +109,51 @@ export function InputSchemaComposer({
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Track previous data for debug mode sync
+  const prevDataRef = useRef(data);
+
+  // Debug mode: sync external data changes to internal values state
+  // This allows editing display_data from debug tools to update input fields
+  useEffect(() => {
+    const isDebug = getDebugMode();
+    if (!isDebug) return;
+
+    // Check if data actually changed (reference comparison)
+    if (data === prevDataRef.current) return;
+    prevDataRef.current = data;
+
+    // Re-compute values from new data (same logic as initialization)
+    const properties = inputSchema?.properties || {};
+    const dataRecord = (data || {}) as Record<string, unknown>;
+    const newValues: Record<string, unknown> = {};
+
+    for (const [key, fieldSchema] of Object.entries(properties)) {
+      const schemaRecord = fieldSchema as Record<string, unknown>;
+      const fieldUx = (schemaRecord._ux || {}) as Record<string, unknown>;
+      const sourceField = fieldUx.source_field as string | undefined;
+      const sourceData = fieldUx.source_data as string | undefined;
+
+      if (sourceData) {
+        newValues[key] = sourceData.replace(/\{(\w+)\}/g, (_, field) => {
+          const value = dataRecord[field];
+          return value !== undefined ? String(value) : "";
+        });
+      } else if (sourceField) {
+        // Support dot-notated paths (e.g., "nested.field.path")
+        const nestedValue = getNestedValue(dataRecord, sourceField);
+        if (nestedValue !== undefined) {
+          newValues[key] = nestedValue;
+        } else {
+          newValues[key] = dataRecord[key] ?? schemaRecord.default;
+        }
+      } else {
+        newValues[key] = dataRecord[key] ?? schemaRecord.default;
+      }
+    }
+
+    setValues(newValues);
+  }, [data, inputSchema]);
 
   // Dynamic options for controlled select fields
   const [dynamicOptions, setDynamicOptionsState] = useState<Record<string, DynamicOption[]>>({});
@@ -121,7 +186,9 @@ export function InputSchemaComposer({
   );
 
   // Create context value
+  const sourceData = (data || {}) as Record<string, unknown>;
   const contextValue = useMemo<InputSchemaContextValue>(() => ({
+    sourceData,
     values,
     getValue: (key) => values[key],
     setValue: (key, value) => {
@@ -176,7 +243,7 @@ export function InputSchemaComposer({
     readonly,
 
     inputSchema,
-  }), [values, errors, getDynamicOptions, setDynamicOptions, alternativeMode, isAlternativeMode, setAlternativeMode, disabled, readonly, inputSchema]);
+  }), [sourceData, values, errors, getDynamicOptions, setDynamicOptions, alternativeMode, isAlternativeMode, setAlternativeMode, disabled, readonly, inputSchema]);
 
   // Render input fields + children (other siblings from bracket syntax)
   return (

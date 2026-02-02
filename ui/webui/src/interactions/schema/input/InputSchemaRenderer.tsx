@@ -65,17 +65,17 @@ export function InputSchemaRenderer({
   // Note: Using inline styles for dynamic values since Tailwind can't handle dynamic class names
   const layoutStyle: React.CSSProperties = layout === "grid"
     ? {
-        display: "grid",
-        gap: `${gap * 0.25}rem`,
-        gridTemplateColumns: `repeat(${columnsSm}, minmax(0, 1fr))`,
-      }
+      display: "grid",
+      gap: `${gap * 0.25}rem`,
+      gridTemplateColumns: `repeat(${columnsSm}, minmax(0, 1fr))`,
+    }
     : layout === "stack"
-    ? {
+      ? {
         display: "flex",
         flexDirection: "column",
         gap: `${gap * 0.25}rem`,
       }
-    : {
+      : {
         display: "flex",
         flexWrap: "wrap",
         gap: `${gap * 0.25}rem`,
@@ -113,7 +113,6 @@ export function InputSchemaRenderer({
               itemStyle.gridColumn = `span ${colSpan}`;
             }
           }
-
           return (
             <div key={key} style={itemStyle}>
               <SchemaRenderer

@@ -143,6 +143,7 @@ export interface UxConfig {
   enum_labels?: Record<string, string>;
   source_field?: string;  // Field name in data to get initial value from
   source_data?: string;   // Template string with {field} placeholders
+  enum_source?: string;   // Path in sourceData to get enum options from (e.g., "_provider_metadata.categories")
   placeholder?: string;   // Placeholder text for inputs
 
   // Layout configuration (for input_schema container)

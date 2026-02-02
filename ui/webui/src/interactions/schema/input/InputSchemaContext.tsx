@@ -65,6 +65,9 @@ export interface InputSchema {
  * Context value for input schema management.
  */
 export interface InputSchemaContextValue {
+  // Source data (original data object for resolving enum_source paths)
+  sourceData: Record<string, unknown>;
+
   // Values management
   values: Record<string, unknown>;
   getValue: (key: string) => unknown;
