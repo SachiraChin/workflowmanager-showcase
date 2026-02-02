@@ -18,6 +18,8 @@ interface WorkflowStateContextValue {
   error: string | null;
   /** Get a nested value from state */
   getValue: <T>(key: string, defaultValue?: T) => T | undefined;
+  /** Update state at a specific path (for debugging) */
+  updateStateAtPath: (path: string, value: unknown) => void;
   /** Workflow definition - flattened (has expanded modules with _metadata.expanded_from) */
   workflowDefinition: WorkflowDefinition | null;
   /** Raw workflow definition - original (has execution_groups modules) */
@@ -43,7 +45,7 @@ export function WorkflowStateProvider({
   workflowRunId,
   children,
 }: WorkflowStateProviderProps) {
-  const { state, isConnected, error, getValue, fetchState } = useWorkflowState(workflowRunId, {
+  const { state, isConnected, error, getValue, fetchState, updateStateAtPath } = useWorkflowState(workflowRunId, {
     autoConnect: true,
   });
 
@@ -116,6 +118,7 @@ export function WorkflowStateProvider({
       isConnected,
       error,
       getValue,
+      updateStateAtPath,
       workflowDefinition,
       rawWorkflowDefinition,
       getModuleConfig,
@@ -141,6 +144,7 @@ export function useWorkflowStateContext(): WorkflowStateContextValue {
       isConnected: false,
       error: null,
       getValue: () => undefined,
+      updateStateAtPath: () => {},
       workflowDefinition: null,
       rawWorkflowDefinition: null,
       getModuleConfig: () => null,

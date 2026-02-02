@@ -402,9 +402,9 @@ export interface WorkflowDefinition {
 export interface SubActionRequest {
   /** ID of the current interaction */
   interaction_id: string;
-  /** References sub_action.id in module schema */
-  action_id: string;
-  /** Action-specific params (e.g., feedback) */
+  /** References sub_action.id in module schema (e.g., "image_generation") */
+  sub_action_id: string;
+  /** Action-specific params - includes all data needed for the operation */
   params?: Record<string, unknown>;
 }
 
@@ -421,6 +421,8 @@ export interface SubActionDef {
   shortcut?: string;
   /** Loading state label */
   loading_label?: string;
+  /** Hide from footer but allow programmatic triggering */
+  hidden?: boolean;
   /** Actions to execute (target_sub_action or self_sub_action) */
   actions: Array<{
     type: "target_sub_action" | "self_sub_action";

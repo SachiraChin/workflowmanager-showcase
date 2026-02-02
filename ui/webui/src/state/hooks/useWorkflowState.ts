@@ -133,6 +133,34 @@ export function useWorkflowState(
     }
   }, [baseUrl, workflowRunId, onStateChange]);
 
+  /**
+   * Update state at a specific path (for debugging purposes).
+   * Path format: "steps.step_id.module_name.display_data.field"
+   */
+  const updateStateAtPath = useCallback((path: string, value: unknown) => {
+    const keys = path.split(".");
+    setState((prev) => {
+      // Deep clone to avoid mutation
+      const newState = JSON.parse(JSON.stringify(prev));
+
+      // Navigate to parent and set the value
+      let current = newState;
+      for (let i = 0; i < keys.length - 1; i++) {
+        const key = keys[i];
+        if (!(key in current)) {
+          current[key] = {};
+        }
+        current = current[key];
+      }
+
+      const lastKey = keys[keys.length - 1];
+      current[lastKey] = value;
+
+      onStateChange?.(newState);
+      return newState;
+    });
+  }, [onStateChange]);
+
   return {
     state,
     isConnected,
@@ -141,5 +169,6 @@ export function useWorkflowState(
     disconnect,
     getValue,
     fetchState,
+    updateStateAtPath,
   };
 }
