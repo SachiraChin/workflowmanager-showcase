@@ -1071,6 +1071,274 @@ class LeonardoProvider(MediaProviderBase):
             cost_per_image_usd=round(total_cost, 4)
         )
 
+    def get_metadata(self, action_type: str) -> Dict[str, Any]:
+        """
+        Get Leonardo model metadata for UI rendering.
+
+        Args:
+            action_type: "txt2img", "img2img", or "img2vid"
+
+        Returns:
+            Dict with all UI params for the specified action type.
+        """
+        if action_type == "img2vid":
+            return self._get_img2vid_metadata()
+        elif action_type in ("txt2img", "img2img"):
+            return self._get_txt2img_metadata()
+        else:
+            return {}
+
+    def _get_img2vid_metadata(self) -> Dict[str, Any]:
+        """Get metadata for img2vid (video generation)."""
+        return {
+            # Video model options
+            "models": [
+                {"key": "MOTION2", "label": "Motion 2.0"},
+                {"key": "MOTION2FAST", "label": "Motion 2.0 Fast"},
+                {"key": "VEO3", "label": "VEO 3"},
+                {"key": "VEO3FAST", "label": "VEO 3 Fast"},
+                {"key": "KLING2_1", "label": "Kling 2.1"},
+                {"key": "KLING2_5", "label": "Kling 2.5"},
+            ],
+
+            # Resolution options
+            "resolution": [
+                {"key": "RESOLUTION_480", "label": "480p"},
+                {"key": "RESOLUTION_720", "label": "720p"},
+                {"key": "RESOLUTION_1080", "label": "1080p"},
+            ],
+
+            # Duration options (for models that support variable duration)
+            "duration": [
+                {"key": "5", "label": "5 seconds"},
+                {"key": "10", "label": "10 seconds"},
+            ],
+
+            # Frame interpolation
+            "frame_interpolation": [
+                {"key": "true", "label": "Enabled"},
+                {"key": "false", "label": "Disabled"},
+            ],
+        }
+
+    def _get_txt2img_metadata(self) -> Dict[str, Any]:
+        """Get metadata for txt2img/img2img (image generation)."""
+        # Common styles for Phoenix, Lucid, and Flux models
+        phoenix_styles: List[Dict[str, str]] = [
+            {"key": "556c1ee5-ec38-42e8-955a-1e82dad0ffa1", "label": "None"},
+            {"key": "a5632c7c-ddbb-4e2f-ba34-8456ab3ac436", "label": "Cinematic"},
+            {"key": "33abbb99-03b9-4dd7-9761-ee98650b2c88", "label": "Cinematic Concept"},
+            {"key": "6fedbf1f-4a17-45ec-84fb-92fe524a29ef", "label": "Creative"},
+            {"key": "111dc692-d470-4eec-b791-3475abac4c46", "label": "Dynamic"},
+            {"key": "594c4a08-a522-4e0e-b7ff-e4dac4b6b622", "label": "Fashion"},
+            {"key": "97c20e5c-1af6-4d42-b227-54d03d8f0727", "label": "HDR"},
+            {"key": "645e4195-f63d-4715-a3f2-3fb1e6eb8c70", "label": "Illustration"},
+            {"key": "9fdc5e8c-4d13-49b4-9ce6-5a74cbb19177", "label": "Bokeh"},
+            {"key": "30c1d34f-e3a9-479a-b56f-c018bbc9c02a", "label": "Macro"},
+            {"key": "cadc8cd6-7838-4c99-b645-df76be8ba8d8", "label": "Minimalist"},
+            {"key": "621e1c9a-6319-4bee-a12d-ae40659162fa", "label": "Moody"},
+            {"key": "8e2bc543-6ee2-45f9-bcd9-594b6ce84dcd", "label": "Portrait"},
+            {"key": "0d34f8e1-46d4-428f-8ddd-4b11811fa7c9", "label": "Portrait Fashion"},
+            {"key": "22a9a7d2-2166-4d86-80ff-22e2643adbcf", "label": "Pro B&W Photography"},
+            {"key": "7c3f932b-a572-47cb-9b9b-f20211e63b5b", "label": "Pro Color Photography"},
+            {"key": "581ba6d6-5aac-4492-bebe-54c424a0d46e", "label": "Pro Film Photography"},
+            {"key": "debdf72a-91a4-467b-bf61-cc02bdeb69c6", "label": "3D Render"},
+            {"key": "b504f83c-3326-4947-82e1-7fe9e839ec0f", "label": "Ray Traced"},
+            {"key": "be8c6b58-739c-4d44-b9c1-b032ed308b61", "label": "Sketch (B&W)"},
+            {"key": "093accc3-7633-4ffd-82da-d34000dfc0d6", "label": "Sketch (Color)"},
+            {"key": "5bdc3f2a-1be6-4d1c-8e77-992a30824a2c", "label": "Stock Photo"},
+            {"key": "dee282d3-891f-4f73-ba02-7f8131e5541b", "label": "Vibrant"},
+            {"key": "2e74ec31-f3a4-4825-b08b-2894f6d13941", "label": "Graphic Design Pop Art"},
+            {"key": "1fbb6a68-9319-44d2-8d56-2957ca0ece6a", "label": "Graphic Design Vector"},
+        ]
+
+        # Common presets for XL models
+        xl_presets = [
+            {"key": "NONE", "label": "None"},
+            {"key": "BOKEH", "label": "Bokeh"},
+            {"key": "CINEMATIC", "label": "Cinematic"},
+            {"key": "CINEMATIC_CLOSEUP", "label": "Cinematic Closeup"},
+            {"key": "CREATIVE", "label": "Creative"},
+            {"key": "FASHION", "label": "Fashion"},
+            {"key": "FILM", "label": "Film"},
+            {"key": "FOOD", "label": "Food"},
+            {"key": "HDR", "label": "HDR"},
+            {"key": "LONG_EXPOSURE", "label": "Long Exposure"},
+            {"key": "MACRO", "label": "Macro"},
+        ]
+
+        models = [
+            # Phoenix models (with styles)
+            {
+                "key": "de7d3faf-762f-48e0-b3b7-9d0ac3a3fcf3",
+                "label": "Leonardo Phoenix 1.0",
+                "styles": phoenix_styles,
+            },
+            {
+                "key": "6b645e3a-d64f-4341-a6d8-7a3690fbf042",
+                "label": "Leonardo Phoenix 0.9",
+                "styles": phoenix_styles,
+            },
+            # Lucid models (with styles)
+            {
+                "key": "7b592283-e8a7-4c5a-9ba6-d18c31f258b9",
+                "label": "Lucid Origin",
+                "styles": phoenix_styles,
+            },
+            {
+                "key": "05ce0082-2d80-4a2d-8653-4d1c85e2418e",
+                "label": "Lucid Realism",
+                "styles": phoenix_styles,
+            },
+            # Flux models (with styles)
+            {
+                "key": "b2614463-296c-462a-9586-aafdb8f00e36",
+                "label": "Flux Dev",
+                "styles": phoenix_styles,
+            },
+            {
+                "key": "1dd50843-d653-4516-a8e3-f0238ee453ff",
+                "label": "Flux Schnell",
+                "styles": phoenix_styles,
+            },
+            {
+                "key": "28aeddf8-bd19-4803-80fc-79602d1a9989",
+                "label": "FLUX.1 Kontext",
+                "styles": phoenix_styles,
+            },
+            # XL models (with presets)
+            {
+                "key": "e71a1c2f-4f80-4800-934f-2c68979d8cc8",
+                "label": "Leonardo Anime XL",
+                "presets": xl_presets,
+            },
+            {
+                "key": "b24e16ff-06e3-43eb-8d33-4416c2d75876",
+                "label": "Leonardo Lightning XL",
+                "presets": xl_presets,
+            },
+            {
+                "key": "aa77f04e-3eec-4034-9c07-d0f619684628",
+                "label": "Leonardo Kino XL",
+                "presets": xl_presets,
+            },
+            {
+                "key": "5c232a9e-9061-4777-980a-ddc8e65647c6",
+                "label": "Leonardo Vision XL",
+                "presets": xl_presets,
+            },
+            {
+                "key": "1e60896f-3c26-4296-8ecc-53e2afecc132",
+                "label": "Leonardo Diffusion XL",
+                "presets": xl_presets,
+            },
+            {
+                "key": "16e7060a-803e-4df3-97ee-edcfa5dc9cc8",
+                "label": "SDXL 1.0",
+                "presets": xl_presets,
+            },
+            {
+                "key": "b63f7119-31dc-4540-969b-2a9df997e173",
+                "label": "SDXL 0.9",
+                "presets": xl_presets,
+            },
+            {
+                "key": "2067ae52-33fd-4a82-bb92-c2c55e7d2786",
+                "label": "AlbedoBase XL",
+                "presets": xl_presets,
+            },
+            {
+                "key": "f1929ea3-b169-4c18-a16c-5d58b4292c69",
+                "label": "RPG v5",
+                "presets": xl_presets,
+            },
+            {
+                "key": "d69c8273-6b17-4a30-a13e-d6637ae1c644",
+                "label": "3D Animation Style",
+                "presets": xl_presets,
+            },
+            {
+                "key": "ac614f96-1082-45bf-be9d-757f2d31c17",
+                "label": "DreamShaper v7",
+                "presets": xl_presets,
+            },
+        ]
+
+        return {
+            # Models with nested styles/presets for cascading selection
+            "models": models,
+
+            # Aspect ratio options
+            "aspect_ratio": [
+                {"key": "1:1", "label": "1:1 (Square)"},
+                {"key": "16:9", "label": "16:9 (Landscape)"},
+                {"key": "9:16", "label": "9:16 (Portrait)"},
+                {"key": "4:3", "label": "4:3"},
+                {"key": "3:4", "label": "3:4"},
+                {"key": "3:2", "label": "3:2"},
+                {"key": "2:3", "label": "2:3"},
+            ],
+
+            # Size tier options
+            "size": [
+                {"key": "small", "label": "Small (Fast)"},
+                {"key": "medium", "label": "Medium"},
+                {"key": "large", "label": "Large"},
+            ],
+
+            # Generation mode options
+            "generation_mode": [
+                {"key": "fast", "label": "Fast"},
+                {"key": "quality", "label": "Quality (~1.5x)"},
+                {"key": "ultra", "label": "Ultra (~2x)"},
+            ],
+
+            # Number of images options
+            "num_images": [
+                {"key": "1", "label": "1"},
+                {"key": "2", "label": "2"},
+                {"key": "4", "label": "4"},
+            ],
+
+            # Contrast level options (for Phoenix/Flux models)
+            "contrast": [
+                {"key": "1.0", "label": "1.0 (Low)"},
+                {"key": "1.3", "label": "1.3"},
+                {"key": "1.8", "label": "1.8"},
+                {"key": "2.5", "label": "2.5"},
+                {"key": "3.0", "label": "3.0 (Default)"},
+                {"key": "3.5", "label": "3.5"},
+                {"key": "4.0", "label": "4.0"},
+                {"key": "4.5", "label": "4.5 (High)"},
+            ],
+
+            # Scheduler options
+            "scheduler": [
+                {"key": "EULER_DISCRETE", "label": "Euler Discrete"},
+                {"key": "EULER_ANCESTRAL_DISCRETE", "label": "Euler Ancestral"},
+                {"key": "LEONARDO", "label": "Leonardo"},
+                {"key": "DPM_SOLVER", "label": "DPM Solver"},
+                {"key": "DDIM", "label": "DDIM"},
+                {"key": "KLMS", "label": "KLMS"},
+                {"key": "PNDM", "label": "PNDM"},
+            ],
+
+            # Slider params (min, max, default, step)
+            "guidance_scale": {
+                "min": 1,
+                "max": 20,
+                "default": 7,
+                "step": 1,
+            },
+
+            "num_inference_steps": {
+                "min": 10,
+                "max": 60,
+                "default": 15,
+                "step": 1,
+            },
+        }
+
     def _calculate_image_credits(self, params: Dict[str, Any]) -> CreditInfo:
         """Calculate image generation credits using Leonardo pricing API."""
         credits = 0.0

@@ -923,6 +923,99 @@ class OpenAIProvider(MediaProviderBase):
 
         return PreviewInfo(resolution=resolution, credits=credits)
 
+    def get_metadata(self, action_type: str) -> Dict[str, Any]:
+        """
+        Get OpenAI model metadata for UI rendering.
+
+        Args:
+            action_type: "txt2img", "img2img", or "img2vid"
+
+        Returns:
+            Dict with all UI params for the specified action type.
+        """
+        if action_type == "img2vid":
+            return self._get_img2vid_metadata()
+        elif action_type in ("txt2img", "img2img"):
+            return self._get_txt2img_metadata()
+        else:
+            return {}
+
+    def _get_txt2img_metadata(self) -> Dict[str, Any]:
+        """Get metadata for txt2img/img2img (image generation)."""
+        return {
+            # Model options
+            "models": [
+                {"key": "gpt-image-1.5", "label": "GPT Image 1.5 (Best)"},
+                {"key": "gpt-image-1", "label": "GPT Image 1"},
+                {"key": "gpt-image-1-mini", "label": "GPT Image 1 Mini (Budget)"},
+            ],
+
+            # Aspect ratio options (OpenAI only supports 3 fixed sizes)
+            "aspect_ratio": [
+                {"key": "1:1", "label": "1024x1024 (Square)"},
+                {"key": "2:3", "label": "1024x1536 (Portrait)"},
+                {"key": "3:2", "label": "1536x1024 (Landscape)"},
+            ],
+
+            # Quality options
+            "quality": [
+                {"key": "low", "label": "Low (Fast)"},
+                {"key": "medium", "label": "Medium"},
+                {"key": "high", "label": "High (Best)"},
+            ],
+
+            # Number of images options
+            "num_images": [
+                {"key": "1", "label": "1"},
+                {"key": "2", "label": "2"},
+                {"key": "4", "label": "4"},
+            ],
+
+            # Background options
+            "background": [
+                {"key": "auto", "label": "Auto"},
+                {"key": "opaque", "label": "Opaque"},
+                {"key": "transparent", "label": "Transparent"},
+            ],
+
+            # Output format options
+            "output_format": [
+                {"key": "png", "label": "PNG"},
+                {"key": "jpeg", "label": "JPEG"},
+                {"key": "webp", "label": "WebP"},
+            ],
+        }
+
+    def _get_img2vid_metadata(self) -> Dict[str, Any]:
+        """Get metadata for img2vid (Sora 2 video generation)."""
+        return {
+            # Video model options
+            "models": [
+                {"key": "sora-2", "label": "Sora 2 (Fast)"},
+                {"key": "sora-2-pro", "label": "Sora 2 Pro (Quality)"},
+            ],
+
+            # Aspect ratio options
+            "aspect_ratio": [
+                {"key": "16:9", "label": "16:9 (Landscape)"},
+                {"key": "9:16", "label": "9:16 (Portrait)"},
+                {"key": "1:1", "label": "1:1 (Square)"},
+            ],
+
+            # Quality/resolution options
+            "quality": [
+                {"key": "720p", "label": "720p"},
+                {"key": "HD", "label": "HD (sora-2-pro only)"},
+            ],
+
+            # Duration options
+            "duration": [
+                {"key": "4", "label": "4 seconds"},
+                {"key": "8", "label": "8 seconds"},
+                {"key": "12", "label": "12 seconds"},
+            ],
+        }
+
     def _get_video_preview_info(self, params: Dict[str, Any]) -> PreviewInfo:
         """
         Get preview info for video generation (Sora 2).

@@ -540,6 +540,106 @@ class MidAPIProvider(MediaProviderBase):
             megapixels=megapixels
         )
 
+    def get_metadata(self, action_type: str) -> Dict[str, Any]:
+        """
+        Get MidJourney/MidAPI model metadata for UI rendering.
+
+        Args:
+            action_type: "txt2img" or "img2vid"
+
+        Returns:
+            Dict with all UI params for the specified action type.
+        """
+        if action_type == "img2vid":
+            return self._get_img2vid_metadata()
+        elif action_type == "txt2img":
+            return self._get_txt2img_metadata()
+        else:
+            return {}
+
+    def _get_txt2img_metadata(self) -> Dict[str, Any]:
+        """Get metadata for txt2img (image generation)."""
+        return {
+            # Aspect ratio options
+            "aspect_ratio": [
+                {"key": "1:1", "label": "1:1 (Square)"},
+                {"key": "16:9", "label": "16:9 (Landscape)"},
+                {"key": "9:16", "label": "9:16 (Portrait)"},
+                {"key": "4:3", "label": "4:3"},
+                {"key": "3:4", "label": "3:4"},
+                {"key": "3:2", "label": "3:2"},
+                {"key": "2:3", "label": "2:3"},
+            ],
+
+            # Speed options
+            "speed": [
+                {"key": "relaxed", "label": "Relaxed"},
+                {"key": "fast", "label": "Fast"},
+                {"key": "turbo", "label": "Turbo"},
+            ],
+
+            # Version options
+            "versions": [
+                {"key": "7", "label": "V7"},
+                {"key": "6.1", "label": "V6.1"},
+                {"key": "6", "label": "V6"},
+                {"key": "5.2", "label": "V5.2"},
+                {"key": "niji6", "label": "Niji 6"},
+            ],
+
+            # Slider params (min, max, default, step)
+            "stylization": {
+                "min": 0,
+                "max": 1000,
+                "default": 100,
+                "step": 10,
+            },
+
+            "weirdness": {
+                "min": 0,
+                "max": 3000,
+                "default": 0,
+                "step": 50,
+            },
+
+            "variety": {
+                "min": 0,
+                "max": 100,
+                "default": 0,
+                "step": 5,
+            },
+        }
+
+    def _get_img2vid_metadata(self) -> Dict[str, Any]:
+        """Get metadata for img2vid (MidJourney video generation)."""
+        return {
+            # Motion intensity options
+            "motion": [
+                {"key": "low", "label": "Low"},
+                {"key": "high", "label": "High"},
+            ],
+
+            # Quality options
+            "hd": [
+                {"key": "false", "label": "Standard"},
+                {"key": "true", "label": "HD"},
+            ],
+
+            # Speed options (same as txt2img)
+            "speed": [
+                {"key": "relaxed", "label": "Relaxed"},
+                {"key": "fast", "label": "Fast"},
+                {"key": "turbo", "label": "Turbo"},
+            ],
+
+            # Batch size options
+            "batch_size": [
+                {"key": "1", "label": "1"},
+                {"key": "2", "label": "2"},
+                {"key": "4", "label": "4"},
+            ],
+        }
+
     def _calculate_credits(
         self,
         action_type: str,
