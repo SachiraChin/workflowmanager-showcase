@@ -30,23 +30,16 @@
         "leonardo": {
           "type": "object",
           "properties": {
-            "phoenix_1_0": {
-              "type": "object",
-              "properties": {
-                "prompt": {
-                  "type": "string",
-                  "description": "Leonardo Phoenix 1.0 optimized prompt"
-                },
-                "style_notes": {
-                  "type": "string",
-                  "description": "Brief note on the style/quality targeted"
-                }
-              },
-              "required": ["prompt", "style_notes"],
-              "additionalProperties": false
+            "prompt": {
+              "type": "string",
+              "description": "Leonardo Phoenix optimized prompt"
+            },
+            "style_notes": {
+              "type": "string",
+              "description": "Brief note on the style/quality targeted"
             }
           },
-          "required": ["phoenix_1_0"],
+          "required": ["prompt", "style_notes"],
           "additionalProperties": false
         },
         "openai": {

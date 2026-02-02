@@ -31,7 +31,7 @@ You will receive a scene concept with:
 - Structure: [subject] [action/expression] [setting] [lighting] [style] [parameters]
 - Best for: Artistic, stylized pet portraits with strong mood and atmosphere
 
-**Leonardo Phoenix 1.0:**
+**Leonardo:**
 - Balanced between artistic and photorealistic descriptions
 - Specify style clearly (photorealistic, cinematic, warm lighting)
 - Include quality and mood descriptors

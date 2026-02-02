@@ -52,20 +52,6 @@
       "name": "generate_image_prompts"
     },
     {
-      "module_id": "api.fetch",
-      "inputs": {
-        "url": "/wm-api/models/by_category",
-        "base_url": "http://192.168.1.181:7860",
-        "method": "GET",
-        "extract_path": "categories",
-        "error_on_failure": true
-      },
-      "outputs_to_state": {
-        "response": "sd_model_categories"
-      },
-      "name": "fetch_sd_models"
-    },
-    {
       "module_id": "media.generate",
       "inputs": {
         "resolver_schema": {
@@ -93,11 +79,15 @@
       },
       "sub_actions": [
         {
-          "id": "generate",
+          "id": "image_generation",
           "label": "Generate Images",
-          "action_type": "txt2img",
           "loading_label": "Generating...",
-          "result_key": "generations"
+          "hidden": true,
+          "actions": [
+            {
+              "type": "self_sub_action"
+            }
+          ]
         }
       ],
       "retryable": {

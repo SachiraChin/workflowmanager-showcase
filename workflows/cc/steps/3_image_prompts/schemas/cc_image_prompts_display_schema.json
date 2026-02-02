@@ -47,49 +47,34 @@
                 "aspect_ratio": {
                   "type": "string",
                   "title": "Aspect Ratio",
-                  "enum": ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"],
                   "default": "9:16",
-                  "enum_labels": {
-                    "1:1": "1:1 (Square)",
-                    "16:9": "16:9 (Landscape)",
-                    "9:16": "9:16 (Portrait)",
-                    "4:3": "4:3",
-                    "3:4": "3:4",
-                    "3:2": "3:2",
-                    "2:3": "2:3"
-                  },
+                  "value_key": "key",
+                  "label_key": "label",
                   "_ux": {
-                    "input_type": "select"
+                    "input_type": "select",
+                    "enum_source": "_provider_metadata.aspect_ratio"
                   }
                 },
                 "speed": {
                   "type": "string",
                   "title": "Speed",
-                  "enum": ["relaxed", "fast", "turbo"],
                   "default": "fast",
-                  "enum_labels": {
-                    "relaxed": "Relaxed",
-                    "fast": "Fast",
-                    "turbo": "Turbo"
-                  },
+                  "value_key": "key",
+                  "label_key": "label",
                   "_ux": {
-                    "input_type": "select"
+                    "input_type": "select",
+                    "enum_source": "_provider_metadata.speed"
                   }
                 },
                 "version": {
                   "type": "string",
                   "title": "Version",
-                  "enum": ["7", "6.1", "6", "5.2", "niji6"],
                   "default": "7",
-                  "enum_labels": {
-                    "7": "V7",
-                    "6.1": "V6.1",
-                    "6": "V6",
-                    "5.2": "V5.2",
-                    "niji6": "Niji 6"
-                  },
+                  "value_key": "key",
+                  "label_key": "label",
                   "_ux": {
-                    "input_type": "select"
+                    "input_type": "select",
+                    "enum_source": "_provider_metadata.versions"
                   }
                 },
                 "stylization": {
@@ -151,622 +136,175 @@
           "_ux": {
             "display": "visible",
             "tab_label": "Leonardo",
-            "render_as": "tab"
-          },
-          "properties": {
-            "phoenix_1_0": {
+            "render_as": "tab.media[input_schema,image_generation]",
+            "provider": "leonardo",
+            "input_schema": {
               "type": "object",
               "_ux": {
-                "display": true,
-                "render_as": "media[input_schema,image_generation]",
-                "display_label": "Leonardo",
-                "provider": "leonardo",
-                "prompt_id": "phoenix_1_0",
-                "input_schema": {
-                  "type": "object",
-                  "_ux": {
-                    "layout": "grid",
-                    "layout_columns": 3,
-                    "layout_columns_sm": 2
-                  },
-                  "properties": {
-                    "_text": {
-                      "type": "string",
-                      "title": "Prompt",
-                      "destination_field": "prompt",
-                      "_ux": {
-                        "input_type": "textarea",
-                        "col_span": "full",
-                        "rows": 4,
-                        "source_field": "prompt"
-                      }
-                    },
-                    "model_id": {
-                      "type": "string",
-                      "title": "Model",
-                      "enum": [
-                        {
-                          "key": "de7d3faf-762f-48e0-b3b7-9d0ac3a3fcf3",
-                          "label": "Leonardo Phoenix 1.0",
-                          "styles": [
-                            {"key": "556c1ee5-ec38-42e8-955a-1e82dad0ffa1", "label": "None"},
-                            {"key": "a5632c7c-ddbb-4e2f-ba34-8456ab3ac436", "label": "Cinematic"},
-                            {"key": "33abbb99-03b9-4dd7-9761-ee98650b2c88", "label": "Cinematic Concept"},
-                            {"key": "6fedbf1f-4a17-45ec-84fb-92fe524a29ef", "label": "Creative"},
-                            {"key": "111dc692-d470-4eec-b791-3475abac4c46", "label": "Dynamic"},
-                            {"key": "594c4a08-a522-4e0e-b7ff-e4dac4b6b622", "label": "Fashion"},
-                            {"key": "97c20e5c-1af6-4d42-b227-54d03d8f0727", "label": "HDR"},
-                            {"key": "645e4195-f63d-4715-a3f2-3fb1e6eb8c70", "label": "Illustration"},
-                            {"key": "9fdc5e8c-4d13-49b4-9ce6-5a74cbb19177", "label": "Bokeh"},
-                            {"key": "30c1d34f-e3a9-479a-b56f-c018bbc9c02a", "label": "Macro"},
-                            {"key": "cadc8cd6-7838-4c99-b645-df76be8ba8d8", "label": "Minimalist"},
-                            {"key": "621e1c9a-6319-4bee-a12d-ae40659162fa", "label": "Moody"},
-                            {"key": "8e2bc543-6ee2-45f9-bcd9-594b6ce84dcd", "label": "Portrait"},
-                            {"key": "0d34f8e1-46d4-428f-8ddd-4b11811fa7c9", "label": "Portrait Fashion"},
-                            {"key": "22a9a7d2-2166-4d86-80ff-22e2643adbcf", "label": "Pro B&W Photography"},
-                            {"key": "7c3f932b-a572-47cb-9b9b-f20211e63b5b", "label": "Pro Color Photography"},
-                            {"key": "581ba6d6-5aac-4492-bebe-54c424a0d46e", "label": "Pro Film Photography"},
-                            {"key": "debdf72a-91a4-467b-bf61-cc02bdeb69c6", "label": "3D Render"},
-                            {"key": "b504f83c-3326-4947-82e1-7fe9e839ec0f", "label": "Ray Traced"},
-                            {"key": "be8c6b58-739c-4d44-b9c1-b032ed308b61", "label": "Sketch (B&W)"},
-                            {"key": "093accc3-7633-4ffd-82da-d34000dfc0d6", "label": "Sketch (Color)"},
-                            {"key": "5bdc3f2a-1be6-4d1c-8e77-992a30824a2c", "label": "Stock Photo"},
-                            {"key": "dee282d3-891f-4f73-ba02-7f8131e5541b", "label": "Vibrant"},
-                            {"key": "2e74ec31-f3a4-4825-b08b-2894f6d13941", "label": "Graphic Design Pop Art"},
-                            {"key": "1fbb6a68-9319-44d2-8d56-2957ca0ece6a", "label": "Graphic Design Vector"}
-                          ]
-                        },
-                        {
-                          "key": "6b645e3a-d64f-4341-a6d8-7a3690fbf042",
-                          "label": "Leonardo Phoenix 0.9",
-                          "styles": [
-                            {"key": "556c1ee5-ec38-42e8-955a-1e82dad0ffa1", "label": "None"},
-                            {"key": "a5632c7c-ddbb-4e2f-ba34-8456ab3ac436", "label": "Cinematic"},
-                            {"key": "33abbb99-03b9-4dd7-9761-ee98650b2c88", "label": "Cinematic Concept"},
-                            {"key": "6fedbf1f-4a17-45ec-84fb-92fe524a29ef", "label": "Creative"},
-                            {"key": "111dc692-d470-4eec-b791-3475abac4c46", "label": "Dynamic"},
-                            {"key": "594c4a08-a522-4e0e-b7ff-e4dac4b6b622", "label": "Fashion"},
-                            {"key": "97c20e5c-1af6-4d42-b227-54d03d8f0727", "label": "HDR"},
-                            {"key": "645e4195-f63d-4715-a3f2-3fb1e6eb8c70", "label": "Illustration"},
-                            {"key": "9fdc5e8c-4d13-49b4-9ce6-5a74cbb19177", "label": "Bokeh"},
-                            {"key": "30c1d34f-e3a9-479a-b56f-c018bbc9c02a", "label": "Macro"},
-                            {"key": "cadc8cd6-7838-4c99-b645-df76be8ba8d8", "label": "Minimalist"},
-                            {"key": "621e1c9a-6319-4bee-a12d-ae40659162fa", "label": "Moody"},
-                            {"key": "8e2bc543-6ee2-45f9-bcd9-594b6ce84dcd", "label": "Portrait"},
-                            {"key": "0d34f8e1-46d4-428f-8ddd-4b11811fa7c9", "label": "Portrait Fashion"},
-                            {"key": "22a9a7d2-2166-4d86-80ff-22e2643adbcf", "label": "Pro B&W Photography"},
-                            {"key": "7c3f932b-a572-47cb-9b9b-f20211e63b5b", "label": "Pro Color Photography"},
-                            {"key": "581ba6d6-5aac-4492-bebe-54c424a0d46e", "label": "Pro Film Photography"},
-                            {"key": "debdf72a-91a4-467b-bf61-cc02bdeb69c6", "label": "3D Render"},
-                            {"key": "b504f83c-3326-4947-82e1-7fe9e839ec0f", "label": "Ray Traced"},
-                            {"key": "be8c6b58-739c-4d44-b9c1-b032ed308b61", "label": "Sketch (B&W)"},
-                            {"key": "093accc3-7633-4ffd-82da-d34000dfc0d6", "label": "Sketch (Color)"},
-                            {"key": "5bdc3f2a-1be6-4d1c-8e77-992a30824a2c", "label": "Stock Photo"},
-                            {"key": "dee282d3-891f-4f73-ba02-7f8131e5541b", "label": "Vibrant"},
-                            {"key": "2e74ec31-f3a4-4825-b08b-2894f6d13941", "label": "Graphic Design Pop Art"},
-                            {"key": "1fbb6a68-9319-44d2-8d56-2957ca0ece6a", "label": "Graphic Design Vector"}
-                          ]
-                        },
-                        {
-                          "key": "7b592283-e8a7-4c5a-9ba6-d18c31f258b9",
-                          "label": "Lucid Origin",
-                          "styles": [
-                            {"key": "556c1ee5-ec38-42e8-955a-1e82dad0ffa1", "label": "None"},
-                            {"key": "a5632c7c-ddbb-4e2f-ba34-8456ab3ac436", "label": "Cinematic"},
-                            {"key": "33abbb99-03b9-4dd7-9761-ee98650b2c88", "label": "Cinematic Concept"},
-                            {"key": "6fedbf1f-4a17-45ec-84fb-92fe524a29ef", "label": "Creative"},
-                            {"key": "111dc692-d470-4eec-b791-3475abac4c46", "label": "Dynamic"},
-                            {"key": "594c4a08-a522-4e0e-b7ff-e4dac4b6b622", "label": "Fashion"},
-                            {"key": "97c20e5c-1af6-4d42-b227-54d03d8f0727", "label": "HDR"},
-                            {"key": "645e4195-f63d-4715-a3f2-3fb1e6eb8c70", "label": "Illustration"},
-                            {"key": "9fdc5e8c-4d13-49b4-9ce6-5a74cbb19177", "label": "Bokeh"},
-                            {"key": "30c1d34f-e3a9-479a-b56f-c018bbc9c02a", "label": "Macro"},
-                            {"key": "cadc8cd6-7838-4c99-b645-df76be8ba8d8", "label": "Minimalist"},
-                            {"key": "621e1c9a-6319-4bee-a12d-ae40659162fa", "label": "Moody"},
-                            {"key": "8e2bc543-6ee2-45f9-bcd9-594b6ce84dcd", "label": "Portrait"},
-                            {"key": "0d34f8e1-46d4-428f-8ddd-4b11811fa7c9", "label": "Portrait Fashion"},
-                            {"key": "22a9a7d2-2166-4d86-80ff-22e2643adbcf", "label": "Pro B&W Photography"},
-                            {"key": "7c3f932b-a572-47cb-9b9b-f20211e63b5b", "label": "Pro Color Photography"},
-                            {"key": "581ba6d6-5aac-4492-bebe-54c424a0d46e", "label": "Pro Film Photography"},
-                            {"key": "debdf72a-91a4-467b-bf61-cc02bdeb69c6", "label": "3D Render"},
-                            {"key": "b504f83c-3326-4947-82e1-7fe9e839ec0f", "label": "Ray Traced"},
-                            {"key": "be8c6b58-739c-4d44-b9c1-b032ed308b61", "label": "Sketch (B&W)"},
-                            {"key": "093accc3-7633-4ffd-82da-d34000dfc0d6", "label": "Sketch (Color)"},
-                            {"key": "5bdc3f2a-1be6-4d1c-8e77-992a30824a2c", "label": "Stock Photo"},
-                            {"key": "dee282d3-891f-4f73-ba02-7f8131e5541b", "label": "Vibrant"},
-                            {"key": "2e74ec31-f3a4-4825-b08b-2894f6d13941", "label": "Graphic Design Pop Art"},
-                            {"key": "1fbb6a68-9319-44d2-8d56-2957ca0ece6a", "label": "Graphic Design Vector"}
-                          ]
-                        },
-                        {
-                          "key": "05ce0082-2d80-4a2d-8653-4d1c85e2418e",
-                          "label": "Lucid Realism",
-                          "styles": [
-                            {"key": "556c1ee5-ec38-42e8-955a-1e82dad0ffa1", "label": "None"},
-                            {"key": "a5632c7c-ddbb-4e2f-ba34-8456ab3ac436", "label": "Cinematic"},
-                            {"key": "33abbb99-03b9-4dd7-9761-ee98650b2c88", "label": "Cinematic Concept"},
-                            {"key": "6fedbf1f-4a17-45ec-84fb-92fe524a29ef", "label": "Creative"},
-                            {"key": "111dc692-d470-4eec-b791-3475abac4c46", "label": "Dynamic"},
-                            {"key": "594c4a08-a522-4e0e-b7ff-e4dac4b6b622", "label": "Fashion"},
-                            {"key": "97c20e5c-1af6-4d42-b227-54d03d8f0727", "label": "HDR"},
-                            {"key": "645e4195-f63d-4715-a3f2-3fb1e6eb8c70", "label": "Illustration"},
-                            {"key": "9fdc5e8c-4d13-49b4-9ce6-5a74cbb19177", "label": "Bokeh"},
-                            {"key": "30c1d34f-e3a9-479a-b56f-c018bbc9c02a", "label": "Macro"},
-                            {"key": "cadc8cd6-7838-4c99-b645-df76be8ba8d8", "label": "Minimalist"},
-                            {"key": "621e1c9a-6319-4bee-a12d-ae40659162fa", "label": "Moody"},
-                            {"key": "8e2bc543-6ee2-45f9-bcd9-594b6ce84dcd", "label": "Portrait"},
-                            {"key": "0d34f8e1-46d4-428f-8ddd-4b11811fa7c9", "label": "Portrait Fashion"},
-                            {"key": "22a9a7d2-2166-4d86-80ff-22e2643adbcf", "label": "Pro B&W Photography"},
-                            {"key": "7c3f932b-a572-47cb-9b9b-f20211e63b5b", "label": "Pro Color Photography"},
-                            {"key": "581ba6d6-5aac-4492-bebe-54c424a0d46e", "label": "Pro Film Photography"},
-                            {"key": "debdf72a-91a4-467b-bf61-cc02bdeb69c6", "label": "3D Render"},
-                            {"key": "b504f83c-3326-4947-82e1-7fe9e839ec0f", "label": "Ray Traced"},
-                            {"key": "be8c6b58-739c-4d44-b9c1-b032ed308b61", "label": "Sketch (B&W)"},
-                            {"key": "093accc3-7633-4ffd-82da-d34000dfc0d6", "label": "Sketch (Color)"},
-                            {"key": "5bdc3f2a-1be6-4d1c-8e77-992a30824a2c", "label": "Stock Photo"},
-                            {"key": "dee282d3-891f-4f73-ba02-7f8131e5541b", "label": "Vibrant"},
-                            {"key": "2e74ec31-f3a4-4825-b08b-2894f6d13941", "label": "Graphic Design Pop Art"},
-                            {"key": "1fbb6a68-9319-44d2-8d56-2957ca0ece6a", "label": "Graphic Design Vector"}
-                          ]
-                        },
-                        {
-                          "key": "b2614463-296c-462a-9586-aafdb8f00e36",
-                          "label": "Flux Dev",
-                          "styles": [
-                            {"key": "556c1ee5-ec38-42e8-955a-1e82dad0ffa1", "label": "None"},
-                            {"key": "a5632c7c-ddbb-4e2f-ba34-8456ab3ac436", "label": "Cinematic"},
-                            {"key": "33abbb99-03b9-4dd7-9761-ee98650b2c88", "label": "Cinematic Concept"},
-                            {"key": "6fedbf1f-4a17-45ec-84fb-92fe524a29ef", "label": "Creative"},
-                            {"key": "111dc692-d470-4eec-b791-3475abac4c46", "label": "Dynamic"},
-                            {"key": "594c4a08-a522-4e0e-b7ff-e4dac4b6b622", "label": "Fashion"},
-                            {"key": "97c20e5c-1af6-4d42-b227-54d03d8f0727", "label": "HDR"},
-                            {"key": "645e4195-f63d-4715-a3f2-3fb1e6eb8c70", "label": "Illustration"},
-                            {"key": "9fdc5e8c-4d13-49b4-9ce6-5a74cbb19177", "label": "Bokeh"},
-                            {"key": "30c1d34f-e3a9-479a-b56f-c018bbc9c02a", "label": "Macro"},
-                            {"key": "cadc8cd6-7838-4c99-b645-df76be8ba8d8", "label": "Minimalist"},
-                            {"key": "621e1c9a-6319-4bee-a12d-ae40659162fa", "label": "Moody"},
-                            {"key": "8e2bc543-6ee2-45f9-bcd9-594b6ce84dcd", "label": "Portrait"},
-                            {"key": "0d34f8e1-46d4-428f-8ddd-4b11811fa7c9", "label": "Portrait Fashion"},
-                            {"key": "22a9a7d2-2166-4d86-80ff-22e2643adbcf", "label": "Pro B&W Photography"},
-                            {"key": "7c3f932b-a572-47cb-9b9b-f20211e63b5b", "label": "Pro Color Photography"},
-                            {"key": "581ba6d6-5aac-4492-bebe-54c424a0d46e", "label": "Pro Film Photography"},
-                            {"key": "debdf72a-91a4-467b-bf61-cc02bdeb69c6", "label": "3D Render"},
-                            {"key": "b504f83c-3326-4947-82e1-7fe9e839ec0f", "label": "Ray Traced"},
-                            {"key": "be8c6b58-739c-4d44-b9c1-b032ed308b61", "label": "Sketch (B&W)"},
-                            {"key": "093accc3-7633-4ffd-82da-d34000dfc0d6", "label": "Sketch (Color)"},
-                            {"key": "5bdc3f2a-1be6-4d1c-8e77-992a30824a2c", "label": "Stock Photo"},
-                            {"key": "dee282d3-891f-4f73-ba02-7f8131e5541b", "label": "Vibrant"},
-                            {"key": "2e74ec31-f3a4-4825-b08b-2894f6d13941", "label": "Graphic Design Pop Art"},
-                            {"key": "1fbb6a68-9319-44d2-8d56-2957ca0ece6a", "label": "Graphic Design Vector"}
-                          ]
-                        },
-                        {
-                          "key": "1dd50843-d653-4516-a8e3-f0238ee453ff",
-                          "label": "Flux Schnell",
-                          "styles": [
-                            {"key": "556c1ee5-ec38-42e8-955a-1e82dad0ffa1", "label": "None"},
-                            {"key": "a5632c7c-ddbb-4e2f-ba34-8456ab3ac436", "label": "Cinematic"},
-                            {"key": "33abbb99-03b9-4dd7-9761-ee98650b2c88", "label": "Cinematic Concept"},
-                            {"key": "6fedbf1f-4a17-45ec-84fb-92fe524a29ef", "label": "Creative"},
-                            {"key": "111dc692-d470-4eec-b791-3475abac4c46", "label": "Dynamic"},
-                            {"key": "594c4a08-a522-4e0e-b7ff-e4dac4b6b622", "label": "Fashion"},
-                            {"key": "97c20e5c-1af6-4d42-b227-54d03d8f0727", "label": "HDR"},
-                            {"key": "645e4195-f63d-4715-a3f2-3fb1e6eb8c70", "label": "Illustration"},
-                            {"key": "9fdc5e8c-4d13-49b4-9ce6-5a74cbb19177", "label": "Bokeh"},
-                            {"key": "30c1d34f-e3a9-479a-b56f-c018bbc9c02a", "label": "Macro"},
-                            {"key": "cadc8cd6-7838-4c99-b645-df76be8ba8d8", "label": "Minimalist"},
-                            {"key": "621e1c9a-6319-4bee-a12d-ae40659162fa", "label": "Moody"},
-                            {"key": "8e2bc543-6ee2-45f9-bcd9-594b6ce84dcd", "label": "Portrait"},
-                            {"key": "0d34f8e1-46d4-428f-8ddd-4b11811fa7c9", "label": "Portrait Fashion"},
-                            {"key": "22a9a7d2-2166-4d86-80ff-22e2643adbcf", "label": "Pro B&W Photography"},
-                            {"key": "7c3f932b-a572-47cb-9b9b-f20211e63b5b", "label": "Pro Color Photography"},
-                            {"key": "581ba6d6-5aac-4492-bebe-54c424a0d46e", "label": "Pro Film Photography"},
-                            {"key": "debdf72a-91a4-467b-bf61-cc02bdeb69c6", "label": "3D Render"},
-                            {"key": "b504f83c-3326-4947-82e1-7fe9e839ec0f", "label": "Ray Traced"},
-                            {"key": "be8c6b58-739c-4d44-b9c1-b032ed308b61", "label": "Sketch (B&W)"},
-                            {"key": "093accc3-7633-4ffd-82da-d34000dfc0d6", "label": "Sketch (Color)"},
-                            {"key": "5bdc3f2a-1be6-4d1c-8e77-992a30824a2c", "label": "Stock Photo"},
-                            {"key": "dee282d3-891f-4f73-ba02-7f8131e5541b", "label": "Vibrant"},
-                            {"key": "2e74ec31-f3a4-4825-b08b-2894f6d13941", "label": "Graphic Design Pop Art"},
-                            {"key": "1fbb6a68-9319-44d2-8d56-2957ca0ece6a", "label": "Graphic Design Vector"}
-                          ]
-                        },
-                        {
-                          "key": "28aeddf8-bd19-4803-80fc-79602d1a9989",
-                          "label": "FLUX.1 Kontext",
-                          "styles": [
-                            {"key": "556c1ee5-ec38-42e8-955a-1e82dad0ffa1", "label": "None"},
-                            {"key": "a5632c7c-ddbb-4e2f-ba34-8456ab3ac436", "label": "Cinematic"},
-                            {"key": "33abbb99-03b9-4dd7-9761-ee98650b2c88", "label": "Cinematic Concept"},
-                            {"key": "6fedbf1f-4a17-45ec-84fb-92fe524a29ef", "label": "Creative"},
-                            {"key": "111dc692-d470-4eec-b791-3475abac4c46", "label": "Dynamic"},
-                            {"key": "594c4a08-a522-4e0e-b7ff-e4dac4b6b622", "label": "Fashion"},
-                            {"key": "97c20e5c-1af6-4d42-b227-54d03d8f0727", "label": "HDR"},
-                            {"key": "645e4195-f63d-4715-a3f2-3fb1e6eb8c70", "label": "Illustration"},
-                            {"key": "9fdc5e8c-4d13-49b4-9ce6-5a74cbb19177", "label": "Bokeh"},
-                            {"key": "30c1d34f-e3a9-479a-b56f-c018bbc9c02a", "label": "Macro"},
-                            {"key": "cadc8cd6-7838-4c99-b645-df76be8ba8d8", "label": "Minimalist"},
-                            {"key": "621e1c9a-6319-4bee-a12d-ae40659162fa", "label": "Moody"},
-                            {"key": "8e2bc543-6ee2-45f9-bcd9-594b6ce84dcd", "label": "Portrait"},
-                            {"key": "0d34f8e1-46d4-428f-8ddd-4b11811fa7c9", "label": "Portrait Fashion"},
-                            {"key": "22a9a7d2-2166-4d86-80ff-22e2643adbcf", "label": "Pro B&W Photography"},
-                            {"key": "7c3f932b-a572-47cb-9b9b-f20211e63b5b", "label": "Pro Color Photography"},
-                            {"key": "581ba6d6-5aac-4492-bebe-54c424a0d46e", "label": "Pro Film Photography"},
-                            {"key": "debdf72a-91a4-467b-bf61-cc02bdeb69c6", "label": "3D Render"},
-                            {"key": "b504f83c-3326-4947-82e1-7fe9e839ec0f", "label": "Ray Traced"},
-                            {"key": "be8c6b58-739c-4d44-b9c1-b032ed308b61", "label": "Sketch (B&W)"},
-                            {"key": "093accc3-7633-4ffd-82da-d34000dfc0d6", "label": "Sketch (Color)"},
-                            {"key": "5bdc3f2a-1be6-4d1c-8e77-992a30824a2c", "label": "Stock Photo"},
-                            {"key": "dee282d3-891f-4f73-ba02-7f8131e5541b", "label": "Vibrant"},
-                            {"key": "2e74ec31-f3a4-4825-b08b-2894f6d13941", "label": "Graphic Design Pop Art"},
-                            {"key": "1fbb6a68-9319-44d2-8d56-2957ca0ece6a", "label": "Graphic Design Vector"}
-                          ]
-                        },
-                        {
-                          "key": "e71a1c2f-4f80-4800-934f-2c68979d8cc8",
-                          "label": "Leonardo Anime XL",
-                          "presets": [
-                            {"key": "NONE", "label": "None"},
-                            {"key": "BOKEH", "label": "Bokeh"},
-                            {"key": "CINEMATIC", "label": "Cinematic"},
-                            {"key": "CINEMATIC_CLOSEUP", "label": "Cinematic Closeup"},
-                            {"key": "CREATIVE", "label": "Creative"},
-                            {"key": "FASHION", "label": "Fashion"},
-                            {"key": "FILM", "label": "Film"},
-                            {"key": "FOOD", "label": "Food"},
-                            {"key": "HDR", "label": "HDR"},
-                            {"key": "LONG_EXPOSURE", "label": "Long Exposure"},
-                            {"key": "MACRO", "label": "Macro"}
-                          ]
-                        },
-                        {
-                          "key": "b24e16ff-06e3-43eb-8d33-4416c2d75876",
-                          "label": "Leonardo Lightning XL",
-                          "presets": [
-                            {"key": "NONE", "label": "None"},
-                            {"key": "BOKEH", "label": "Bokeh"},
-                            {"key": "CINEMATIC", "label": "Cinematic"},
-                            {"key": "CINEMATIC_CLOSEUP", "label": "Cinematic Closeup"},
-                            {"key": "CREATIVE", "label": "Creative"},
-                            {"key": "FASHION", "label": "Fashion"},
-                            {"key": "FILM", "label": "Film"},
-                            {"key": "FOOD", "label": "Food"},
-                            {"key": "HDR", "label": "HDR"},
-                            {"key": "LONG_EXPOSURE", "label": "Long Exposure"},
-                            {"key": "MACRO", "label": "Macro"}
-                          ]
-                        },
-                        {
-                          "key": "aa77f04e-3eec-4034-9c07-d0f619684628",
-                          "label": "Leonardo Kino XL",
-                          "presets": [
-                            {"key": "NONE", "label": "None"},
-                            {"key": "BOKEH", "label": "Bokeh"},
-                            {"key": "CINEMATIC", "label": "Cinematic"},
-                            {"key": "CINEMATIC_CLOSEUP", "label": "Cinematic Closeup"},
-                            {"key": "CREATIVE", "label": "Creative"},
-                            {"key": "FASHION", "label": "Fashion"},
-                            {"key": "FILM", "label": "Film"},
-                            {"key": "FOOD", "label": "Food"},
-                            {"key": "HDR", "label": "HDR"},
-                            {"key": "LONG_EXPOSURE", "label": "Long Exposure"},
-                            {"key": "MACRO", "label": "Macro"}
-                          ]
-                        },
-                        {
-                          "key": "5c232a9e-9061-4777-980a-ddc8e65647c6",
-                          "label": "Leonardo Vision XL",
-                          "presets": [
-                            {"key": "NONE", "label": "None"},
-                            {"key": "BOKEH", "label": "Bokeh"},
-                            {"key": "CINEMATIC", "label": "Cinematic"},
-                            {"key": "CINEMATIC_CLOSEUP", "label": "Cinematic Closeup"},
-                            {"key": "CREATIVE", "label": "Creative"},
-                            {"key": "FASHION", "label": "Fashion"},
-                            {"key": "FILM", "label": "Film"},
-                            {"key": "FOOD", "label": "Food"},
-                            {"key": "HDR", "label": "HDR"},
-                            {"key": "LONG_EXPOSURE", "label": "Long Exposure"},
-                            {"key": "MACRO", "label": "Macro"}
-                          ]
-                        },
-                        {
-                          "key": "1e60896f-3c26-4296-8ecc-53e2afecc132",
-                          "label": "Leonardo Diffusion XL",
-                          "presets": [
-                            {"key": "NONE", "label": "None"},
-                            {"key": "BOKEH", "label": "Bokeh"},
-                            {"key": "CINEMATIC", "label": "Cinematic"},
-                            {"key": "CINEMATIC_CLOSEUP", "label": "Cinematic Closeup"},
-                            {"key": "CREATIVE", "label": "Creative"},
-                            {"key": "FASHION", "label": "Fashion"},
-                            {"key": "FILM", "label": "Film"},
-                            {"key": "FOOD", "label": "Food"},
-                            {"key": "HDR", "label": "HDR"},
-                            {"key": "LONG_EXPOSURE", "label": "Long Exposure"},
-                            {"key": "MACRO", "label": "Macro"}
-                          ]
-                        },
-                        {
-                          "key": "16e7060a-803e-4df3-97ee-edcfa5dc9cc8",
-                          "label": "SDXL 1.0",
-                          "presets": [
-                            {"key": "NONE", "label": "None"},
-                            {"key": "BOKEH", "label": "Bokeh"},
-                            {"key": "CINEMATIC", "label": "Cinematic"},
-                            {"key": "CINEMATIC_CLOSEUP", "label": "Cinematic Closeup"},
-                            {"key": "CREATIVE", "label": "Creative"},
-                            {"key": "FASHION", "label": "Fashion"},
-                            {"key": "FILM", "label": "Film"},
-                            {"key": "FOOD", "label": "Food"},
-                            {"key": "HDR", "label": "HDR"},
-                            {"key": "LONG_EXPOSURE", "label": "Long Exposure"},
-                            {"key": "MACRO", "label": "Macro"}
-                          ]
-                        },
-                        {
-                          "key": "b63f7119-31dc-4540-969b-2a9df997e173",
-                          "label": "SDXL 0.9",
-                          "presets": [
-                            {"key": "NONE", "label": "None"},
-                            {"key": "BOKEH", "label": "Bokeh"},
-                            {"key": "CINEMATIC", "label": "Cinematic"},
-                            {"key": "CINEMATIC_CLOSEUP", "label": "Cinematic Closeup"},
-                            {"key": "CREATIVE", "label": "Creative"},
-                            {"key": "FASHION", "label": "Fashion"},
-                            {"key": "FILM", "label": "Film"},
-                            {"key": "FOOD", "label": "Food"},
-                            {"key": "HDR", "label": "HDR"},
-                            {"key": "LONG_EXPOSURE", "label": "Long Exposure"},
-                            {"key": "MACRO", "label": "Macro"}
-                          ]
-                        },
-                        {
-                          "key": "2067ae52-33fd-4a82-bb92-c2c55e7d2786",
-                          "label": "AlbedoBase XL",
-                          "presets": [
-                            {"key": "NONE", "label": "None"},
-                            {"key": "BOKEH", "label": "Bokeh"},
-                            {"key": "CINEMATIC", "label": "Cinematic"},
-                            {"key": "CINEMATIC_CLOSEUP", "label": "Cinematic Closeup"},
-                            {"key": "CREATIVE", "label": "Creative"},
-                            {"key": "FASHION", "label": "Fashion"},
-                            {"key": "FILM", "label": "Film"},
-                            {"key": "FOOD", "label": "Food"},
-                            {"key": "HDR", "label": "HDR"},
-                            {"key": "LONG_EXPOSURE", "label": "Long Exposure"},
-                            {"key": "MACRO", "label": "Macro"}
-                          ]
-                        },
-                        {
-                          "key": "f1929ea3-b169-4c18-a16c-5d58b4292c69",
-                          "label": "RPG v5",
-                          "presets": [
-                            {"key": "NONE", "label": "None"},
-                            {"key": "BOKEH", "label": "Bokeh"},
-                            {"key": "CINEMATIC", "label": "Cinematic"},
-                            {"key": "CINEMATIC_CLOSEUP", "label": "Cinematic Closeup"},
-                            {"key": "CREATIVE", "label": "Creative"},
-                            {"key": "FASHION", "label": "Fashion"},
-                            {"key": "FILM", "label": "Film"},
-                            {"key": "FOOD", "label": "Food"},
-                            {"key": "HDR", "label": "HDR"},
-                            {"key": "LONG_EXPOSURE", "label": "Long Exposure"},
-                            {"key": "MACRO", "label": "Macro"}
-                          ]
-                        },
-                        {
-                          "key": "d69c8273-6b17-4a30-a13e-d6637ae1c644",
-                          "label": "3D Animation Style",
-                          "presets": [
-                            {"key": "NONE", "label": "None"},
-                            {"key": "BOKEH", "label": "Bokeh"},
-                            {"key": "CINEMATIC", "label": "Cinematic"},
-                            {"key": "CINEMATIC_CLOSEUP", "label": "Cinematic Closeup"},
-                            {"key": "CREATIVE", "label": "Creative"},
-                            {"key": "FASHION", "label": "Fashion"},
-                            {"key": "FILM", "label": "Film"},
-                            {"key": "FOOD", "label": "Food"},
-                            {"key": "HDR", "label": "HDR"},
-                            {"key": "LONG_EXPOSURE", "label": "Long Exposure"},
-                            {"key": "MACRO", "label": "Macro"}
-                          ]
-                        },
-                        {
-                          "key": "ac614f96-1082-45bf-be9d-757f2d31c17",
-                          "label": "DreamShaper v7",
-                          "presets": [
-                            {"key": "NONE", "label": "None"},
-                            {"key": "BOKEH", "label": "Bokeh"},
-                            {"key": "CINEMATIC", "label": "Cinematic"},
-                            {"key": "CINEMATIC_CLOSEUP", "label": "Cinematic Closeup"},
-                            {"key": "CREATIVE", "label": "Creative"},
-                            {"key": "FASHION", "label": "Fashion"},
-                            {"key": "FILM", "label": "Film"},
-                            {"key": "FOOD", "label": "Food"},
-                            {"key": "HDR", "label": "HDR"},
-                            {"key": "LONG_EXPOSURE", "label": "Long Exposure"},
-                            {"key": "MACRO", "label": "Macro"}
-                          ]
-                        }
-                      ],
-                      "value_key": "key",
-                      "label_key": "label",
-                      "default": "de7d3faf-762f-48e0-b3b7-9d0ac3a3fcf3",
-                      "_ux": {
-                        "input_type": "select"
-                      },
-                      "controls": {
-                        "style_uuid": {
-                          "type": "enum",
-                          "enum_path": "styles",
-                          "value_key": "key",
-                          "label_key": "label",
-                          "default_index": 0,
-                          "reset": true
-                        },
-                        "preset_style": {
-                          "type": "enum",
-                          "enum_path": "presets",
-                          "value_key": "key",
-                          "label_key": "label",
-                          "default_index": 0,
-                          "reset": true
-                        }
-                      }
-                    },
-                    "aspect_ratio": {
-                      "type": "string",
-                      "title": "Aspect Ratio",
-                      "enum": ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"],
-                      "default": "9:16",
-                      "enum_labels": {
-                        "1:1": "1:1 (Square)",
-                        "16:9": "16:9 (Landscape)",
-                        "9:16": "9:16 (Portrait)",
-                        "4:3": "4:3",
-                        "3:4": "3:4",
-                        "3:2": "3:2",
-                        "2:3": "2:3"
-                      },
-                      "_ux": {
-                        "input_type": "select"
-                      }
-                    },
-                    "size": {
-                      "type": "string",
-                      "title": "Size",
-                      "enum": ["small", "medium", "large"],
-                      "default": "medium",
-                      "enum_labels": {
-                        "small": "Small (Fast)",
-                        "medium": "Medium",
-                        "large": "Large"
-                      },
-                      "_ux": {
-                        "input_type": "select"
-                      }
-                    },
-                    "generation_mode": {
-                      "type": "string",
-                      "title": "Generation Mode",
-                      "enum": ["fast", "quality", "ultra"],
-                      "default": "fast",
-                      "enum_labels": {
-                        "fast": "Fast",
-                        "quality": "Quality (~1.5x)",
-                        "ultra": "Ultra (~2x)"
-                      },
-                      "_ux": {
-                        "input_type": "select"
-                      }
-                    },
-                    "style_uuid": {
-                      "type": "string",
-                      "title": "Style",
-                      "_ux": {
-                        "input_type": "select"
-                      }
-                    },
-                    "preset_style": {
-                      "type": "string",
-                      "title": "Preset Style",
-                      "_ux": {
-                        "input_type": "select"
-                      }
-                    },
-                    "num_images": {
-                      "type": "string",
-                      "title": "Images",
-                      "enum": ["1", "2", "4"],
-                      "default": "4",
-                      "enum_labels": {
-                        "1": "1",
-                        "2": "2",
-                        "4": "4"
-                      },
-                      "_ux": {
-                        "input_type": "select"
-                      }
-                    },
-                    "guidance_scale": {
-                      "type": "integer",
-                      "title": "Guidance",
-                      "minimum": 1,
-                      "maximum": 20,
-                      "default": 7,
-                      "step": 1,
-                      "_ux": {
-                        "input_type": "slider"
-                      }
-                    },
-                    "contrast": {
-                      "type": "string",
-                      "title": "Contrast",
-                      "enum": ["1.0", "1.3", "1.8", "2.5", "3.0", "3.5", "4.0", "4.5"],
-                      "default": "3.0",
-                      "enum_labels": {
-                        "1.0": "1.0 (Low)",
-                        "1.3": "1.3",
-                        "1.8": "1.8",
-                        "2.5": "2.5",
-                        "3.0": "3.0 (Default)",
-                        "3.5": "3.5",
-                        "4.0": "4.0",
-                        "4.5": "4.5 (High)"
-                      },
-                      "_ux": {
-                        "input_type": "select"
-                      }
-                    },
-                    "num_inference_steps": {
-                      "type": "integer",
-                      "title": "Steps",
-                      "minimum": 10,
-                      "maximum": 60,
-                      "default": 15,
-                      "step": 1,
-                      "_ux": {
-                        "input_type": "slider"
-                      }
-                    },
-                    "scheduler": {
-                      "type": "string",
-                      "title": "Scheduler",
-                      "enum": ["EULER_DISCRETE", "EULER_ANCESTRAL_DISCRETE", "LEONARDO", "DPM_SOLVER", "DDIM", "KLMS", "PNDM"],
-                      "default": "EULER_DISCRETE",
-                      "enum_labels": {
-                        "EULER_DISCRETE": "Euler Discrete",
-                        "EULER_ANCESTRAL_DISCRETE": "Euler Ancestral",
-                        "LEONARDO": "Leonardo",
-                        "DPM_SOLVER": "DPM Solver",
-                        "DDIM": "DDIM",
-                        "KLMS": "KLMS",
-                        "PNDM": "PNDM"
-                      },
-                      "_ux": {
-                        "input_type": "select"
-                      }
-                    }
-                  }
-                }
+                "layout": "grid",
+                "layout_columns": 3,
+                "layout_columns_sm": 2
               },
               "properties": {
-                "prompt": {
+                "_text": {
                   "type": "string",
+                  "title": "Prompt",
+                  "destination_field": "prompt",
                   "_ux": {
-                    "display": false
+                    "input_type": "textarea",
+                    "col_span": "full",
+                    "rows": 4,
+                    "source_field": "prompt"
                   }
                 },
-                "style_notes": {
+                "model_id": {
                   "type": "string",
+                  "title": "Model",
+                  "value_key": "key",
+                  "label_key": "label",
+                  "default": "de7d3faf-762f-48e0-b3b7-9d0ac3a3fcf3",
                   "_ux": {
-                    "display": true,
-                    "display_label": "Style",
-                    "highlight": true,
-                    "highlight_color": "#FF6B6B"
+                    "input_type": "select",
+                    "enum_source": "_provider_metadata.models"
+                  },
+                  "controls": {
+                    "style_uuid": {
+                      "type": "enum",
+                      "enum_path": "styles",
+                      "value_key": "key",
+                      "label_key": "label",
+                      "default_index": 0,
+                      "reset": true
+                    },
+                    "preset_style": {
+                      "type": "enum",
+                      "enum_path": "presets",
+                      "value_key": "key",
+                      "label_key": "label",
+                      "default_index": 0,
+                      "reset": true
+                    }
+                  }
+                },
+                "aspect_ratio": {
+                  "type": "string",
+                  "title": "Aspect Ratio",
+                  "default": "9:16",
+                  "value_key": "key",
+                  "label_key": "label",
+                  "_ux": {
+                    "input_type": "select",
+                    "enum_source": "_provider_metadata.aspect_ratio"
+                  }
+                },
+                "size": {
+                  "type": "string",
+                  "title": "Size",
+                  "default": "medium",
+                  "value_key": "key",
+                  "label_key": "label",
+                  "_ux": {
+                    "input_type": "select",
+                    "enum_source": "_provider_metadata.size"
+                  }
+                },
+                "generation_mode": {
+                  "type": "string",
+                  "title": "Generation Mode",
+                  "default": "fast",
+                  "value_key": "key",
+                  "label_key": "label",
+                  "_ux": {
+                    "input_type": "select",
+                    "enum_source": "_provider_metadata.generation_mode"
+                  }
+                },
+                "style_uuid": {
+                  "type": "string",
+                  "title": "Style",
+                  "_ux": {
+                    "input_type": "select"
+                  }
+                },
+                "preset_style": {
+                  "type": "string",
+                  "title": "Preset Style",
+                  "_ux": {
+                    "input_type": "select"
+                  }
+                },
+                "num_images": {
+                  "type": "string",
+                  "title": "Images",
+                  "default": "4",
+                  "value_key": "key",
+                  "label_key": "label",
+                  "_ux": {
+                    "input_type": "select",
+                    "enum_source": "_provider_metadata.num_images"
+                  }
+                },
+                "guidance_scale": {
+                  "type": "integer",
+                  "title": "Guidance",
+                  "minimum": 1,
+                  "maximum": 20,
+                  "default": 7,
+                  "step": 1,
+                  "_ux": {
+                    "input_type": "slider"
+                  }
+                },
+                "contrast": {
+                  "type": "string",
+                  "title": "Contrast",
+                  "default": "3.0",
+                  "value_key": "key",
+                  "label_key": "label",
+                  "_ux": {
+                    "input_type": "select",
+                    "enum_source": "_provider_metadata.contrast"
+                  }
+                },
+                "num_inference_steps": {
+                  "type": "integer",
+                  "title": "Steps",
+                  "minimum": 10,
+                  "maximum": 60,
+                  "default": 15,
+                  "step": 1,
+                  "_ux": {
+                    "input_type": "slider"
+                  }
+                },
+                "scheduler": {
+                  "type": "string",
+                  "title": "Scheduler",
+                  "default": "EULER_DISCRETE",
+                  "value_key": "key",
+                  "label_key": "label",
+                  "_ux": {
+                    "input_type": "select",
+                    "enum_source": "_provider_metadata.scheduler"
                   }
                 }
+              }
+            }
+          },
+          "properties": {
+            "prompt": {
+              "type": "string",
+              "_ux": {
+                "display": false
+              }
+            },
+            "style_notes": {
+              "type": "string",
+              "_ux": {
+                "display": true,
+                "display_label": "Style",
+                "highlight": true,
+                "highlight_color": "#FF6B6B"
               }
             }
           }
@@ -800,85 +338,67 @@
                 "model": {
                   "type": "string",
                   "title": "Model",
-                  "enum": ["gpt-image-1.5", "gpt-image-1", "gpt-image-1-mini"],
                   "default": "gpt-image-1-mini",
-                  "enum_labels": {
-                    "gpt-image-1.5": "GPT Image 1.5 (Best)",
-                    "gpt-image-1": "GPT Image 1",
-                    "gpt-image-1-mini": "GPT Image 1 Mini (Budget)"
-                  },
+                  "value_key": "key",
+                  "label_key": "label",
                   "_ux": {
-                    "input_type": "select"
+                    "input_type": "select",
+                    "enum_source": "_provider_metadata.models"
                   }
                 },
                 "aspect_ratio": {
                   "type": "string",
                   "title": "Size",
-                  "enum": ["1:1", "2:3", "3:2"],
                   "default": "2:3",
-                  "enum_labels": {
-                    "1:1": "1024x1024 (Square)",
-                    "2:3": "1024x1536 (Portrait)",
-                    "3:2": "1536x1024 (Landscape)"
-                  },
+                  "value_key": "key",
+                  "label_key": "label",
                   "_ux": {
-                    "input_type": "select"
+                    "input_type": "select",
+                    "enum_source": "_provider_metadata.aspect_ratio"
                   }
                 },
                 "quality": {
                   "type": "string",
                   "title": "Quality",
-                  "enum": ["low", "medium", "high"],
                   "default": "medium",
-                  "enum_labels": {
-                    "low": "Low (Fast)",
-                    "medium": "Medium",
-                    "high": "High (Best)"
-                  },
+                  "value_key": "key",
+                  "label_key": "label",
                   "_ux": {
-                    "input_type": "select"
+                    "input_type": "select",
+                    "enum_source": "_provider_metadata.quality"
                   }
                 },
                 "num_images": {
                   "type": "string",
                   "title": "Images",
-                  "enum": ["1", "2", "4"],
                   "default": "4",
-                  "enum_labels": {
-                    "1": "1",
-                    "2": "2",
-                    "4": "4"
-                  },
+                  "value_key": "key",
+                  "label_key": "label",
                   "_ux": {
-                    "input_type": "select"
+                    "input_type": "select",
+                    "enum_source": "_provider_metadata.num_images"
                   }
                 },
                 "background": {
                   "type": "string",
                   "title": "Background",
-                  "enum": ["auto", "opaque", "transparent"],
                   "default": "auto",
-                  "enum_labels": {
-                    "auto": "Auto",
-                    "opaque": "Opaque",
-                    "transparent": "Transparent"
-                  },
+                  "value_key": "key",
+                  "label_key": "label",
                   "_ux": {
-                    "input_type": "select"
+                    "input_type": "select",
+                    "enum_source": "_provider_metadata.background"
                   }
                 },
                 "output_format": {
                   "type": "string",
                   "title": "Format",
-                  "enum": ["png", "jpeg", "webp"],
                   "default": "png",
-                  "enum_labels": {
-                    "png": "PNG",
-                    "jpeg": "JPEG",
-                    "webp": "WebP"
-                  },
+                  "value_key": "key",
+                  "label_key": "label",
                   "_ux": {
-                    "input_type": "select"
+                    "input_type": "select",
+                    "enum_source": "_provider_metadata.output_format"
                   }
                 }
               }
@@ -921,8 +441,16 @@
                   "type": "string",
                   "title": "Prompt Style",
                   "enum": [
-                    { "key": "tag", "label": "Tag-based", "value": "{{ state.image_prompts.prompts.stable_diffusion.tag_prompt }}" },
-                    { "key": "natural", "label": "Natural Language", "value": "{{ state.image_prompts.prompts.stable_diffusion.natural_prompt }}" }
+                    {
+                      "key": "tag",
+                      "label": "Tag-based",
+                      "value": "{{ state.image_prompts.prompts.stable_diffusion.tag_prompt }}"
+                    },
+                    {
+                      "key": "natural",
+                      "label": "Natural Language",
+                      "value": "{{ state.image_prompts.prompts.stable_diffusion.natural_prompt }}"
+                    }
                   ],
                   "value_key": "key",
                   "label_key": "label",
@@ -951,22 +479,22 @@
                 "negative_prompt": {
                   "type": "string",
                   "title": "Negative Prompt",
+                  "destination_field": "negative_prompt",
                   "_ux": {
                     "input_type": "textarea",
                     "col_span": "full",
                     "rows": 4,
-                    "source_data": "{negative_prompt}, deformed face, distorted face, malformed face, asymmetrical face, uneven face, stretched face, misaligned eyes, uneven eyes, extra eyes, missing eyes, crossed eyes, mutated eyes, bulging eyes, sunken eyes, glassy eyes, hollow eyes, deformed eyes, unnatural eye placement, warped muzzle, twisted snout, deformed muzzle, crooked nose, broken snout, flattened face, malformed mouth, distorted mouth, extra mouth, duplicated mouth, open mouth, broken jaw, distorted jaw, extra teeth, missing teeth, visible gums, hanging tongue, deformed tongue, deformed head, malformed head, warped skull, crushed head, elongated head, uneven head shape, extra limbs, extra legs, extra ears, missing ears, fused ears, misplaced ears, malformed ears, extra tail, bad anatomy, bad proportions, mutation, mutated, lowres, blurry, out of focus, jpeg artifacts, noisy, oversharpened"
+                    "source_field": "negative_prompt"
                   }
                 },
-                "model_category": {
+                "category": {
                   "type": "string",
                   "title": "Category",
-                  "required": true,
-                  "enum": "{{ state.sd_model_categories }}",
                   "value_key": "id",
                   "label_key": "name",
                   "_ux": {
-                    "input_type": "select"
+                    "input_type": "select",
+                    "enum_source": "_provider_metadata.categories"
                   },
                   "controls": {
                     "checkpoint": {
@@ -982,7 +510,6 @@
                 "checkpoint": {
                   "type": "string",
                   "title": "Model",
-                  "required": true,
                   "_ux": {
                     "input_type": "select"
                   },
@@ -1031,7 +558,6 @@
                 "sampler_combo": {
                   "type": "string",
                   "title": "Sampler",
-                  "required": true,
                   "_ux": {
                     "input_type": "select"
                   }
@@ -1039,7 +565,6 @@
                 "resolution": {
                   "type": "string",
                   "title": "Resolution",
-                  "required": true,
                   "_ux": {
                     "input_type": "select"
                   },
@@ -1106,7 +631,12 @@
                 "batch_size": {
                   "type": "integer",
                   "title": "Images",
-                  "enum": [1, 2, 4],
+                  "enum": [
+                    1,
+                    2,
+                    4,
+                    8
+                  ],
                   "default": 4,
                   "_ux": {
                     "input_type": "select"
