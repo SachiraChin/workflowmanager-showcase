@@ -24,7 +24,6 @@ import { MediaGrid } from "./MediaGrid";
 import { CropSelectionModal } from "./CropSelectionModal";
 import type { SchemaProperty, UxConfig } from "../../schema/types";
 import type {
-  SubActionConfig,
   GenerationResult,
   ProgressState,
   PreviewInfo,
@@ -86,7 +85,6 @@ export function VideoGeneration({
   const [savedCrop, setSavedCrop] = useState<CropState | null>(null);
   const [showCropModal, setShowCropModal] = useState(false);
   const [cropModalViewOnly, setCropModalViewOnly] = useState(false);
-  const [pendingAction, setPendingAction] = useState<SubActionConfig | null>(null);
   const [pendingParams, setPendingParams] = useState<Record<string, unknown> | null>(null);
 
   // Source image for crop modal
@@ -193,8 +191,15 @@ export function VideoGeneration({
 
   // Execute generation with crop
   const executeWithCrop = useCallback(
-    async (action: SubActionConfig, params: Record<string, unknown>, cropRegion?: CropRegion) => {
+    async (params: Record<string, unknown>, cropRegion?: CropRegion) => {
       if (!mediaContext || !workflowRunId || !provider) return;
+
+      // Get sub_action_id from first available sub_action in context
+      const subActionId = subActions[0]?.id;
+      if (!subActionId) {
+        setError("No sub-action configured");
+        return;
+      }
 
       const finalParams = { ...params };
 
@@ -215,10 +220,10 @@ export function VideoGeneration({
       // Build generic sub-action request with all params
       const subActionRequest: SubActionRequest = {
         interaction_id: request.interaction_id,
-        action_id: action.id,
+        sub_action_id: subActionId,
         params: {
           provider,
-          action_type: action.action_type,
+          action_type: "img2vid",
           prompt_id: promptId,
           params: finalParams,
           source_data: data,
@@ -230,21 +235,28 @@ export function VideoGeneration({
         eventData: Record<string, unknown>
       ) => {
         switch (eventType) {
-          case "progress":
+          case "progress": {
+            // Handle both flat (message) and nested (progress.message) formats
+            const progressData = eventData.progress as Record<string, unknown> | undefined;
             setProgress({
-              elapsed_ms: eventData.elapsed_ms as number,
-              message: eventData.message as string,
+              elapsed_ms: (progressData?.elapsed_ms ?? eventData.elapsed_ms ?? 0) as number,
+              message: (progressData?.message ?? eventData.message ?? "") as string,
             });
             break;
+          }
 
           case "complete": {
-            const result: GenerationResult = {
-              urls: (eventData.urls as string[]).map(toMediaUrl),
-              metadata_id: eventData.metadata_id as string,
-              content_ids: eventData.content_ids as string[],
-            };
-            setGenerations((prev) => [...prev, result]);
-            registerGeneration(promptKey, result);
+            // Result is in sub_action_result for clean separation
+            const subActionResult = eventData.sub_action_result as Record<string, unknown> | undefined;
+            if (subActionResult) {
+              const result: GenerationResult = {
+                urls: (subActionResult.urls as string[]).map(toMediaUrl),
+                metadata_id: subActionResult.metadata_id as string,
+                content_ids: subActionResult.content_ids as string[],
+              };
+              setGenerations((prev) => [...prev, result]);
+              registerGeneration(promptKey, result);
+            }
             setLoading(false);
             setProgress(null);
             break;
@@ -279,6 +291,7 @@ export function VideoGeneration({
       data,
       sourceImageData,
       registerGeneration,
+      subActions,
     ]
   );
 
@@ -289,20 +302,19 @@ export function VideoGeneration({
         setSavedCrop({ region: cropRegion, aspectRatio });
       }
 
-      if (pendingAction && pendingParams && cropRegion) {
-        executeWithCrop(pendingAction, pendingParams, cropRegion);
+      if (pendingParams && cropRegion) {
+        executeWithCrop(pendingParams, cropRegion);
       }
 
       setShowCropModal(false);
-      setPendingAction(null);
       setPendingParams(null);
     },
-    [pendingAction, pendingParams, executeWithCrop]
+    [pendingParams, executeWithCrop]
   );
 
   // Handle generate click
   const handleGenerate = useCallback(
-    async (action: SubActionConfig) => {
+    async () => {
       if (!mediaContext || !workflowRunId || !inputContext || !provider) return;
 
       const params = inputContext.getMappedValues();
@@ -333,19 +345,18 @@ export function VideoGeneration({
 
       setError(null);
 
-      // For img2vid, show crop modal or use saved crop
-      if (action.action_type === "img2vid" && sourceImageUrl) {
+      // For img2vid with source image, show crop modal or use saved crop
+      if (sourceImageUrl) {
         if (savedCrop) {
-          executeWithCrop(action, params, savedCrop.region);
+          executeWithCrop(params, savedCrop.region);
         } else {
-          setPendingAction(action);
           setPendingParams(params);
           setCropModalViewOnly(false);
           setShowCropModal(true);
         }
       } else {
-        // For other actions, execute directly
-        executeWithCrop(action, params);
+        // No source image, execute directly
+        executeWithCrop(params);
       }
     },
     [
@@ -372,11 +383,6 @@ export function VideoGeneration({
       </div>
     );
   }
-
-  // Filter for video action types
-  const videoActions = subActions.filter((a) =>
-    ["img2vid", "txt2vid"].includes(a.action_type)
-  );
 
   return (
     <div className="space-y-4">
@@ -448,33 +454,28 @@ export function VideoGeneration({
         </div>
       )}
 
-      {/* Action Buttons */}
-      {!readonly && videoActions.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {videoActions.map((action) => (
-            <Button
-              key={action.id}
-              variant="outline"
-              size="sm"
-              onClick={() => handleGenerate(action)}
-              disabled={loading || disabled}
-            >
-              {action.label}
-            </Button>
-          ))}
+      {/* Generate Button + Progress */}
+      {!readonly && (
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleGenerate}
+            disabled={loading || disabled}
+          >
+            Generate
+          </Button>
+          {loading && (
+            <span className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              {progress?.message && <span>{progress.message}</span>}
+            </span>
+          )}
         </div>
       )}
 
       {/* Error */}
       {error && <div className="text-sm text-destructive">{error}</div>}
-
-      {/* Progress */}
-      {loading && progress && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          <span>{progress.message}</span>
-        </div>
-      )}
 
       {/* Generated Content */}
       {generations.length > 0 && (
@@ -494,7 +495,6 @@ export function VideoGeneration({
           onClose={() => {
             setShowCropModal(false);
             setCropModalViewOnly(false);
-            setPendingAction(null);
             setPendingParams(null);
           }}
           imageUrl={sourceImageUrl}

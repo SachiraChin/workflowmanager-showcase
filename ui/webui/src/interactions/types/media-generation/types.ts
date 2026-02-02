@@ -69,7 +69,10 @@ export interface PromptsData {
  * SSE event: Sub-action started.
  */
 export interface SSEStartedEvent {
-  action_id: string;
+  /** Unique ID for this execution run */
+  execution_id: string;
+  /** ID of the sub-action definition (e.g., "image_generation") */
+  sub_action_id: string;
 }
 
 /**

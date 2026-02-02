@@ -23,7 +23,6 @@ import { useInputSchemaOptional, pathToKey } from "../../schema/input/InputSchem
 import { useMediaGeneration } from "./MediaGenerationContext";
 import type { SchemaProperty, UxConfig } from "../../schema/types";
 import type {
-  SubActionConfig,
   GenerationResult,
   ProgressState,
   PreviewInfo,
@@ -354,7 +353,7 @@ export function AudioGeneration({
 
   // Execute generation via SSE
   const handleGenerate = useCallback(
-    async (action: SubActionConfig) => {
+    async () => {
       if (!mediaContext || !workflowRunId || !inputContext || !provider) return;
 
       const params = inputContext.getMappedValues();
@@ -387,13 +386,21 @@ export function AudioGeneration({
       setProgress({ elapsed_ms: 0, message: "Starting..." });
       setError(null);
 
+      // Get sub_action_id from first available sub_action in context
+      const subActionId = subActions[0]?.id;
+      if (!subActionId) {
+        setError("No sub-action configured");
+        setLoading(false);
+        return;
+      }
+
       // Build generic sub-action request with all params
       const subActionRequest: SubActionRequest = {
         interaction_id: request.interaction_id,
-        action_id: action.id,
+        sub_action_id: subActionId,
         params: {
           provider,
-          action_type: action.action_type,
+          action_type: "txt2audio",
           prompt_id: promptId,
           params,
           source_data: data,
@@ -405,21 +412,28 @@ export function AudioGeneration({
         eventData: Record<string, unknown>
       ) => {
         switch (eventType) {
-          case "progress":
+          case "progress": {
+            // Handle both flat (message) and nested (progress.message) formats
+            const progressData = eventData.progress as Record<string, unknown> | undefined;
             setProgress({
-              elapsed_ms: eventData.elapsed_ms as number,
-              message: eventData.message as string,
+              elapsed_ms: (progressData?.elapsed_ms ?? eventData.elapsed_ms ?? 0) as number,
+              message: (progressData?.message ?? eventData.message ?? "") as string,
             });
             break;
+          }
 
           case "complete": {
-            const result: GenerationResult = {
-              urls: (eventData.urls as string[]).map(toMediaUrl),
-              metadata_id: eventData.metadata_id as string,
-              content_ids: eventData.content_ids as string[],
-            };
-            setGenerations((prev) => [...prev, result]);
-            registerGeneration(promptKey, result);
+            // Result is in sub_action_result for clean separation
+            const subActionResult = eventData.sub_action_result as Record<string, unknown> | undefined;
+            if (subActionResult) {
+              const result: GenerationResult = {
+                urls: (subActionResult.urls as string[]).map(toMediaUrl),
+                metadata_id: subActionResult.metadata_id as string,
+                content_ids: subActionResult.content_ids as string[],
+              };
+              setGenerations((prev) => [...prev, result]);
+              registerGeneration(promptKey, result);
+            }
             setLoading(false);
             setProgress(null);
             break;
@@ -452,6 +466,7 @@ export function AudioGeneration({
       data,
       ux.input_schema,
       registerGeneration,
+      subActions,
     ]
   );
 
@@ -477,9 +492,6 @@ export function AudioGeneration({
       </div>
     );
   }
-
-  // Filter for audio action types
-  const audioActions = subActions.filter((a) => a.action_type === "txt2audio");
 
   return (
     <div className="space-y-4">
@@ -513,33 +525,28 @@ export function AudioGeneration({
         </div>
       )}
 
-      {/* Action Buttons */}
-      {!readonly && audioActions.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {audioActions.map((action) => (
-            <Button
-              key={action.id}
-              variant="outline"
-              size="sm"
-              onClick={() => handleGenerate(action)}
-              disabled={loading || disabled}
-            >
-              {action.label}
-            </Button>
-          ))}
+      {/* Generate Button + Progress */}
+      {!readonly && (
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleGenerate}
+            disabled={loading || disabled}
+          >
+            Generate
+          </Button>
+          {loading && (
+            <span className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              {progress?.message && <span>{progress.message}</span>}
+            </span>
+          )}
         </div>
       )}
 
       {/* Error */}
       {error && <div className="text-sm text-destructive">{error}</div>}
-
-      {/* Progress */}
-      {loading && progress && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          <span>{progress.message}</span>
-        </div>
-      )}
 
       {/* Generated Audio Tracks */}
       {tracks.length > 0 && (
