@@ -192,7 +192,7 @@ async def execute_sub_action(
     Execute a sub-action via SSE streaming.
 
     Sub-actions allow triggering operations from within an interactive module
-    without completing the interaction. The action_id references a sub_action
+    without completing the interaction. The sub_action_id references a sub_action
     definition in the module's schema.
 
     Two sub-action types:
@@ -203,7 +203,7 @@ async def execute_sub_action(
     """
     logger.info(
         f"[SubAction] Request for workflow {workflow_run_id[:8]}..., "
-        f"action_id={request.action_id}, interaction={request.interaction_id}"
+        f"sub_action_id={request.sub_action_id}, interaction={request.interaction_id}"
     )
 
     workflow = db.workflow_repo.get_workflow(workflow_run_id)
@@ -215,7 +215,7 @@ async def execute_sub_action(
             async for event in processor.sub_action_handler.execute_sub_action(
                 workflow_run_id=workflow_run_id,
                 interaction_id=request.interaction_id,
-                action_id=request.action_id,
+                sub_action_id=request.sub_action_id,
                 params=request.params,
             ):
                 yield {"event": event.type.value, "data": json.dumps(event.data)}

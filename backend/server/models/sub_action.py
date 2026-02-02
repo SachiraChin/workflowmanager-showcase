@@ -12,7 +12,8 @@ from dataclasses import dataclass
 @dataclass
 class SubActionStarted:
     """Sub-action execution has started."""
-    action_id: str
+    execution_id: str
+    sub_action_id: str
 
 
 @dataclass

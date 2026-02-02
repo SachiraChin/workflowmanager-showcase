@@ -32,13 +32,13 @@ class SubActionContext:
     def __init__(
         self,
         workflow_run_id: str,
-        sub_action_id: str,
+        execution_id: str,
         interaction_id: str,
         db: Database,
         params: Dict[str, Any],
     ):
         self.workflow_run_id = workflow_run_id
-        self.sub_action_id = sub_action_id
+        self.execution_id = execution_id
         self.interaction_id = interaction_id
         self.db = db
         self.params = params
@@ -62,7 +62,7 @@ class SubActionHandler:
         self,
         workflow_run_id: str,
         interaction_id: str,
-        action_id: str,
+        sub_action_id: str,
         params: Dict[str, Any] = None,
     ) -> AsyncIterator[SSEEvent]:
         """
@@ -71,7 +71,7 @@ class SubActionHandler:
         Args:
             workflow_run_id: Parent workflow run ID
             interaction_id: Current interaction ID
-            action_id: Sub-action ID from schema
+            sub_action_id: Sub-action ID from schema (e.g., "image_generation")
             params: Optional parameters (e.g., feedback)
 
         Yields:
@@ -79,8 +79,8 @@ class SubActionHandler:
         """
         params = params or {}
 
-        # 1. Generate unique sub_action_id
-        sub_action_id = f"{action_id}_{uuid7_str()}"
+        # 1. Generate unique execution_id for this run
+        execution_id = f"{sub_action_id}_{uuid7_str()}"
 
         # 2. Get interaction and module config
         interaction = self._get_interaction(workflow_run_id, interaction_id)
@@ -95,16 +95,16 @@ class SubActionHandler:
         module_name = interaction.get("module_name")
         module_config = self._get_module_config_from_interaction(interaction)
 
-        sub_action_def = self._find_sub_action(module_config, action_id)
+        sub_action_def = self._find_sub_action(module_config, sub_action_id)
         if not sub_action_def:
             yield SSEEvent(
                 type=SSEEventType.ERROR,
-                data={"message": f"Sub-action '{action_id}' not found in module config"},
+                data={"message": f"Sub-action '{sub_action_id}' not found in module config"},
             )
             return
 
         logger.info(
-            f"[SubAction] Found sub_action_def: id={action_id}, "
+            f"[SubAction] Found sub_action_def: id={sub_action_id}, "
             f"result_mapping={sub_action_def.get('result_mapping')}"
         )
 
@@ -115,8 +115,8 @@ class SubActionHandler:
             step_id=step_id,
             module_name=module_name,
             data={
+                "execution_id": execution_id,
                 "sub_action_id": sub_action_id,
-                "action_id": action_id,
                 "interaction_id": interaction_id,
                 "params": params,
             },
@@ -126,7 +126,7 @@ class SubActionHandler:
             type=SSEEventType.PROGRESS,
             data={
                 "workflow_run_id": workflow_run_id,
-                "sub_action_id": sub_action_id,
+                "execution_id": execution_id,
                 "message": sub_action_def.get("loading_label", "Processing..."),
             },
         )
@@ -136,7 +136,7 @@ class SubActionHandler:
         if not actions:
             yield SSEEvent(
                 type=SSEEventType.ERROR,
-                data={"message": f"Sub-action '{action_id}' has no actions"},
+                data={"message": f"Sub-action '{sub_action_id}' has no actions"},
             )
             return
 
@@ -147,20 +147,20 @@ class SubActionHandler:
             # 5. Execute based on type (both return child_state dict)
             if action_type == "target_sub_action":
                 child_state, child_workflow_id = await self._execute_target_sub_actions(
-                    workflow_run_id, sub_action_id, sub_action_def, params
+                    workflow_run_id, execution_id, sub_action_def, params
                 )
             elif action_type == "self_sub_action":
                 # self_sub_action yields progress events before returning result
                 child_state = None
                 async for event_type, event_data in self._execute_self_sub_action(
-                    workflow_run_id, sub_action_id, interaction, sub_action_def, params
+                    workflow_run_id, execution_id, interaction, sub_action_def, params
                 ):
                     if event_type == "progress":
                         yield SSEEvent(
                             type=SSEEventType.PROGRESS,
                             data={
                                 "workflow_run_id": workflow_run_id,
-                                "sub_action_id": sub_action_id,
+                                "execution_id": execution_id,
                                 **event_data,
                             },
                         )
@@ -196,6 +196,7 @@ class SubActionHandler:
 
             # 8. Store sub_action_completed event in PARENT
             completed_data = {
+                "execution_id": execution_id,
                 "sub_action_id": sub_action_id,
                 "child_state": child_state,
                 "_state_mapped": out_state,
@@ -217,26 +218,31 @@ class SubActionHandler:
                 data=completed_data,
             )
 
-            # 9. Yield completion
+            # 9. Yield completion with result data for UI consumption
+            completion_data = {
+                "execution_id": execution_id,
+                "updated_state": out_state,
+            }
+            # Include raw result for UI components (e.g., media generation)
+            if child_state:
+                completion_data["sub_action_result"] = child_state
+
             yield SSEEvent(
                 type=SSEEventType.COMPLETE,
-                data={
-                    "sub_action_id": sub_action_id,
-                    "updated_state": out_state,
-                },
+                data=completion_data,
             )
 
         except Exception as e:
-            logger.error(f"Sub-action {sub_action_id} failed: {e}")
+            logger.error(f"Sub-action execution {execution_id} failed: {e}")
             yield SSEEvent(
                 type=SSEEventType.ERROR,
-                data={"message": str(e), "sub_action_id": sub_action_id},
+                data={"message": str(e), "execution_id": execution_id},
             )
 
     async def _execute_target_sub_actions(
         self,
         parent_workflow_run_id: str,
-        sub_action_id: str,
+        execution_id: str,
         sub_action_def: Dict,
         params: Dict,
     ) -> Tuple[Dict, str]:
@@ -282,12 +288,12 @@ class SubActionHandler:
 
         # Build virtual step
         virtual_step = {
-            "step_id": f"sub_action_{sub_action_id}",
+            "step_id": f"sub_action_{execution_id}",
             "modules": resolved_modules,
         }
 
         # Create child workflow run
-        child_id = self._create_child_workflow_run(parent_workflow_run_id, sub_action_id)
+        child_id = self._create_child_workflow_run(parent_workflow_run_id, execution_id)
 
         # Execute using existing executor
         response = self.executor.execute_step_modules(
@@ -315,7 +321,7 @@ class SubActionHandler:
     def _create_child_workflow_run(
         self,
         parent_workflow_run_id: str,
-        sub_action_id: str,
+        execution_id: str,
     ) -> str:
         """Create child workflow run for sub-action execution."""
         child_id = f"wf_sub_{uuid7_str()}"
@@ -323,7 +329,7 @@ class SubActionHandler:
         self.db.workflow_runs.insert_one({
             "workflow_run_id": child_id,
             "parent_workflow_id": parent_workflow_run_id,
-            "sub_action_id": sub_action_id,
+            "execution_id": execution_id,
             "visible_in_ui": False,
             "status": "processing",
             "created_at": datetime.utcnow(),
@@ -484,7 +490,7 @@ class SubActionHandler:
     async def _execute_self_sub_action(
         self,
         workflow_run_id: str,
-        sub_action_id: str,
+        execution_id: str,
         interaction: Dict,
         sub_action_def: Dict,
         params: Dict,
@@ -508,7 +514,7 @@ class SubActionHandler:
 
         context = SubActionContext(
             workflow_run_id=workflow_run_id,
-            sub_action_id=sub_action_id,
+            execution_id=execution_id,
             interaction_id=interaction.get("data", {}).get("interaction_id"),
             db=self.db,
             params={**action_params, **params},
