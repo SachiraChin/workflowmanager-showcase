@@ -1,5 +1,5 @@
 /**
- * SchemaRenderer - Pure type-based router.
+ * SchemaRenderer - Pure type-based router with debug mode support.
  *
  * Routes to:
  * - Special renderers (before type routing):
@@ -22,9 +22,15 @@
  * - Some render_as values need direct data/schema access for coordinated rendering
  * - These are handled specially at this level BEFORE type routing
  * - Currently: content-panel, table
+ *
+ * Debug Mode:
+ * - When debug mode is enabled, container/layout components get an edit button
+ * - The edit button allows editing the node's data and schema
+ * - Terminal and Input renderers do not get the edit button
  */
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { Pencil } from "lucide-react";
 import type { SchemaProperty, RenderAs } from "./schema/types";
 import { normalizeDisplay } from "./schema/types";
 import { getUx } from "./schema/ux-utils";
@@ -32,6 +38,10 @@ import { TerminalRenderer } from "./renderers";
 import { InputRenderer } from "./InputRenderer";
 import { renderTemplate } from "@/lib/template-service";
 import { useWorkflowStateContext } from "@/state/WorkflowStateContext";
+import { useWorkflowStore } from "@/state/workflow-store";
+import { getDebugMode } from "@/state/hooks/useDebugMode";
+import { JsonEditorDialog } from "@/components/ui/json-editor-dialog";
+import { cn } from "@/core/utils";
 
 // Import the type-specific renderers
 import { ArraySchemaRenderer } from "./schema/ArraySchemaRenderer";
@@ -72,10 +82,191 @@ interface SchemaRendererProps {
 }
 
 // =============================================================================
-// Component
+// Debug Edit Wrapper
 // =============================================================================
 
-export function SchemaRenderer({
+interface DebugEditWrapperProps {
+  data: unknown;
+  schema: SchemaProperty;
+  path: string[];
+  children: ReactNode;
+}
+
+/**
+ * Wrapper that adds an edit button to container/layout components in debug mode.
+ * The edit button opens a dialog to edit the node's data.
+ */
+function DebugEditWrapper({ data, schema, path, children }: DebugEditWrapperProps) {
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isButtonHovered, setIsButtonHovered] = useState(false);
+  const updateCurrentInteractionDisplayData = useWorkflowStore(
+    (s) => s.updateCurrentInteractionDisplayData
+  );
+  const currentInteraction = useWorkflowStore((s) => s.currentInteraction);
+
+  // Build the value to edit - combine data and schema for full context
+  const editValue = {
+    data,
+    schema,
+  };
+
+  const handleSave = (newValue: unknown) => {
+    const edited = newValue as { data: unknown; schema: SchemaProperty };
+
+    // We need to update the display_data at this path
+    // For now, we'll update the entire display_data with the new values merged in
+    if (currentInteraction?.display_data) {
+      const newDisplayData = JSON.parse(JSON.stringify(currentInteraction.display_data));
+
+      // Navigate to the correct location and update
+      // The path tells us where in the data structure we are
+      if (path.length === 0) {
+        // Root level - update data and schema directly
+        newDisplayData.data = edited.data;
+        newDisplayData.schema = edited.schema;
+      } else {
+        // Nested path - need to traverse and update
+        // For display_data.data path
+        let currentData = newDisplayData.data;
+        let currentSchema = newDisplayData.schema?.properties;
+
+        for (let i = 0; i < path.length - 1; i++) {
+          const key = path[i];
+          if (currentData && typeof currentData === "object") {
+            currentData = (currentData as Record<string, unknown>)[key];
+          }
+          if (currentSchema && typeof currentSchema === "object") {
+            const schemaNode = (currentSchema as Record<string, SchemaProperty>)[key];
+            currentSchema = schemaNode?.properties;
+          }
+        }
+
+        const finalKey = path[path.length - 1];
+        if (currentData && typeof currentData === "object") {
+          (currentData as Record<string, unknown>)[finalKey] = edited.data;
+        }
+        if (currentSchema && typeof currentSchema === "object") {
+          (currentSchema as Record<string, SchemaProperty>)[finalKey] = edited.schema;
+        }
+      }
+
+      updateCurrentInteractionDisplayData(newDisplayData);
+    }
+  };
+
+  return (
+    <div
+      className={cn(
+        "relative group/debug-edit",
+        isButtonHovered && "outline outline-2 outline-orange-400 outline-offset-1 rounded"
+      )}
+    >
+      {/* Edit button - top right corner */}
+      <button
+        type="button"
+        onClick={() => setIsEditOpen(true)}
+        onMouseEnter={() => setIsButtonHovered(true)}
+        onMouseLeave={() => setIsButtonHovered(false)}
+        className={cn(
+          "absolute top-1 right-1 z-10",
+          "p-1 rounded",
+          "bg-orange-100 hover:bg-orange-200 dark:bg-orange-900/30 dark:hover:bg-orange-900/50",
+          "text-orange-600 dark:text-orange-400",
+          "opacity-0 group-hover/debug-edit:opacity-100",
+          "transition-opacity duration-150"
+        )}
+        title={`Edit: ${path.join(".") || "root"}`}
+      >
+        <Pencil className="h-3 w-3" />
+      </button>
+
+      {/* Content */}
+      {children}
+
+      {/* Edit dialog */}
+      <JsonEditorDialog
+        open={isEditOpen}
+        onOpenChange={setIsEditOpen}
+        value={editValue}
+        title={`Edit: ${path.join(".") || "root"}`}
+        onSave={handleSave}
+      />
+    </div>
+  );
+}
+
+// =============================================================================
+// Helper: Check if this will render as terminal/input
+// =============================================================================
+
+function isTerminalOrInput(schema: SchemaProperty, ux: UxConfig): boolean {
+  // Input type → InputRenderer
+  if (ux.input_type) {
+    return true;
+  }
+
+  // display_format without render_as → TerminalRenderer
+  if (ux.display_format && !ux.render_as) {
+    return true;
+  }
+
+  // Not array/object and no special render_as → TerminalRenderer
+  if (schema.type !== "array" && schema.type !== "object" && !ux.render_as && !ux.input_schema) {
+    return true;
+  }
+
+  return false;
+}
+
+// =============================================================================
+// SchemaRenderer (public API)
+// =============================================================================
+
+/**
+ * Main SchemaRenderer - wraps SchemaRendererCore with debug edit functionality.
+ * In debug mode, container/layout components get an edit button.
+ */
+export function SchemaRenderer(props: SchemaRendererProps) {
+  const isDebug = getDebugMode();
+
+  // If not debug mode, skip wrapper entirely
+  if (!isDebug) {
+    return <SchemaRendererCore {...props} />;
+  }
+
+  // Extract UX to determine if this is terminal/input
+  const ux = props.ux ?? getUx(props.schema as Record<string, unknown>);
+
+  // Terminal and input types don't get the edit wrapper
+  if (isTerminalOrInput(props.schema, ux)) {
+    return <SchemaRendererCore {...props} />;
+  }
+
+  // Null data without input_type → will return null, no wrapper needed
+  if (props.data == null && !ux.input_type) {
+    return <SchemaRendererCore {...props} />;
+  }
+
+  // Container/layout type in debug mode → wrap with edit button
+  return (
+    <DebugEditWrapper
+      data={props.data}
+      schema={props.schema}
+      path={props.path || []}
+    >
+      <SchemaRendererCore {...props} />
+    </DebugEditWrapper>
+  );
+}
+
+// =============================================================================
+// SchemaRendererCore (internal implementation)
+// =============================================================================
+
+// SchemaRendererCore uses the same props as SchemaRenderer
+type SchemaRendererCoreProps = SchemaRendererProps;
+
+function SchemaRendererCore({
   data,
   schema,
   path = [],
@@ -83,7 +274,7 @@ export function SchemaRenderer({
   children,
   disabled = false,
   readonly = false,
-}: SchemaRendererProps) {
+}: SchemaRendererCoreProps) {
   const { state: workflowState } = useWorkflowStateContext();
   const templateState = (workflowState.state_mapped || {}) as Record<string, unknown>;
 

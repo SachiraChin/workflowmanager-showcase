@@ -83,6 +83,8 @@ export function InputRenderer({
       const labelKey = schemaRecord.label_key as string | undefined;
       const labelFormat = schemaRecord.label_format as string | undefined;
       const controls = schemaRecord.controls as Record<string, ControlConfig> | undefined;
+      // enum_source: path to resolve enum options from sourceData (e.g., "_provider_metadata.categories")
+      const enumSource = ux.enum_source as string | undefined;
 
       primaryInput = (
         <SelectInputRenderer
@@ -95,6 +97,7 @@ export function InputRenderer({
           labelKey={labelKey}
           labelFormat={labelFormat}
           controls={controls}
+          enumSource={enumSource}
           className={className}
           disabled={disabled}
           readonly={readonly}

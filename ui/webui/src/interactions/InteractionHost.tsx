@@ -13,8 +13,11 @@
  * trigger feedback popups via openFeedbackPopup().
  */
 
-import { Check, RotateCcw, MessageSquare, Clock, Loader2, Sparkles } from "lucide-react";
+import { useState, useCallback } from "react";
+import { Check, RotateCcw, MessageSquare, Clock, Loader2, Sparkles, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { JsonEditorDialog } from "@/components/ui/json-editor-dialog";
+import { useDebugMode } from "@/state/hooks/useDebugMode";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -26,20 +29,19 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/core/utils";
-import { api } from "@/core/api";
 import { useWorkflowStore } from "@/state/workflow-store";
 import type {
   InteractionRequest,
   InteractionResponseData,
   InteractionMode,
   SubActionDef,
-  SSEEventType,
 } from "@/core/types";
 import {
   InteractionProvider,
   useInteractionHostInternal,
   ActionSlotTarget,
 } from "@/state/interaction-context";
+import { SubActionProvider, useSubAction } from "@/state/sub-action-context";
 
 // Import interaction components
 import { TextInputEnhanced } from "./types/text-input";
@@ -110,6 +112,19 @@ export function InteractionHost({
   timestamp,
   onSubActionComplete,
 }: InteractionHostProps) {
+  // Debug mode for editing display_data
+  const { isDebugMode } = useDebugMode();
+  const updateCurrentInteractionDisplayData = useWorkflowStore((s) => s.updateCurrentInteractionDisplayData);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+
+  // Handle save from JSON editor
+  const handleSaveDisplayData = useCallback((newValue: unknown) => {
+    updateCurrentInteractionDisplayData(newValue as Record<string, unknown>);
+  }, [updateCurrentInteractionDisplayData]);
+
+  // Extract sub-actions from display_data for SubActionProvider
+  const subActions = (request.display_data?.sub_actions || []) as SubActionDef[];
+
   // Same structure for both active and readonly modes
   // Readonly mode just has disabled inputs and no retryable buttons
   return (
@@ -119,35 +134,67 @@ export function InteractionHost({
       mode={mode}
       onSubmit={onSubmit}
     >
-      <div className="h-full flex flex-col">
-        {/* Title - fixed at top */}
-        {request.title && (
-          <div className="flex-shrink-0 pb-4 flex items-center justify-between">
-            <h3 className="text-lg font-semibold">{request.title}</h3>
-            {timestamp && (
-              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <Clock className="h-3.5 w-3.5" />
-                <span>{timestamp}</span>
+      <SubActionProvider
+        interactionId={request.interaction_id}
+        subActions={subActions}
+        onComplete={onSubActionComplete}
+      >
+        <div className="h-full flex flex-col">
+          {/* Title - fixed at top */}
+          {request.title && (
+            <div className="flex-shrink-0 pb-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-semibold">{request.title}</h3>
+                {/* Debug mode: Edit display_data button */}
+                {isDebugMode && mode.type === "active" && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsEditOpen(true)}
+                    className="h-7 px-2 text-orange-600 hover:text-orange-700 hover:bg-orange-100 dark:text-orange-400 dark:hover:bg-orange-900/30"
+                    title="Edit display_data (Debug Mode)"
+                  >
+                    <Pencil className="h-3.5 w-3.5 mr-1" />
+                    Edit Data
+                  </Button>
+                )}
               </div>
-            )}
+              {timestamp && (
+                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>{timestamp}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Debug mode: JSON Editor Dialog */}
+          {isDebugMode && (
+            <JsonEditorDialog
+              open={isEditOpen}
+              onOpenChange={setIsEditOpen}
+              value={request.display_data}
+              title="Edit display_data"
+              onSave={handleSaveDisplayData}
+            />
+          )}
+
+          {/* Interaction Content - fills middle area */}
+          <div className="flex-1 min-h-0">
+            <div className="h-full">
+              <InteractionContent type={request.interaction_type} />
+            </div>
           </div>
-        )}
 
-        {/* Interaction Content - fills middle area */}
-        <div className="flex-1 min-h-0">
-          <div className="h-full">
-            <InteractionContent type={request.interaction_type} />
+          {/* Action Buttons - fixed at bottom */}
+          <div className="flex-shrink-0 pt-4">
+            <InteractionFooter onCancel={onCancel} />
           </div>
-        </div>
 
-        {/* Action Buttons - fixed at bottom */}
-        <div className="flex-shrink-0 pt-4">
-          <InteractionFooter onCancel={onCancel} onSubActionComplete={onSubActionComplete} />
+          {/* Feedback Popup */}
+          <FeedbackPopup />
         </div>
-
-        {/* Feedback Popup */}
-        <FeedbackPopup />
-      </div>
+      </SubActionProvider>
     </InteractionProvider>
   );
 }
@@ -187,10 +234,9 @@ function InteractionContent({ type }: { type: string }) {
 
 interface InteractionFooterProps {
   onCancel?: () => void;
-  onSubActionComplete?: () => void;
 }
 
-function InteractionFooter({ onCancel, onSubActionComplete }: InteractionFooterProps) {
+function InteractionFooter({ onCancel }: InteractionFooterProps) {
   const {
     providerState,
     feedbackByGroup,
@@ -207,7 +253,6 @@ function InteractionFooter({ onCancel, onSubActionComplete }: InteractionFooterP
       setGlobalFeedback={setGlobalFeedback}
       handleAction={handleAction}
       onCancel={onCancel}
-      onSubActionComplete={onSubActionComplete}
     />
   );
 }
@@ -219,7 +264,6 @@ interface InteractionFooterInnerProps {
   setGlobalFeedback: (feedback: string) => void;
   handleAction: (action: "continue" | "retry_all" | "retry_selected") => void;
   onCancel?: () => void;
-  onSubActionComplete?: () => void;
 }
 
 function InteractionFooterInner({
@@ -229,24 +273,19 @@ function InteractionFooterInner({
   setGlobalFeedback,
   handleAction,
   onCancel,
-  onSubActionComplete,
 }: InteractionFooterInnerProps) {
   const { request, disabled } = useInteractionFooterContext();
-  const workflowRunId = useWorkflowStore((s) => s.workflowRunId);
 
   // Retryable config
   const retryable = (request.display_data?.retryable || {}) as RetryableConfig;
   const hasRetryableOptions = retryable.options && retryable.options.length > 0;
   const showGlobalFeedback = retryable.feedback?.global === true;
 
-  // Sub-actions config
-  const subActions = (request.display_data?.sub_actions || []) as SubActionDef[];
-  const hasSubActions = subActions.length > 0;
+  // Sub-actions from context (already filtered for visible only)
+  const { visibleSubActions, state: subActionState, trigger: triggerSubAction, clearError } = useSubAction();
+  const hasSubActions = visibleSubActions.length > 0;
 
-  // Sub-action state
-  const [runningSubAction, setRunningSubAction] = React.useState<string | null>(null);
-  const [subActionProgress, setSubActionProgress] = React.useState<string | null>(null);
-  const [subActionError, setSubActionError] = React.useState<string | null>(null);
+  // Sub-action feedback popup state (local to footer)
   const [subActionFeedbackPopup, setSubActionFeedbackPopup] = React.useState<{
     subAction: SubActionDef;
     onSubmit: (feedback: string) => void;
@@ -255,51 +294,6 @@ function InteractionFooterInner({
   // Check if any feedback exists (for retryable)
   const hasFeedback =
     Object.values(feedbackByGroup).some((f) => f) || globalFeedback.length > 0;
-
-  // Handle sub-action execution
-  const executeSubAction = React.useCallback(
-    (subAction: SubActionDef, feedback?: string) => {
-      if (!workflowRunId) return;
-
-      setRunningSubAction(subAction.id);
-      setSubActionProgress(subAction.loading_label || "Processing...");
-      setSubActionError(null);
-
-      const subActionRequest = {
-        interaction_id: request.interaction_id,
-        action_id: subAction.id,
-        params: feedback ? { feedback } : undefined,
-      };
-
-      const handleEvent = (eventType: SSEEventType, data: Record<string, unknown>) => {
-        switch (eventType) {
-          case "progress":
-            setSubActionProgress(data.message as string || "Processing...");
-            break;
-          case "complete":
-            setRunningSubAction(null);
-            setSubActionProgress(null);
-            // Notify parent to refresh display data
-            onSubActionComplete?.();
-            break;
-          case "error":
-            setRunningSubAction(null);
-            setSubActionProgress(null);
-            setSubActionError(data.message as string || "Sub-action failed");
-            break;
-        }
-      };
-
-      const handleError = (err: Error) => {
-        setRunningSubAction(null);
-        setSubActionProgress(null);
-        setSubActionError(err.message);
-      };
-
-      api.streamSubAction(workflowRunId, subActionRequest, handleEvent, handleError);
-    },
-    [workflowRunId, request.interaction_id, onSubActionComplete]
-  );
 
   // Handle sub-action button click
   const handleSubActionClick = React.useCallback(
@@ -310,15 +304,19 @@ function InteractionFooterInner({
           subAction,
           onSubmit: (feedback: string) => {
             setSubActionFeedbackPopup(null);
-            executeSubAction(subAction, feedback);
+            triggerSubAction(subAction.id, { feedback });
           },
         });
       } else {
-        executeSubAction(subAction);
+        triggerSubAction(subAction.id);
       }
     },
-    [executeSubAction]
+    [triggerSubAction]
   );
+
+  // Destructure sub-action state for easier use
+  const { runningId, progress, error: subActionError } = subActionState;
+  const isSubActionRunning = runningId !== null;
 
   return (
     <div className="space-y-4 pt-2 border-t">
@@ -338,18 +336,21 @@ function InteractionFooterInner({
 
       {/* Sub-action error */}
       {subActionError && (
-        <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">
-          {subActionError}
+        <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md flex items-center justify-between">
+          <span>{subActionError}</span>
+          <Button variant="ghost" size="sm" onClick={clearError}>
+            Dismiss
+          </Button>
         </div>
       )}
 
       {/* Action buttons */}
       <div className="flex items-center justify-between">
         <div className="text-sm">
-          {runningSubAction && subActionProgress ? (
+          {isSubActionRunning && progress ? (
             <span className="text-muted-foreground flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin" />
-              {subActionProgress}
+              {progress}
             </span>
           ) : providerState.selectedCount > 0 ? (
             <span className="text-muted-foreground">{providerState.selectedCount} selected</span>
@@ -366,16 +367,16 @@ function InteractionFooterInner({
           {/* Child-provided actions (e.g., Download button) */}
           <ActionSlotTarget />
 
-          {/* Sub-action buttons */}
+          {/* Sub-action buttons (visible ones only) */}
           {hasSubActions &&
-            subActions.map((subAction) => {
-              const isRunning = runningSubAction === subAction.id;
+            visibleSubActions.map((subAction) => {
+              const isRunning = runningId === subAction.id;
               return (
                 <Button
                   key={subAction.id}
                   variant="outline"
                   onClick={() => handleSubActionClick(subAction)}
-                  disabled={disabled || runningSubAction !== null}
+                  disabled={disabled || isSubActionRunning}
                 >
                   {isRunning ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -388,7 +389,7 @@ function InteractionFooterInner({
             })}
 
           {onCancel && (
-            <Button variant="outline" onClick={onCancel} disabled={disabled || runningSubAction !== null}>
+            <Button variant="outline" onClick={onCancel} disabled={disabled || isSubActionRunning}>
               Cancel
             </Button>
           )}
@@ -416,7 +417,7 @@ function InteractionFooterInner({
               // Determine if button should be disabled
               const isDisabled =
                 disabled ||
-                runningSubAction !== null ||
+                isSubActionRunning ||
                 (isContinue && !providerState.isValid) ||
                 (isRetrySelected && providerState.selectedCount === 0);
 
@@ -449,7 +450,7 @@ function InteractionFooterInner({
             // Default continue button
             <Button
               onClick={() => handleAction("continue")}
-              disabled={disabled || runningSubAction !== null || !providerState.isValid}
+              disabled={disabled || isSubActionRunning || !providerState.isValid}
             >
               Continue
             </Button>
