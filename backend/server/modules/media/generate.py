@@ -9,6 +9,11 @@ The module works with the WebUI MediaGeneration component to:
 2. Execute sub-actions (txt2img, img2img, img2vid) via SSE streaming
 3. Allow selection of generated content
 4. Return selected content ID and data to workflow state
+
+Provider Metadata Injection:
+The module automatically fetches provider metadata (models, styles, etc.)
+and injects it into each provider's data node as `_provider_metadata`.
+This allows the UI to render dynamic options without hardcoding in schemas.
 """
 
 import asyncio
@@ -18,6 +23,7 @@ from typing import Dict, Any, List, Optional
 from utils import uuid7_str
 from backend.db import TaskQueue
 from backend.db.path_utils import resolve_local_path
+from backend.providers.media.registry import MediaProviderRegistry
 
 logger = logging.getLogger("modules.media.generate")
 
@@ -75,6 +81,13 @@ class MediaGenerateModule(InteractiveModule):
                 required=False,
                 default="Generate Media",
                 description="Interaction title"
+            ),
+            ModuleInput(
+                name="action_type",
+                type="string",
+                required=False,
+                default="txt2img",
+                description="Action type for provider metadata (txt2img, img2img, img2vid)"
             )
         ]
 
@@ -110,6 +123,7 @@ class MediaGenerateModule(InteractiveModule):
         prompts = inputs.get('prompts', {})
         schema = inputs.get('schema', {})
         title = self.get_input_value(inputs, 'title')
+        action_type = self.get_input_value(inputs, 'action_type') or 'txt2img'
 
         # Get sub_actions from context (set by executor from module config)
         sub_actions = getattr(context, 'sub_actions', None)
@@ -123,10 +137,16 @@ class MediaGenerateModule(InteractiveModule):
         # Build data object - include source_image if present for schema-driven rendering
         # Handle both array (new style) and dict (legacy grouped by provider) prompt formats
         if isinstance(prompts, list):
-            # Array of prompts - wrap in object for schema (expects data.prompts)
-            data = {"prompts": prompts}
+            # Array of prompts - convert to dict keyed by provider
+            # Each array item must have a "provider" field
+            prompts_dict = self._convert_prompts_array_to_dict(prompts)
+            enriched_prompts = self._inject_provider_metadata(prompts_dict, action_type)
+            data = enriched_prompts
         elif isinstance(prompts, dict):
-            data = dict(prompts)
+            # Inject provider metadata into each provider node
+            # Keep original structure: data = prompts (not wrapped in "prompts" key)
+            enriched_prompts = self._inject_provider_metadata(prompts, action_type)
+            data = enriched_prompts
         else:
             data = {}
         if source_image:
@@ -251,6 +271,156 @@ class MediaGenerateModule(InteractiveModule):
                     }
         return None
 
+    def _convert_prompts_array_to_dict(
+        self,
+        prompts_array: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """
+        Convert an array of prompts to a dict keyed by provider.
+
+        Each item in the array must have a "provider" field. The provider
+        field is removed from the item and used as the dict key.
+
+        Args:
+            prompts_array: List of prompt dicts, each with a "provider" field
+                e.g., [{"provider": "midjourney", "prompt": "..."}, ...]
+
+        Returns:
+            Dict keyed by provider name
+                e.g., {"midjourney": {"prompt": "..."}, ...}
+
+        Raises:
+            ModuleExecutionError: If any item is missing the "provider" field
+        """
+        result = {}
+
+        for idx, item in enumerate(prompts_array):
+            if not isinstance(item, dict):
+                raise ModuleExecutionError(
+                    self.module_id,
+                    f"Prompts array item {idx} is not a dict",
+                    None
+                )
+
+            provider = item.get("provider")
+            if not provider:
+                raise ModuleExecutionError(
+                    self.module_id,
+                    f"Prompts array item {idx} is missing required 'provider' field",
+                    None
+                )
+
+            # Create a copy without the "provider" field
+            prompt_data = {k: v for k, v in item.items() if k != "provider"}
+            result[provider] = prompt_data
+
+        return result
+
+    def _inject_provider_metadata(
+        self,
+        data: Dict[str, Any],
+        action_type: str
+    ) -> Dict[str, Any]:
+        """
+        Inject provider metadata into each provider's prompt data.
+
+        Handles two data structures:
+        1. Flat: {"midjourney": {...}, "leonardo": {...}}
+           - Provider name is the key
+        2. Nested: {"scene_title": "...", "prompts": {"midjourney": {...}, ...}}
+           - Provider data is under "prompts" key
+
+        For each provider found, fetches metadata from the provider interface
+        and injects it as `_provider_metadata`. Also adds empty `_generations`
+        list for tracking generated content.
+
+        Args:
+            data: Dict containing prompts (either flat or nested structure)
+            action_type: The action type for metadata lookup
+                ("txt2img", "img2img", "img2vid")
+
+        Returns:
+            Enriched data dict with _provider_metadata and _generations
+            injected into each provider node.
+        """
+        # Check if this is a nested structure with "prompts" key
+        if "prompts" in data and isinstance(data.get("prompts"), dict):
+            # Nested structure: inject metadata into data["prompts"]
+            enriched_prompts = self._enrich_provider_nodes(
+                data["prompts"], action_type
+            )
+            # Keep other top-level keys (scene_title, key_moment, etc.)
+            return {**data, "prompts": enriched_prompts}
+        else:
+            # Flat structure: inject metadata directly
+            return self._enrich_provider_nodes(data, action_type)
+
+    def _enrich_provider_nodes(
+        self,
+        prompts: Dict[str, Any],
+        action_type: str
+    ) -> Dict[str, Any]:
+        """
+        Enrich each provider node with metadata and generations list.
+
+        Args:
+            prompts: Dict of prompts keyed by provider name
+            action_type: The action type for metadata lookup
+
+        Returns:
+            Enriched prompts dict with _provider_metadata and _generations.
+        """
+        enriched = {}
+
+        for provider_name, provider_data in prompts.items():
+            if not isinstance(provider_data, dict):
+                # Skip non-dict entries (shouldn't happen, but be safe)
+                enriched[provider_name] = provider_data
+                continue
+
+            # Fetch provider metadata
+            metadata = self._get_provider_metadata(provider_name, action_type)
+
+            # Inject metadata and generations as sibling fields
+            enriched[provider_name] = {
+                "_provider_metadata": metadata,
+                "_generations": [],
+                **provider_data
+            }
+
+        return enriched
+
+    def _get_provider_metadata(
+        self,
+        provider_name: str,
+        action_type: str
+    ) -> Dict[str, Any]:
+        """
+        Fetch metadata from a provider's get_metadata() method.
+
+        Args:
+            provider_name: Provider identifier (e.g., "midjourney", "leonardo")
+            action_type: Action type for metadata lookup
+
+        Returns:
+            Provider metadata dict, or empty dict if provider not found
+            or metadata fetch fails.
+        """
+        try:
+            provider = MediaProviderRegistry.get_optional(provider_name)
+            if provider:
+                return provider.get_metadata(action_type)
+            else:
+                logger.warning(
+                    f"[MediaGenerate] Provider not found: {provider_name}"
+                )
+                return {}
+        except Exception as e:
+            logger.warning(
+                f"[MediaGenerate] Failed to get metadata for {provider_name}: {e}"
+            )
+            return {}
+
     async def sub_action(self, context):
         """
         Execute media generation sub-action.
@@ -271,14 +441,19 @@ class MediaGenerateModule(InteractiveModule):
         interaction_id = context.interaction_id
 
         # Extract generation parameters
-        provider = params.get("provider")
+        provider_name = params.get("provider")
         action_type = params.get("action_type")
         prompt_id = params.get("prompt_id")
         generation_params = params.get("params", {})
         source_data = params.get("source_data")
 
+        # Apply provider-specific parameter formatting
+        provider_instance = MediaProviderRegistry.get_optional(provider_name)
+        if provider_instance:
+            generation_params = provider_instance.format_params(generation_params)
+
         logger.info(
-            f"[MediaGenerate] sub_action: provider={provider}, "
+            f"[MediaGenerate] sub_action: provider={provider_name}, "
             f"action_type={action_type}, prompt_id={prompt_id}"
         )
 
@@ -289,7 +464,7 @@ class MediaGenerateModule(InteractiveModule):
             payload={
                 "workflow_run_id": workflow_run_id,
                 "interaction_id": interaction_id,
-                "provider": provider,
+                "provider": provider_name,
                 "action_type": action_type,
                 "prompt_id": prompt_id,
                 "params": generation_params,

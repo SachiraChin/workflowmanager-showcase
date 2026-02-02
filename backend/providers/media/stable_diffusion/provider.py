@@ -17,6 +17,7 @@ import time
 import base64
 import logging
 import requests
+import threading
 from typing import Any, Dict, Optional
 
 from ..base import (
@@ -50,6 +51,13 @@ class StableDiffusionProvider(MediaProviderBase):
 
     No authentication required (local API).
     """
+
+    # Thread-safe metadata cache (class-level, shared across instances)
+    _metadata_cache_lock = threading.Lock()
+    _metadata_cache: Optional[Dict[str, Any]] = None
+    _metadata_cache_timestamp: float = 0.0
+    _category_enforcement_data: Dict[str, Dict[str, str]] = {}
+    _METADATA_CACHE_TTL_SECONDS = 15 * 60  # 15 minutes
 
     def __init__(self):
         self.base_url = os.environ.get("SD_FORGE_API_URL")
@@ -702,6 +710,143 @@ class StableDiffusionProvider(MediaProviderBase):
         raise NotImplementedError(
             "Stable Diffusion does not support audio generation"
         )
+
+    def get_metadata(self, action_type: str) -> Dict[str, Any]:
+        """
+        Get Stable Diffusion model metadata from the local WebUI Forge API.
+
+        Fetches model categories with nested checkpoints and their params
+        (sampler_combo, resolution, vae, hires, adetailer options).
+
+        Results are cached for 15 minutes to avoid repeated API calls.
+        Also builds category_enforcement_data for prompt enforcement.
+
+        Args:
+            action_type: "txt2img" or "img2img" (both supported, same params)
+
+        Returns:
+            Dict with "categories" key containing the model hierarchy.
+            Returns empty dict if API call fails or action not supported.
+        """
+        # SD only supports txt2img and img2img
+        if action_type not in ("txt2img", "img2img"):
+            return {}
+
+        current_time = time.time()
+
+        # Check cache validity under lock
+        with StableDiffusionProvider._metadata_cache_lock:
+            cache_age = current_time - StableDiffusionProvider._metadata_cache_timestamp
+            if (StableDiffusionProvider._metadata_cache is not None and
+                    cache_age < StableDiffusionProvider._METADATA_CACHE_TTL_SECONDS):
+                logger.debug(
+                    f"[StableDiffusion] Returning cached metadata "
+                    f"(age: {cache_age:.1f}s)"
+                )
+                return StableDiffusionProvider._metadata_cache
+
+        # Cache miss or expired - fetch from API (outside lock to avoid blocking)
+        try:
+            response = requests.get(
+                f"{self.api_url}/models/by_category",
+                timeout=30
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            # Extract categories from response
+            categories = data.get("categories", [])
+            result = {"categories": categories}
+
+            # Build category enforcement data
+            enforcement_data: Dict[str, Dict[str, str]] = {}
+            for category in categories:
+                category_id = category.get("id")
+                if category_id:
+                    enforcement_data[category_id] = {
+                        "positive_prompt_enforcement": category.get(
+                            "positive_prompt_enforcement", ""
+                        ),
+                        "negative_prompt_enforcement": category.get(
+                            "negative_prompt_enforcement", ""
+                        ),
+                    }
+
+            # Update cache under lock
+            with StableDiffusionProvider._metadata_cache_lock:
+                StableDiffusionProvider._metadata_cache = result
+                StableDiffusionProvider._metadata_cache_timestamp = current_time
+                StableDiffusionProvider._category_enforcement_data = enforcement_data
+
+            logger.info(
+                f"[StableDiffusion] Cached metadata with "
+                f"{len(enforcement_data)} categories"
+            )
+            return result
+
+        except requests.RequestException as e:
+            logger.warning(f"[StableDiffusion] Failed to fetch model metadata: {e}")
+            return {}
+        except Exception as e:
+            logger.warning(f"[StableDiffusion] Error parsing model metadata: {e}")
+            return {}
+
+    def format_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Apply category-specific prompt enforcement to generation parameters.
+
+        Prepends positive_prompt_enforcement to prompt and appends
+        negative_prompt_enforcement to negative_prompt based on the
+        selected category.
+
+        Args:
+            params: Generation parameters dict containing:
+                - category: Category ID for enforcement lookup
+                - prompt: User's prompt text
+                - negative_prompt: User's negative prompt text
+
+        Returns:
+            Modified params dict with enforcement applied.
+            Returns params unchanged if category not found or no enforcement.
+        """
+        category = params.get("category")
+        if not category:
+            return params
+
+        # Get enforcement data (thread-safe read)
+        with StableDiffusionProvider._metadata_cache_lock:
+            enforcement = StableDiffusionProvider._category_enforcement_data.get(
+                category
+            )
+
+        if not enforcement:
+            logger.debug(
+                f"[StableDiffusion] No enforcement data for category: {category}"
+            )
+            return params
+
+        # Create a copy to avoid mutating the original
+        result = params.copy()
+
+        # Apply positive prompt enforcement (prepend)
+        positive_enforcement = enforcement.get("positive_prompt_enforcement", "")
+        if positive_enforcement:
+            current_prompt = result.get("prompt", "")
+            result["prompt"] = f"{positive_enforcement},{current_prompt}"
+            logger.debug(
+                f"[StableDiffusion] Applied positive enforcement for {category}"
+            )
+
+        # Apply negative prompt enforcement (append)
+        negative_enforcement = enforcement.get("negative_prompt_enforcement", "")
+        if negative_enforcement:
+            current_negative = result.get("negative_prompt", "")
+            result["negative_prompt"] = f"{current_negative},{negative_enforcement}"
+            logger.debug(
+                f"[StableDiffusion] Applied negative enforcement for {category}"
+            )
+
+        return result
 
     def get_preview_info(
         self,

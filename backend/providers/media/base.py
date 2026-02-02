@@ -251,6 +251,46 @@ class MediaProviderBase(ABC):
         """
         pass
 
+    def get_metadata(self, action_type: str) -> Dict[str, Any]:
+        """
+        Get provider metadata for UI rendering (models, styles, presets, etc.).
+
+        This method returns metadata that the UI needs to render provider-specific
+        options like model selection dropdowns, style options, etc. The structure
+        varies by provider and action type.
+
+        Args:
+            action_type: Type of generation action. One of:
+                - "txt2img": Text to image generation
+                - "img2img": Image to image generation
+                - "img2vid": Image to video generation
+                - "txt2audio": Text to audio generation
+
+        Returns:
+            Dict with provider-specific metadata structure for the given action.
+            Default implementation returns empty dict.
+        """
+        return {}
+
+    def format_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Format/transform generation parameters before execution.
+
+        This method allows providers to modify generation parameters before
+        they are used for generation. Use cases include:
+        - Applying category-specific prompt enforcement
+        - Normalizing parameter formats
+        - Adding provider-specific defaults
+
+        Args:
+            params: Generation parameters dict
+
+        Returns:
+            Transformed parameters dict. Default implementation returns
+            params unchanged.
+        """
+        return params
+
 
 class ProviderError(Exception):
     """
