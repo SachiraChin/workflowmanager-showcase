@@ -3,152 +3,164 @@
   "_ux.display": "passthrough",
   "properties": {
     "prompts": {
-      "type": "array",
-      "_ux": {
-        "display": "visible",
-        "render_as": "tabs",
-        "tab_key": "name"
-      },
-      "items": {
-        "type": "object",
-        "_ux": {
-          "display": "visible",
-          "render_as": "tab.media[input_schema,audio_generation]",
-          "provider": "elevenlabs",
-          "prompt_id_field": "name",
-          "input_schema": {
-            "type": "object",
-            "_ux": {
-              "layout": "grid",
-              "layout_columns": 3,
-              "layout_columns_sm": 2
-            },
-            "properties": {
-              "_text": {
-                "type": "string",
-                "title": "Prompt",
-                "destination_field": "prompt",
-                "_ux": {
-                  "input_type": "textarea",
-                  "col_span": "full",
-                  "rows": 3,
-                  "source_field": "prompt"
-                }
+      "type": "object",
+      "_ux.display": "passthrough",
+      "properties": {
+        "elevenlabs": {
+          "type": "object",
+          "_ux.display": "passthrough",
+          "properties": {
+            "data": {
+              "type": "array",
+              "_ux": {
+                "display": "visible",
+                "render_as": "tabs",
+                "tab_label_field": "name"
               },
-              "duration_seconds": {
-                "type": "integer",
-                "title": "Duration (seconds)",
-                "minimum": 10,
-                "maximum": 120,
-                "default": 15,
-                "step": 1,
+              "items": {
+                "type": "object",
                 "_ux": {
-                  "input_type": "slider"
-                }
-              },
-              "bpm": {
-                "type": "integer",
-                "title": "BPM",
-                "minimum": 50,
-                "maximum": 120,
-                "step": 1,
-                "_ux": {
-                  "input_type": "number",
-                  "source_field": "suggested_bpm"
-                }
-              },
-              "instruments": {
-                "type": "array",
-                "title": "Instruments",
-                "_ux": {
-                  "input_type": "tag_input",
-                  "source_field": "instruments",
-                  "placeholder": "e.g. piano, strings, acoustic guitar"
-                }
-              },
-              "mood": {
-                "type": "array",
-                "title": "Mood",
-                "_ux": {
-                  "input_type": "tag_input",
-                  "source_field": "mood",
-                  "placeholder": "e.g. peaceful, reflective, warm"
-                }
-              },
-              "force_instrumental": {
-                "type": "boolean",
-                "title": "Instrumental Only",
-                "default": true,
-                "_ux": {
-                  "input_type": "checkbox"
-                }
-              },
-              "output_format": {
-                "type": "string",
-                "title": "Quality",
-                "enum": ["mp3_44100_64", "mp3_44100_128"],
-                "default": "mp3_44100_128",
-                "enum_labels": {
-                  "mp3_44100_64": "64kbps",
-                  "mp3_44100_128": "128kbps"
+                  "display": "visible",
+                  "render_as": "tab.media[input_schema,audio_generation]",
+                  "provider": "elevenlabs",
+                  "prompt_id_field": "name",
+                  "input_schema": {
+                    "type": "object",
+                    "_ux": {
+                      "layout": "grid",
+                      "layout_columns": 3,
+                      "layout_columns_sm": 2
+                    },
+                    "properties": {
+                      "_text": {
+                        "type": "string",
+                        "title": "Prompt",
+                        "destination_field": "prompt",
+                        "_ux": {
+                          "input_type": "textarea",
+                          "col_span": "full",
+                          "rows": 3,
+                          "source_field": "prompt"
+                        }
+                      },
+                      "duration_seconds": {
+                        "type": "integer",
+                        "title": "Duration (seconds)",
+                        "minimum": 10,
+                        "maximum": 120,
+                        "default": 15,
+                        "step": 1,
+                        "_ux": {
+                          "input_type": "slider"
+                        }
+                      },
+                      "bpm": {
+                        "type": "integer",
+                        "title": "BPM",
+                        "minimum": 50,
+                        "maximum": 120,
+                        "step": 1,
+                        "_ux": {
+                          "input_type": "number",
+                          "source_field": "suggested_bpm"
+                        }
+                      },
+                      "instruments": {
+                        "type": "array",
+                        "title": "Instruments",
+                        "_ux": {
+                          "input_type": "tag_input",
+                          "source_field": "instruments",
+                          "placeholder": "e.g. piano, strings, acoustic guitar"
+                        }
+                      },
+                      "mood": {
+                        "type": "array",
+                        "title": "Mood",
+                        "_ux": {
+                          "input_type": "tag_input",
+                          "source_field": "mood",
+                          "placeholder": "e.g. peaceful, reflective, warm"
+                        }
+                      },
+                      "force_instrumental": {
+                        "type": "boolean",
+                        "title": "Instrumental Only",
+                        "default": true,
+                        "_ux": {
+                          "input_type": "checkbox"
+                        }
+                      },
+                      "output_format": {
+                        "type": "string",
+                        "title": "Quality",
+                        "enum": ["mp3_44100_64", "mp3_44100_128"],
+                        "default": "mp3_44100_128",
+                        "enum_labels": {
+                          "mp3_44100_64": "64kbps",
+                          "mp3_44100_128": "128kbps"
+                        },
+                        "_ux": {
+                          "input_type": "select"
+                        }
+                      }
+                    }
+                  }
                 },
-                "_ux": {
-                  "input_type": "select"
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "_ux": {
+                      "display": true,
+                      "render_as": "card-title"
+                    }
+                  },
+                  "description": {
+                    "type": "string",
+                    "_ux": {
+                      "display": true,
+                      "render_as": "card-subtitle",
+                      "highlight": true
+                    }
+                  },
+                  "prompt": {
+                    "type": "string",
+                    "_ux.display": false
+                  },
+                  "suggested_bpm": {
+                    "type": "integer",
+                    "_ux.display": false
+                  },
+                  "duration_seconds": {
+                    "type": "integer",
+                    "_ux.display": false,
+                    "display_format": "{{ state.duration_selection.sound_track_duration }}"
+                  },
+                  "instruments": {
+                    "type": "array",
+                    "_ux": {
+                      "display": true,
+                      "display_label": "Instruments",
+                      "display_format": "{{ value | join(', ') }}"
+                    }
+                  },
+                  "mood": {
+                    "type": "array",
+                    "_ux": {
+                      "display": true,
+                      "display_label": "Mood",
+                      "display_format": "{{ value | join(', ') }}"
+                    }
+                  },
+                  "energy": {
+                    "type": "string",
+                    "_ux": {
+                      "display": true,
+                      "display_label": "Energy"
+                    }
+                  }
                 }
               }
-            }
-          }
-        },
-        "properties": {
-          "name": {
-            "type": "string",
-            "_ux": {
-              "display": true,
-              "render_as": "card-title"
-            }
-          },
-          "description": {
-            "type": "string",
-            "_ux": {
-              "display": true,
-              "render_as": "card-subtitle",
-              "highlight": true
-            }
-          },
-          "prompt": {
-            "type": "string",
-            "_ux.display": false
-          },
-          "suggested_bpm": {
-            "type": "integer",
-            "_ux.display": false
-          },
-          "duration_seconds": {
-            "type": "integer",
-            "_ux.display": false,
-            "display_format": "{{ state.duration_selection.sound_track_duration }}"
-          },
-          "instruments": {
-            "type": "array",
-            "_ux": {
-              "display": true,
-              "display_label": "Instruments",
-              "display_format": "{{ value | join(', ') }}"
-            }
-          },
-          "mood": {
-            "type": "array",
-            "_ux": {
-              "display": true,
-              "display_label": "Mood",
-              "display_format": "{{ value | join(', ') }}"
-            }
-          },
-          "energy": {
-            "type": "string",
-            "_ux": {
-              "display": true,
-              "display_label": "Energy"
             }
           }
         }

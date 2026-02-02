@@ -2,60 +2,74 @@
   "type": "object",
   "properties": {
     "prompts": {
-      "type": "array",
-      "minItems": 3,
-      "maxItems": 3,
-      "items": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "Evocative 2-3 word name for this style"
+      "type": "object",
+      "properties": {
+        "elevenlabs": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "array",
+              "minItems": 3,
+              "maxItems": 3,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Evocative 2-3 word name for this style"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "15-25 word summary of the sound and feel"
+                  },
+                  "prompt": {
+                    "type": "string",
+                    "description": "ElevenLabs-ready prompt (100-200 chars)"
+                  },
+                  "suggested_bpm": {
+                    "type": "integer",
+                    "description": "Suggested BPM (user can adjust)",
+                    "minimum": 50,
+                    "maximum": 120
+                  },
+                  "instruments": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "minItems": 2,
+                    "maxItems": 4,
+                    "description": "Instruments with texture descriptors"
+                  },
+                  "mood": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "minItems": 2,
+                    "maxItems": 3,
+                    "description": "Mood descriptors"
+                  },
+                  "energy": {
+                    "type": "string",
+                    "description": "Energy arc or movement feel"
+                  }
+                },
+                "required": [
+                  "name",
+                  "description",
+                  "prompt",
+                  "suggested_bpm",
+                  "instruments",
+                  "mood",
+                  "energy"
+                ],
+                "additionalProperties": false
+              }
+            }
           },
-          "description": {
-            "type": "string",
-            "description": "15-25 word summary of the sound and feel"
-          },
-          "prompt": {
-            "type": "string",
-            "description": "ElevenLabs-ready prompt (100-200 chars)"
-          },
-          "suggested_bpm": {
-            "type": "integer",
-            "description": "Suggested BPM (user can adjust)",
-            "minimum": 50,
-            "maximum": 120
-          },
-          "instruments": {
-            "type": "array",
-            "items": { "type": "string" },
-            "minItems": 2,
-            "maxItems": 4,
-            "description": "Instruments with texture descriptors"
-          },
-          "mood": {
-            "type": "array",
-            "items": { "type": "string" },
-            "minItems": 2,
-            "maxItems": 3,
-            "description": "Mood descriptors"
-          },
-          "energy": {
-            "type": "string",
-            "description": "Energy arc or movement feel"
-          }
-        },
-        "required": [
-          "name",
-          "description",
-          "prompt",
-          "suggested_bpm",
-          "instruments",
-          "mood",
-          "energy"
-        ],
-        "additionalProperties": false
-      }
+          "required": ["data"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["elevenlabs"],
+      "additionalProperties": false
     }
   },
   "required": ["prompts"],

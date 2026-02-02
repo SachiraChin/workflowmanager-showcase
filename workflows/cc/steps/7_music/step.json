@@ -54,7 +54,7 @@
             "prompts": { "resolver": "server" }
           }
         },
-        "prompts": "{{ state.music_prompts.prompts }}",
+        "prompts": "{{ state.music_prompts }}",
         "schema": {
           "$ref": "schemas/cc_audio_generation_display_schema.json",
           "type": "json"
@@ -68,10 +68,15 @@
       },
       "sub_actions": [
         {
-          "id": "generate_music",
+          "id": "audio_generation",
           "label": "Generate Music",
-          "action_type": "txt2audio",
-          "loading_label": "Generating music..."
+          "loading_label": "Generating...",
+          "hidden": true,
+          "actions": [
+            {
+              "type": "self_sub_action"
+            }
+          ]
         }
       ],
       "retryable": {
