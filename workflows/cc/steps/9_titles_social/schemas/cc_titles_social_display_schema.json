@@ -15,7 +15,8 @@
           "display": true,
           "display_label": "Description",
           "display_format": "{{ description }} {{ emojis }}",
-          "display_order": 2
+          "display_order": 2,
+          "nudges": ["copy"]
         }
       }
     },
@@ -28,7 +29,8 @@
           "display": true,
           "display_label": "Title",
           "render_as": "card-title",
-          "display_order": 1
+          "display_order": 1,
+          "nudges": ["copy"]
         }
       },
       "description": {
