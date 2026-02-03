@@ -52,7 +52,7 @@ interface WorkflowStartPageProps {
 export function WorkflowStartPage({ onWorkflowStarted }: WorkflowStartPageProps) {
   // Form state
   const [projectName, setProjectName] = useState("");
-  const [workflowSource, setWorkflowSource] = useState<WorkflowSource>("upload");
+  const [workflowSource, setWorkflowSource] = useState<WorkflowSource>("template");
 
   // Upload state
   const [uploadedWorkflow, setUploadedWorkflow] = useState<UploadedWorkflow | null>(null);
@@ -265,13 +265,13 @@ export function WorkflowStartPage({ onWorkflowStarted }: WorkflowStartPageProps)
             onValueChange={(v) => setWorkflowSource(v as WorkflowSource)}
           >
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="upload" className="flex items-center gap-2">
-                <Upload className="h-4 w-4" />
-                Upload
-              </TabsTrigger>
               <TabsTrigger value="template" className="flex items-center gap-2">
                 <FileJson className="h-4 w-4" />
                 Template
+              </TabsTrigger>
+              <TabsTrigger value="upload" className="flex items-center gap-2">
+                <Upload className="h-4 w-4" />
+                Upload
               </TabsTrigger>
               <TabsTrigger value="runs" className="flex items-center gap-2">
                 <History className="h-4 w-4" />
@@ -279,21 +279,21 @@ export function WorkflowStartPage({ onWorkflowStarted }: WorkflowStartPageProps)
               </TabsTrigger>
             </TabsList>
 
+            {/* Template Tab */}
+            <TabsContent value="template" className="space-y-4 mt-4">
+              <TemplateSelector
+                value={selectedVersionId}
+                onChange={setSelectedVersionId}
+                disabled={isStarting}
+              />
+            </TabsContent>
+
             {/* Upload Tab */}
             <TabsContent value="upload" className="space-y-4 mt-4">
               <WorkflowUploader
                 value={uploadedWorkflow}
                 onChange={setUploadedWorkflow}
                 onError={handleUploadError}
-                disabled={isStarting}
-              />
-            </TabsContent>
-
-            {/* Template Tab */}
-            <TabsContent value="template" className="space-y-4 mt-4">
-              <TemplateSelector
-                value={selectedVersionId}
-                onChange={setSelectedVersionId}
                 disabled={isStarting}
               />
             </TabsContent>
