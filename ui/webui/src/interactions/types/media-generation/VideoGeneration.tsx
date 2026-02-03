@@ -458,7 +458,7 @@ export function VideoGeneration({
       {!readonly && (
         <div className="flex flex-wrap items-center gap-3">
           <Button
-            variant="outline"
+            variant="default"
             size="sm"
             onClick={handleGenerate}
             disabled={loading || disabled}
