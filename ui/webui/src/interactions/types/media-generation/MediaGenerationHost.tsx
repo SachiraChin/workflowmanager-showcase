@@ -42,6 +42,9 @@ export function MediaGenerationHost() {
   // Track generations from children for response
   const generationsRef = useRef<Record<string, GenerationResult[]>>({});
 
+  // Track generations count as state to trigger provider updates for validation
+  const [generationsCount, setGenerationsCount] = useState(0);
+
   // Initialize from readonly response
   useEffect(() => {
     if (isReadonly && mode.response) {
@@ -61,6 +64,8 @@ export function MediaGenerationHost() {
         ...(generationsRef.current[path] || []),
         result,
       ];
+      // Update count to trigger provider state update for validation
+      setGenerationsCount((prev) => prev + 1);
     },
     []
   );
@@ -68,6 +73,8 @@ export function MediaGenerationHost() {
   // Refs for getResponse closure stability
   const selectedContentIdRef = useRef(selectedContentId);
   selectedContentIdRef.current = selectedContentId;
+  const generationsCountRef = useRef(generationsCount);
+  generationsCountRef.current = generationsCount;
 
   // Register provider with InteractionHost
   // Note: isValid is always true - selection is optional for media generation
@@ -78,6 +85,7 @@ export function MediaGenerationHost() {
         isValid: true,
         selectedCount: selectedContentIdRef.current ? 1 : 0,
         selectedGroupIds: [],
+        generationsCount: generationsCountRef.current,
       }),
       getResponse: () => ({
         selected_content_id: selectedContentIdRef.current ?? undefined,
@@ -86,20 +94,21 @@ export function MediaGenerationHost() {
     });
   }, [updateProvider]);
 
-  // Update provider when selection changes
+  // Update provider when selection or generations count changes
   useEffect(() => {
     updateProvider({
       getState: () => ({
         isValid: true,
         selectedCount: selectedContentId ? 1 : 0,
         selectedGroupIds: [],
+        generationsCount: generationsCountRef.current,
       }),
       getResponse: () => ({
         selected_content_id: selectedContentIdRef.current ?? undefined,
         generations: generationsRef.current,
       }),
     });
-  }, [selectedContentId, updateProvider]);
+  }, [selectedContentId, generationsCount, updateProvider]);
 
   // Build context value
   const contextValue = useMemo<MediaGenerationContextValue>(

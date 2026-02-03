@@ -38,6 +38,8 @@ export interface ProviderState {
   isValid: boolean;
   selectedCount: number;
   selectedGroupIds: string[];
+  /** Number of generations (for media generation validation) */
+  generationsCount?: number;
 }
 
 /** Configuration provided by child component */

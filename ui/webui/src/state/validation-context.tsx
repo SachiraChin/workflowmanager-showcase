@@ -265,7 +265,7 @@ export function useValidationOptional(): ValidationContextValue | null {
  * @returns Derived response state for validation
  */
 function deriveResponseState(
-  providerState: { selectedCount: number; selectedGroupIds: string[] },
+  providerState: { selectedCount: number; selectedGroupIds: string[]; generationsCount?: number },
   request: InteractionRequest
 ): ResponseData {
   const displayData = request.display_data || {};
@@ -280,28 +280,37 @@ function deriveResponseState(
     selected_indices: providerState.selectedGroupIds,
   };
 
-  // For media generation: check if any generations exist in display_data
-  // This is a heuristic - we look for _generations arrays in the data
-  if (displayData.data && typeof displayData.data === "object") {
-    const data = displayData.data as Record<string, unknown>;
-    const generations: Record<string, unknown[]> = {};
+  // For media generation: use generationsCount from providerState if available
+  // This is more reliable than checking display_data._generations arrays
+  // because it includes generations made during the current session
+  if (providerState.generationsCount !== undefined && providerState.generationsCount > 0) {
+    // Create a placeholder generations object to satisfy validation rules
+    // The actual generations data is in the response, not needed for validation
+    response.generations = { _count: providerState.generationsCount };
+  } else {
+    // Fallback: check display_data for pre-existing generations (from server)
+    // This handles the case where we're viewing an existing interaction
+    if (displayData.data && typeof displayData.data === "object") {
+      const data = displayData.data as Record<string, unknown>;
+      const generations: Record<string, unknown[]> = {};
 
-    for (const [key, value] of Object.entries(data)) {
-      if (value && typeof value === "object") {
-        const val = value as Record<string, unknown>;
-        if (
-          val._generations &&
-          Array.isArray(val._generations) &&
-          val._generations.length > 0
-        ) {
-          generations[key] = val._generations as unknown[];
+      for (const [key, value] of Object.entries(data)) {
+        if (value && typeof value === "object") {
+          const val = value as Record<string, unknown>;
+          if (
+            val._generations &&
+            Array.isArray(val._generations) &&
+            val._generations.length > 0
+          ) {
+            generations[key] = val._generations as unknown[];
+          }
         }
       }
-    }
 
-    // Only set generations if we found any
-    if (Object.keys(generations).length > 0) {
-      response.generations = generations;
+      // Only set generations if we found any
+      if (Object.keys(generations).length > 0) {
+        response.generations = generations;
+      }
     }
   }
 
@@ -322,7 +331,7 @@ interface ValidationProviderWithRequestProps {
   /** Retryable config (extracted from request.display_data for convenience) */
   retryable: Record<string, unknown> | undefined;
   /** Provider state from InteractionContext */
-  providerState: { selectedCount: number; selectedGroupIds: string[] };
+  providerState: { selectedCount: number; selectedGroupIds: string[]; generationsCount?: number };
   /** Children to render */
   children: ReactNode;
 }
