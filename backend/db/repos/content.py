@@ -339,6 +339,38 @@ class ContentRepository(BaseRepository):
                 content["preview"] = preview
         return content
 
+    def get_generations_for_workflow(
+        self,
+        workflow_run_id: str,
+    ) -> List[Dict[str, Any]]:
+        """
+        Get all completed generations for a workflow.
+
+        Returns list of generation metadata with their content items attached.
+        Only includes generations with status="completed".
+
+        Args:
+            workflow_run_id: The workflow run ID
+
+        Returns:
+            List of generation metadata dicts with content_items attached
+        """
+        generations = list(self.metadata.find(
+            {
+                "workflow_run_id": workflow_run_id,
+                "status": "completed"
+            },
+            {"_id": 0}
+        ).sort("created_at", ASCENDING))
+
+        for gen in generations:
+            gen["content_items"] = list(self.content.find(
+                {"content_generation_metadata_id": gen["content_generation_metadata_id"]},
+                {"_id": 0}
+            ).sort("index", ASCENDING))
+
+        return generations
+
     def delete_workflow_content(self, workflow_run_id: str) -> Dict[str, int]:
         """
         Delete all content and metadata for a workflow.

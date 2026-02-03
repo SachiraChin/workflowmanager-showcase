@@ -459,7 +459,12 @@ export interface SubActionDef {
 export interface WorkflowFile {
   file_id: string;
   filename: string;
+  /** "json", "text" for regular files; "image", "video", "audio" for media */
   content_type: string;
+  /** For media files: the URL to access the content */
+  url?: string;
+  /** For video files: URL to preview image */
+  preview_url?: string;
 }
 
 /**
@@ -469,6 +474,8 @@ export interface FileGroup {
   group_id: string;
   created_at: string | null;
   files: WorkflowFile[];
+  /** For media groups: the prompt identifier */
+  prompt_id?: string;
 }
 
 /**

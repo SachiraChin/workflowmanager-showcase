@@ -232,14 +232,21 @@ class StateRepository(BaseRepository):
             {
                 "steps": {...},        # hierarchical module state
                 "state_mapped": {...}, # state-mapped values
-                "files": {...}         # file tree structure
+                "files": {...}         # file tree structure (includes media)
             }
         """
         # Get existing hierarchical state
         state = self.get_module_outputs_hierarchical(workflow_run_id, branch_id)
 
         # Add file tree (includes all branches, organized appropriately)
-        state["files"] = self._build_file_tree(workflow_run_id)
+        file_tree = self._build_file_tree(workflow_run_id)
+
+        # Add media tree (generated content organized by provider)
+        media_tree = self._build_media_tree(workflow_run_id)
+        if media_tree:
+            file_tree["media"] = media_tree
+
+        state["files"] = file_tree
         state["state_mapped"] = self.get_module_outputs(workflow_run_id, branch_id)
 
         return state
@@ -346,6 +353,116 @@ class StateRepository(BaseRepository):
                 tree[category] = []
 
             tree[category].append(file_entry)
+
+    def _build_media_tree(self, workflow_run_id: str) -> Dict[str, Any]:
+        """
+        Build media tree from generated content, organized by provider.
+
+        Structure:
+        {
+            "midjourney": [
+                {
+                    "group_id": "cgm_xxx",
+                    "created_at": "...",
+                    "prompt_id": "...",
+                    "files": [
+                        {
+                            "file_id": "gc_xxx",
+                            "filename": "gc_xxx.png",
+                            "content_type": "image",
+                            "url": "/workflow/{id}/media/gc_xxx.png"
+                        }
+                    ]
+                }
+            ],
+            "leonardo": [...],
+            "elevenlabs": [...]
+        }
+        """
+        # Access content collections directly
+        metadata_col = self.db.content_generation_metadata
+        content_col = self.db.generated_content
+
+        # Get all completed generations for this workflow
+        generations = list(metadata_col.find(
+            {
+                "workflow_run_id": workflow_run_id,
+                "status": "completed"
+            },
+            {"_id": 0}
+        ).sort("created_at", ASCENDING))
+
+        result: Dict[str, List] = {}
+
+        for gen in generations:
+            provider = gen.get("provider", "unknown")
+            metadata_id = gen.get("content_generation_metadata_id")
+
+            # Get content items for this generation
+            content_items = list(content_col.find(
+                {"content_generation_metadata_id": metadata_id},
+                {"_id": 0}
+            ).sort("index", ASCENDING))
+
+            if not content_items:
+                continue
+
+            # Build file entries with server-generated URLs
+            files = []
+            for item in content_items:
+                content_id = item.get("generated_content_id")
+                extension = item.get("extension", "")
+                content_type = item.get("content_type", "image")
+
+                # Skip preview images (they're referenced by videos)
+                if content_type == "video.preview":
+                    continue
+
+                file_entry = {
+                    "file_id": content_id,
+                    "filename": f"{content_id}.{extension}" if extension else content_id,
+                    "content_type": content_type,
+                }
+
+                # Generate URL server-side (matches streaming.py pattern)
+                if item.get("local_path") and extension:
+                    file_entry["url"] = (
+                        f"/workflow/{workflow_run_id}/media/{content_id}.{extension}"
+                    )
+
+                    # Include preview URL for videos
+                    preview_id = item.get("preview_content_id")
+                    if preview_id:
+                        preview = content_col.find_one(
+                            {"generated_content_id": preview_id},
+                            {"_id": 0}
+                        )
+                        if preview and preview.get("extension"):
+                            file_entry["preview_url"] = (
+                                f"/workflow/{workflow_run_id}/media/"
+                                f"{preview_id}.{preview.get('extension')}"
+                            )
+
+                files.append(file_entry)
+
+            if not files:
+                continue
+
+            # Initialize provider list if needed
+            if provider not in result:
+                result[provider] = []
+
+            # Create group entry
+            created_at = gen.get("created_at")
+            group_entry = {
+                "group_id": metadata_id,
+                "created_at": created_at.isoformat() if created_at else None,
+                "prompt_id": gen.get("prompt_id"),
+                "files": files,
+            }
+            result[provider].append(group_entry)
+
+        return result
 
     def get_module_output(
         self, workflow_run_id: str, module_name: str

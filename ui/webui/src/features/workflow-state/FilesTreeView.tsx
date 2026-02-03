@@ -1,9 +1,10 @@
 /**
  * FilesTreeView - Workflow files viewer as a tree.
  *
- * Shows workflow files (API calls, outputs) in a collapsible tree structure.
+ * Shows workflow files (API calls, outputs, generated media) in a collapsible
+ * tree structure.
  * - Dynamic hierarchy based on data (branches, categories, steps, groups)
- * - Click file to view content in popup
+ * - Click file to view content in popup (JSON/text) or media preview
  * - Search functionality
  * - Maximizable view
  */
@@ -20,6 +21,9 @@ import {
   Check,
   FolderOpen,
   Folder,
+  Image,
+  Video,
+  Music,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +34,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { JsonTreeView } from "@/components/ui/json-tree-view";
+import { MediaPreviewDialog } from "./MediaPreviewDialog";
 import { useWorkflowStateContext } from "@/state/WorkflowStateContext";
 import { cn } from "@/core/utils";
 import type { WorkflowFile, FileGroup } from "@/core/types";
@@ -114,6 +119,49 @@ function nodeMatchesSearch(key: string, value: unknown, searchTerm: string): boo
   return false;
 }
 
+/**
+ * Check if a file is a media type (image, video, audio).
+ */
+function isMediaFile(file: WorkflowFile): boolean {
+  return ["image", "video", "audio"].includes(file.content_type);
+}
+
+/**
+ * Extract all media files from the file tree in display order.
+ * Traverses the tree structure recursively to collect media files.
+ */
+function extractMediaFiles(tree: Record<string, unknown>): WorkflowFile[] {
+  const mediaFiles: WorkflowFile[] = [];
+
+  function traverse(value: unknown): void {
+    if (isFileArray(value)) {
+      // Array of files - add media files
+      for (const file of value) {
+        if (isMediaFile(file)) {
+          mediaFiles.push(file);
+        }
+      }
+    } else if (isGroupArray(value)) {
+      // Array of groups - traverse each group's files
+      for (const group of value) {
+        for (const file of group.files) {
+          if (isMediaFile(file)) {
+            mediaFiles.push(file);
+          }
+        }
+      }
+    } else if (value && typeof value === "object" && !Array.isArray(value)) {
+      // Object (branch, category, step) - traverse children in key order
+      for (const key of Object.keys(value)) {
+        traverse((value as Record<string, unknown>)[key]);
+      }
+    }
+  }
+
+  traverse(tree);
+  return mediaFiles;
+}
+
 // =============================================================================
 // Copy Button Component
 // =============================================================================
@@ -167,28 +215,39 @@ interface FileNodeProps {
   level: number;
   searchTerm: string;
   onFileClick: (file: WorkflowFile) => void;
+  /** Currently previewed file ID (for highlighting) */
+  previewingFileId?: string | null;
 }
 
-function FileNode({ file, level, searchTerm, onFileClick }: FileNodeProps) {
+function FileNode({ file, level, searchTerm, onFileClick, previewingFileId }: FileNodeProps) {
   const keyMatches =
     searchTerm && file.filename.toLowerCase().includes(searchTerm.toLowerCase());
+  const isPreviewing = previewingFileId === file.file_id;
 
   const isJson = file.content_type === "json" || file.filename.endsWith(".json");
+  const isImage = file.content_type === "image";
+  const isVideo = file.content_type === "video";
+  const isAudio = file.content_type === "audio";
+
+  const getIcon = () => {
+    if (isImage) return <Image className="h-4 w-4 text-green-500 shrink-0" />;
+    if (isVideo) return <Video className="h-4 w-4 text-purple-500 shrink-0" />;
+    if (isAudio) return <Music className="h-4 w-4 text-orange-500 shrink-0" />;
+    if (isJson) return <FileJson className="h-4 w-4 text-blue-500 shrink-0" />;
+    return <FileText className="h-4 w-4 text-muted-foreground shrink-0" />;
+  };
 
   return (
     <div
       className={cn(
         "flex items-center gap-2 py-1.5 px-2 rounded hover:bg-muted/50 cursor-pointer",
-        keyMatches && "bg-yellow-100 dark:bg-yellow-900/30"
+        keyMatches && "bg-yellow-100 dark:bg-yellow-900/30",
+        isPreviewing && "bg-primary/20 ring-1 ring-primary/50"
       )}
       style={{ paddingLeft: `${level * 16 + 8}px` }}
       onClick={() => onFileClick(file)}
     >
-      {isJson ? (
-        <FileJson className="h-4 w-4 text-blue-500 shrink-0" />
-      ) : (
-        <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-      )}
+      {getIcon()}
       <span
         className={cn(
           "font-mono text-sm text-foreground",
@@ -211,6 +270,7 @@ interface GroupNodeProps {
   searchTerm: string;
   showDate: boolean;
   onFileClick: (file: WorkflowFile) => void;
+  previewingFileId?: string | null;
 }
 
 function GroupNode({
@@ -219,6 +279,7 @@ function GroupNode({
   searchTerm,
   showDate,
   onFileClick,
+  previewingFileId,
 }: GroupNodeProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -243,6 +304,7 @@ function GroupNode({
             level={level}
             searchTerm={searchTerm}
             onFileClick={onFileClick}
+            previewingFileId={previewingFileId}
           />
         ))}
       </>
@@ -283,6 +345,7 @@ function GroupNode({
               level={level + 1}
               searchTerm={searchTerm}
               onFileClick={onFileClick}
+              previewingFileId={previewingFileId}
             />
           ))}
         </div>
@@ -301,6 +364,7 @@ interface StepNodeProps {
   level: number;
   searchTerm: string;
   onFileClick: (file: WorkflowFile) => void;
+  previewingFileId?: string | null;
 }
 
 function StepNode({
@@ -309,6 +373,7 @@ function StepNode({
   level,
   searchTerm,
   onFileClick,
+  previewingFileId,
 }: StepNodeProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -365,6 +430,7 @@ function StepNode({
               searchTerm={searchTerm}
               showDate={showDate}
               onFileClick={onFileClick}
+              previewingFileId={previewingFileId}
             />
           ))}
         </div>
@@ -383,6 +449,7 @@ interface CategoryNodeProps {
   level: number;
   searchTerm: string;
   onFileClick: (file: WorkflowFile) => void;
+  previewingFileId?: string | null;
 }
 
 function CategoryNode({
@@ -391,6 +458,7 @@ function CategoryNode({
   level,
   searchTerm,
   onFileClick,
+  previewingFileId,
 }: CategoryNodeProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -459,6 +527,7 @@ function CategoryNode({
                 level={level + 1}
                 searchTerm={searchTerm}
                 onFileClick={onFileClick}
+                previewingFileId={previewingFileId}
               />
             ))
           ) : isGroupArray(value) ? (
@@ -471,6 +540,7 @@ function CategoryNode({
                 searchTerm={searchTerm}
                 showDate={value.length > 1}
                 onFileClick={onFileClick}
+                previewingFileId={previewingFileId}
               />
             ))
           ) : value && typeof value === "object" ? (
@@ -485,6 +555,7 @@ function CategoryNode({
                     level={level + 1}
                     searchTerm={searchTerm}
                     onFileClick={onFileClick}
+                    previewingFileId={previewingFileId}
                   />
                 );
               }
@@ -507,6 +578,7 @@ interface BranchNodeProps {
   level: number;
   searchTerm: string;
   onFileClick: (file: WorkflowFile) => void;
+  previewingFileId?: string | null;
 }
 
 function BranchNode({
@@ -515,6 +587,7 @@ function BranchNode({
   level,
   searchTerm,
   onFileClick,
+  previewingFileId,
 }: BranchNodeProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -568,6 +641,7 @@ function BranchNode({
               level={level + 1}
               searchTerm={searchTerm}
               onFileClick={onFileClick}
+              previewingFileId={previewingFileId}
             />
           ))}
         </div>
@@ -592,9 +666,36 @@ export function FilesTreeView() {
     contentType: "text",
     loading: false,
   });
+  // Index of currently previewed media file (null = closed)
+  const [mediaPreviewIndex, setMediaPreviewIndex] = useState<number | null>(null);
+
+  // Extract all media files from tree in display order
+  const allMediaFiles = useMemo(() => {
+    if (!files) return [];
+    return extractMediaFiles(files as Record<string, unknown>);
+  }, [files]);
+
+  // Build a map from file_id to index for quick lookup
+  const mediaFileIndexMap = useMemo(() => {
+    const map = new Map<string, number>();
+    allMediaFiles.forEach((file, index) => {
+      map.set(file.file_id, index);
+    });
+    return map;
+  }, [allMediaFiles]);
 
   const handleFileClick = useCallback(
     async (file: WorkflowFile) => {
+      // Media files open in the media preview dialog
+      if (isMediaFile(file)) {
+        const index = mediaFileIndexMap.get(file.file_id);
+        if (index !== undefined) {
+          setMediaPreviewIndex(index);
+        }
+        return;
+      }
+
+      // Regular files (JSON/text) open in the content popup
       setPopup({
         open: true,
         filename: file.filename,
@@ -610,12 +711,26 @@ export function FilesTreeView() {
         loading: false,
       }));
     },
-    [fetchFileContent]
+    [fetchFileContent, mediaFileIndexMap]
   );
 
   const handleClosePopup = useCallback(() => {
     setPopup((prev) => ({ ...prev, open: false }));
   }, []);
+
+  const handleCloseMediaPreview = useCallback(() => {
+    setMediaPreviewIndex(null);
+  }, []);
+
+  const handleMediaPrevious = useCallback(() => {
+    setMediaPreviewIndex((prev) => (prev !== null && prev > 0 ? prev - 1 : prev));
+  }, []);
+
+  const handleMediaNext = useCallback(() => {
+    setMediaPreviewIndex((prev) =>
+      prev !== null && prev < allMediaFiles.length - 1 ? prev + 1 : prev
+    );
+  }, [allMediaFiles.length]);
 
   // Determine if we have multiple branches
   const hasBranches = useMemo(() => {
@@ -630,6 +745,11 @@ export function FilesTreeView() {
       !("group_id" in firstValue)
     );
   }, [files]);
+
+  // Get the file_id of currently previewing media (for highlighting in tree)
+  const previewingFileId = mediaPreviewIndex !== null
+    ? allMediaFiles[mediaPreviewIndex]?.file_id ?? null
+    : null;
 
   // Render tree content
   const renderTreeContent = () => {
@@ -651,6 +771,7 @@ export function FilesTreeView() {
           level={0}
           searchTerm={searchTerm}
           onFileClick={handleFileClick}
+          previewingFileId={previewingFileId}
         />
       ));
     } else {
@@ -663,6 +784,7 @@ export function FilesTreeView() {
           level={0}
           searchTerm={searchTerm}
           onFileClick={handleFileClick}
+          previewingFileId={previewingFileId}
         />
       ));
     }
@@ -770,6 +892,17 @@ export function FilesTreeView() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Media Preview Dialog (images, videos, audio) */}
+      <MediaPreviewDialog
+        open={mediaPreviewIndex !== null}
+        onOpenChange={(open) => !open && handleCloseMediaPreview()}
+        file={mediaPreviewIndex !== null ? allMediaFiles[mediaPreviewIndex] : null}
+        currentIndex={mediaPreviewIndex ?? 0}
+        totalCount={allMediaFiles.length}
+        onPrevious={handleMediaPrevious}
+        onNext={handleMediaNext}
+      />
     </>
   );
 }
