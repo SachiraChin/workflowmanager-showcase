@@ -116,3 +116,6 @@ class InteractionResponseData(BaseModel):
     selected_content_id: Optional[str] = None
     selected_content: Optional[Dict[str, Any]] = None
     generations: Dict[str, List[Dict[str, Any]]] = Field(default_factory=dict)
+    # Validation response fields
+    action_id: Optional[str] = None  # Which action triggered this response
+    confirmed_warnings: List[str] = Field(default_factory=list)  # Validation IDs user confirmed

@@ -112,7 +112,17 @@
           {
             "id": "continue",
             "mode": "continue",
-            "label": "Accept and continue"
+            "label": "Accept and continue",
+            "validations": [
+              {
+                "id": "warn_no_video_generation",
+                "rule": "response_field_not_empty",
+                "field": "generations",
+                "severity": "warning",
+                "message": "You haven't generated any videos yet. Continue without generating?",
+                "validator": ["webui", "server"]
+              }
+            ]
           },
           {
             "id": "retry_prompts",

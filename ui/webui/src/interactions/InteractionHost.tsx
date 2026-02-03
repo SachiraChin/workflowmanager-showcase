@@ -13,8 +13,17 @@
  * trigger feedback popups via openFeedbackPopup().
  */
 
-import { useState, useCallback } from "react";
-import { Check, RotateCcw, MessageSquare, Clock, Loader2, Sparkles, Pencil } from "lucide-react";
+import React, { useState, useCallback } from "react";
+import {
+  Check,
+  RotateCcw,
+  MessageSquare,
+  Clock,
+  Loader2,
+  Sparkles,
+  Pencil,
+  AlertTriangle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { JsonEditorDialog } from "@/components/ui/json-editor-dialog";
 import { useDebugMode } from "@/state/hooks/useDebugMode";
@@ -35,13 +44,20 @@ import type {
   InteractionResponseData,
   InteractionMode,
   SubActionDef,
+  ValidationConfig,
+  ValidationMessage,
 } from "@/core/types";
 import {
   InteractionProvider,
+  useInteraction,
   useInteractionHostInternal,
   ActionSlotTarget,
 } from "@/state/interaction-context";
 import { SubActionProvider, useSubAction } from "@/state/sub-action-context";
+import {
+  ValidationProviderWithRequest,
+  useValidation,
+} from "@/state/validation-context";
 
 // Import interaction components
 import { TextInputEnhanced } from "./types/text-input";
@@ -72,6 +88,8 @@ interface RetryableOption {
     prompt?: string;
     default_message?: string;
   };
+  /** Validation rules for this action */
+  validations?: ValidationConfig[];
 }
 
 interface RetryableConfig {
@@ -118,13 +136,20 @@ export function InteractionHost({
 }: InteractionHostProps) {
   // Debug mode for editing display_data
   const { isDebugMode } = useDebugMode();
-  const updateCurrentInteractionDisplayData = useWorkflowStore((s) => s.updateCurrentInteractionDisplayData);
+  const updateCurrentInteractionDisplayData = useWorkflowStore(
+    (s) => s.updateCurrentInteractionDisplayData
+  );
   const [isEditOpen, setIsEditOpen] = useState(false);
 
   // Handle save from JSON editor
-  const handleSaveDisplayData = useCallback((newValue: unknown) => {
-    updateCurrentInteractionDisplayData(newValue as Record<string, unknown>);
-  }, [updateCurrentInteractionDisplayData]);
+  const handleSaveDisplayData = useCallback(
+    (newValue: unknown) => {
+      updateCurrentInteractionDisplayData(
+        newValue as Record<string, unknown>
+      );
+    },
+    [updateCurrentInteractionDisplayData]
+  );
 
   // Extract sub-actions from display_data for SubActionProvider
   const subActions = (request.display_data?.sub_actions || []) as SubActionDef[];
@@ -143,63 +168,119 @@ export function InteractionHost({
         subActions={subActions}
         onComplete={onSubActionComplete}
       >
-        <div className="h-full flex flex-col">
-          {/* Title - fixed at top */}
-          {request.title && (
-            <div className="flex-shrink-0 pb-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <h3 className="text-lg font-semibold">{request.title}</h3>
-                {/* Debug mode: Edit display_data button */}
-                {isDebugMode && mode.type === "active" && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIsEditOpen(true)}
-                    className="h-7 px-2 text-orange-600 hover:text-orange-700 hover:bg-orange-100 dark:text-orange-400 dark:hover:bg-orange-900/30"
-                    title="Edit display_data (Debug Mode)"
-                  >
-                    <Pencil className="h-3.5 w-3.5 mr-1" />
-                    Edit Data
-                  </Button>
-                )}
-              </div>
-              {timestamp && (
-                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <Clock className="h-3.5 w-3.5" />
-                  <span>{timestamp}</span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Debug mode: JSON Editor Dialog */}
-          {isDebugMode && (
-            <JsonEditorDialog
-              open={isEditOpen}
-              onOpenChange={setIsEditOpen}
-              value={request.display_data}
-              title="Edit display_data"
-              onSave={handleSaveDisplayData}
-            />
-          )}
-
-          {/* Interaction Content - fills middle area */}
-          <div className="flex-1 min-h-0">
-            <div className="h-full">
-              <InteractionContent type={request.interaction_type} />
-            </div>
-          </div>
-
-          {/* Action Buttons - fixed at bottom */}
-          <div className="flex-shrink-0 pt-4">
-            <InteractionFooter onCancel={onCancel} />
-          </div>
-
-          {/* Feedback Popup */}
-          <FeedbackPopup />
-        </div>
+        <InteractionHostContent
+          request={request}
+          mode={mode}
+          timestamp={timestamp}
+          isDebugMode={isDebugMode}
+          isEditOpen={isEditOpen}
+          setIsEditOpen={setIsEditOpen}
+          handleSaveDisplayData={handleSaveDisplayData}
+          onCancel={onCancel}
+        />
       </SubActionProvider>
     </InteractionProvider>
+  );
+}
+
+// =============================================================================
+// Host Content (wrapped with ValidationProvider)
+// =============================================================================
+
+interface InteractionHostContentProps {
+  request: InteractionRequest;
+  mode: InteractionMode;
+  timestamp?: string;
+  isDebugMode: boolean;
+  isEditOpen: boolean;
+  setIsEditOpen: (open: boolean) => void;
+  handleSaveDisplayData: (value: unknown) => void;
+  onCancel?: () => void;
+}
+
+function InteractionHostContent({
+  request,
+  mode,
+  timestamp,
+  isDebugMode,
+  isEditOpen,
+  setIsEditOpen,
+  handleSaveDisplayData,
+  onCancel,
+}: InteractionHostContentProps) {
+  // Get providerState from InteractionContext for ValidationProvider
+  const { providerState } = useInteractionHostInternal();
+
+  // Extract retryable config
+  const retryable = request.display_data?.retryable as
+    | Record<string, unknown>
+    | undefined;
+
+  return (
+    <ValidationProviderWithRequest
+      request={request}
+      retryable={retryable}
+      providerState={providerState}
+    >
+      <div className="h-full flex flex-col">
+        {/* Title - fixed at top */}
+        {request.title && (
+          <div className="flex-shrink-0 pb-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-semibold">{request.title}</h3>
+              {/* Debug mode: Edit display_data button */}
+              {isDebugMode && mode.type === "active" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsEditOpen(true)}
+                  className="h-7 px-2 text-orange-600 hover:text-orange-700 hover:bg-orange-100 dark:text-orange-400 dark:hover:bg-orange-900/30"
+                  title="Edit display_data (Debug Mode)"
+                >
+                  <Pencil className="h-3.5 w-3.5 mr-1" />
+                  Edit Data
+                </Button>
+              )}
+            </div>
+            {timestamp && (
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <Clock className="h-3.5 w-3.5" />
+                <span>{timestamp}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Debug mode: JSON Editor Dialog */}
+        {isDebugMode && (
+          <JsonEditorDialog
+            open={isEditOpen}
+            onOpenChange={setIsEditOpen}
+            value={request.display_data}
+            title="Edit display_data"
+            onSave={handleSaveDisplayData}
+          />
+        )}
+
+        {/* Interaction Content - fills middle area */}
+        <div className="flex-1 min-h-0">
+          <div className="h-full">
+            <InteractionContent type={request.interaction_type} />
+          </div>
+        </div>
+
+        {/* Action Buttons - fixed at bottom */}
+        <div className="flex-shrink-0 pt-4">
+          <InteractionFooter onCancel={onCancel} />
+        </div>
+
+        {/* Feedback Popup */}
+        <FeedbackPopup />
+
+        {/* Validation Warning Popup */}
+        <ValidationWarningPopup />
+      </div>
+    </ValidationProviderWithRequest>
   );
 }
 
@@ -262,11 +343,18 @@ function InteractionFooter({ onCancel }: InteractionFooterProps) {
 }
 
 interface InteractionFooterInnerProps {
-  providerState: { isValid: boolean; selectedCount: number; selectedGroupIds: string[] };
+  providerState: {
+    isValid: boolean;
+    selectedCount: number;
+    selectedGroupIds: string[];
+  };
   feedbackByGroup: Record<string, string>;
   globalFeedback: string;
   setGlobalFeedback: (feedback: string) => void;
-  handleAction: (action: "continue" | "retry_all" | "retry_selected") => void;
+  handleAction: (
+    action: "continue" | "retry_all" | "retry_selected",
+    options?: { actionId?: string; confirmedWarnings?: string[] }
+  ) => void;
   onCancel?: () => void;
 }
 
@@ -278,16 +366,28 @@ function InteractionFooterInner({
   handleAction,
   onCancel,
 }: InteractionFooterInnerProps) {
-  const { request, disabled } = useInteractionFooterContext();
+  const { request, disabled } = useInteraction();
+
+  // Validation context
+  const { getErrorsForAction, handleActionWithValidation } = useValidation();
 
   // Retryable config - filter out hidden options (same pattern as SubActions)
   const retryable = (request.display_data?.retryable || {}) as RetryableConfig;
-  const visibleRetryableOptions = (retryable.options || []).filter((opt) => !opt.hidden);
-  const hasRetryableOptions = !retryable.hidden && visibleRetryableOptions.length > 0;
-  const showGlobalFeedback = !retryable.hidden && retryable.feedback?.global === true;
+  const visibleRetryableOptions = (retryable.options || []).filter(
+    (opt) => !opt.hidden
+  );
+  const hasRetryableOptions =
+    !retryable.hidden && visibleRetryableOptions.length > 0;
+  const showGlobalFeedback =
+    !retryable.hidden && retryable.feedback?.global === true;
 
   // Sub-actions from context (already filtered for visible only)
-  const { visibleSubActions, state: subActionState, trigger: triggerSubAction, clearError } = useSubAction();
+  const {
+    visibleSubActions,
+    state: subActionState,
+    trigger: triggerSubAction,
+    clearError,
+  } = useSubAction();
   const hasSubActions = visibleSubActions.length > 0;
 
   // Sub-action feedback popup state (local to footer)
@@ -317,6 +417,23 @@ function InteractionFooterInner({
       }
     },
     [triggerSubAction]
+  );
+
+  // Handle retryable action click with validation
+  const handleRetryableActionClick = React.useCallback(
+    (
+      option: RetryableOption,
+      action: "continue" | "retry_all" | "retry_selected"
+    ) => {
+      // Use validation context to handle validation and warning popup
+      handleActionWithValidation(option.id, (confirmedWarnings) => {
+        handleAction(action, {
+          actionId: option.id,
+          confirmedWarnings,
+        });
+      });
+    },
+    [handleActionWithValidation, handleAction]
   );
 
   // Destructure sub-action state for easier use
@@ -358,8 +475,11 @@ function InteractionFooterInner({
               {progress}
             </span>
           ) : providerState.selectedCount > 0 ? (
-            <span className="text-muted-foreground">{providerState.selectedCount} selected</span>
-          ) : !providerState.isValid && request.interaction_type === "select_from_structured" ? (
+            <span className="text-muted-foreground">
+              {providerState.selectedCount} selected
+            </span>
+          ) : !providerState.isValid &&
+            request.interaction_type === "select_from_structured" ? (
             <span className="text-green-600">
               {request.max_selections === 1
                 ? "Select an option to continue"
@@ -394,7 +514,11 @@ function InteractionFooterInner({
             })}
 
           {onCancel && (
-            <Button variant="outline" onClick={onCancel} disabled={disabled || isSubActionRunning}>
+            <Button
+              variant="outline"
+              onClick={onCancel}
+              disabled={disabled || isSubActionRunning}
+            >
               Cancel
             </Button>
           )}
@@ -405,11 +529,16 @@ function InteractionFooterInner({
               const isContinue = option.mode === "continue";
               const isRetrySelected = option.mode === "retry_selected";
               const isRetryWithFeedback =
-                (option.mode === "retry" || option.mode === "retry_all" || isRetrySelected) &&
+                (option.mode === "retry" ||
+                  option.mode === "retry_all" ||
+                  isRetrySelected) &&
                 hasFeedback;
 
               // Map option mode to action
-              const actionMap: Record<string, "continue" | "retry_all" | "retry_selected"> = {
+              const actionMap: Record<
+                string,
+                "continue" | "retry_all" | "retry_selected"
+              > = {
                 continue: "continue",
                 retry: "retry_all",
                 retry_all: "retry_all",
@@ -419,18 +548,23 @@ function InteractionFooterInner({
 
               const Icon = isContinue ? Check : RotateCcw;
 
+              // Check for validation errors (disables button)
+              const validationErrors = getErrorsForAction(option.id);
+              const hasValidationErrors = validationErrors.length > 0;
+
               // Determine if button should be disabled
               const isDisabled =
                 disabled ||
                 isSubActionRunning ||
                 (isContinue && !providerState.isValid) ||
-                (isRetrySelected && providerState.selectedCount === 0);
+                (isRetrySelected && providerState.selectedCount === 0) ||
+                hasValidationErrors;
 
               return (
                 <Button
                   key={option.id}
                   variant={isContinue ? "default" : "outline"}
-                  onClick={() => handleAction(action)}
+                  onClick={() => handleRetryableActionClick(option, action)}
                   disabled={isDisabled}
                   className={cn(
                     isRetryWithFeedback && "ring-2 ring-primary ring-offset-2"
@@ -473,14 +607,6 @@ function InteractionFooterInner({
       )}
     </div>
   );
-}
-
-// Helper hook to access request from footer
-import { useInteraction } from "@/state/interaction-context";
-
-function useInteractionFooterContext() {
-  const { request, disabled } = useInteraction();
-  return { request, disabled };
 }
 
 // =============================================================================
@@ -531,6 +657,67 @@ function SubActionFeedbackDialog({
 }
 
 // =============================================================================
+// Validation Warning Popup
+// =============================================================================
+
+function ValidationWarningPopup() {
+  const { warningPopup, confirmWarnings, cancelWarnings } = useValidation();
+
+  if (!warningPopup) return null;
+
+  return (
+    <ValidationWarningDialog
+      warnings={warningPopup.warnings}
+      onConfirm={confirmWarnings}
+      onCancel={cancelWarnings}
+    />
+  );
+}
+
+interface ValidationWarningDialogProps {
+  warnings: ValidationMessage[];
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+function ValidationWarningDialog({
+  warnings,
+  onConfirm,
+  onCancel,
+}: ValidationWarningDialogProps) {
+  return (
+    <Dialog open onOpenChange={(open) => !open && onCancel()}>
+      <DialogContent size="sm" className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-yellow-500" />
+            Continue without generating?
+          </DialogTitle>
+          <DialogDescription>
+            {warnings.length === 1
+              ? warnings[0].message
+              : "The following items need your attention:"}
+          </DialogDescription>
+        </DialogHeader>
+        {warnings.length > 1 && (
+          <ul className="list-disc pl-4 space-y-1 text-sm text-muted-foreground">
+            {warnings.map((w) => (
+              <li key={w.id}>{w.message}</li>
+            ))}
+          </ul>
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={onCancel}>
+            Go Back
+          </Button>
+          <Button onClick={onConfirm}>Continue Anyway</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// =============================================================================
 // Feedback Popup
 // =============================================================================
 
@@ -571,7 +758,8 @@ function FeedbackPopupDialog({
         <DialogHeader>
           <DialogTitle>Feedback for "{groupLabel}"</DialogTitle>
           <DialogDescription>
-            Enter your feedback for this item. This will be included when you retry.
+            Enter your feedback for this item. This will be included when you
+            retry.
           </DialogDescription>
         </DialogHeader>
         <Textarea
@@ -594,6 +782,3 @@ function FeedbackPopupDialog({
     </Dialog>
   );
 }
-
-// Need React import for useState in FeedbackPopupDialog
-import React from "react";

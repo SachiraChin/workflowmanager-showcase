@@ -954,6 +954,213 @@ bcrypt hashing), but brute force attacks are not mitigated.
 
 ---
 
+## 16. Interaction Response Access: Per-Provider Hardcoded Patterns
+
+**Date Identified:** 2026-02-03
+**Severity:** Critical
+**Status:** Open
+
+### Problem
+
+The interaction architecture lacks a generic mechanism to access current response
+data before submission time. Each interaction type implements its own response
+shape via a provider pattern, but this data is only accessible when the user
+clicks an action button.
+
+**Current Architecture:**
+
+1. **Provider Registration Pattern** (`interaction-context.tsx`):
+   - Child interaction components (e.g., `MediaGenerationHost`, `StructuredSelect`)
+     call `updateProvider()` with a `ProviderConfig` object
+   - `ProviderConfig` contains:
+     - `getState(): ProviderState` - Returns `{isValid, selectedCount,
+       selectedGroupIds}`
+     - `getResponse(params): InteractionResponseData` - Builds the response
+
+2. **Response Built Only at Submit Time** (`interaction-context.tsx:217-239`):
+   ```typescript
+   const handleAction = useCallback((action, options) => {
+     if (providerRef.current) {
+       const response = providerRef.current.getResponse({
+         action,
+         feedbackByGroup,
+         globalFeedback,
+       });
+       onSubmit(response);
+     }
+   }, [...]);
+   ```
+
+3. **Each Interaction Returns Different Response Shape**:
+
+   **MediaGenerationHost** (`MediaGenerationHost.tsx:82-85`):
+   ```typescript
+   getResponse: () => ({
+     selected_content_id: selectedContentIdRef.current ?? undefined,
+     generations: generationsRef.current,
+   })
+   ```
+
+   **StructuredSelect** (would return):
+   ```typescript
+   getResponse: () => ({
+     selected_indices: [...],
+     selected_data: {...},
+   })
+   ```
+
+   **FormInput** (would return):
+   ```typescript
+   getResponse: () => ({
+     fields: {...},
+   })
+   ```
+
+### Why This Matters for Validation
+
+The server-side validation system we're implementing needs to validate response
+data BEFORE submission. Validation rules in step.json specify field names:
+
+```json
+{
+  "validations": [
+    {
+      "rule": "response_field_required",
+      "field": "selected_content_id",
+      "severity": "error"
+    },
+    {
+      "rule": "response_field_not_empty", 
+      "field": "generations",
+      "severity": "warning"
+    }
+  ]
+}
+```
+
+The validation system must:
+1. Access the current response state (whatever shape it has)
+2. Check the configured fields against that data
+3. Enable/disable buttons based on errors
+4. Show confirmation popup for warnings
+
+**The Problem:** There is no generic way to access the current response data
+outside of the `handleAction` callback. The `ProviderState` only exposes:
+- `isValid: boolean`
+- `selectedCount: number`
+- `selectedGroupIds: string[]`
+
+This is insufficient for field-based validation rules that need to check
+arbitrary fields like `selected_content_id`, `generations`, `fields`, etc.
+
+### Current Workaround
+
+The current `InteractionHost.tsx` implementation (lines 336-357) attempts to
+derive response state inline:
+
+```typescript
+const getCurrentResponse = React.useCallback((): Record<string, unknown> => {
+  return {
+    selected_content_id: providerState.selectedCount > 0 
+      ? "has_selection" : undefined,
+    selected_indices: providerState.selectedGroupIds,
+    generations: request.display_data?.data ? 
+      // ... complex extraction logic specific to media generation
+  };
+}, [providerState, request.display_data]);
+```
+
+This is problematic because:
+1. It hardcodes knowledge of specific response fields (`selected_content_id`,
+   `generations`)
+2. It derives response shape from `providerState` + `display_data` rather than
+   getting the actual response
+3. Different interaction types would need different derivation logic
+4. The derivation may not match what `getResponse()` actually returns
+
+### Impact
+
+1. **Validation coupling**: Validation logic must know about each interaction
+   type's response shape
+2. **No single source of truth**: Response data exists in provider refs but
+   isn't accessible generically
+3. **Fragile workarounds**: Inline derivation logic can get out of sync with
+   actual `getResponse()` implementations
+4. **Blocks generic validation**: Cannot implement truly generic field-based
+   validation without response access
+
+### Files Affected
+
+**Core Architecture:**
+- `ui/webui/src/state/interaction-context.tsx` - `InteractionProvider`,
+  `ProviderConfig`, `ProviderState` interfaces
+- `ui/webui/src/interactions/InteractionHost.tsx` - Footer validation logic
+
+**Per-Interaction Providers:**
+- `ui/webui/src/interactions/types/media-generation/MediaGenerationHost.tsx`
+- `ui/webui/src/interactions/types/structured-select/index.tsx` (or similar)
+- `ui/webui/src/interactions/types/form-input/index.tsx` (or similar)
+
+### Suggested Fix
+
+**Option A: Extend ProviderConfig with getCurrentResponse()**
+
+Add a method to get current response without submitting:
+
+```typescript
+interface ProviderConfig {
+  getState: () => ProviderState;
+  getResponse: (params: ResponseParams) => InteractionResponseData;
+  getCurrentResponse?: () => InteractionResponseData;  // New
+}
+```
+
+Each interaction provider implements `getCurrentResponse()` to return the
+current response snapshot. `InteractionProvider` exposes this via context
+for validation to consume.
+
+**Option B: Store response state reactively**
+
+Instead of building response on-demand in `getResponse()`, providers store
+response state that updates reactively:
+
+```typescript
+interface ProviderConfig {
+  getState: () => ProviderState;
+  getResponse: (params: ResponseParams) => InteractionResponseData;
+  responseState: InteractionResponseData;  // Live response data
+}
+```
+
+The `updateProvider()` call would include current response state, making it
+available for validation without calling `getResponse()`.
+
+**Option C: Validation-specific state interface**
+
+Define a validation-friendly state interface that providers populate:
+
+```typescript
+interface ValidationState {
+  fields: Record<string, unknown>;  // Field values for validation
+}
+
+interface ProviderConfig {
+  getState: () => ProviderState;
+  getResponse: (params: ResponseParams) => InteractionResponseData;
+  getValidationState?: () => ValidationState;  // For validation only
+}
+```
+
+This separates validation concerns from submission concerns.
+
+### Related
+
+- Architecture document: `architecture/2026_02_03_server_side_validation/r3.md`
+- Current validation implementation uses inline workaround in
+  `InteractionHost.tsx:336-357`
+
+---
+
 ## Template for New Issues
 
 ```markdown

@@ -96,7 +96,17 @@
           {
             "id": "continue",
             "mode": "continue",
-            "label": "Accept and continue"
+            "label": "Accept and continue",
+            "validations": [
+              {
+                "id": "require_image_selection",
+                "rule": "response_field_required",
+                "field": "selected_content_id",
+                "severity": "error",
+                "message": "Please select an image before continuing",
+                "validator": ["webui", "server"]
+              }
+            ]
           },
           {
             "id": "retry",

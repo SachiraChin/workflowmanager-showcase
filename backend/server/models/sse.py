@@ -17,6 +17,7 @@ class SSEEventType(str, Enum):
     COMPLETE = "complete"         # Workflow/module completed
     ERROR = "error"               # Error occurred
     CANCELLED = "cancelled"       # Request was cancelled
+    VALIDATION_FAILED = "validation_failed"  # Response validation failed
     # State streaming events
     STATE_SNAPSHOT = "state_snapshot"  # Full state snapshot (on connect)
     STATE_UPDATE = "state_update"      # Incremental state update

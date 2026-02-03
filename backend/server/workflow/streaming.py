@@ -16,6 +16,7 @@ from models import (
     InteractionResponseData,
     SSEEvent,
     SSEEventType,
+    WorkflowResponse,
 )
 from backend.db import DbEventType
 from utils import sanitize_error_message
@@ -329,7 +330,7 @@ class WorkflowStreamingMixin:
         finally:
             executor.shutdown(wait=False)
 
-    async def _result_to_events(self: "WorkflowProcessor", workflow_run_id: str, result):
+    async def _result_to_events(self: "WorkflowProcessor", workflow_run_id: str, result: WorkflowResponse):
         """Convert WorkflowResponse to SSE events."""
         if result.status == WorkflowStatus.AWAITING_INPUT and result.interaction_request:
             # interaction_request already contains workflow_run_id from model_dump()
@@ -346,6 +347,15 @@ class WorkflowStreamingMixin:
             yield SSEEvent(
                 type=SSEEventType.ERROR,
                 data={"workflow_run_id": workflow_run_id, "message": result.error or "Unknown error"}
+            )
+        elif result.status == WorkflowStatus.VALIDATION_FAILED:
+            yield SSEEvent(
+                type=SSEEventType.VALIDATION_FAILED,
+                data={
+                    "workflow_run_id": workflow_run_id,
+                    "errors": result.validation_errors,
+                    "warnings": result.validation_warnings
+                }
             )
         else:
             self.logger.warning(f"[SSE STREAM] Unexpected status: {result.status}")

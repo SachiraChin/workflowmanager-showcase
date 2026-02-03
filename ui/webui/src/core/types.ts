@@ -12,7 +12,8 @@ export type WorkflowStatus =
   | "processing"
   | "awaiting_input"
   | "completed"
-  | "error";
+  | "error"
+  | "validation_failed";
 
 export type InteractionType =
   | "text_input"
@@ -42,6 +43,7 @@ export type SSEEventType =
   | "complete"
   | "error"
   | "cancelled"
+  | "validation_failed"
   | "state_snapshot"
   | "state_update";
 
@@ -195,6 +197,9 @@ export interface InteractionResponseData {
   // MEDIA_GENERATION response fields
   selected_content_id?: string; // ID of selected generated content
   generations?: Record<string, unknown[]>; // All generations by prompt key
+  // Validation fields
+  action_id?: string; // Which action triggered this response (e.g., "continue")
+  confirmed_warnings?: string[]; // Validation IDs user confirmed to proceed
 }
 
 export interface RespondRequest {
@@ -492,4 +497,60 @@ export interface WorkflowFileContent {
   content_type: string;
   content: unknown;
   metadata: Record<string, unknown>;
+}
+
+// =============================================================================
+// Validation Types
+// =============================================================================
+
+/**
+ * Validation rule configuration from step.json.
+ * Defined under retryable.options[].validations[]
+ */
+export interface ValidationConfig {
+  /** Unique identifier for this validation */
+  id: string;
+  /** Rule name from registry (e.g., "response_field_required") */
+  rule: string;
+  /** Response field to validate (rule-dependent) */
+  field: string;
+  /** "error" blocks action, "warning" requires confirmation */
+  severity: "error" | "warning";
+  /** Human-readable error message */
+  message: string;
+  /** Which layers validate: ["webui", "server"] */
+  validator?: string[];
+  /** For response_field_equals rule */
+  value?: unknown;
+  /** For min_selections rule */
+  min?: number;
+}
+
+/**
+ * Validation error/warning message from server or client.
+ */
+export interface ValidationMessage {
+  id: string;
+  field: string;
+  rule: string;
+  message: string;
+  severity: "error" | "warning";
+}
+
+/**
+ * Result of validating a response.
+ */
+export interface ValidationResult {
+  valid: boolean;
+  errors: ValidationMessage[];
+  warnings: ValidationMessage[];
+}
+
+/**
+ * SSE event data for validation_failed event.
+ */
+export interface SSEValidationFailedData {
+  workflow_run_id: string;
+  errors: ValidationMessage[];
+  warnings: ValidationMessage[];
 }

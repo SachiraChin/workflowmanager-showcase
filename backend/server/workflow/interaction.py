@@ -17,6 +17,7 @@ from models import (
     InteractionResponseData,
 )
 from .workflow_context import WorkflowExecutionContext, StateProxy
+from .validation import validate_response, get_validations_for_action
 from utils import sanitize_error_message, get_nested_value
 from engine.module_registry import ModuleRegistry
 from engine.jinja2_resolver import Jinja2Resolver as ParameterResolver
@@ -165,6 +166,42 @@ class InteractionHandler:
                 raw_inputs = module_config.get('inputs', {}).copy()
                 resolved_inputs = resolver.resolve_with_schema(raw_inputs, module_outputs)
                 self.logger.debug(f"[TIMING]   resolve_inputs (fallback): {(time.time()-tc2)*1000:.0f}ms")
+
+            # Validate response if action has validations
+            action_id = interaction_response.action_id
+            if action_id:
+                retryable = module_config.get('retryable', {})
+                validations = get_validations_for_action(retryable, action_id)
+                if validations:
+                    # Build response dict for validation
+                    response_dict = {
+                        'selected_content_id': interaction_response.selected_content_id,
+                        'generations': interaction_response.generations or {},
+                        'selected_indices': interaction_response.selected_indices,
+                        'selected_options': interaction_response.selected_options,
+                        'value': interaction_response.value,
+                        'form_data': interaction_response.form_data,
+                    }
+                    
+                    validation_result = validate_response(
+                        response_dict,
+                        validations,
+                        interaction_response.confirmed_warnings or [],
+                        validator_layer="server"
+                    )
+                    
+                    if not validation_result.valid:
+                        self.logger.info(
+                            f"[VALIDATION] Failed for action '{action_id}': "
+                            f"errors={len(validation_result.errors)}, "
+                            f"warnings={len(validation_result.warnings)}"
+                        )
+                        return WorkflowResponse(
+                            workflow_run_id=workflow_run_id,
+                            status=WorkflowStatus.VALIDATION_FAILED,
+                            validation_errors=[e.to_dict() for e in validation_result.errors],
+                            validation_warnings=[w.to_dict() for w in validation_result.warnings]
+                        )
 
             # Convert response to engine format
             engine_response = EngineInteractionResponse(

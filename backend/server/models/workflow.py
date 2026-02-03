@@ -19,6 +19,7 @@ class WorkflowStatus(str, Enum):
     AWAITING_INPUT = "awaiting_input"
     COMPLETED = "completed"
     ERROR = "error"
+    VALIDATION_FAILED = "validation_failed"
 
 
 class WorkflowProgress(BaseModel):
@@ -39,6 +40,9 @@ class WorkflowResponse(BaseModel):
     interaction_request: Optional["ApiInteractionRequest"] = None
     result: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
+    # Validation failure fields
+    validation_errors: List[Dict[str, Any]] = Field(default_factory=list)
+    validation_warnings: List[Dict[str, Any]] = Field(default_factory=list)
 
 
 # Note: model_rebuild() is called in __init__.py after ApiInteractionRequest is imported

@@ -86,7 +86,10 @@ export interface InteractionHostInternalState {
   /** Version counter to trigger re-render of ActionSlotTarget */
   slotVersion: number;
   setGlobalFeedback: (feedback: string) => void;
-  handleAction: (action: "continue" | "retry_all" | "retry_selected") => void;
+  handleAction: (
+    action: "continue" | "retry_all" | "retry_selected",
+    options?: { actionId?: string; confirmedWarnings?: string[] }
+  ) => void;
   handleFeedbackSubmit: (feedback: string) => void;
   handleFeedbackCancel: () => void;
 }
@@ -212,13 +215,23 @@ export function InteractionProvider({
   // === Host Internal API ===
 
   const handleAction = useCallback(
-    (action: "continue" | "retry_all" | "retry_selected") => {
+    (
+      action: "continue" | "retry_all" | "retry_selected",
+      options?: { actionId?: string; confirmedWarnings?: string[] }
+    ) => {
       if (providerRef.current) {
         const response = providerRef.current.getResponse({
           action,
           feedbackByGroup,
           globalFeedback,
         });
+        // Add validation fields if provided
+        if (options?.actionId) {
+          response.action_id = options.actionId;
+        }
+        if (options?.confirmedWarnings) {
+          response.confirmed_warnings = options.confirmedWarnings;
+        }
         onSubmit(response);
       }
     },

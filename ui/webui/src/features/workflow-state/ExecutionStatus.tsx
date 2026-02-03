@@ -51,6 +51,7 @@ function StatusBadge({ status }: { status: WorkflowStatus | null }) {
     awaiting_input: { variant: "outline", icon: <Zap className="w-3 h-3" />, label: "Awaiting Input" },
     completed: { variant: "secondary", icon: <CheckCircle2 className="w-3 h-3 text-green-500" />, label: "Completed" },
     error: { variant: "destructive", icon: <XCircle className="w-3 h-3" />, label: "Error" },
+    validation_failed: { variant: "destructive", icon: <XCircle className="w-3 h-3" />, label: "Validation Failed" },
   };
 
   const config = variants[status];
