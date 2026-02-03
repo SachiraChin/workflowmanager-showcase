@@ -23,6 +23,8 @@ import {
   type DynamicOption,
 } from "./InputSchemaContext";
 import { InputSchemaRenderer } from "./InputSchemaRenderer";
+import { useWorkflowStateContext } from "@/state/WorkflowStateContext";
+import { renderTemplate } from "@/lib/template-service";
 
 // =============================================================================
 // Types
@@ -61,6 +63,10 @@ export function InputSchemaComposer({
   void _schema; // Schema is available but we use ux.input_schema
   const inputSchema = ux.input_schema as InputSchema;
 
+  // Get workflow state for Jinja2-style source_data resolution
+  const { state: workflowState } = useWorkflowStateContext();
+  const templateState = (workflowState.state_mapped || {}) as Record<string, unknown>;
+
   // Helper: Get nested value by dot-notated path (e.g., "nested.field.path")
   const getNestedValue = (obj: Record<string, unknown>, path: string): unknown => {
     const parts = path.split(".");
@@ -88,11 +94,25 @@ export function InputSchemaComposer({
 
       // Value priority: source_data > source_field > data[key] > schema.default
       if (sourceData) {
-        // Resolve {field} placeholders in the template
-        initial[key] = sourceData.replace(/\{(\w+)\}/g, (_, field) => {
-          const value = dataRecord[field];
-          return value !== undefined ? String(value) : "";
-        });
+        // Check if it's a Jinja2-style template ({{ }}) or simple placeholder ({})
+        if (sourceData.includes("{{")) {
+          // Use renderTemplate for Jinja2-style expressions with state access
+          const rendered = renderTemplate(sourceData, dataRecord, templateState);
+          // Try to parse as number if the schema type is integer/number
+          const schemaType = schemaRecord.type as string;
+          if ((schemaType === "integer" || schemaType === "number") && rendered) {
+            const parsed = Number(rendered);
+            initial[key] = isNaN(parsed) ? schemaRecord.default : parsed;
+          } else {
+            initial[key] = rendered || schemaRecord.default;
+          }
+        } else {
+          // Resolve {field} placeholders in the template (legacy format)
+          initial[key] = sourceData.replace(/\{(\w+)\}/g, (_, field) => {
+            const value = dataRecord[field];
+            return value !== undefined ? String(value) : "";
+          });
+        }
       } else if (sourceField) {
         // Support dot-notated paths (e.g., "nested.field.path")
         const nestedValue = getNestedValue(dataRecord, sourceField);

@@ -51,7 +51,8 @@
                         "default": 15,
                         "step": 1,
                         "_ux": {
-                          "input_type": "slider"
+                          "input_type": "slider",
+                          "source_data": "{{ state.duration_selection.sound_track_duration }}"
                         }
                       },
                       "bpm": {
