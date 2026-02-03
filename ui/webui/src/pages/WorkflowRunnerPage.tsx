@@ -366,7 +366,10 @@ export function WorkflowRunnerPage({ onRestart }: WorkflowRunnerPageProps) {
                 {/* Card content - same height as scroll mode cards */}
                 {/* Completed interaction */}
                 {currentViewIndex < interactionsWithSteps.length && (
-                  <div style={{ height: "calc(100vh - 5rem)" }}>
+                  <div
+                    key={interactionsWithSteps[currentViewIndex].interaction_id}
+                    style={{ height: "calc(100vh - 5rem)" }}
+                  >
                     <CompletedInteractionCard
                       interaction={interactionsWithSteps[currentViewIndex]}
                       stepName={interactionsWithSteps[currentViewIndex].isFirstInStep
