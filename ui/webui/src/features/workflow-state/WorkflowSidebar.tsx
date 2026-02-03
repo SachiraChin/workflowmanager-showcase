@@ -76,7 +76,7 @@ export function WorkflowSidebar({
 
   return (
     <div className="space-y-4">
-      {/* Execution Status */}
+      {/* TODO: Fix ExecutionStatus component - temporarily hidden
       <ExecutionStatus
         status={status}
         progress={progress}
@@ -86,6 +86,7 @@ export function WorkflowSidebar({
         error={error}
         statusDisplayFields={statusDisplayFields}
       />
+      */}
 
       {/* Action buttons */}
       <div className="flex gap-2">
