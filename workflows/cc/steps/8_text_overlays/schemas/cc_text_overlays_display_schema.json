@@ -22,7 +22,8 @@
             "type": "string",
             "_ux": {
               "display": true,
-              "render_as": "card-title"
+              "render_as": "card-title",
+              "nudges": ["copy"]
             }
           },
           "paragraphs": {
@@ -40,7 +41,8 @@
                   "type": "array",
                   "_ux": {
                     "display": true,
-                    "display_format": "{{ value | join('\n') }}"
+                    "display_format": "{{ value | join('\n') }}",
+                    "nudges": ["copy"]
                   }
                 }
               }

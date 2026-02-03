@@ -402,6 +402,15 @@ export function SelectInputRenderer({
     const valueIsCleared = !value || value === "";
 
     for (const [fieldName, config] of Object.entries(controls)) {
+      // Handle type="visibility" - show/hide target field based on selection
+      if (config.type === "visibility") {
+        // Get the stored value (not index) to compare with visible_when
+        const storedValue = inputSchemaContext.getValue(fieldKey);
+        const isVisible = storedValue === config.visible_when;
+        inputSchemaContext.setVisibility(fieldName, isVisible);
+        continue;
+      }
+
       // Handle type="value" - set target field value directly
       if (config.type === "value") {
         // If value is cleared, optionally reset the target field

@@ -440,35 +440,29 @@
                 "prompt_type": {
                   "type": "string",
                   "title": "Prompt Style",
-                  "enum": [
-                    {
-                      "key": "tag",
-                      "label": "Tag-based",
-                      "value": "{{ state.image_prompts.prompts.stable_diffusion.tag_prompt }}"
-                    },
-                    {
-                      "key": "natural",
-                      "label": "Natural Language",
-                      "value": "{{ state.image_prompts.prompts.stable_diffusion.natural_prompt }}"
-                    }
-                  ],
-                  "value_key": "key",
-                  "label_key": "label",
+                  "enum": ["tag", "natural"],
                   "default": "tag",
                   "_ux": {
-                    "input_type": "select"
+                    "input_type": "select",
+                    "enum_labels": {
+                      "tag": "Tag-based",
+                      "natural": "Natural Language"
+                    }
                   },
                   "controls": {
-                    "_text": {
-                      "type": "value",
-                      "value_path": ".value"
+                    "tag_prompt": {
+                      "type": "visibility",
+                      "visible_when": "tag"
+                    },
+                    "natural_prompt": {
+                      "type": "visibility",
+                      "visible_when": "natural"
                     }
                   }
                 },
-                "_text": {
+                "tag_prompt": {
                   "type": "string",
-                  "title": "Prompt",
-                  "destination_field": "prompt",
+                  "title": "Tag Prompt",
                   "_ux": {
                     "input_type": "textarea",
                     "col_span": "full",
@@ -476,10 +470,19 @@
                     "source_field": "tag_prompt"
                   }
                 },
+                "natural_prompt": {
+                  "type": "string",
+                  "title": "Natural Prompt",
+                  "_ux": {
+                    "input_type": "textarea",
+                    "col_span": "full",
+                    "rows": 4,
+                    "source_field": "natural_prompt"
+                  }
+                },
                 "negative_prompt": {
                   "type": "string",
                   "title": "Negative Prompt",
-                  "destination_field": "negative_prompt",
                   "_ux": {
                     "input_type": "textarea",
                     "col_span": "full",

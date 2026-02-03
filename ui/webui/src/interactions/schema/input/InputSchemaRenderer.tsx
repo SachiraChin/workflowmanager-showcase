@@ -17,7 +17,7 @@
  * - col_span: number | "full" (default: 1)
  */
 
-import type { InputSchema } from "./InputSchemaContext";
+import { useInputSchemaOptional, type InputSchema } from "./InputSchemaContext";
 import { getUx } from "../ux-utils";
 
 // Forward declaration to avoid circular import
@@ -54,6 +54,9 @@ export function InputSchemaRenderer({
 }: InputSchemaRendererProps) {
   const properties = schema.properties || {};
   const ux = schema._ux || {};
+
+  // Get visibility state from context (if available)
+  const inputSchemaContext = useInputSchemaOptional();
 
   // Layout configuration with defaults
   const layout = ux.layout || "grid";
@@ -98,6 +101,12 @@ export function InputSchemaRenderer({
       )}
       <div className={gridClassName} style={layoutStyle}>
         {Object.entries(properties).map(([key, fieldSchema]) => {
+          // Check visibility from context (default: visible)
+          const isVisible = inputSchemaContext?.isVisible(key) ?? true;
+          if (!isVisible) {
+            return null; // Skip rendering hidden fields
+          }
+
           const fieldUx = getUx(fieldSchema as Record<string, unknown>);
           const colSpan = fieldUx.col_span;
 

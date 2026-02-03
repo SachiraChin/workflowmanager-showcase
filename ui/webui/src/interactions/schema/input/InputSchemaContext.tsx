@@ -5,12 +5,14 @@
  * - Values management (get/set input values)
  * - Error management (validation errors per field)
  * - Dynamic options for controlled select fields
+ * - Visibility control for conditional field display
  * - Disabled/readonly state propagation
  * - Schema reference for validation rules
  *
  * Used by:
  * - InputSchemaComposer (provides the context)
  * - Input renderers (read/write values, display errors, get dynamic options)
+ * - InputSchemaRenderer (check field visibility)
  * - Consumers (validate and submit values via getMappedValues)
  */
 
@@ -90,6 +92,11 @@ export interface InputSchemaContextValue {
   alternativeMode: Record<string, boolean>;
   isAlternativeMode: (key: string) => boolean;
   setAlternativeMode: (key: string, active: boolean) => void;
+
+  // Visibility control for conditional field display
+  visibility: Record<string, boolean>;
+  isVisible: (key: string) => boolean;
+  setVisibility: (key: string, visible: boolean) => void;
 
   // State
   isValid: boolean;

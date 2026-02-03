@@ -447,10 +447,9 @@ class MediaGenerateModule(InteractiveModule):
         generation_params = params.get("params", {})
         source_data = params.get("source_data")
 
-        # Apply provider-specific parameter formatting
-        provider_instance = MediaProviderRegistry.get_optional(provider_name)
-        if provider_instance:
-            generation_params = provider_instance.format_params(generation_params)
+        # Note: Provider-specific parameter formatting (format_params) is now
+        # applied in the worker AFTER storing original params. This ensures
+        # request_params contains user's original input for UI restoration.
 
         logger.info(
             f"[MediaGenerate] sub_action: provider={provider_name}, "

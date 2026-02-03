@@ -183,8 +183,13 @@ export type InputType = "textarea" | "select" | "slider" | "checkbox" | "text" |
 
 /** Config for a controlled field - used by select and other input components */
 export interface ControlConfig {
-  /** Type of control - "enum" sets options, "value" sets value directly */
-  type: "enum" | "value";
+  /**
+   * Type of control:
+   * - "enum": sets options for a dependent select field
+   * - "value": sets value directly from selected object
+   * - "visibility": controls visibility of target field based on selection
+   */
+  type: "enum" | "value" | "visibility";
   /** Path to extract options from in the selected object (e.g., "params.sampler_combo") - for type="enum" */
   enum_path?: string;
   /** Path to extract value from in the selected object (e.g., ".value") - for type="value" */
@@ -199,6 +204,8 @@ export interface ControlConfig {
   default_index?: number;
   /** Reset field value when parent changes (default: false) */
   reset?: boolean;
+  /** Value that makes the target field visible - for type="visibility" */
+  visible_when?: unknown;
 }
 
 /** Input schema configuration - object schema with properties for input fields */

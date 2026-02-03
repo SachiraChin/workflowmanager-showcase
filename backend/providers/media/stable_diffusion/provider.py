@@ -793,25 +793,45 @@ class StableDiffusionProvider(MediaProviderBase):
 
     def format_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Apply category-specific prompt enforcement to generation parameters.
+        Apply prompt selection and category-specific enforcement.
 
-        Prepends positive_prompt_enforcement to prompt and appends
-        negative_prompt_enforcement to negative_prompt based on the
-        selected category.
+        First selects the correct prompt based on prompt_type:
+        - "tag": Uses tag_prompt field
+        - "natural": Uses natural_prompt field
+        - If neither, uses existing prompt field
+
+        Then applies category-specific enforcement:
+        - Prepends positive_prompt_enforcement to prompt
+        - Appends negative_prompt_enforcement to negative_prompt
 
         Args:
             params: Generation parameters dict containing:
+                - prompt_type: "tag" or "natural" for prompt selection
+                - tag_prompt: Tag-based prompt text
+                - natural_prompt: Natural language prompt text
                 - category: Category ID for enforcement lookup
-                - prompt: User's prompt text
                 - negative_prompt: User's negative prompt text
 
         Returns:
-            Modified params dict with enforcement applied.
-            Returns params unchanged if category not found or no enforcement.
+            Modified params dict with prompt selected and enforcement applied.
         """
-        category = params.get("category")
+        # Create a copy to avoid mutating the original
+        result = params.copy()
+
+        # Step 1: Select prompt based on prompt_type
+        prompt_type = result.get("prompt_type")
+        if prompt_type == "tag" and "tag_prompt" in result:
+            result["prompt"] = result["tag_prompt"]
+            logger.debug("[StableDiffusion] Using tag_prompt as prompt")
+        elif prompt_type == "natural" and "natural_prompt" in result:
+            result["prompt"] = result["natural_prompt"]
+            logger.debug("[StableDiffusion] Using natural_prompt as prompt")
+        # else: keep existing prompt (if any)
+
+        # Step 2: Apply category enforcement
+        category = result.get("category")
         if not category:
-            return params
+            return result
 
         # Get enforcement data (thread-safe read)
         with StableDiffusionProvider._metadata_cache_lock:
@@ -823,10 +843,7 @@ class StableDiffusionProvider(MediaProviderBase):
             logger.debug(
                 f"[StableDiffusion] No enforcement data for category: {category}"
             )
-            return params
-
-        # Create a copy to avoid mutating the original
-        result = params.copy()
+            return result
 
         # Apply positive prompt enforcement (prepend)
         positive_enforcement = enforcement.get("positive_prompt_enforcement", "")

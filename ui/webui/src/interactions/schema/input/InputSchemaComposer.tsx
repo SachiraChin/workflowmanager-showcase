@@ -205,6 +205,21 @@ export function InputSchemaComposer({
     []
   );
 
+  // Visibility control for conditional field display
+  const [visibility, setVisibilityState] = useState<Record<string, boolean>>({});
+
+  const isVisible = useCallback(
+    (key: string): boolean => visibility[key] ?? true, // Default to visible
+    [visibility]
+  );
+
+  const setVisibility = useCallback(
+    (key: string, visible: boolean) => {
+      setVisibilityState(prev => ({ ...prev, [key]: visible }));
+    },
+    []
+  );
+
   // Create context value
   const sourceData = (data || {}) as Record<string, unknown>;
   const contextValue = useMemo<InputSchemaContextValue>(() => ({
@@ -257,13 +272,18 @@ export function InputSchemaComposer({
     isAlternativeMode,
     setAlternativeMode,
 
+    // Visibility control for conditional field display
+    visibility,
+    isVisible,
+    setVisibility,
+
     // State
     isValid: Object.keys(errors).length === 0,
     disabled,
     readonly,
 
     inputSchema,
-  }), [sourceData, values, errors, getDynamicOptions, setDynamicOptions, alternativeMode, isAlternativeMode, setAlternativeMode, disabled, readonly, inputSchema]);
+  }), [sourceData, values, errors, getDynamicOptions, setDynamicOptions, alternativeMode, isAlternativeMode, setAlternativeMode, visibility, isVisible, setVisibility, disabled, readonly, inputSchema]);
 
   // Render input fields + children (other siblings from bracket syntax)
   return (

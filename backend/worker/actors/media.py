@@ -151,7 +151,8 @@ class MediaActor(ActorBase):
                 f"Provider {provider_name} does not support {action_type}"
             )
 
-        # Create metadata record in database
+        # Create metadata record in database with ORIGINAL params
+        # (before format_params enrichment, so UI can restore user's actual input)
         metadata_id = self._db.content_repo.store_generation(
             workflow_run_id=workflow_run_id,
             interaction_id=interaction_id,
@@ -163,9 +164,14 @@ class MediaActor(ActorBase):
         )
 
         try:
-            # Prepare arguments based on action type
-            prompt = params.get("prompt", "")
-            method_params = {k: v for k, v in params.items() if k != "prompt"}
+            # Apply provider-specific parameter formatting AFTER storage
+            # This enriches prompts (e.g., Stable Diffusion adds enforcement text)
+            # but we store original params so UI can restore user's actual input
+            generation_params = provider.format_params(params)
+
+            # Prepare arguments based on action type (using enriched params)
+            prompt = generation_params.get("prompt", "")
+            method_params = {k: v for k, v in generation_params.items() if k != "prompt"}
 
             # Extract additional fields from source_data that may not be in params
             # (e.g., negative_prompt for Stable Diffusion)
@@ -188,7 +194,7 @@ class MediaActor(ActorBase):
             if action_type == "txt2img":
                 result = method(prompt, method_params, progress_callback=progress_callback)
             elif action_type in ("img2img", "img2vid"):
-                source_image = params.get("source_image")
+                source_image = generation_params.get("source_image")
 
                 # For img2vid, if source_image not in params, look up from interaction event
                 if not source_image and action_type == "img2vid":
