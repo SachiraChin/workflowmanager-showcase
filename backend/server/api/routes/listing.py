@@ -53,9 +53,20 @@ async def list_workflow_templates(
         versions = db.version_repo.get_raw_versions_for_template(template_id, limit=version_limit)
 
         if versions:
+            # Get workflow name from the latest version's resolved_workflow
+            workflow_name = None
+            latest_version = versions[0] if versions else None
+            if latest_version:
+                resolved = db.version_repo.get_resolved_workflow(
+                    latest_version.get("workflow_version_id")
+                )
+                if resolved:
+                    workflow_name = resolved.get("name")
+
             result.append({
                 "template_name": template.get("workflow_template_name"),
                 "template_id": template_id,
+                "name": workflow_name,  # Human-readable name from workflow JSON
                 "versions": versions
             })
 

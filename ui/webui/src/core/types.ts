@@ -166,6 +166,7 @@ export interface WorkflowVersion {
 export interface WorkflowTemplate {
   template_name: string;
   template_id: string;
+  name?: string;  // Human-readable name from workflow JSON
   versions: WorkflowVersion[];
 }
 

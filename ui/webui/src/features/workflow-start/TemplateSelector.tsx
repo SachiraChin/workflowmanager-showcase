@@ -152,7 +152,7 @@ export function TemplateSelector({
           <SelectContent>
             {templates.map((template) => (
               <SelectItem key={template.template_id} value={template.template_id}>
-                {template.template_name}
+                {template.name || template.template_name}
               </SelectItem>
             ))}
           </SelectContent>
