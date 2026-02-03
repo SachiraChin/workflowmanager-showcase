@@ -557,7 +557,7 @@ export function AudioGeneration({
               track={track}
               isSelected={selectedContentId === track.contentId}
               isPlaying={playingId === track.contentId}
-              onSelect={() => onSelectContent(track.contentId)}
+              onSelect={() => !readonly && onSelectContent(track.contentId)}
               onPlay={() => {
                 // Stop any currently playing track
                 setPlayingId(track.contentId);
@@ -565,7 +565,7 @@ export function AudioGeneration({
               onPause={() => {
                 setPlayingId(null);
               }}
-              disabled={readonly}
+              disabled={false}
             />
           ))}
         </div>
