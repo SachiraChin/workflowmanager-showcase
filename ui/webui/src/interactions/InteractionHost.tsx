@@ -63,6 +63,8 @@ interface RetryableOption {
   shortcut?: string;
   target_module?: string;
   target_step?: string;
+  /** Hide this option from footer */
+  hidden?: boolean;
   feedback?: {
     enabled?: boolean;
     per_group?: boolean;
@@ -79,6 +81,8 @@ interface RetryableConfig {
     per_group?: boolean;
     global?: boolean;
   };
+  /** Hide retryable buttons from footer */
+  hidden?: boolean;
 }
 
 interface InteractionHostProps {
@@ -276,10 +280,11 @@ function InteractionFooterInner({
 }: InteractionFooterInnerProps) {
   const { request, disabled } = useInteractionFooterContext();
 
-  // Retryable config
+  // Retryable config - filter out hidden options (same pattern as SubActions)
   const retryable = (request.display_data?.retryable || {}) as RetryableConfig;
-  const hasRetryableOptions = retryable.options && retryable.options.length > 0;
-  const showGlobalFeedback = retryable.feedback?.global === true;
+  const visibleRetryableOptions = (retryable.options || []).filter((opt) => !opt.hidden);
+  const hasRetryableOptions = !retryable.hidden && visibleRetryableOptions.length > 0;
+  const showGlobalFeedback = !retryable.hidden && retryable.feedback?.global === true;
 
   // Sub-actions from context (already filtered for visible only)
   const { visibleSubActions, state: subActionState, trigger: triggerSubAction, clearError } = useSubAction();
@@ -395,8 +400,8 @@ function InteractionFooterInner({
           )}
 
           {hasRetryableOptions ? (
-            // Render retryable options
-            retryable.options!.map((option) => {
+            // Render visible retryable options (hidden ones filtered out)
+            visibleRetryableOptions.map((option) => {
               const isContinue = option.mode === "continue";
               const isRetrySelected = option.mode === "retry_selected";
               const isRetryWithFeedback =
