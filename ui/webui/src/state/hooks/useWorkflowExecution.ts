@@ -272,19 +272,7 @@ export function useWorkflowExecution() {
       };
 
       try {
-        const response = await fetch(`${API_URL}/workflow/start`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify(requestWithCapabilities),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.detail || `HTTP ${response.status}`);
-        }
-
-        const data = await response.json();
+        const data = await api.startWorkflow(requestWithCapabilities);
 
         // Check if version confirmation is required
         if (data.result?.requires_confirmation) {
@@ -382,19 +370,8 @@ export function useWorkflowExecution() {
     };
 
     try {
-      const response = await fetch(`${API_URL}/workflow/start/confirm`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(requestWithCapabilities),
-      });
+      const data = await api.confirmWorkflowStart(requestWithCapabilities);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || `HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
       actions.startWorkflow(data.workflow_run_id, request.project_name);
       actions.setStatus(data.status);
 
@@ -448,7 +425,7 @@ export function useWorkflowExecution() {
       try {
         actions.setConnected(true);
 
-        // Debug: log what we're sending
+        // Build request
         const requestBody = {
           workflow_run_id: currentWorkflowRunId,
           interaction_id: interaction.interaction_id,
@@ -465,48 +442,72 @@ export function useWorkflowExecution() {
           signal: controller.signal,
         });
 
-        if (!fetchResponse.ok) {
+        // Handle 401 - try to refresh token and retry
+        if (fetchResponse.status === 401) {
+          try {
+            await api.refreshToken();
+            // Retry the request
+            const retryResponse = await fetch(url, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify(requestBody),
+              signal: controller.signal,
+            });
+            if (!retryResponse.ok) {
+              throw new Error(`HTTP ${retryResponse.status}: ${retryResponse.statusText}`);
+            }
+            // Continue with retry response
+            await processStreamResponse(retryResponse);
+          } catch (refreshError) {
+            throw new Error("Session expired. Please log in again.");
+          }
+        } else if (!fetchResponse.ok) {
           throw new Error(`HTTP ${fetchResponse.status}: ${fetchResponse.statusText}`);
+        } else {
+          await processStreamResponse(fetchResponse);
         }
 
-        // Track this as a completed interaction
-        // Note: step_id and module_name are populated when fetching history from server
-        const completedInteraction: CompletedInteraction = {
-          interaction_id: interaction.interaction_id,
-          request: interaction,
-          response,
-          timestamp: new Date().toISOString(),
-        };
-        actions.addCompletedInteraction(completedInteraction);
+        // Helper to process the stream response
+        async function processStreamResponse(streamResponse: Response) {
+          // Track this as a completed interaction
+          const completedInteraction: CompletedInteraction = {
+            interaction_id: interaction.interaction_id,
+            request: interaction,
+            response,
+            timestamp: new Date().toISOString(),
+          };
+          actions.addCompletedInteraction(completedInteraction);
 
-        const reader = fetchResponse.body?.getReader();
-        if (!reader) {
-          throw new Error("No response body");
-        }
+          const reader = streamResponse.body?.getReader();
+          if (!reader) {
+            throw new Error("No response body");
+          }
 
-        const decoder = new TextDecoder();
-        let buffer = "";
-        let currentEventType: SSEEventType | null = null;
+          const decoder = new TextDecoder();
+          let buffer = "";
+          let currentEventType: SSEEventType | null = null;
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
 
-          buffer += decoder.decode(value, { stream: true });
+            buffer += decoder.decode(value, { stream: true });
 
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || "";
-          for (const line of lines) {
-            if (line.startsWith("event: ")) {
-              currentEventType = line.slice(7).trim() as SSEEventType;
-            } else if (line.startsWith("data: ") && currentEventType) {
-              try {
-                const data = JSON.parse(line.slice(6));
-                handleSSEEvent(currentEventType, data);
-              } catch (e) {
-                console.error("Failed to parse SSE data", e);
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
+            for (const line of lines) {
+              if (line.startsWith("event: ")) {
+                currentEventType = line.slice(7).trim() as SSEEventType;
+              } else if (line.startsWith("data: ") && currentEventType) {
+                try {
+                  const data = JSON.parse(line.slice(6));
+                  handleSSEEvent(currentEventType, data);
+                } catch (e) {
+                  console.error("Failed to parse SSE data", e);
+                }
+                currentEventType = null;
               }
-              currentEventType = null;
             }
           }
         }
@@ -534,10 +535,7 @@ export function useWorkflowExecution() {
     disconnect();
 
     try {
-      await fetch(`${API_URL}/workflow/${currentWorkflowRunId}/cancel`, {
-        method: "POST",
-        credentials: "include",
-      });
+      await api.cancel(currentWorkflowRunId);
     } catch (e) {
       console.error("Failed to cancel workflow", e);
     }
@@ -578,16 +576,8 @@ export function useWorkflowExecution() {
 
       try {
         // Call /resume endpoint - returns same response as /start
-        const response = await fetch(`${API_URL}/workflow/${resumeWorkflowRunId}/resume`, {
-          method: "POST",
-          credentials: "include",
-        });
+        const data = await api.resume(resumeWorkflowRunId);
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-
-        const data = await response.json();
         actions.setStatus(data.status);
 
         if (data.progress) {
@@ -639,23 +629,12 @@ export function useWorkflowExecution() {
       setVersionConfirmation({ pending: false });
 
       try {
-        const response = await fetch(`${API_URL}/workflow/${resumeWorkflowRunId}/resume`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            workflow_content: workflowContent,
-            workflow_entry_point: entryPoint,
-            capabilities: WEBUI_CAPABILITIES,
-          }),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.detail || `HTTP ${response.status}`);
-        }
-
-        const data = await response.json();
+        const data = await api.resumeWithContent(
+          resumeWorkflowRunId,
+          workflowContent,
+          entryPoint,
+          WEBUI_CAPABILITIES
+        );
 
         // Check if version confirmation is required
         if (data.result?.requires_confirmation) {
@@ -708,23 +687,13 @@ export function useWorkflowExecution() {
       setVersionConfirmation({ pending: false });
 
       try {
-        const response = await fetch(`${API_URL}/workflow/${resumeWorkflowRunId}/resume/confirm`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            workflow_content: resumeContent,
-            workflow_entry_point: resumeEntryPoint,
-            capabilities: WEBUI_CAPABILITIES,
-          }),
-        });
+        const data = await api.confirmResume(
+          resumeWorkflowRunId,
+          resumeContent!,
+          resumeEntryPoint,
+          WEBUI_CAPABILITIES
+        );
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.detail || `HTTP ${response.status}`);
-        }
-
-        const data = await response.json();
         actions.startWorkflow(data.workflow_run_id, data.project_name || "");
         actions.setStatus(data.status);
 

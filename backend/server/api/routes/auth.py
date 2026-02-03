@@ -23,6 +23,7 @@ from ..auth import (
     verify_refresh_token,
     set_auth_cookies,
     clear_auth_cookies,
+    TOKEN_ROTATION_GRACE_SECONDS,
 )
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
@@ -179,7 +180,9 @@ async def refresh_token(
     """
     Refresh the access token using the refresh token cookie.
 
-    Also rotates the refresh token for security.
+    Also rotates the refresh token for security, with a grace period
+    for multi-tab scenarios where the same old token may be used by
+    multiple browser tabs.
     """
     if not db:
         raise HTTPException(status_code=503, detail="Service not initialized")
@@ -196,8 +199,10 @@ async def refresh_token(
         clear_auth_cookies(response)
         raise
 
-    # Check if token exists in database and is not revoked
-    db_token = db.user_repo.get_refresh_token(payload["token_id"])
+    # Check if token exists in database (include rotated tokens for grace period)
+    db_token = db.user_repo.get_refresh_token(
+        payload["token_id"], include_rotated=True
+    )
     if not db_token:
         clear_auth_cookies(response)
         raise HTTPException(status_code=401, detail="Refresh token revoked or expired")
@@ -207,14 +212,46 @@ async def refresh_token(
         clear_auth_cookies(response)
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
+    # Check if token was already rotated (multi-tab scenario)
+    if db_token.get("rotated_at"):
+        rotated_at = db_token["rotated_at"]
+        seconds_since_rotation = (datetime.utcnow() - rotated_at).total_seconds()
+
+        if seconds_since_rotation > TOKEN_ROTATION_GRACE_SECONDS:
+            # Outside grace period - reject
+            clear_auth_cookies(response)
+            raise HTTPException(status_code=401, detail="Refresh token already used")
+
+        # Within grace period - issue fresh tokens for this tab too
+        # This handles multi-tab scenarios where both tabs had the same old token
+        user = db.user_repo.get_user(payload["user_id"])
+        if not user or not user.get("is_active", True):
+            clear_auth_cookies(response)
+            raise HTTPException(status_code=401, detail="User not found or disabled")
+
+        # Create new tokens for this tab
+        access_token = create_access_token(user["user_id"], user["email"])
+        new_refresh_token, token_id, expires_at = create_refresh_token(user["user_id"])
+
+        # Store new refresh token
+        user_agent, ip_address = get_client_info(request)
+        db.user_repo.store_refresh_token(
+            token_id=token_id,
+            user_id=user["user_id"],
+            token_hash=hash_refresh_token(new_refresh_token),
+            expires_at=expires_at,
+            user_agent=user_agent,
+            ip_address=ip_address
+        )
+
+        set_auth_cookies(response, access_token, new_refresh_token)
+        return MessageResponse(message="Token refreshed (grace period)")
+
     # Get user
     user = db.user_repo.get_user(payload["user_id"])
     if not user or not user.get("is_active", True):
         clear_auth_cookies(response)
         raise HTTPException(status_code=401, detail="User not found or disabled")
-
-    # Revoke old refresh token
-    db.user_repo.revoke_refresh_token(payload["token_id"])
 
     # Create new tokens
     access_token = create_access_token(user["user_id"], user["email"])
@@ -230,6 +267,10 @@ async def refresh_token(
         user_agent=user_agent,
         ip_address=ip_address
     )
+
+    # Rotate old refresh token (mark as rotated, not revoked)
+    # This allows other tabs to use the old token during grace period
+    db.user_repo.rotate_refresh_token(payload["token_id"], token_id)
 
     # Set new cookies
     set_auth_cookies(response, access_token, new_refresh_token)

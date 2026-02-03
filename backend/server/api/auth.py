@@ -25,8 +25,12 @@ JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "dev-secret-key-change-in-prod
 JWT_ALGORITHM = "HS256"
 
 # Token expiration times
-ACCESS_TOKEN_EXPIRE_MINUTES = 15
-REFRESH_TOKEN_EXPIRE_DAYS = 7
+ACCESS_TOKEN_EXPIRE_MINUTES = 60
+REFRESH_TOKEN_EXPIRE_DAYS = 14
+
+# Grace period for token rotation (seconds)
+# Old tokens remain valid briefly after rotation to handle multi-tab scenarios
+TOKEN_ROTATION_GRACE_SECONDS = 60
 
 # Cookie settings
 COOKIE_SECURE = os.environ.get("COOKIE_SECURE", "false").lower() == "true"  # Set True in production (HTTPS)

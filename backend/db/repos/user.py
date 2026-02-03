@@ -200,25 +200,32 @@ class UserRepository(BaseRepository):
         self.refresh_tokens.insert_one(doc)
         return doc
 
-    def get_refresh_token(self, token_id: str) -> Optional[Dict[str, Any]]:
+    def get_refresh_token(
+        self, token_id: str, include_rotated: bool = False
+    ) -> Optional[Dict[str, Any]]:
         """
         Get a refresh token by its ID.
 
         Only returns active (non-revoked, non-expired) tokens.
+        If include_rotated=True, also returns recently rotated tokens
+        (for grace period handling in multi-tab scenarios).
 
         Args:
             token_id: The token ID from the JWT
+            include_rotated: If True, include tokens with rotated_at set
 
         Returns:
             Token document or None
         """
-        return self.refresh_tokens.find_one(
-            {
-                "token_id": token_id,
-                "revoked_at": None,
-                "expires_at": {"$gt": datetime.utcnow()},
-            }
-        )
+        query = {
+            "token_id": token_id,
+            "revoked_at": None,
+            "expires_at": {"$gt": datetime.utcnow()},
+        }
+        if not include_rotated:
+            # Only get tokens that haven't been rotated
+            query["rotated_at"] = None
+        return self.refresh_tokens.find_one(query)
 
     def update_refresh_token_usage(self, token_id: str) -> bool:
         """Update the last_used_at timestamp for a refresh token."""
@@ -241,6 +248,58 @@ class UserRepository(BaseRepository):
             {"token_id": token_id}, {"$set": {"revoked_at": datetime.utcnow()}}
         )
         return result.modified_count > 0
+
+    def rotate_refresh_token(
+        self, old_token_id: str, new_token_id: str
+    ) -> bool:
+        """
+        Mark a refresh token as rotated (not revoked).
+
+        Rotated tokens remain valid during a grace period to handle
+        multi-tab scenarios where multiple tabs may try to refresh
+        using the same old token.
+
+        Args:
+            old_token_id: The token ID being rotated out
+            new_token_id: The new token ID that replaces it
+
+        Returns:
+            True if token was rotated, False if not found
+        """
+        result = self.refresh_tokens.update_one(
+            {"token_id": old_token_id, "rotated_at": None},
+            {
+                "$set": {
+                    "rotated_at": datetime.utcnow(),
+                    "successor_token_id": new_token_id,
+                }
+            },
+        )
+        return result.modified_count > 0
+
+    def get_successor_token(self, old_token_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get the successor token for a rotated token.
+
+        Used when a rotated token is presented during grace period.
+
+        Args:
+            old_token_id: The rotated token ID
+
+        Returns:
+            Successor token document or None
+        """
+        old_token = self.refresh_tokens.find_one({"token_id": old_token_id})
+        if not old_token or not old_token.get("successor_token_id"):
+            return None
+
+        return self.refresh_tokens.find_one(
+            {
+                "token_id": old_token["successor_token_id"],
+                "revoked_at": None,
+                "expires_at": {"$gt": datetime.utcnow()},
+            }
+        )
 
     def revoke_all_user_refresh_tokens(self, user_id: str) -> int:
         """

@@ -5,6 +5,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { API_URL } from "@/core/config";
+import { api } from "@/core/api";
 
 interface UseWorkflowStateOptions {
   baseUrl?: string;
@@ -118,20 +119,14 @@ export function useWorkflowState(
     if (!workflowRunId) return;
 
     try {
-      const response = await fetch(`${baseUrl}/workflow/${workflowRunId}/state/v2`, {
-        credentials: "include",
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      const data = await response.json();
+      const data = await api.getStateV2(workflowRunId);
       const newState = data.state || {};
       setState(newState);
       onStateChange?.(newState);
     } catch (e) {
       setError((e as Error).message);
     }
-  }, [baseUrl, workflowRunId, onStateChange]);
+  }, [workflowRunId, onStateChange]);
 
   /**
    * Update state at a specific path (for debugging purposes).

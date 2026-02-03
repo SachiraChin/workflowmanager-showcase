@@ -176,9 +176,67 @@ class ApiClient {
     });
   }
 
+  /**
+   * Resume an existing workflow.
+   * Returns current state and pending interaction if any.
+   */
+  async resume(workflowRunId: string): Promise<WorkflowResponse> {
+    return this.request<WorkflowResponse>(`/workflow/${workflowRunId}/resume`, {
+      method: "POST",
+    });
+  }
+
+  /**
+   * Resume workflow with updated content.
+   * May return requires_confirmation if version changed.
+   */
+  async resumeWithContent(
+    workflowRunId: string,
+    workflowContent: string | Record<string, unknown>,
+    entryPoint?: string,
+    capabilities?: string[]
+  ): Promise<WorkflowResponse> {
+    return this.request<WorkflowResponse>(`/workflow/${workflowRunId}/resume`, {
+      method: "POST",
+      body: JSON.stringify({
+        workflow_content: workflowContent,
+        workflow_entry_point: entryPoint,
+        capabilities,
+      }),
+    });
+  }
+
+  /**
+   * Confirm version change and resume workflow.
+   */
+  async confirmResume(
+    workflowRunId: string,
+    workflowContent: string | Record<string, unknown>,
+    entryPoint?: string,
+    capabilities?: string[]
+  ): Promise<WorkflowResponse> {
+    return this.request<WorkflowResponse>(`/workflow/${workflowRunId}/resume/confirm`, {
+      method: "POST",
+      body: JSON.stringify({
+        workflow_content: workflowContent,
+        workflow_entry_point: entryPoint,
+        capabilities,
+      }),
+    });
+  }
+
   async getState(workflowRunId: string): Promise<Record<string, unknown>> {
     return this.request<Record<string, unknown>>(
       `/workflow/${workflowRunId}/state`
+    );
+  }
+
+  /**
+   * Get hierarchical workflow state (v2 endpoint).
+   */
+  async getStateV2(workflowRunId: string): Promise<{ state: Record<string, unknown> }> {
+    return this.request<{ state: Record<string, unknown> }>(
+      `/workflow/${workflowRunId}/state/v2`
     );
   }
 
@@ -391,7 +449,8 @@ class ApiClient {
     email: string;
     username: string;
   }> {
-    return this.requestRaw<{
+    // Use request (with auth retry) so expired access tokens trigger refresh
+    return this.request<{
       user_id: string;
       email: string;
       username: string;
@@ -483,11 +542,17 @@ class ApiClient {
   /**
    * Respond to an interaction and stream the continuation.
    * Uses the /stream/respond endpoint that combines respond + stream.
+   *
+   * @param request - The respond request
+   * @param onEvent - Called for each SSE event
+   * @param onError - Called on error
+   * @param onStart - Called after request succeeds but before streaming (for tracking completed interactions)
    */
   streamRespond(
     request: RespondRequest,
     onEvent: (eventType: SSEEventType, data: Record<string, unknown>) => void,
-    onError?: (error: Error) => void
+    onError?: (error: Error) => void,
+    onStart?: () => void
   ): () => void {
     const url = `${this.baseUrl}/workflow/${request.workflow_run_id}/stream/respond`;
 
@@ -512,6 +577,9 @@ class ApiClient {
         };
 
         const response = await this.withAuth(doFetch);
+
+        // Request succeeded - notify caller before streaming
+        onStart?.();
 
         const reader = response.body?.getReader();
         if (!reader) {
