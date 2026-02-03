@@ -216,13 +216,6 @@ class StateRepository(BaseRepository):
                 while f"{event_type}.{n}" in module_data:
                     n += 1
                 module_data[f"{event_type}.{n}"] = data_with_metadata
-
-            if event_type == "module_completed" or event_type == "sub_action_completed":
-                # Extract state-mapped values
-                state_mapped = data.get("_state_mapped")
-                if state_mapped:
-                    for state_key, value in state_mapped.items():
-                        result["state_mapped"][state_key] = value
                 
         return result
 
@@ -247,7 +240,7 @@ class StateRepository(BaseRepository):
 
         # Add file tree (includes all branches, organized appropriately)
         state["files"] = self._build_file_tree(workflow_run_id)
-        state["state_server"] = self.get_module_outputs(workflow_run_id, branch_id)
+        state["state_mapped"] = self.get_module_outputs(workflow_run_id, branch_id)
 
         return state
 
