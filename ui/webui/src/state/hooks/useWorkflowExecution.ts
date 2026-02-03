@@ -22,6 +22,7 @@ import type {
   SSEEventType,
   StartWorkflowRequest,
   StartWorkflowByVersionRequest,
+  VersionConfirmationResult,
   VersionDiff,
 } from "@/core/types";
 import { WEBUI_CAPABILITIES } from "@/lib/capabilities";
@@ -276,11 +277,12 @@ export function useWorkflowExecution() {
 
         // Check if version confirmation is required
         if (data.result?.requires_confirmation) {
+          const result = data.result as unknown as VersionConfirmationResult;
           setVersionConfirmation({
             pending: true,
-            diff: data.result.version_diff,
-            oldHash: data.result.old_hash,
-            newHash: data.result.new_hash,
+            diff: result.version_diff,
+            oldHash: result.old_hash,
+            newHash: result.new_hash,
             request,
           });
           return data;
@@ -469,11 +471,12 @@ export function useWorkflowExecution() {
         }
 
         // Helper to process the stream response
+        // Note: We capture previousInteraction which is guaranteed non-null at this point
         async function processStreamResponse(streamResponse: Response) {
           // Track this as a completed interaction
           const completedInteraction: CompletedInteraction = {
-            interaction_id: interaction.interaction_id,
-            request: interaction,
+            interaction_id: previousInteraction.interaction_id,
+            request: previousInteraction,
             response,
             timestamp: new Date().toISOString(),
           };
@@ -638,11 +641,12 @@ export function useWorkflowExecution() {
 
         // Check if version confirmation is required
         if (data.result?.requires_confirmation) {
+          const result = data.result as unknown as VersionConfirmationResult;
           setVersionConfirmation({
             pending: true,
-            diff: data.result.version_diff,
-            oldHash: data.result.old_hash,
-            newHash: data.result.new_hash,
+            diff: result.version_diff,
+            oldHash: result.old_hash,
+            newHash: result.new_hash,
             // Store resume-specific data for confirm
             resumeWorkflowRunId,
             resumeContent: workflowContent,
@@ -652,7 +656,9 @@ export function useWorkflowExecution() {
         }
 
         // No confirmation needed - workflow resumed
-        actions.startWorkflow(data.workflow_run_id, data.project_name || "");
+        // Note: project_name comes from result for resume operations
+        const projectName = (data.result?.project_name as string) || "";
+        actions.startWorkflow(data.workflow_run_id, projectName);
         actions.setStatus(data.status);
 
         if (data.progress) {
@@ -694,7 +700,9 @@ export function useWorkflowExecution() {
           WEBUI_CAPABILITIES
         );
 
-        actions.startWorkflow(data.workflow_run_id, data.project_name || "");
+        // Note: project_name comes from result for confirm resume operations
+        const confirmProjectName = (data.result?.project_name as string) || "";
+        actions.startWorkflow(data.workflow_run_id, confirmProjectName);
         actions.setStatus(data.status);
 
         if (data.progress) {

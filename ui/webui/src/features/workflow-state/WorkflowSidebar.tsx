@@ -10,7 +10,8 @@
 import { LogOut, RefreshCw, Layers, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ExecutionStatus } from "./ExecutionStatus";
+// TODO: Re-enable when ExecutionStatus is fixed
+// import { ExecutionStatus } from "./ExecutionStatus";
 import { useWorkflowStore } from "@/state/workflow-store";
 import type { WorkflowProgress, WorkflowStatus } from "@/core/types";
 
@@ -59,18 +60,27 @@ interface WorkflowSidebarProps {
 
 export function WorkflowSidebar({
   pageState,
-  status,
-  progress,
-  isProcessing,
-  elapsedMs,
-  lastMessage,
-  error,
-  statusDisplayFields,
+  // TODO: Re-enable when ExecutionStatus is fixed
+  status: _status,
+  progress: _progress,
+  isProcessing: _isProcessing,
+  elapsedMs: _elapsedMs,
+  lastMessage: _lastMessage,
+  error: _error,
+  statusDisplayFields: _statusDisplayFields,
   projectName,
   workflowRunId,
   onCancel,
   onRestart,
 }: WorkflowSidebarProps) {
+  // Suppress unused variable warnings for temporarily disabled props
+  void _status;
+  void _progress;
+  void _isProcessing;
+  void _elapsedMs;
+  void _lastMessage;
+  void _error;
+  void _statusDisplayFields;
   const viewMode = useWorkflowStore((s) => s.viewMode);
   const toggleViewMode = useWorkflowStore((s) => s.toggleViewMode);
 
