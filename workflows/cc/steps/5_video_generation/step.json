@@ -120,6 +120,7 @@
             "label": "Regenerate video prompts",
             "shortcut": "r",
             "target_module": "generate_video_prompts",
+            "hidden": true,
             "feedback": {
               "enabled": true,
               "prompt": "What should be different?",
@@ -131,12 +132,14 @@
             "mode": "jump",
             "label": "Change motion elements",
             "target_step": "video_generation",
+            "hidden": true,
             "target_module": "select_motion_elements"
           },
           {
             "id": "change_image",
             "mode": "jump",
             "label": "Go back to image selection",
+            "hidden": true,
             "target_step": "image_prompts",
             "target_module": "generate_and_select_images"
           }

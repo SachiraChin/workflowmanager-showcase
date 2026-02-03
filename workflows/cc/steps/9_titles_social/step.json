@@ -80,6 +80,7 @@
             "mode": "retry",
             "label": "Regenerate titles & descriptions",
             "shortcut": "r",
+            "hidden": true,
             "target_module": "generate_titles_social",
             "feedback": {
               "enabled": true,

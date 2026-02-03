@@ -92,6 +92,7 @@
             "mode": "retry",
             "label": "Regenerate music prompts",
             "shortcut": "r",
+            "hidden": true,
             "target_module": "generate_music_prompts",
             "feedback": {
               "enabled": true,

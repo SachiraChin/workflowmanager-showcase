@@ -104,6 +104,7 @@
             "label": "Regenerate prompts",
             "shortcut": "r",
             "target_module": "generate_image_prompts",
+            "hidden": true,
             "feedback": {
               "enabled": true,
               "prompt": "What should be different?",
@@ -113,6 +114,7 @@
           {
             "id": "change_scene",
             "mode": "jump",
+            "hidden": true,
             "label": "Choose different scene",
             "target_step": "scene_generation",
             "target_module": "select_scene"

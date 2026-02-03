@@ -80,6 +80,7 @@
             "mode": "retry",
             "label": "Regenerate text",
             "shortcut": "r",
+            "hidden": true,
             "target_module": "generate_text_overlays",
             "feedback": {
               "enabled": true,
