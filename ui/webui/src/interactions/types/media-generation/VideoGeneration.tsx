@@ -7,8 +7,8 @@
  * - Video-specific action types
  *
  * Manages its own local state:
- * - generations, loading, progress, error, preview
- * - savedCrop, showCropModal (video-specific)
+ * - generations, queue state (via useGenerationQueue hook)
+ * - preview, savedCrop, showCropModal (video-specific)
  */
 
 import { useState, useEffect, useCallback } from "react";
@@ -20,12 +20,12 @@ import { api } from "@/core/api";
 import { toMediaUrl } from "@/core/config";
 import { useInputSchemaOptional, pathToKey } from "../../schema/input/InputSchemaContext";
 import { useMediaGeneration } from "./MediaGenerationContext";
+import { useGenerationQueue } from "./useGenerationQueue";
 import { MediaGrid } from "./MediaGrid";
 import { CropSelectionModal } from "./CropSelectionModal";
 import type { SchemaProperty, UxConfig } from "../../schema/types";
 import type {
   GenerationResult,
-  ProgressState,
   PreviewInfo,
   CropState,
   CropRegion,
@@ -73,13 +73,22 @@ export function VideoGeneration({
   const { request } = useInteraction();
   const workflowRunId = useWorkflowStore((s) => s.workflowRunId);
 
+  // Extract from context (must be before hooks that use these values)
+  const subActions = mediaContext?.subActions ?? [];
+  const selectedContentId = mediaContext?.selectedContentId ?? null;
+  const onSelectContent = mediaContext?.onSelectContent ?? (() => {});
+  const registerGeneration = mediaContext?.registerGeneration ?? (() => {});
+  const rootData = mediaContext?.rootData ?? {};
+  const readonly = mediaContext?.readonly ?? false;
+  const disabled = mediaContext?.disabled ?? false;
+
   // LOCAL state
   const [generations, setGenerations] = useState<GenerationResult[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [progress, setProgress] = useState<ProgressState | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<PreviewInfo | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+
+  // Queue management for concurrent generation tasks
+  const queue = useGenerationQueue(generations.length, disabled);
 
   // Video-specific: crop state
   const [savedCrop, setSavedCrop] = useState<CropState | null>(null);
@@ -94,15 +103,6 @@ export function VideoGeneration({
   const provider = ux.provider;
   const promptId = ux.prompt_id || "default";
   const promptKey = pathToKey(path);
-
-  // Extract from context
-  const subActions = mediaContext?.subActions ?? [];
-  const selectedContentId = mediaContext?.selectedContentId ?? null;
-  const onSelectContent = mediaContext?.onSelectContent ?? (() => {});
-  const registerGeneration = mediaContext?.registerGeneration ?? (() => {});
-  const rootData = mediaContext?.rootData ?? {};
-  const readonly = mediaContext?.readonly ?? false;
-  const disabled = mediaContext?.disabled ?? false;
 
   // Get source image from root data (for img2vid)
   const sourceImageData = rootData._source_image as {
@@ -194,10 +194,13 @@ export function VideoGeneration({
     async (params: Record<string, unknown>, cropRegion?: CropRegion) => {
       if (!mediaContext || !workflowRunId || !provider) return;
 
+      // Start tracking this task in the queue
+      const taskId = queue.actions.startTask();
+
       // Get sub_action_id from first available sub_action in context
       const subActionId = subActions[0]?.id;
       if (!subActionId) {
-        setError("No sub-action configured");
+        queue.actions.failTask(taskId, "No sub-action configured");
         return;
       }
 
@@ -212,10 +215,6 @@ export function VideoGeneration({
       if (cropRegion) {
         finalParams.crop_region = cropRegion;
       }
-
-      setLoading(true);
-      setProgress({ elapsed_ms: 0, message: "Starting..." });
-      setError(null);
 
       // Build generic sub-action request with all params
       const subActionRequest: SubActionRequest = {
@@ -236,9 +235,11 @@ export function VideoGeneration({
       ) => {
         switch (eventType) {
           case "progress": {
+            // Re-enable button after first progress event
+            queue.actions.onStreamStarted();
             // Handle both flat (message) and nested (progress.message) formats
             const progressData = eventData.progress as Record<string, unknown> | undefined;
-            setProgress({
+            queue.actions.updateProgress(taskId, {
               elapsed_ms: (progressData?.elapsed_ms ?? eventData.elapsed_ms ?? 0) as number,
               message: (progressData?.message ?? eventData.message ?? "") as string,
             });
@@ -246,6 +247,8 @@ export function VideoGeneration({
           }
 
           case "complete": {
+            // Remove task from queue
+            queue.actions.completeTask(taskId);
             // Result is in sub_action_result for clean separation
             const subActionResult = eventData.sub_action_result as Record<string, unknown> | undefined;
             if (subActionResult) {
@@ -257,15 +260,11 @@ export function VideoGeneration({
               setGenerations((prev) => [...prev, result]);
               registerGeneration(promptKey, result);
             }
-            setLoading(false);
-            setProgress(null);
             break;
           }
 
           case "error":
-            setError(eventData.message as string);
-            setLoading(false);
-            setProgress(null);
+            queue.actions.failTask(taskId, eventData.message as string);
             // Clear saved crop on error
             setSavedCrop(null);
             break;
@@ -273,9 +272,7 @@ export function VideoGeneration({
       };
 
       const handleError = (err: Error) => {
-        setError(err.message);
-        setLoading(false);
-        setProgress(null);
+        queue.actions.failTask(taskId, err.message);
         setSavedCrop(null);
       };
 
@@ -292,6 +289,7 @@ export function VideoGeneration({
       sourceImageData,
       registerGeneration,
       subActions,
+      queue.actions,
     ]
   );
 
@@ -339,11 +337,9 @@ export function VideoGeneration({
       }
 
       if (errors.length > 0) {
-        setError(errors.join(", "));
+        queue.actions.failTask("", errors.join(", "));
         return;
       }
-
-      setError(null);
 
       // For img2vid with source image, show crop modal or use saved crop
       if (sourceImageUrl) {
@@ -367,6 +363,7 @@ export function VideoGeneration({
       sourceImageUrl,
       savedCrop,
       executeWithCrop,
+      queue.actions,
     ]
   );
 
@@ -454,28 +451,32 @@ export function VideoGeneration({
         </div>
       )}
 
-      {/* Generate Button + Progress */}
+      {/* Generate/Queue Button + Progress */}
       {!readonly && (
         <div className="flex flex-wrap items-center gap-3">
           <Button
             variant="default"
             size="sm"
             onClick={handleGenerate}
-            disabled={loading || disabled}
+            disabled={queue.derived.buttonDisabled}
           >
-            Generate
+            {queue.derived.buttonLabel}
           </Button>
-          {loading && (
+          {queue.derived.isLoading && (
             <span className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="w-4 h-4 animate-spin" />
-              {progress?.message && <span>{progress.message}</span>}
+              {queue.derived.progressMessage && (
+                <span>{queue.derived.progressMessage}</span>
+              )}
             </span>
           )}
         </div>
       )}
 
       {/* Error */}
-      {error && <div className="text-sm text-destructive">{error}</div>}
+      {queue.state.error && (
+        <div className="text-sm text-destructive">{queue.state.error}</div>
+      )}
 
       {/* Generated Content */}
       {generations.length > 0 && (

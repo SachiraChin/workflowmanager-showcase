@@ -7,8 +7,8 @@
  * - Track list instead of image grid
  *
  * Manages its own local state:
- * - generations, loading, progress, error, preview
- * - playingId, currentTime (audio-specific)
+ * - generations, queue state (via useGenerationQueue hook)
+ * - preview, playingId (audio-specific)
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -21,10 +21,10 @@ import { api } from "@/core/api";
 import { toMediaUrl } from "@/core/config";
 import { useInputSchemaOptional, pathToKey } from "../../schema/input/InputSchemaContext";
 import { useMediaGeneration } from "./MediaGenerationContext";
+import { useGenerationQueue } from "./useGenerationQueue";
 import type { SchemaProperty, UxConfig } from "../../schema/types";
 import type {
   GenerationResult,
-  ProgressState,
   PreviewInfo,
 } from "./types";
 import type { SubActionRequest, SSEEventType } from "@/core/types";
@@ -256,13 +256,21 @@ export function AudioGeneration({
   const { request } = useInteraction();
   const workflowRunId = useWorkflowStore((s) => s.workflowRunId);
 
+  // Context values (must be before hooks that use these values)
+  const subActions = mediaContext?.subActions ?? [];
+  const selectedContentId = mediaContext?.selectedContentId ?? null;
+  const onSelectContent = mediaContext?.onSelectContent ?? (() => {});
+  const registerGeneration = mediaContext?.registerGeneration ?? (() => {});
+  const readonly = mediaContext?.readonly ?? false;
+  const disabled = mediaContext?.disabled ?? false;
+
   // LOCAL state
   const [generations, setGenerations] = useState<GenerationResult[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [progress, setProgress] = useState<ProgressState | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<PreviewInfo | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+
+  // Queue management for concurrent generation tasks
+  const queue = useGenerationQueue(generations.length, disabled);
 
   // Audio-specific state
   const [playingId, setPlayingId] = useState<string | null>(null);
@@ -271,14 +279,6 @@ export function AudioGeneration({
   const provider = ux.provider;
   const promptId = ux.prompt_id || "default";
   const promptKey = pathToKey(path);
-
-  // Context values
-  const subActions = mediaContext?.subActions ?? [];
-  const selectedContentId = mediaContext?.selectedContentId ?? null;
-  const onSelectContent = mediaContext?.onSelectContent ?? (() => {});
-  const registerGeneration = mediaContext?.registerGeneration ?? (() => {});
-  const readonly = mediaContext?.readonly ?? false;
-  const disabled = mediaContext?.disabled ?? false;
 
   // Load existing generations on mount
   useEffect(() => {
@@ -378,19 +378,17 @@ export function AudioGeneration({
       }
 
       if (errors.length > 0) {
-        setError(errors.join(", "));
+        queue.actions.failTask("", errors.join(", "));
         return;
       }
 
-      setLoading(true);
-      setProgress({ elapsed_ms: 0, message: "Starting..." });
-      setError(null);
+      // Start tracking this task in the queue
+      const taskId = queue.actions.startTask();
 
       // Get sub_action_id from first available sub_action in context
       const subActionId = subActions[0]?.id;
       if (!subActionId) {
-        setError("No sub-action configured");
-        setLoading(false);
+        queue.actions.failTask(taskId, "No sub-action configured");
         return;
       }
 
@@ -413,9 +411,11 @@ export function AudioGeneration({
       ) => {
         switch (eventType) {
           case "progress": {
+            // Re-enable button after first progress event
+            queue.actions.onStreamStarted();
             // Handle both flat (message) and nested (progress.message) formats
             const progressData = eventData.progress as Record<string, unknown> | undefined;
-            setProgress({
+            queue.actions.updateProgress(taskId, {
               elapsed_ms: (progressData?.elapsed_ms ?? eventData.elapsed_ms ?? 0) as number,
               message: (progressData?.message ?? eventData.message ?? "") as string,
             });
@@ -423,6 +423,8 @@ export function AudioGeneration({
           }
 
           case "complete": {
+            // Remove task from queue
+            queue.actions.completeTask(taskId);
             // Result is in sub_action_result for clean separation
             const subActionResult = eventData.sub_action_result as Record<string, unknown> | undefined;
             if (subActionResult) {
@@ -434,23 +436,17 @@ export function AudioGeneration({
               setGenerations((prev) => [...prev, result]);
               registerGeneration(promptKey, result);
             }
-            setLoading(false);
-            setProgress(null);
             break;
           }
 
           case "error":
-            setError(eventData.message as string);
-            setLoading(false);
-            setProgress(null);
+            queue.actions.failTask(taskId, eventData.message as string);
             break;
         }
       };
 
       const handleError = (err: Error) => {
-        setError(err.message);
-        setLoading(false);
-        setProgress(null);
+        queue.actions.failTask(taskId, err.message);
       };
 
       api.streamSubAction(workflowRunId, subActionRequest, handleEvent, handleError);
@@ -467,6 +463,7 @@ export function AudioGeneration({
       ux.input_schema,
       registerGeneration,
       subActions,
+      queue.actions,
     ]
   );
 
@@ -525,28 +522,32 @@ export function AudioGeneration({
         </div>
       )}
 
-      {/* Generate Button + Progress */}
+      {/* Generate/Queue Button + Progress */}
       {!readonly && (
         <div className="flex flex-wrap items-center gap-3">
           <Button
             variant="default"
             size="sm"
             onClick={handleGenerate}
-            disabled={loading || disabled}
+            disabled={queue.derived.buttonDisabled}
           >
-            Generate
+            {queue.derived.buttonLabel}
           </Button>
-          {loading && (
+          {queue.derived.isLoading && (
             <span className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="w-4 h-4 animate-spin" />
-              {progress?.message && <span>{progress.message}</span>}
+              {queue.derived.progressMessage && (
+                <span>{queue.derived.progressMessage}</span>
+              )}
             </span>
           )}
         </div>
       )}
 
       {/* Error */}
-      {error && <div className="text-sm text-destructive">{error}</div>}
+      {queue.state.error && (
+        <div className="text-sm text-destructive">{queue.state.error}</div>
+      )}
 
       {/* Generated Audio Tracks */}
       {tracks.length > 0 && (

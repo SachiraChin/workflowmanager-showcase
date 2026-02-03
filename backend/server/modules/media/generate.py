@@ -20,12 +20,27 @@ import asyncio
 import logging
 from typing import Dict, Any, List, Optional
 
+from typing import Optional as TypingOptional
 from utils import uuid7_str
 from backend.db import TaskQueue
 from backend.db.path_utils import resolve_local_path
 from backend.providers.media.registry import MediaProviderRegistry
 
 logger = logging.getLogger("modules.media.generate")
+
+# =============================================================================
+# Singleton TaskQueue (reuse connection to avoid connection pool exhaustion)
+# =============================================================================
+
+_task_queue: TypingOptional[TaskQueue] = None
+
+
+def _get_task_queue() -> TaskQueue:
+    """Get singleton TaskQueue instance for this module."""
+    global _task_queue
+    if _task_queue is None:
+        _task_queue = TaskQueue()
+    return _task_queue
 
 from engine.module_interface import (
     InteractiveModule, ModuleInput, ModuleOutput, ModuleExecutionError,
@@ -456,8 +471,8 @@ class MediaGenerateModule(InteractiveModule):
             f"action_type={action_type}, prompt_id={prompt_id}"
         )
 
-        # Create task via TaskQueue
-        queue = TaskQueue()
+        # Create task via TaskQueue (use singleton to avoid connection exhaustion)
+        queue = _get_task_queue()
         task_id = queue.enqueue(
             actor="media",
             payload={

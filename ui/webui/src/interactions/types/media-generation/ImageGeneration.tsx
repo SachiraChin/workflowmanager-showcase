@@ -3,8 +3,7 @@
  *
  * Manages its own local state:
  * - generations (array of results)
- * - loading/progress
- * - error
+ * - queue state (via useGenerationQueue hook)
  * - preview
  *
  * Uses shared context for:
@@ -22,11 +21,11 @@ import { api } from "@/core/api";
 import { toMediaUrl } from "@/core/config";
 import { useInputSchemaOptional, pathToKey } from "../../schema/input/InputSchemaContext";
 import { useMediaGeneration } from "./MediaGenerationContext";
+import { useGenerationQueue } from "./useGenerationQueue";
 import { MediaGrid } from "./MediaGrid";
 import type { SchemaProperty, UxConfig } from "../../schema/types";
 import type {
   GenerationResult,
-  ProgressState,
   PreviewInfo,
 } from "./types";
 import type { SubActionRequest, SSEEventType } from "@/core/types";
@@ -72,26 +71,27 @@ export function ImageGeneration({
   const { request } = useInteraction();
   const workflowRunId = useWorkflowStore((s) => s.workflowRunId);
 
-  // LOCAL state - each instance manages its own
-  const [generations, setGenerations] = useState<GenerationResult[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [progress, setProgress] = useState<ProgressState | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [preview, setPreview] = useState<PreviewInfo | null>(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
-
-  // Extract config from ux
-  const provider = ux.provider;
-  const promptId = ux.prompt_id || "default";
-  const promptKey = pathToKey(path);
-
   // Extract values from context (with defaults if context is null)
+  // NOTE: These must be extracted before using in hooks
   const subActions = mediaContext?.subActions ?? [];
   const selectedContentId = mediaContext?.selectedContentId ?? null;
   const onSelectContent = mediaContext?.onSelectContent ?? (() => {});
   const registerGeneration = mediaContext?.registerGeneration ?? (() => {});
   const readonly = mediaContext?.readonly ?? false;
   const disabled = mediaContext?.disabled ?? false;
+
+  // LOCAL state - each instance manages its own
+  const [generations, setGenerations] = useState<GenerationResult[]>([]);
+  const [preview, setPreview] = useState<PreviewInfo | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  // Queue management for concurrent generation tasks
+  const queue = useGenerationQueue(generations.length, disabled);
+
+  // Extract config from ux
+  const provider = ux.provider;
+  const promptId = ux.prompt_id || "default";
+  const promptKey = pathToKey(path);
 
   // Load existing generations on mount (also in readonly mode to show history)
   useEffect(() => {
@@ -193,20 +193,18 @@ export function ImageGeneration({
       }
 
       if (errors.length > 0) {
-        setError(errors.join(", "));
+        queue.actions.failTask("", errors.join(", "));
         return;
       }
 
-      setLoading(true);
-      setProgress({ elapsed_ms: 0, message: "Starting..." });
-      setError(null);
+      // Start tracking this task in the queue
+      const taskId = queue.actions.startTask();
 
       // Build generic sub-action request with all params
       // Get sub_action_id from first available sub_action in context
       const subActionId = subActions[0]?.id;
       if (!subActionId) {
-        setError("No sub-action configured");
-        setLoading(false);
+        queue.actions.failTask(taskId, "No sub-action configured");
         return;
       }
 
@@ -228,9 +226,11 @@ export function ImageGeneration({
       ) => {
         switch (eventType) {
           case "progress": {
+            // Re-enable button after first progress event
+            queue.actions.onStreamStarted();
             // Handle both flat (message) and nested (progress.message) formats
             const progressData = eventData.progress as Record<string, unknown> | undefined;
-            setProgress({
+            queue.actions.updateProgress(taskId, {
               elapsed_ms: (progressData?.elapsed_ms ?? eventData.elapsed_ms ?? 0) as number,
               message: (progressData?.message ?? eventData.message ?? "") as string,
             });
@@ -238,6 +238,8 @@ export function ImageGeneration({
           }
 
           case "complete": {
+            // Remove task from queue
+            queue.actions.completeTask(taskId);
             // Result is in sub_action_result for clean separation
             const subActionResult = eventData.sub_action_result as Record<string, unknown> | undefined;
             if (subActionResult) {
@@ -249,23 +251,17 @@ export function ImageGeneration({
               setGenerations((prev) => [...prev, result]);
               registerGeneration(promptKey, result);
             }
-            setLoading(false);
-            setProgress(null);
             break;
           }
 
           case "error":
-            setError(eventData.message as string);
-            setLoading(false);
-            setProgress(null);
+            queue.actions.failTask(taskId, eventData.message as string);
             break;
         }
       };
 
       const handleError = (err: Error) => {
-        setError(err.message);
-        setLoading(false);
-        setProgress(null);
+        queue.actions.failTask(taskId, err.message);
       };
 
       api.streamSubAction(workflowRunId, subActionRequest, handleEvent, handleError);
@@ -282,6 +278,7 @@ export function ImageGeneration({
       ux.input_schema,
       registerGeneration,
       subActions,
+      queue.actions,
     ]
   );
 
@@ -341,28 +338,32 @@ export function ImageGeneration({
         </div>
       )}
 
-      {/* Generate Button + Progress */}
+      {/* Generate/Queue Button + Progress */}
       {!readonly && (
         <div className="flex flex-wrap items-center gap-3">
           <Button
             variant="default"
             size="sm"
             onClick={handleGenerate}
-            disabled={loading || disabled}
+            disabled={queue.derived.buttonDisabled}
           >
-            Generate
+            {queue.derived.buttonLabel}
           </Button>
-          {loading && (
+          {queue.derived.isLoading && (
             <span className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="w-4 h-4 animate-spin" />
-              {progress?.message && <span>{progress.message}</span>}
+              {queue.derived.progressMessage && (
+                <span>{queue.derived.progressMessage}</span>
+              )}
             </span>
           )}
         </div>
       )}
 
       {/* Error */}
-      {error && <div className="text-sm text-destructive">{error}</div>}
+      {queue.state.error && (
+        <div className="text-sm text-destructive">{queue.state.error}</div>
+      )}
 
       {/* Generated Content */}
       {generations.length > 0 && (
