@@ -159,6 +159,7 @@ export function InteractionProvider({
     isValid: false,
     selectedCount: 0,
     selectedGroupIds: [],
+    generationsCount: 0,
   });
 
   // Feedback collection

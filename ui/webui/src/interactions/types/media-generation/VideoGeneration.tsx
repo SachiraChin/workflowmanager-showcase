@@ -146,13 +146,18 @@ export function VideoGeneration({
             }
           }
 
-          setGenerations(
-            myGenerations.map((g) => ({
-              urls: g.urls.map(toMediaUrl),
-              metadata_id: g.metadata_id,
-              content_ids: g.content_ids,
-            }))
-          );
+          const loadedGenerations = myGenerations.map((g) => ({
+            urls: g.urls.map(toMediaUrl),
+            metadata_id: g.metadata_id,
+            content_ids: g.content_ids,
+          }));
+
+          setGenerations(loadedGenerations);
+
+          // Register loaded generations for validation tracking
+          for (const gen of loadedGenerations) {
+            registerGeneration(promptKey, gen);
+          }
         }
       } catch (err) {
         console.error("[VideoGeneration] Failed to load generations:", err);
