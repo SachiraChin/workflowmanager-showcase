@@ -439,11 +439,28 @@ If cross-version state compatibility becomes necessary:
 
 ---
 
-## 7. WorkflowResolver Path Traversal Security Risk
+## [DONE] 7. WorkflowResolver Path Traversal Security Risk
 
 **Date Identified:** 2026-01-07
 **Severity:** Critical
-**Status:** Open
+**Status:** Resolved
+
+**Resolution Date:** 2026-02-04
+
+### Resolution
+
+Added path traversal detection to `_normalize_path()` in `workflow_resolver.py`.
+
+**Changes made:**
+1. Track depth as path is traversed, recording minimum depth reached
+2. Reject paths where minimum depth goes negative (attempted root escape)
+3. Still allows valid `..` usage within bounds (e.g., `a/b/../c.txt` → `a/c.txt`)
+
+**Test cases verified:**
+- `../etc/passwd` - Rejected (escape from root)
+- `a/../../etc/passwd` - Rejected (escape from subdir)
+- `a/b/../c.txt` - Allowed (stays within bounds)
+- `a/../x.txt` - Allowed (back to root level, not above)
 
 ### Problem
 
