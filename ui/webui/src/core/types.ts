@@ -450,47 +450,81 @@ export interface SubActionDef {
 }
 
 // =============================================================================
-// Workflow Files Types
+// Workflow Files Types - Universal Tree Structure
 // =============================================================================
 
 /**
- * A single file entry in the file tree.
+ * Icon types for tree nodes.
+ * Maps to lucide-react icons in the frontend.
+ */
+export type TreeNodeIcon =
+  | "folder"
+  | "folder-open"
+  | "image"
+  | "video"
+  | "audio"
+  | "json"
+  | "text";
+
+/**
+ * Metadata for a tree node - defines how the node should be displayed
+ * and what actions are available.
+ */
+export interface TreeNodeMetadata {
+  /** Display name shown in the tree */
+  display_name: string;
+
+  /** Icon to show (defaults to "folder" for containers, "text" for leaves) */
+  icon?: TreeNodeIcon;
+
+  /** True if this is a leaf node (no children, clickable for content) */
+  leaf?: boolean;
+
+  /** Whether folder should be open by default */
+  default_open?: boolean;
+
+  /** URL to download this node's contents (as ZIP for containers) */
+  download_url?: string;
+
+  /**
+   * Content type for leaf nodes - determines how content is displayed.
+   * "image", "video", "audio" = media preview dialog
+   * "json", "text" = content popup with JSON tree or text
+   */
+  content_type?: string;
+
+  /** URL to fetch/display content for leaf nodes */
+  content_url?: string;
+}
+
+/**
+ * Universal tree node structure.
+ * Backend builds this, frontend renders it recursively.
+ */
+export interface FileTreeNode {
+  /** Node metadata - display and behavior */
+  _meta: TreeNodeMetadata;
+
+  /** Child nodes (only for container nodes) */
+  children?: FileTreeNode[];
+}
+
+/**
+ * Root file tree - array of top-level nodes.
+ */
+export type FileTree = FileTreeNode[];
+
+/**
+ * Simplified file info for MediaPreviewDialog.
+ * Used to pass file data to the preview component.
  */
 export interface WorkflowFile {
   file_id: string;
   filename: string;
-  /** "json", "text" for regular files; "image", "video", "audio" for media */
   content_type: string;
-  /** For media files: the URL to access the content */
   url?: string;
-  /** For video files: URL to preview image */
   preview_url?: string;
 }
-
-/**
- * A group of files (e.g., an API call with request/response).
- */
-export interface FileGroup {
-  group_id: string;
-  created_at: string | null;
-  files: WorkflowFile[];
-  /** For media groups: the prompt identifier */
-  prompt_id?: string;
-}
-
-/**
- * File tree structure - entirely dynamic based on actual data.
- *
- * Structure depends on branches and grouping:
- * - Single branch: { [category]: StepGroups | WorkflowFile[] }
- * - Multiple branches: { [branch_id]: { [category]: ... } }
- *
- * Where StepGroups = { [step_id]: FileGroup[] }
- *
- * Files with group_id are organized as: category/step_id/groups/files
- * Files without group_id are flat arrays under category.
- */
-export type FileTree = Record<string, unknown>;
 
 /**
  * Content of a file fetched from the API.

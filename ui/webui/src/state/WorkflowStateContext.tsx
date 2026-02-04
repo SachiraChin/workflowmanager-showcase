@@ -10,6 +10,8 @@ import { api } from "@/core/api";
 import type { WorkflowDefinition, ModuleConfig, FileTree, WorkflowFileContent } from "@/core/types";
 
 interface WorkflowStateContextValue {
+  /** Current workflow run ID */
+  workflowRunId: string | null;
   /** Current workflow state */
   state: Record<string, unknown>;
   /** Whether SSE connection is active */
@@ -114,6 +116,7 @@ export function WorkflowStateProvider({
 
   return (
     <WorkflowStateContext.Provider value={{
+      workflowRunId,
       state,
       isConnected,
       error,
@@ -140,6 +143,7 @@ export function useWorkflowStateContext(): WorkflowStateContextValue {
   if (!context) {
     // Return empty state if not in provider (allows components to work standalone)
     return {
+      workflowRunId: null,
       state: {},
       isConnected: false,
       error: null,

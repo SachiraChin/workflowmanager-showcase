@@ -238,148 +238,217 @@ class StateRepository(BaseRepository):
         # Get existing hierarchical state
         state = self.get_module_outputs_hierarchical(workflow_run_id, branch_id)
 
-        # Add file tree (includes all branches, organized appropriately)
+        # Build file tree (workflow files as TreeNode list)
         file_tree = self._build_file_tree(workflow_run_id)
 
-        # Add media tree (generated content organized by provider)
-        media_tree = self._build_media_tree(workflow_run_id)
-        if media_tree:
-            file_tree["media"] = media_tree
+        # Add media tree as a "media" category node
+        media_children = self._build_media_tree(workflow_run_id)
+        if media_children:
+            media_node = {
+                "_meta": {
+                    "display_name": "media",
+                    "icon": "folder",
+                    "download_url": f"/workflow/{workflow_run_id}/media/download",
+                },
+                "children": media_children,
+            }
+            file_tree.append(media_node)
 
         state["files"] = file_tree
         state["state_mapped"] = self.get_module_outputs(workflow_run_id, branch_id)
 
         return state
 
-    def _build_file_tree(self, workflow_run_id: str) -> Dict[str, Any]:
+    def _build_file_tree(self, workflow_run_id: str) -> List[Dict[str, Any]]:
         """
         Build hierarchical file tree from workflow_files collection.
 
-        Hierarchy rules (all dynamic based on actual data):
-        - If multiple branches exist: branch_id becomes root level
-        - If single branch: branch level is omitted
-        - Files with group_id: organized as category/step_id/[groups]
-        - Files without group_id: flat list directly under category
+        Returns universal TreeNode structure:
+        [
+            {
+                "_meta": {"display_name": "api_calls", "icon": "folder", ...},
+                "children": [...]
+            },
+            ...
+        ]
 
-        The structure is entirely determined by the data - no hardcoded keys.
+        Hierarchy: category -> step_id -> group (if multiple) -> files
         """
         query = {"workflow_run_id": workflow_run_id}
         files = list(self.workflow_files.find(query).sort("created_at", ASCENDING))
 
         if not files:
-            return {}
+            return []
 
-        # Check how many unique branches exist
-        branch_ids = set()
-        for f in files:
-            bid = f.get("branch_id")
-            if bid:
-                branch_ids.add(bid)
+        # First pass: organize files into nested dict structure
+        # categories[category][step_id][group_id] = {group_data, files: [...]}
+        categories: Dict[str, Dict[str, Dict[str, Any]]] = {}
 
-        has_multiple_branches = len(branch_ids) > 1
+        for file_doc in files:
+            category = file_doc.get("category")
+            if not category:
+                continue
 
-        if has_multiple_branches:
-            # Organize by branch_id at root
-            result: Dict[str, Any] = {}
-            for file_doc in files:
-                branch_id = file_doc.get("branch_id")
-                if not branch_id:
-                    continue  # Skip files without branch_id when multiple branches exist
-                if branch_id not in result:
-                    result[branch_id] = {}
-                self._add_file_to_tree(result[branch_id], file_doc)
-            return result
-        else:
-            # Single branch - hide branch level
-            result: Dict[str, Any] = {}
-            for file_doc in files:
-                self._add_file_to_tree(result, file_doc)
-            return result
+            group_id = file_doc.get("group_id")
+            metadata = file_doc.get("metadata", {})
+            step_id = metadata.get("step_id") or "_ungrouped"
+            created_at = file_doc.get("created_at")
 
-    def _add_file_to_tree(self, tree: Dict[str, Any], file_doc: Dict[str, Any]) -> None:
-        """
-        Add a single file document to a tree structure.
-
-        Hierarchy rules:
-        - Files with group_id: category -> step_id -> groups -> files
-        - Files without group_id: category -> files (flat list)
-
-        Args:
-            tree: The tree dict to add file to
-            file_doc: The file document from MongoDB
-        """
-        category = file_doc.get("category")
-        if not category:
-            return  # Skip files without category
-
-        group_id = file_doc.get("group_id")
-        metadata = file_doc.get("metadata", {})
-        step_id = metadata.get("step_id")
-        created_at = file_doc.get("created_at")
-
-        file_entry = {
-            "file_id": file_doc.get("file_id"),
-            "filename": file_doc.get("filename"),
-            "content_type": file_doc.get("content_type", "text"),
-        }
-
-        if group_id and step_id:
-            # File has group_id - organize under category/step_id/groups
-            if category not in tree:
-                tree[category] = {}
-
-            if step_id not in tree[category]:
-                tree[category][step_id] = []
-
-            # Find or create group entry
-            group_entry = None
-            for g in tree[category][step_id]:
-                if g["group_id"] == group_id:
-                    group_entry = g
-                    break
-
-            if not group_entry:
-                group_entry = {
-                    "group_id": group_id,
-                    "created_at": created_at.isoformat() if created_at else None,
-                    "files": [],
+            # Initialize nested structure
+            if category not in categories:
+                categories[category] = {}
+            if step_id not in categories[category]:
+                categories[category][step_id] = {}
+            if group_id not in categories[category][step_id]:
+                categories[category][step_id][group_id] = {
+                    "created_at": created_at,
+                    "files": []
                 }
-                tree[category][step_id].append(group_entry)
 
-            group_entry["files"].append(file_entry)
-        else:
-            # File without group_id - flat list under category
-            if category not in tree:
-                tree[category] = []
+            # Add file to group
+            categories[category][step_id][group_id]["files"].append(file_doc)
 
-            tree[category].append(file_entry)
+        # Second pass: convert to TreeNode structure
+        result: List[Dict[str, Any]] = []
 
-    def _build_media_tree(self, workflow_run_id: str) -> Dict[str, Any]:
+        for category, steps in categories.items():
+            category_children: List[Dict[str, Any]] = []
+
+            for step_id, groups in steps.items():
+                step_children: List[Dict[str, Any]] = []
+
+                # Check if we need group-level nodes (multiple groups)
+                show_groups = len(groups) > 1
+
+                for group_id, group_data in groups.items():
+                    file_nodes = self._build_file_nodes(
+                        workflow_run_id, category, step_id, group_id,
+                        group_data["files"]
+                    )
+
+                    if show_groups and group_id:
+                        # Multiple groups - show group node with date
+                        created_at = group_data["created_at"]
+                        display_name = self._format_date(created_at)
+                        group_node = {
+                            "_meta": {
+                                "display_name": display_name,
+                                "icon": "folder",
+                                "download_url": (
+                                    f"/workflow/{workflow_run_id}/files/"
+                                    f"{category}/{step_id}/{group_id}/download"
+                                ),
+                            },
+                            "children": file_nodes,
+                        }
+                        step_children.append(group_node)
+                    else:
+                        # Single group or no group - files directly under step
+                        step_children.extend(file_nodes)
+
+                if step_id == "_ungrouped":
+                    # Files without step_id go directly under category
+                    category_children.extend(step_children)
+                else:
+                    # Step node
+                    step_node = {
+                        "_meta": {
+                            "display_name": step_id,
+                            "icon": "folder",
+                            "download_url": (
+                                f"/workflow/{workflow_run_id}/files/"
+                                f"{category}/{step_id}/download"
+                            ),
+                        },
+                        "children": step_children,
+                    }
+                    category_children.append(step_node)
+
+            # Category node
+            category_node = {
+                "_meta": {
+                    "display_name": category,
+                    "icon": "folder",
+                    "download_url": (
+                        f"/workflow/{workflow_run_id}/files/{category}/download"
+                    ),
+                },
+                "children": category_children,
+            }
+            result.append(category_node)
+
+        return result
+
+    def _build_file_nodes(
+        self,
+        workflow_run_id: str,
+        category: str,
+        step_id: str,
+        group_id: Optional[str],
+        file_docs: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Build TreeNode entries for individual files."""
+        nodes = []
+        for file_doc in file_docs:
+            file_id = file_doc.get("file_id")
+            filename = file_doc.get("filename", "unknown")
+            content_type = file_doc.get("content_type", "text")
+
+            # Map content_type to icon
+            icon = "text"
+            if content_type == "json" or filename.endswith(".json"):
+                icon = "json"
+
+            # Build download URL path
+            if group_id:
+                download_url = (
+                    f"/workflow/{workflow_run_id}/files/"
+                    f"{category}/{step_id}/{group_id}/{file_id}"
+                )
+            else:
+                download_url = (
+                    f"/workflow/{workflow_run_id}/files/{category}/{file_id}"
+                )
+
+            node = {
+                "_meta": {
+                    "display_name": filename,
+                    "icon": icon,
+                    "leaf": True,
+                    "content_type": content_type,
+                    "content_url": f"/workflow/{workflow_run_id}/files/{file_id}",
+                    "download_url": download_url,
+                },
+            }
+            nodes.append(node)
+
+        return nodes
+
+    def _format_date(self, dt: Optional[datetime]) -> str:
+        """Format datetime for display."""
+        if not dt:
+            return "Unknown"
+        return dt.strftime("%b %d, %H:%M")
+
+    def _build_media_tree(self, workflow_run_id: str) -> List[Dict[str, Any]]:
         """
         Build media tree from generated content, organized by provider.
 
-        Structure:
-        {
-            "midjourney": [
-                {
-                    "group_id": "cgm_xxx",
-                    "created_at": "...",
-                    "prompt_id": "...",
-                    "files": [
-                        {
-                            "file_id": "gc_xxx",
-                            "filename": "gc_xxx.png",
-                            "content_type": "image",
-                            "url": "/workflow/{id}/media/gc_xxx.png"
-                        }
-                    ]
-                }
-            ],
-            "leonardo": [...],
-            "elevenlabs": [...]
-        }
+        Returns universal TreeNode structure:
+        [
+            {
+                "_meta": {"display_name": "midjourney", ...},
+                "children": [
+                    {
+                        "_meta": {"display_name": "Jan 15, 10:30", ...},
+                        "children": [
+                            {"_meta": {"display_name": "gc_xxx.png", "leaf": True, ...}}
+                        ]
+                    }
+                ]
+            }
+        ]
         """
-        # Access content collections directly
         metadata_col = self.db.content_generation_metadata
         content_col = self.db.generated_content
 
@@ -392,11 +461,13 @@ class StateRepository(BaseRepository):
             {"_id": 0}
         ).sort("created_at", ASCENDING))
 
-        result: Dict[str, List] = {}
+        # Organize by provider
+        providers: Dict[str, List[Dict[str, Any]]] = {}
 
         for gen in generations:
             provider = gen.get("provider", "unknown")
             metadata_id = gen.get("content_generation_metadata_id")
+            created_at = gen.get("created_at")
 
             # Get content items for this generation
             content_items = list(content_col.find(
@@ -407,8 +478,8 @@ class StateRepository(BaseRepository):
             if not content_items:
                 continue
 
-            # Build file entries with server-generated URLs
-            files = []
+            # Build file nodes
+            file_nodes = []
             for item in content_items:
                 content_id = item.get("generated_content_id")
                 extension = item.get("extension", "")
@@ -418,49 +489,87 @@ class StateRepository(BaseRepository):
                 if content_type == "video.preview":
                     continue
 
-                file_entry = {
-                    "file_id": content_id,
-                    "filename": f"{content_id}.{extension}" if extension else content_id,
-                    "content_type": content_type,
-                }
+                filename = f"{content_id}.{extension}" if extension else content_id
 
-                # Generate URL server-side (matches streaming.py pattern)
+                # Map content_type to icon
+                icon = "image"
+                if content_type == "video":
+                    icon = "video"
+                elif content_type == "audio":
+                    icon = "audio"
+
+                # Build content URL for preview
+                content_url = None
                 if item.get("local_path") and extension:
-                    file_entry["url"] = (
+                    content_url = (
                         f"/workflow/{workflow_run_id}/media/{content_id}.{extension}"
                     )
 
-                    # Include preview URL for videos
-                    preview_id = item.get("preview_content_id")
-                    if preview_id:
-                        preview = content_col.find_one(
-                            {"generated_content_id": preview_id},
-                            {"_id": 0}
-                        )
-                        if preview and preview.get("extension"):
-                            file_entry["preview_url"] = (
-                                f"/workflow/{workflow_run_id}/media/"
-                                f"{preview_id}.{preview.get('extension')}"
-                            )
+                file_node = {
+                    "_meta": {
+                        "display_name": filename,
+                        "icon": icon,
+                        "leaf": True,
+                        "content_type": content_type,
+                        "content_url": content_url,
+                        "download_url": (
+                            f"/workflow/{workflow_run_id}/media/"
+                            f"{provider}/{metadata_id}/{content_id}"
+                        ),
+                    },
+                }
+                file_nodes.append(file_node)
 
-                files.append(file_entry)
-
-            if not files:
+            if not file_nodes:
                 continue
 
-            # Initialize provider list if needed
-            if provider not in result:
-                result[provider] = []
+            # Initialize provider if needed
+            if provider not in providers:
+                providers[provider] = []
 
-            # Create group entry
-            created_at = gen.get("created_at")
-            group_entry = {
-                "group_id": metadata_id,
-                "created_at": created_at.isoformat() if created_at else None,
-                "prompt_id": gen.get("prompt_id"),
-                "files": files,
+            # Create generation group node
+            group_node = {
+                "_meta": {
+                    "display_name": self._format_date(created_at),
+                    "icon": "folder",
+                    "download_url": (
+                        f"/workflow/{workflow_run_id}/media/"
+                        f"{provider}/{metadata_id}/download"
+                    ),
+                },
+                "children": file_nodes,
             }
-            result[provider].append(group_entry)
+            providers[provider].append(group_node)
+
+        # Convert to result list
+        result: List[Dict[str, Any]] = []
+        for provider, groups in providers.items():
+            # Check if we need group-level nodes
+            if len(groups) == 1:
+                # Single generation - flatten (files directly under provider)
+                provider_node = {
+                    "_meta": {
+                        "display_name": provider,
+                        "icon": "folder",
+                        "download_url": (
+                            f"/workflow/{workflow_run_id}/media/{provider}/download"
+                        ),
+                    },
+                    "children": groups[0]["children"],
+                }
+            else:
+                # Multiple generations - show group nodes
+                provider_node = {
+                    "_meta": {
+                        "display_name": provider,
+                        "icon": "folder",
+                        "download_url": (
+                            f"/workflow/{workflow_run_id}/media/{provider}/download"
+                        ),
+                    },
+                    "children": groups,
+                }
+            result.append(provider_node)
 
         return result
 

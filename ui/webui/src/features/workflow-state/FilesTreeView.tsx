@@ -1,11 +1,11 @@
 /**
- * FilesTreeView - Workflow files viewer as a tree.
+ * FilesTreeView - Workflow files viewer as a universal tree.
  *
- * Shows workflow files (API calls, outputs, generated media) in a collapsible
- * tree structure.
- * - Dynamic hierarchy based on data (branches, categories, steps, groups)
- * - Click file to view content in popup (JSON/text) or media preview
- * - Search functionality
+ * Renders a recursive tree structure from the server.
+ * Each node has _meta (display info) and optional children.
+ * - Leaf nodes: clickable to view content (JSON/text popup or media preview)
+ * - Container nodes: expandable folders with download buttons
+ * - Search filters visible nodes
  * - Maximizable view
  */
 
@@ -24,6 +24,7 @@ import {
   Image,
   Video,
   Music,
+  Download,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,7 +38,8 @@ import { JsonTreeView } from "@/components/ui/json-tree-view";
 import { MediaPreviewDialog } from "./MediaPreviewDialog";
 import { useWorkflowStateContext } from "@/state/WorkflowStateContext";
 import { cn } from "@/core/utils";
-import type { WorkflowFile, FileGroup } from "@/core/types";
+import { API_URL } from "@/core/config";
+import type { FileTreeNode, TreeNodeMetadata } from "@/core/types";
 
 // =============================================================================
 // Types
@@ -51,115 +53,103 @@ interface FilePopupState {
   loading: boolean;
 }
 
+/** Media file info for the preview dialog */
+interface MediaFileInfo {
+  displayName: string;
+  contentType: string;
+  contentUrl: string;
+}
+
 // =============================================================================
 // Helper Functions
 // =============================================================================
 
 /**
- * Check if a value is an array of WorkflowFile objects.
+ * Get icon component for a tree node based on _meta.icon.
  */
-function isFileArray(value: unknown): value is WorkflowFile[] {
-  if (!Array.isArray(value)) return false;
-  if (value.length === 0) return true;
-  return value[0] && typeof value[0] === "object" && "file_id" in value[0];
-}
-
-/**
- * Check if a value is an array of FileGroup objects.
- */
-function isGroupArray(value: unknown): value is FileGroup[] {
-  if (!Array.isArray(value)) return false;
-  if (value.length === 0) return false;
-  return value[0] && typeof value[0] === "object" && "group_id" in value[0];
-}
-
-/**
- * Format ISO timestamp to user-friendly date string.
- */
-function formatDate(isoString: string | null): string {
-  if (!isoString) return "";
-  try {
-    const date = new Date(isoString);
-    return date.toLocaleString(undefined, {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return isoString;
+function getNodeIcon(icon: string | undefined, isOpen: boolean) {
+  switch (icon) {
+    case "folder":
+    case "folder-open":
+      return isOpen ? (
+        <FolderOpen className="h-4 w-4 text-amber-500 shrink-0" />
+      ) : (
+        <Folder className="h-4 w-4 text-amber-500 shrink-0" />
+      );
+    case "image":
+      return <Image className="h-4 w-4 text-green-500 shrink-0" />;
+    case "video":
+      return <Video className="h-4 w-4 text-purple-500 shrink-0" />;
+    case "audio":
+      return <Music className="h-4 w-4 text-orange-500 shrink-0" />;
+    case "json":
+      return <FileJson className="h-4 w-4 text-blue-500 shrink-0" />;
+    case "text":
+    default:
+      return <FileText className="h-4 w-4 text-muted-foreground shrink-0" />;
   }
 }
 
 /**
  * Check if a node or its descendants match the search term.
  */
-function nodeMatchesSearch(key: string, value: unknown, searchTerm: string): boolean {
+function nodeMatchesSearch(node: FileTreeNode, searchTerm: string): boolean {
   if (!searchTerm) return true;
   const term = searchTerm.toLowerCase();
 
-  if (key.toLowerCase().includes(term)) return true;
+  // Check this node's display name
+  if (node._meta.display_name.toLowerCase().includes(term)) return true;
 
-  if (isFileArray(value)) {
-    return value.some((f) => f.filename.toLowerCase().includes(term));
-  }
-
-  if (isGroupArray(value)) {
-    return value.some((g) =>
-      g.files.some((f) => f.filename.toLowerCase().includes(term))
-    );
-  }
-
-  if (value && typeof value === "object" && !Array.isArray(value)) {
-    return Object.entries(value).some(([k, v]) =>
-      nodeMatchesSearch(k, v, searchTerm)
-    );
+  // Check children recursively
+  if (node.children) {
+    return node.children.some((child) => nodeMatchesSearch(child, searchTerm));
   }
 
   return false;
 }
 
 /**
- * Check if a file is a media type (image, video, audio).
+ * Extract all media files from the tree in display order.
+ * Used for media preview navigation.
  */
-function isMediaFile(file: WorkflowFile): boolean {
-  return ["image", "video", "audio"].includes(file.content_type);
-}
+function extractMediaFiles(nodes: FileTreeNode[]): MediaFileInfo[] {
+  const mediaFiles: MediaFileInfo[] = [];
 
-/**
- * Extract all media files from the file tree in display order.
- * Traverses the tree structure recursively to collect media files.
- */
-function extractMediaFiles(tree: Record<string, unknown>): WorkflowFile[] {
-  const mediaFiles: WorkflowFile[] = [];
+  function traverse(node: FileTreeNode): void {
+    const { _meta, children } = node;
 
-  function traverse(value: unknown): void {
-    if (isFileArray(value)) {
-      // Array of files - add media files
-      for (const file of value) {
-        if (isMediaFile(file)) {
-          mediaFiles.push(file);
-        }
+    if (_meta.leaf && _meta.content_url) {
+      const contentType = _meta.content_type || "";
+      if (["image", "video", "audio"].includes(contentType)) {
+        mediaFiles.push({
+          displayName: _meta.display_name,
+          contentType,
+          contentUrl: _meta.content_url,
+        });
       }
-    } else if (isGroupArray(value)) {
-      // Array of groups - traverse each group's files
-      for (const group of value) {
-        for (const file of group.files) {
-          if (isMediaFile(file)) {
-            mediaFiles.push(file);
-          }
-        }
-      }
-    } else if (value && typeof value === "object" && !Array.isArray(value)) {
-      // Object (branch, category, step) - traverse children in key order
-      for (const key of Object.keys(value)) {
-        traverse((value as Record<string, unknown>)[key]);
+    }
+
+    if (children) {
+      for (const child of children) {
+        traverse(child);
       }
     }
   }
 
-  traverse(tree);
+  for (const node of nodes) {
+    traverse(node);
+  }
+
   return mediaFiles;
+}
+
+/**
+ * Count total leaf nodes (files) in a tree.
+ */
+function countFiles(node: FileTreeNode): number {
+  if (node._meta.leaf) return 1;
+  if (!node.children) return 0;
+  return node.children.reduce((sum, child) => sum + countFiles(child), 0);
 }
 
 // =============================================================================
@@ -180,7 +170,9 @@ function CopyButton({ value, className }: CopyButtonProps) {
         value !== null && typeof value === "object"
           ? JSON.stringify(value, null, 2)
           : String(value);
-      await navigator.clipboard.writeText(text.replace(/\r\n/g, "\n").replace(/\r/g, "\n"));
+      await navigator.clipboard.writeText(
+        text.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
+      );
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
@@ -207,441 +199,144 @@ function CopyButton({ value, className }: CopyButtonProps) {
 }
 
 // =============================================================================
-// File Node Component
+// Download Button Component
 // =============================================================================
 
-interface FileNodeProps {
-  file: WorkflowFile;
-  level: number;
-  searchTerm: string;
-  onFileClick: (file: WorkflowFile) => void;
-  /** Currently previewed file ID (for highlighting) */
-  previewingFileId?: string | null;
+interface DownloadButtonProps {
+  downloadUrl?: string;
+  title?: string;
+  className?: string;
 }
 
-function FileNode({ file, level, searchTerm, onFileClick, previewingFileId }: FileNodeProps) {
-  const keyMatches =
-    searchTerm && file.filename.toLowerCase().includes(searchTerm.toLowerCase());
-  const isPreviewing = previewingFileId === file.file_id;
+function DownloadButton({ downloadUrl, title, className }: DownloadButtonProps) {
+  if (!downloadUrl) return null;
 
-  const isJson = file.content_type === "json" || file.filename.endsWith(".json");
-  const isImage = file.content_type === "image";
-  const isVideo = file.content_type === "video";
-  const isAudio = file.content_type === "audio";
-
-  const getIcon = () => {
-    if (isImage) return <Image className="h-4 w-4 text-green-500 shrink-0" />;
-    if (isVideo) return <Video className="h-4 w-4 text-purple-500 shrink-0" />;
-    if (isAudio) return <Music className="h-4 w-4 text-orange-500 shrink-0" />;
-    if (isJson) return <FileJson className="h-4 w-4 text-blue-500 shrink-0" />;
-    return <FileText className="h-4 w-4 text-muted-foreground shrink-0" />;
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    // downloadUrl is relative, prepend API_URL
+    const fullUrl = `${API_URL}${downloadUrl}`;
+    window.open(fullUrl, "_blank");
   };
 
   return (
-    <div
+    <button
+      onClick={handleClick}
       className={cn(
-        "flex items-center gap-2 py-1.5 px-2 rounded hover:bg-muted/50 cursor-pointer",
-        keyMatches && "bg-yellow-100 dark:bg-yellow-900/30",
-        isPreviewing && "bg-primary/20 ring-1 ring-primary/50"
+        "p-1 rounded opacity-0 group-hover:opacity-60 hover:!opacity-100 hover:bg-muted transition-all",
+        className
       )}
-      style={{ paddingLeft: `${level * 16 + 8}px` }}
-      onClick={() => onFileClick(file)}
+      title={title || "Download"}
     >
-      {getIcon()}
-      <span
-        className={cn(
-          "font-mono text-sm text-foreground",
-          keyMatches && "font-bold"
-        )}
-      >
-        {file.filename}
-      </span>
-    </div>
+      <Download className="h-3.5 w-3.5 text-muted-foreground" />
+    </button>
   );
 }
 
 // =============================================================================
-// Group Node Component
+// Tree Node Component (Recursive)
 // =============================================================================
 
-interface GroupNodeProps {
-  group: FileGroup;
+interface TreeNodeComponentProps {
+  node: FileTreeNode;
   level: number;
   searchTerm: string;
-  showDate: boolean;
-  onFileClick: (file: WorkflowFile) => void;
-  previewingFileId?: string | null;
+  onLeafClick: (meta: TreeNodeMetadata) => void;
+  /** Currently previewed content URL (for highlighting) */
+  previewingContentUrl?: string | null;
 }
 
-function GroupNode({
-  group,
+function TreeNodeComponent({
+  node,
   level,
   searchTerm,
-  showDate,
-  onFileClick,
-  previewingFileId,
-}: GroupNodeProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  onLeafClick,
+  previewingContentUrl,
+}: TreeNodeComponentProps) {
+  const { _meta, children } = node;
+  const [isOpen, setIsOpen] = useState(_meta.default_open || false);
 
   const hasMatchingDescendant = useMemo(
-    () => nodeMatchesSearch(group.group_id, group.files, searchTerm),
-    [group, searchTerm]
+    () => nodeMatchesSearch(node, searchTerm),
+    [node, searchTerm]
   );
 
-  const effectiveIsOpen = isOpen || (searchTerm && hasMatchingDescendant);
+  // Auto-expand if search matches descendant
+  const effectiveIsOpen = isOpen || (!!searchTerm && hasMatchingDescendant);
 
-  // Only show date level if showDate is true (multiple groups for this step)
-  const displayName = showDate ? formatDate(group.created_at) : null;
-
-  if (!showDate) {
-    // No date level - render files directly
-    return (
-      <>
-        {group.files.map((file) => (
-          <FileNode
-            key={file.file_id}
-            file={file}
-            level={level}
-            searchTerm={searchTerm}
-            onFileClick={onFileClick}
-            previewingFileId={previewingFileId}
-          />
-        ))}
-      </>
-    );
-  }
-
-  return (
-    <div className="select-none">
-      <div
-        className={cn(
-          "flex items-center gap-2 py-1.5 px-2 rounded hover:bg-muted/50 cursor-pointer"
-        )}
-        style={{ paddingLeft: `${level * 16 + 8}px` }}
-        onClick={() => setIsOpen((prev) => !prev)}
-      >
-        {effectiveIsOpen ? (
-          <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
-        ) : (
-          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-        )}
-        {effectiveIsOpen ? (
-          <FolderOpen className="h-4 w-4 text-amber-500 shrink-0" />
-        ) : (
-          <Folder className="h-4 w-4 text-amber-500 shrink-0" />
-        )}
-        <span className="font-mono text-sm text-primary">{displayName}</span>
-        <span className="text-muted-foreground text-xs">
-          ({group.files.length})
-        </span>
-      </div>
-
-      {effectiveIsOpen && (
-        <div className="border-l border-border/50 ml-4">
-          {group.files.map((file) => (
-            <FileNode
-              key={file.file_id}
-              file={file}
-              level={level + 1}
-              searchTerm={searchTerm}
-              onFileClick={onFileClick}
-              previewingFileId={previewingFileId}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// =============================================================================
-// Step Node Component (contains groups)
-// =============================================================================
-
-interface StepNodeProps {
-  stepId: string;
-  groups: FileGroup[];
-  level: number;
-  searchTerm: string;
-  onFileClick: (file: WorkflowFile) => void;
-  previewingFileId?: string | null;
-}
-
-function StepNode({
-  stepId,
-  groups,
-  level,
-  searchTerm,
-  onFileClick,
-  previewingFileId,
-}: StepNodeProps) {
-  const [isOpen, setIsOpen] = useState(false);
-
-  const hasMatchingDescendant = useMemo(
-    () => nodeMatchesSearch(stepId, groups, searchTerm),
-    [stepId, groups, searchTerm]
-  );
-
-  const effectiveIsOpen = isOpen || (searchTerm && hasMatchingDescendant);
   const keyMatches =
-    searchTerm && stepId.toLowerCase().includes(searchTerm.toLowerCase());
+    searchTerm &&
+    _meta.display_name.toLowerCase().includes(searchTerm.toLowerCase());
 
-  const showDate = groups.length > 1;
-  const totalFiles = groups.reduce((sum, g) => sum + g.files.length, 0);
+  const isLeaf = _meta.leaf;
+  const isPreviewing = previewingContentUrl === _meta.content_url;
+  const fileCount = !isLeaf ? countFiles(node) : 0;
 
-  return (
-    <div className="select-none">
-      <div
-        className={cn(
-          "flex items-center gap-2 py-1.5 px-2 rounded hover:bg-muted/50 cursor-pointer",
-          keyMatches && "bg-yellow-100 dark:bg-yellow-900/30"
-        )}
-        style={{ paddingLeft: `${level * 16 + 8}px` }}
-        onClick={() => setIsOpen((prev) => !prev)}
-      >
-        {effectiveIsOpen ? (
-          <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
-        ) : (
-          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-        )}
-        {effectiveIsOpen ? (
-          <FolderOpen className="h-4 w-4 text-amber-500 shrink-0" />
-        ) : (
-          <Folder className="h-4 w-4 text-amber-500 shrink-0" />
-        )}
-        <span
-          className={cn(
-            "font-mono text-sm text-primary font-medium",
-            keyMatches && "font-bold"
-          )}
-        >
-          {stepId}
-        </span>
-        <span className="text-muted-foreground text-xs">({totalFiles})</span>
-      </div>
-
-      {effectiveIsOpen && (
-        <div className="border-l border-border/50 ml-4">
-          {groups.map((group) => (
-            <GroupNode
-              key={group.group_id}
-              group={group}
-              level={level + 1}
-              searchTerm={searchTerm}
-              showDate={showDate}
-              onFileClick={onFileClick}
-              previewingFileId={previewingFileId}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// =============================================================================
-// Category Node Component
-// =============================================================================
-
-interface CategoryNodeProps {
-  category: string;
-  value: unknown;
-  level: number;
-  searchTerm: string;
-  onFileClick: (file: WorkflowFile) => void;
-  previewingFileId?: string | null;
-}
-
-function CategoryNode({
-  category,
-  value,
-  level,
-  searchTerm,
-  onFileClick,
-  previewingFileId,
-}: CategoryNodeProps) {
-  const [isOpen, setIsOpen] = useState(false);
-
-  const hasMatchingDescendant = useMemo(
-    () => nodeMatchesSearch(category, value, searchTerm),
-    [category, value, searchTerm]
-  );
-
-  const effectiveIsOpen = isOpen || (searchTerm && hasMatchingDescendant);
-  const keyMatches =
-    searchTerm && category.toLowerCase().includes(searchTerm.toLowerCase());
-
-  // Count total files
-  const countFiles = (v: unknown): number => {
-    if (isFileArray(v)) return v.length;
-    if (isGroupArray(v)) return v.reduce((sum, g) => sum + g.files.length, 0);
-    if (v && typeof v === "object" && !Array.isArray(v)) {
-      return Object.values(v).reduce(
-        (sum, child) => sum + countFiles(child),
-        0
-      );
+  // Handle click
+  const handleClick = () => {
+    if (isLeaf) {
+      onLeafClick(_meta);
+    } else {
+      setIsOpen((prev) => !prev);
     }
-    return 0;
   };
-  const totalFiles = countFiles(value);
 
   return (
     <div className="select-none">
       <div
         className={cn(
-          "flex items-center gap-2 py-1.5 px-2 rounded hover:bg-muted/50 cursor-pointer",
-          keyMatches && "bg-yellow-100 dark:bg-yellow-900/30"
+          "group flex items-center gap-2 py-1.5 px-2 rounded hover:bg-muted/50 cursor-pointer",
+          keyMatches && "bg-yellow-100 dark:bg-yellow-900/30",
+          isPreviewing && "bg-primary/20 ring-1 ring-primary/50"
         )}
         style={{ paddingLeft: `${level * 16 + 8}px` }}
-        onClick={() => setIsOpen((prev) => !prev)}
+        onClick={handleClick}
       >
-        {effectiveIsOpen ? (
-          <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
-        ) : (
-          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+        {/* Expand/collapse chevron for containers */}
+        {!isLeaf && (
+          effectiveIsOpen ? (
+            <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+          )
         )}
-        {effectiveIsOpen ? (
-          <FolderOpen className="h-4 w-4 text-amber-500 shrink-0" />
-        ) : (
-          <Folder className="h-4 w-4 text-amber-500 shrink-0" />
-        )}
+
+        {/* Icon */}
+        {getNodeIcon(_meta.icon, effectiveIsOpen)}
+
+        {/* Display name */}
         <span
           className={cn(
-            "font-mono text-sm text-primary font-medium",
+            "font-mono text-sm flex-1",
+            isLeaf ? "text-foreground" : "text-primary font-medium",
             keyMatches && "font-bold"
           )}
         >
-          {category}
+          {_meta.display_name}
         </span>
-        <span className="text-muted-foreground text-xs">({totalFiles})</span>
+
+        {/* File count for containers */}
+        {!isLeaf && fileCount > 0 && (
+          <span className="text-muted-foreground text-xs">({fileCount})</span>
+        )}
+
+        {/* Download button */}
+        <DownloadButton
+          downloadUrl={_meta.download_url}
+          title={isLeaf ? "Download" : `Download ${_meta.display_name}`}
+        />
       </div>
 
-      {effectiveIsOpen && (
+      {/* Children (if expanded) */}
+      {!isLeaf && effectiveIsOpen && children && (
         <div className="border-l border-border/50 ml-4">
-          {isFileArray(value) ? (
-            // Direct file list under category
-            value.map((file) => (
-              <FileNode
-                key={file.file_id}
-                file={file}
-                level={level + 1}
-                searchTerm={searchTerm}
-                onFileClick={onFileClick}
-                previewingFileId={previewingFileId}
-              />
-            ))
-          ) : isGroupArray(value) ? (
-            // Groups directly under category (no step_id)
-            value.map((group) => (
-              <GroupNode
-                key={group.group_id}
-                group={group}
-                level={level + 1}
-                searchTerm={searchTerm}
-                showDate={value.length > 1}
-                onFileClick={onFileClick}
-                previewingFileId={previewingFileId}
-              />
-            ))
-          ) : value && typeof value === "object" ? (
-            // Step IDs under category
-            Object.entries(value).map(([stepId, stepValue]) => {
-              if (isGroupArray(stepValue)) {
-                return (
-                  <StepNode
-                    key={stepId}
-                    stepId={stepId}
-                    groups={stepValue}
-                    level={level + 1}
-                    searchTerm={searchTerm}
-                    onFileClick={onFileClick}
-                    previewingFileId={previewingFileId}
-                  />
-                );
-              }
-              return null;
-            })
-          ) : null}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// =============================================================================
-// Branch Node Component
-// =============================================================================
-
-interface BranchNodeProps {
-  branchId: string;
-  categories: Record<string, unknown>;
-  level: number;
-  searchTerm: string;
-  onFileClick: (file: WorkflowFile) => void;
-  previewingFileId?: string | null;
-}
-
-function BranchNode({
-  branchId,
-  categories,
-  level,
-  searchTerm,
-  onFileClick,
-  previewingFileId,
-}: BranchNodeProps) {
-  const [isOpen, setIsOpen] = useState(false);
-
-  const hasMatchingDescendant = useMemo(() => {
-    return Object.entries(categories).some(([cat, val]) =>
-      nodeMatchesSearch(cat, val, searchTerm)
-    );
-  }, [categories, searchTerm]);
-
-  const effectiveIsOpen = isOpen || (searchTerm && hasMatchingDescendant);
-  const keyMatches =
-    searchTerm && branchId.toLowerCase().includes(searchTerm.toLowerCase());
-
-  return (
-    <div className="select-none">
-      <div
-        className={cn(
-          "flex items-center gap-2 py-1.5 px-2 rounded hover:bg-muted/50 cursor-pointer",
-          keyMatches && "bg-yellow-100 dark:bg-yellow-900/30"
-        )}
-        style={{ paddingLeft: `${level * 16 + 8}px` }}
-        onClick={() => setIsOpen((prev) => !prev)}
-      >
-        {effectiveIsOpen ? (
-          <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
-        ) : (
-          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-        )}
-        {effectiveIsOpen ? (
-          <FolderOpen className="h-4 w-4 text-purple-500 shrink-0" />
-        ) : (
-          <Folder className="h-4 w-4 text-purple-500 shrink-0" />
-        )}
-        <span
-          className={cn(
-            "font-mono text-sm text-primary font-medium",
-            keyMatches && "font-bold"
-          )}
-        >
-          {branchId}
-        </span>
-      </div>
-
-      {effectiveIsOpen && (
-        <div className="border-l border-border/50 ml-4">
-          {Object.entries(categories).map(([category, value]) => (
-            <CategoryNode
-              key={category}
-              category={category}
-              value={value}
+          {children.map((child, index) => (
+            <TreeNodeComponent
+              key={`${child._meta.display_name}-${index}`}
+              node={child}
               level={level + 1}
               searchTerm={searchTerm}
-              onFileClick={onFileClick}
-              previewingFileId={previewingFileId}
+              onLeafClick={onLeafClick}
+              previewingContentUrl={previewingContentUrl}
             />
           ))}
         </div>
@@ -667,28 +362,37 @@ export function FilesTreeView() {
     loading: false,
   });
   // Index of currently previewed media file (null = closed)
-  const [mediaPreviewIndex, setMediaPreviewIndex] = useState<number | null>(null);
+  const [mediaPreviewIndex, setMediaPreviewIndex] = useState<number | null>(
+    null
+  );
+
+  // Cast files to the new TreeNode array structure
+  const fileTree = files as FileTreeNode[] | null;
 
   // Extract all media files from tree in display order
   const allMediaFiles = useMemo(() => {
-    if (!files) return [];
-    return extractMediaFiles(files as Record<string, unknown>);
-  }, [files]);
+    if (!fileTree || !Array.isArray(fileTree)) return [];
+    return extractMediaFiles(fileTree);
+  }, [fileTree]);
 
-  // Build a map from file_id to index for quick lookup
+  // Build a map from content URL to index for quick lookup
   const mediaFileIndexMap = useMemo(() => {
     const map = new Map<string, number>();
     allMediaFiles.forEach((file, index) => {
-      map.set(file.file_id, index);
+      map.set(file.contentUrl, index);
     });
     return map;
   }, [allMediaFiles]);
 
-  const handleFileClick = useCallback(
-    async (file: WorkflowFile) => {
-      // Media files open in the media preview dialog
-      if (isMediaFile(file)) {
-        const index = mediaFileIndexMap.get(file.file_id);
+  // Handle leaf node click
+  const handleLeafClick = useCallback(
+    async (meta: TreeNodeMetadata) => {
+      const contentType = meta.content_type || "text";
+      const isMedia = ["image", "video", "audio"].includes(contentType);
+
+      if (isMedia && meta.content_url) {
+        // Media files open in the media preview dialog
+        const index = mediaFileIndexMap.get(meta.content_url);
         if (index !== undefined) {
           setMediaPreviewIndex(index);
         }
@@ -698,18 +402,30 @@ export function FilesTreeView() {
       // Regular files (JSON/text) open in the content popup
       setPopup({
         open: true,
-        filename: file.filename,
+        filename: meta.display_name,
         content: null,
-        contentType: file.content_type,
+        contentType,
         loading: true,
       });
 
-      const fileContent = await fetchFileContent(file.file_id);
-      setPopup((prev) => ({
-        ...prev,
-        content: fileContent?.content ?? null,
-        loading: false,
-      }));
+      // Extract file_id from content_url (e.g., /workflow/{id}/files/{file_id})
+      const fileIdMatch = meta.content_url?.match(/\/files\/([^/]+)$/);
+      const fileId = fileIdMatch?.[1];
+
+      if (fileId) {
+        const fileContent = await fetchFileContent(fileId);
+        setPopup((prev) => ({
+          ...prev,
+          content: fileContent?.content ?? null,
+          loading: false,
+        }));
+      } else {
+        setPopup((prev) => ({
+          ...prev,
+          content: "Unable to load content",
+          loading: false,
+        }));
+      }
     },
     [fetchFileContent, mediaFileIndexMap]
   );
@@ -723,7 +439,9 @@ export function FilesTreeView() {
   }, []);
 
   const handleMediaPrevious = useCallback(() => {
-    setMediaPreviewIndex((prev) => (prev !== null && prev > 0 ? prev - 1 : prev));
+    setMediaPreviewIndex((prev) =>
+      prev !== null && prev > 0 ? prev - 1 : prev
+    );
   }, []);
 
   const handleMediaNext = useCallback(() => {
@@ -732,28 +450,19 @@ export function FilesTreeView() {
     );
   }, [allMediaFiles.length]);
 
-  // Determine if we have multiple branches
-  const hasBranches = useMemo(() => {
-    if (!files) return false;
-    // Check if first-level keys look like branch IDs (contain categories as values)
-    const firstValue = Object.values(files)[0];
-    return (
-      firstValue &&
-      typeof firstValue === "object" &&
-      !Array.isArray(firstValue) &&
-      !("file_id" in firstValue) &&
-      !("group_id" in firstValue)
-    );
-  }, [files]);
+  // Get the content URL of currently previewing media (for highlighting in tree)
+  const previewingContentUrl =
+    mediaPreviewIndex !== null
+      ? allMediaFiles[mediaPreviewIndex]?.contentUrl ?? null
+      : null;
 
-  // Get the file_id of currently previewing media (for highlighting in tree)
-  const previewingFileId = mediaPreviewIndex !== null
-    ? allMediaFiles[mediaPreviewIndex]?.file_id ?? null
-    : null;
+  // Get current media file for preview dialog
+  const currentMediaFile =
+    mediaPreviewIndex !== null ? allMediaFiles[mediaPreviewIndex] : null;
 
   // Render tree content
   const renderTreeContent = () => {
-    if (!files || Object.keys(files).length === 0) {
+    if (!fileTree || !Array.isArray(fileTree) || fileTree.length === 0) {
       return (
         <div className="text-sm text-muted-foreground italic py-2">
           No files yet
@@ -761,33 +470,16 @@ export function FilesTreeView() {
       );
     }
 
-    if (hasBranches) {
-      // Multiple branches - branch level at root
-      return Object.entries(files).map(([branchId, categories]) => (
-        <BranchNode
-          key={branchId}
-          branchId={branchId}
-          categories={categories as Record<string, unknown>}
-          level={0}
-          searchTerm={searchTerm}
-          onFileClick={handleFileClick}
-          previewingFileId={previewingFileId}
-        />
-      ));
-    } else {
-      // Single branch - categories at root
-      return Object.entries(files).map(([category, value]) => (
-        <CategoryNode
-          key={category}
-          category={category}
-          value={value}
-          level={0}
-          searchTerm={searchTerm}
-          onFileClick={handleFileClick}
-          previewingFileId={previewingFileId}
-        />
-      ));
-    }
+    return fileTree.map((node, index) => (
+      <TreeNodeComponent
+        key={`${node._meta.display_name}-${index}`}
+        node={node}
+        level={0}
+        searchTerm={searchTerm}
+        onLeafClick={handleLeafClick}
+        previewingContentUrl={previewingContentUrl}
+      />
+    ));
   };
 
   return (
@@ -803,13 +495,15 @@ export function FilesTreeView() {
               )}
               title={isConnected ? "Connected" : "Disconnected"}
             />
-            <button
-              onClick={() => setIsMaximized(true)}
-              className="ml-auto p-1 hover:bg-muted rounded opacity-60 hover:opacity-100 transition-opacity"
-              title="Maximize"
-            >
-              <Maximize2 className="h-4 w-4 text-muted-foreground" />
-            </button>
+            <div className="ml-auto flex items-center gap-1">
+              <button
+                onClick={() => setIsMaximized(true)}
+                className="p-1 hover:bg-muted rounded opacity-60 hover:opacity-100 transition-opacity"
+                title="Maximize"
+              >
+                <Maximize2 className="h-4 w-4 text-muted-foreground" />
+              </button>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0 pb-3 flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
@@ -834,7 +528,10 @@ export function FilesTreeView() {
       <Dialog open={popup.open} onOpenChange={handleClosePopup}>
         <DialogContent size="medium" className="flex flex-col overflow-hidden">
           {!popup.loading && popup.content !== null ? (
-            <CopyButton value={popup.content} className="absolute top-4 right-12" />
+            <CopyButton
+              value={popup.content}
+              className="absolute top-4 right-12"
+            />
           ) : null}
           <DialogHeader className="shrink-0">
             <DialogTitle className="font-mono text-sm pr-16">
@@ -848,7 +545,10 @@ export function FilesTreeView() {
               </div>
             ) : popup.content !== null && typeof popup.content === "object" ? (
               <div className="bg-muted p-4 rounded">
-                <JsonTreeView data={popup.content as object} defaultExpandDepth={2} />
+                <JsonTreeView
+                  data={popup.content as object}
+                  defaultExpandDepth={2}
+                />
               </div>
             ) : (
               <pre className="text-sm bg-muted p-4 rounded whitespace-pre-wrap break-words">
@@ -894,15 +594,22 @@ export function FilesTreeView() {
       </Dialog>
 
       {/* Media Preview Dialog (images, videos, audio) */}
-      <MediaPreviewDialog
-        open={mediaPreviewIndex !== null}
-        onOpenChange={(open) => !open && handleCloseMediaPreview()}
-        file={mediaPreviewIndex !== null ? allMediaFiles[mediaPreviewIndex] : null}
-        currentIndex={mediaPreviewIndex ?? 0}
-        totalCount={allMediaFiles.length}
-        onPrevious={handleMediaPrevious}
-        onNext={handleMediaNext}
-      />
+      {currentMediaFile && (
+        <MediaPreviewDialog
+          open={mediaPreviewIndex !== null}
+          onOpenChange={(open) => !open && handleCloseMediaPreview()}
+          file={{
+            file_id: currentMediaFile.contentUrl,
+            filename: currentMediaFile.displayName,
+            content_type: currentMediaFile.contentType,
+            url: currentMediaFile.contentUrl,
+          }}
+          currentIndex={mediaPreviewIndex ?? 0}
+          totalCount={allMediaFiles.length}
+          onPrevious={handleMediaPrevious}
+          onNext={handleMediaNext}
+        />
+      )}
     </>
   );
 }

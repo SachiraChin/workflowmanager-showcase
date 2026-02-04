@@ -4,12 +4,16 @@ Workflow Files API routes.
 Provides endpoints for accessing workflow files and API call logs.
 Used by TUI debug mode for file synchronization.
 Also serves downloaded media files (images/videos).
+Includes bulk download as ZIP functionality.
 """
 
+import io
+import json
 import os
-from typing import Dict, Any, Optional
+import zipfile
+from typing import Dict, Any, Optional, List
 from fastapi import APIRouter, HTTPException, Query, Depends, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 
 from ..dependencies import get_db, get_current_user_id
 from backend.db.path_utils import resolve_local_path
@@ -232,4 +236,339 @@ async def get_media_file(
         path=local_path,
         media_type=content_type,
         headers=headers
+    )
+
+
+# =============================================================================
+# Bulk Download as ZIP - Helper Functions
+# =============================================================================
+
+def _add_workflow_file_to_zip(
+    zf: zipfile.ZipFile,
+    file_doc: Dict[str, Any],
+    base_path: str
+) -> None:
+    """Add a workflow file (from workflow_files collection) to the zip."""
+    filename = file_doc.get("filename", "unknown")
+    content = file_doc.get("content")
+    content_type = file_doc.get("content_type", "text")
+
+    # Build the path in the zip
+    zip_path = f"{base_path}/{filename}" if base_path else filename
+
+    # Serialize content based on type
+    if content_type == "json" and isinstance(content, (dict, list)):
+        data = json.dumps(content, indent=2).encode("utf-8")
+    elif isinstance(content, str):
+        data = content.encode("utf-8")
+    elif isinstance(content, bytes):
+        data = content
+    else:
+        data = str(content).encode("utf-8")
+
+    zf.writestr(zip_path, data)
+
+
+def _add_media_file_to_zip(
+    zf: zipfile.ZipFile,
+    content_doc: Dict[str, Any],
+    base_path: str
+) -> bool:
+    """Add a media file (from generated_content) to the zip. Returns True if added."""
+    content_id = content_doc.get("generated_content_id")
+    extension = content_doc.get("extension", "")
+    local_path = content_doc.get("local_path")
+
+    if not local_path:
+        return False
+
+    full_path = resolve_local_path(local_path)
+    if not os.path.exists(full_path):
+        return False
+
+    filename = f"{content_id}.{extension}" if extension else content_id
+    zip_path = f"{base_path}/{filename}" if base_path else filename
+
+    zf.write(full_path, zip_path)
+    return True
+
+
+def _create_zip_response(
+    zf_buffer: io.BytesIO,
+    filename: str
+) -> StreamingResponse:
+    """Create a ZIP streaming response, raising 404 if empty."""
+    zf_buffer.seek(0)
+    if zf_buffer.getbuffer().nbytes <= 22:  # Empty ZIP is 22 bytes
+        raise HTTPException(status_code=404, detail="No files to download")
+
+    return StreamingResponse(
+        zf_buffer,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"'
+        }
+    )
+
+
+# =============================================================================
+# Workflow Files Download Endpoints
+# =============================================================================
+
+@router.get("/{workflow_run_id}/files/download")
+async def download_all_workflow_files(
+    workflow_run_id: str,
+    db=Depends(get_db),
+    user_id: str = Depends(get_current_user_id)
+):
+    """Download all workflow files as ZIP."""
+    workflow = db.workflow_repo.get_workflow(workflow_run_id)
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+
+    files = db.file_repo.get_workflow_files(workflow_run_id)
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        for file_doc in files:
+            category = file_doc.get("category", "")
+            step_id = file_doc.get("metadata", {}).get("step_id", "")
+            # Organize in zip: category/step_id/filename
+            if step_id:
+                base_path = f"{category}/{step_id}"
+            elif category:
+                base_path = category
+            else:
+                base_path = ""
+            _add_workflow_file_to_zip(zf, file_doc, base_path)
+
+    return _create_zip_response(zip_buffer, f"{workflow_run_id}_files.zip")
+
+
+@router.get("/{workflow_run_id}/files/{category}/download")
+async def download_category_files(
+    workflow_run_id: str,
+    category: str,
+    db=Depends(get_db),
+    user_id: str = Depends(get_current_user_id)
+):
+    """Download all files in a category as ZIP."""
+    workflow = db.workflow_repo.get_workflow(workflow_run_id)
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+
+    files = db.file_repo.get_workflow_files(workflow_run_id, category=category)
+    if not files:
+        raise HTTPException(status_code=404, detail="Category not found or empty")
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        for file_doc in files:
+            step_id = file_doc.get("metadata", {}).get("step_id", "")
+            base_path = step_id if step_id else ""
+            _add_workflow_file_to_zip(zf, file_doc, base_path)
+
+    return _create_zip_response(zip_buffer, f"{workflow_run_id}_{category}.zip")
+
+
+@router.get("/{workflow_run_id}/files/{category}/{step_id}/download")
+async def download_step_files(
+    workflow_run_id: str,
+    category: str,
+    step_id: str,
+    db=Depends(get_db),
+    user_id: str = Depends(get_current_user_id)
+):
+    """Download all files in a step as ZIP."""
+    workflow = db.workflow_repo.get_workflow(workflow_run_id)
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+
+    files = db.file_repo.get_workflow_files(
+        workflow_run_id, category=category, step_id=step_id
+    )
+    if not files:
+        raise HTTPException(status_code=404, detail="Step not found or empty")
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        for file_doc in files:
+            _add_workflow_file_to_zip(zf, file_doc, "")
+
+    return _create_zip_response(zip_buffer, f"{workflow_run_id}_{category}_{step_id}.zip")
+
+
+@router.get("/{workflow_run_id}/files/{category}/{step_id}/{group_id}/download")
+async def download_group_files(
+    workflow_run_id: str,
+    category: str,
+    step_id: str,
+    group_id: str,
+    db=Depends(get_db),
+    user_id: str = Depends(get_current_user_id)
+):
+    """Download all files in a group as ZIP."""
+    workflow = db.workflow_repo.get_workflow(workflow_run_id)
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+
+    files = db.file_repo.get_workflow_files(workflow_run_id, group_id=group_id)
+    if not files:
+        raise HTTPException(status_code=404, detail="Group not found or empty")
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        for file_doc in files:
+            _add_workflow_file_to_zip(zf, file_doc, "")
+
+    return _create_zip_response(zip_buffer, f"{workflow_run_id}_{group_id[:12]}.zip")
+
+
+# =============================================================================
+# Media Download Endpoints
+# =============================================================================
+
+@router.get("/{workflow_run_id}/media/download")
+async def download_all_media(
+    workflow_run_id: str,
+    db=Depends(get_db),
+    user_id: str = Depends(get_current_user_id)
+):
+    """Download all media files as ZIP."""
+    workflow = db.workflow_repo.get_workflow(workflow_run_id)
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+
+    # Get all completed generations
+    metadata_list = list(db.content_repo.metadata.find(
+        {"workflow_run_id": workflow_run_id, "status": "completed"},
+        {"_id": 0}
+    ))
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        for meta in metadata_list:
+            provider = meta.get("provider", "unknown")
+            meta_id = meta.get("content_generation_metadata_id")
+            content_items = list(db.content_repo.content.find(
+                {"content_generation_metadata_id": meta_id},
+                {"_id": 0}
+            ))
+            for item in content_items:
+                if item.get("content_type") == "video.preview":
+                    continue
+                _add_media_file_to_zip(zf, item, provider)
+
+    return _create_zip_response(zip_buffer, f"{workflow_run_id}_media.zip")
+
+
+@router.get("/{workflow_run_id}/media/{provider}/download")
+async def download_provider_media(
+    workflow_run_id: str,
+    provider: str,
+    db=Depends(get_db),
+    user_id: str = Depends(get_current_user_id)
+):
+    """Download all media from a provider as ZIP."""
+    workflow = db.workflow_repo.get_workflow(workflow_run_id)
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+
+    metadata_list = list(db.content_repo.metadata.find(
+        {
+            "workflow_run_id": workflow_run_id,
+            "provider": provider,
+            "status": "completed"
+        },
+        {"_id": 0}
+    ))
+    if not metadata_list:
+        raise HTTPException(status_code=404, detail=f"No media for provider: {provider}")
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        for meta in metadata_list:
+            meta_id = meta.get("content_generation_metadata_id")
+            content_items = list(db.content_repo.content.find(
+                {"content_generation_metadata_id": meta_id},
+                {"_id": 0}
+            ))
+            for item in content_items:
+                if item.get("content_type") == "video.preview":
+                    continue
+                _add_media_file_to_zip(zf, item, "")
+
+    return _create_zip_response(zip_buffer, f"{workflow_run_id}_{provider}.zip")
+
+
+@router.get("/{workflow_run_id}/media/{provider}/{metadata_id}/download")
+async def download_generation_media(
+    workflow_run_id: str,
+    provider: str,
+    metadata_id: str,
+    db=Depends(get_db),
+    user_id: str = Depends(get_current_user_id)
+):
+    """Download all media from a generation as ZIP."""
+    workflow = db.workflow_repo.get_workflow(workflow_run_id)
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+
+    content_items = list(db.content_repo.content.find(
+        {
+            "content_generation_metadata_id": metadata_id,
+            "workflow_run_id": workflow_run_id
+        },
+        {"_id": 0}
+    ))
+    if not content_items:
+        raise HTTPException(status_code=404, detail="Generation not found")
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        for item in content_items:
+            if item.get("content_type") == "video.preview":
+                continue
+            _add_media_file_to_zip(zf, item, "")
+
+    return _create_zip_response(zip_buffer, f"{workflow_run_id}_{metadata_id[:12]}.zip")
+
+
+@router.get("/{workflow_run_id}/media/{provider}/{metadata_id}/{content_id}")
+async def download_single_media(
+    workflow_run_id: str,
+    provider: str,
+    metadata_id: str,
+    content_id: str,
+    request: Request,
+    db=Depends(get_db),
+    user_id: str = Depends(get_current_user_id)
+):
+    """Download a single media file."""
+    content = db.content_repo.get_content_by_id(content_id)
+
+    if not content:
+        raise HTTPException(status_code=404, detail="Content not found")
+
+    if content.get("workflow_run_id") != workflow_run_id:
+        raise HTTPException(status_code=404, detail="Content not found")
+
+    relative_path = content.get("local_path")
+    if not relative_path:
+        raise HTTPException(status_code=404, detail="Content not downloaded")
+
+    local_path = resolve_local_path(relative_path)
+    if not os.path.exists(local_path):
+        raise HTTPException(status_code=404, detail="File not found on disk")
+
+    extension = content.get("extension", "")
+    content_type = MEDIA_CONTENT_TYPES.get(extension.lower(), "application/octet-stream")
+    filename = f"{content_id}.{extension}" if extension else content_id
+
+    return FileResponse(
+        path=local_path,
+        media_type=content_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"'
+        }
     )
