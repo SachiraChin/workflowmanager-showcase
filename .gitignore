@@ -1,3 +1,6 @@
+# Deployment configs (contains server-specific settings)
+deploy/
+
 OPENAI_API_KEY.txt
 /test*
 .claude/settings.local.json
