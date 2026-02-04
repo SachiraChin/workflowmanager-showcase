@@ -380,11 +380,16 @@ class SelectModule(InteractiveModule):
 
         schema_type = schema.get('type')
 
+        # Normalize indices format for single-select
+        # WebUI may send unwrapped path ["key", 0] instead of [["key", 0]]
+        # Detect and wrap if needed for consistent processing
+        normalized_indices = self._normalize_indices(selected_indices, multi_select)
+
         # Dispatch to appropriate extractor based on schema type
         if schema_type == 'array' and isinstance(data, list):
-            selected_items = self._extract_from_array(data, selected_indices)
+            selected_items = self._extract_from_array(data, normalized_indices)
         elif schema_type == 'object' and isinstance(data, dict):
-            selected_items = self._extract_from_object(data, selected_indices)
+            selected_items = self._extract_from_object(data, normalized_indices)
         else:
             selected_items = []
 
@@ -393,6 +398,48 @@ class SelectModule(InteractiveModule):
             return selected_items[0]
 
         return selected_items
+
+    def _normalize_indices(
+        self,
+        selected_indices: List,
+        multi_select: bool
+    ) -> List:
+        """
+        Normalize selected_indices to consistent format.
+
+        For single-select, WebUI may send an unwrapped path like ["key", 0]
+        instead of [["key", 0]]. This detects and wraps such cases.
+
+        Detection logic for unwrapped path:
+        - multi_select is False
+        - First element is a string (indicating a key, not a wrapped path)
+        - Has 2+ elements (a path, not a single key selection)
+
+        Args:
+            selected_indices: Raw indices from client
+            multi_select: Whether multi-select mode is enabled
+
+        Returns:
+            Normalized indices as list of selections
+        """
+        if not selected_indices:
+            return selected_indices
+
+        # For multi-select, indices should already be properly formatted
+        if multi_select:
+            return selected_indices
+
+        # For single-select, check if indices look like an unwrapped path
+        # Unwrapped path: ["key", 0] or ["key", 0, "nested", 1]
+        # Wrapped path: [["key", 0]] or [0]
+        first_element = selected_indices[0]
+
+        # If first element is a string and we have 2+ elements, it's an unwrapped path
+        # e.g., ["text_sets", 1] should become [["text_sets", 1]]
+        if isinstance(first_element, str) and len(selected_indices) >= 2:
+            return [selected_indices]
+
+        return selected_indices
 
     def _extract_from_array(self, data: List, selected_indices: List) -> List:
         """

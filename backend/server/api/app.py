@@ -52,6 +52,7 @@ from .routes import (
     listing_router,
     media_router,
     tasks_router,
+    models_router,
 )
 
 # Configure logger for API
@@ -171,6 +172,7 @@ app.include_router(files_router)
 app.include_router(listing_router)
 app.include_router(media_router)
 app.include_router(tasks_router)
+app.include_router(models_router)
 app.include_router(auth.router)
 
 

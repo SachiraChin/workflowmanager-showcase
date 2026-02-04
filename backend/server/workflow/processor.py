@@ -361,10 +361,17 @@ class WorkflowProcessor(WorkflowStreamingMixin):
         self,
         workflow_run_id: str,
         interaction_id: str,
-        response: InteractionResponseData
+        response: InteractionResponseData,
+        ai_config: Optional[Dict[str, Any]] = None
     ) -> WorkflowResponse:
         """
         Process user response to an interaction.
+        
+        Args:
+            workflow_run_id: The workflow run identifier
+            interaction_id: The interaction being responded to
+            response: The user's response data
+            ai_config: Optional runtime override for AI configuration (provider, model)
         """
         t0 = time.time()
 
@@ -424,6 +431,11 @@ class WorkflowProcessor(WorkflowStreamingMixin):
         position = self.db.state_repo.get_workflow_position(workflow_run_id)
         self.logger.debug(f"[TIMING] get_workflow_position: {(time.time()-t3)*1000:.0f}ms")
         services = rebuild_services(workflow, workflow_def, self.db, self.logger)
+        
+        # Apply runtime ai_config override if provided
+        if ai_config:
+            self.logger.info(f"[RESPOND] Applying ai_config override: {ai_config}")
+            services['ai_config'] = {**services.get('ai_config', {}), **ai_config}
 
         # Get module outputs
         t4 = time.time()
@@ -449,10 +461,19 @@ class WorkflowProcessor(WorkflowStreamingMixin):
         self,
         workflow_run_id: str,
         target_module: str,
-        feedback: Optional[str] = None
+        feedback: Optional[str] = None,
+        ai_config: Optional[Dict[str, Any]] = None
     ) -> WorkflowResponse:
-        """Retry a module with optional feedback."""
-        return self.navigator.retry(workflow_run_id, target_module, feedback)
+        """
+        Retry a module with optional feedback.
+        
+        Args:
+            workflow_run_id: The workflow run identifier
+            target_module: Module name to retry
+            feedback: Optional feedback for retry
+            ai_config: Optional runtime override for AI configuration (provider, model)
+        """
+        return self.navigator.retry(workflow_run_id, target_module, feedback, ai_config)
 
     def jump(
         self,

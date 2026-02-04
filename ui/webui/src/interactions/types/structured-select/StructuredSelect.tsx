@@ -21,7 +21,8 @@ import {
  * 2. Multi-element paths (nested items): ["items", "0"] -> ["items", 0]
  *
  * For multi-select with single-element paths: [["sora"], ["leonardo"]] -> ["sora", "leonardo"]
- * For single-select: [["items", "0"]] -> ["items", 0]
+ * For single-select with single-element path: [["sora"]] -> ["sora"]
+ * For single-select with multi-element path: [["items", "0"]] -> [["items", 0]]
  */
 function buildSelectResponse(
   selectedPaths: string[][],
@@ -47,10 +48,14 @@ function buildSelectResponse(
       path.length === 1 ? path[0] : path
     );
   } else {
-    // For single select, unwrap the outer array: [['items', '0']] -> ['items', 0]
-    if (convertedPaths.length === 1) {
+    // For single-select, flatten only single-element paths
+    // [["sora"]] -> ["sora"] (single key selection)
+    // [["items", 0]] -> [["items", 0]] (nested path - keep wrapped)
+    if (convertedPaths.length === 1 && convertedPaths[0].length === 1) {
+      // Single-element path: unwrap to just the key
       resultIndices = convertedPaths[0] as (string | number)[];
     } else {
+      // Multi-element path or multiple selections: keep as array of paths
       resultIndices = convertedPaths;
     }
   }

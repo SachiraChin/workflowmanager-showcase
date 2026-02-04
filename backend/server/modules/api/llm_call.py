@@ -165,19 +165,21 @@ class LLMCallModule(ExecutableModule):
     def execute(self, inputs: Dict[str, Any], context) -> Dict[str, Any]:
         """Execute LLM API call via selected provider."""
         try:
-            # Get provider
-            provider_id = self.get_input_value(inputs, 'provider') or 'openai'
-            provider = ProviderRegistry.get(provider_id)
-
             # Build configuration from ai_config + explicit inputs
             global_ai_config = context.services.get('ai_config', {})
             module_ai_config = self.get_input_value(inputs, 'ai_config') or {}
             merged_config = {**global_ai_config, **module_ai_config}
 
+            # Get provider (explicit input > ai_config > default)
+            provider_id = self.get_input_value(inputs, 'provider')
+            if not provider_id:
+                provider_id = merged_config.get('provider', 'openai')
+            provider = ProviderRegistry.get(provider_id)
+
             # Get model (explicit input > ai_config > default)
             model = self.get_input_value(inputs, 'model')
             if not model:
-                model = merged_config.get('model', 'gpt-4o')
+                model = merged_config.get('model', 'gpt-5.2')
 
             # Build messages from input
             messages = self._build_messages(inputs, context)

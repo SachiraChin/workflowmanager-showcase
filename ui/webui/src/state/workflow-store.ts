@@ -9,6 +9,7 @@ import type {
   InteractionRequest,
   WorkflowProgress,
   CompletedInteraction,
+  ModelsResponse,
 } from "@/core/types";
 
 // =============================================================================
@@ -51,6 +52,11 @@ export interface WorkflowExecutionState {
   // View mode (scroll = all cards visible, single = one card at a time)
   viewMode: ViewMode;
   currentViewIndex: number;
+
+  // Model selection (runtime override)
+  modelsConfig: ModelsResponse | null;
+  selectedProvider: string | null;
+  selectedModel: string | null;
 }
 
 export interface WorkflowEvent {
@@ -95,6 +101,10 @@ export interface WorkflowActions {
   toggleViewMode: () => void;
   setCurrentViewIndex: (index: number) => void;
   navigateView: (direction: "prev" | "next", maxIndex: number) => void;
+
+  // Model selection
+  setModelsConfig: (config: ModelsResponse) => void;
+  setSelectedModel: (provider: string | null, model: string | null) => void;
 }
 
 // =============================================================================
@@ -145,6 +155,9 @@ const initialState: WorkflowExecutionState = {
   events: [],
   viewMode: getStoredViewMode(),
   currentViewIndex: 0,
+  modelsConfig: null,
+  selectedProvider: null,
+  selectedModel: null,
 };
 
 // =============================================================================
@@ -262,6 +275,14 @@ export const useWorkflowStore = create<WorkflowExecutionState & WorkflowActions>
         : Math.min(maxIndex, state.currentViewIndex + 1);
       return { currentViewIndex: newIndex };
     }),
+
+    // Model selection
+    setModelsConfig: (config) => set({ modelsConfig: config }),
+
+    setSelectedModel: (provider, model) => set({
+      selectedProvider: provider,
+      selectedModel: model,
+    }),
   })
 );
 
@@ -279,3 +300,6 @@ export const selectError = (state: WorkflowExecutionState) => state.error;
 export const selectModuleOutputs = (state: WorkflowExecutionState) => state.moduleOutputs;
 export const selectViewMode = (state: WorkflowExecutionState) => state.viewMode;
 export const selectCurrentViewIndex = (state: WorkflowExecutionState) => state.currentViewIndex;
+export const selectModelsConfig = (state: WorkflowExecutionState) => state.modelsConfig;
+export const selectSelectedProvider = (state: WorkflowExecutionState) => state.selectedProvider;
+export const selectSelectedModel = (state: WorkflowExecutionState) => state.selectedModel;

@@ -324,7 +324,8 @@ async def respond_to_interaction(
         processor.respond,
         workflow_run_id=request.workflow_run_id,
         interaction_id=request.interaction_id,
-        response=request.response
+        response=request.response,
+        ai_config=request.ai_config
     )
 
     # Convert to dict and serialize
@@ -352,12 +353,15 @@ async def retry_module(
     start_time = time.time()
     feedback_summary = request.feedback[:50] + "..." if request.feedback and len(request.feedback) > 50 else request.feedback
     logger.info(f"[API REQUEST] POST /workflow/retry - workflow={request.workflow_run_id[:8]}..., target={request.target_module}, feedback={feedback_summary}")
+    if request.ai_config:
+        logger.info(f"[API REQUEST] ai_config override: {request.ai_config}")
 
     result = await asyncio.to_thread(
         processor.retry,
         workflow_run_id=request.workflow_run_id,
         target_module=request.target_module,
-        feedback=request.feedback
+        feedback=request.feedback,
+        ai_config=request.ai_config
     )
 
     elapsed_ms = (time.time() - start_time) * 1000

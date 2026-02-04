@@ -56,3 +56,27 @@ class InteractionHistoryResponse(BaseModel):
     workflow_run_id: str
     interactions: List[CompletedInteraction]
     pending_interaction: Optional[ApiInteractionRequest] = None
+
+
+# =============================================================================
+# Models Configuration Response
+# =============================================================================
+
+class ModelInfo(BaseModel):
+    """Information about a single model"""
+    id: str
+    name: str
+
+
+class ProviderConfig(BaseModel):
+    """Configuration for a single provider"""
+    name: str
+    default: str
+    models: List[ModelInfo]
+
+
+class ModelsResponse(BaseModel):
+    """Response for GET /models endpoint"""
+    default_provider: str
+    default_model: str
+    providers: Dict[str, ProviderConfig]

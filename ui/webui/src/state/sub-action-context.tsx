@@ -106,6 +106,8 @@ export function SubActionProvider({
   children,
 }: SubActionProviderProps) {
   const workflowRunId = useWorkflowStore((s) => s.workflowRunId);
+  const selectedProvider = useWorkflowStore((s) => s.selectedProvider);
+  const selectedModel = useWorkflowStore((s) => s.selectedModel);
 
   // Execution state
   const [runningId, setRunningId] = useState<string | null>(null);
@@ -143,12 +145,25 @@ export function SubActionProvider({
       setProgress(subAction.loading_label || "Processing...");
       setError(null);
 
-      // Build request
-      const request = {
+      // Build request with optional ai_config override
+      const request: {
+        interaction_id: string;
+        sub_action_id: string;
+        params: Record<string, unknown>;
+        ai_config?: { provider?: string; model?: string };
+      } = {
         interaction_id: interactionId,
         sub_action_id: subActionId,
         params,
       };
+
+      // Include ai_config if model is selected
+      if (selectedModel) {
+        request.ai_config = {
+          provider: selectedProvider || undefined,
+          model: selectedModel,
+        };
+      }
 
       // Handle SSE events
       const handleEvent = (eventType: SSEEventType, data: Record<string, unknown>) => {
@@ -179,7 +194,7 @@ export function SubActionProvider({
       // Execute via SSE
       api.streamSubAction(workflowRunId, request, handleEvent, handleError);
     },
-    [workflowRunId, interactionId, subActions, onComplete]
+    [workflowRunId, interactionId, subActions, onComplete, selectedProvider, selectedModel]
   );
 
   // Build context value

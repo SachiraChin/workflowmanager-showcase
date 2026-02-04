@@ -9,7 +9,7 @@ import concurrent.futures
 import logging
 import os
 import time
-from typing import Dict, Any, TYPE_CHECKING
+from typing import Dict, Any, Optional, TYPE_CHECKING
 
 from models import (
     WorkflowStatus,
@@ -105,10 +105,18 @@ class WorkflowStreamingMixin:
         workflow_run_id: str,
         interaction_id: str,
         response: InteractionResponseData,
-        cancel_event: asyncio.Event
+        cancel_event: asyncio.Event,
+        ai_config: Optional[Dict[str, Any]] = None
     ):
         """
         Process interaction response and stream execution events.
+        
+        Args:
+            workflow_run_id: The workflow run identifier
+            interaction_id: The interaction being responded to
+            response: The user's response data
+            cancel_event: Event to signal cancellation
+            ai_config: Optional runtime override for AI configuration (provider, model)
         """
         self.logger.info(f"[SSE] respond_stream called with cancel_event={cancel_event}")
 
@@ -160,6 +168,12 @@ class WorkflowStreamingMixin:
             yield SSEEvent(type=SSEEventType.ERROR, data={"workflow_run_id": workflow_run_id, "error": "Workflow definition not found"})
             return
         services = rebuild_services(workflow, workflow_def, self.db, self.logger)
+        
+        # Apply runtime ai_config override if provided
+        if ai_config:
+            self.logger.info(f"[SSE] Applying ai_config override: {ai_config}")
+            services['ai_config'] = {**services.get('ai_config', {}), **ai_config}
+        
         module_outputs = self.db.state_repo.get_module_outputs(workflow_run_id)
 
         yield SSEEvent(

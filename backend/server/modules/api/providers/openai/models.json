@@ -54,6 +54,17 @@
       "cache_control": false
     }
   },
+  "gpt-5.2": {
+    "api_endpoint": "responses",
+    "supports": {
+      "temperature": false,
+      "max_tokens": { "max": 100000 },
+      "vision": true,
+      "structured_output": true,
+      "reasoning_effort": { "values": ["low", "medium", "high"], "default": "medium" },
+      "cache_control": true
+    }
+  },
   "gpt-5.1": {
     "api_endpoint": "responses",
     "supports": {

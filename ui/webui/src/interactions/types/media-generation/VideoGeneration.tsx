@@ -72,6 +72,8 @@ export function VideoGeneration({
   const inputContext = useInputSchemaOptional();
   const { request } = useInteraction();
   const workflowRunId = useWorkflowStore((s) => s.workflowRunId);
+  const selectedProvider = useWorkflowStore((s) => s.selectedProvider);
+  const selectedModel = useWorkflowStore((s) => s.selectedModel);
 
   // Extract from context (must be before hooks that use these values)
   const subActions = mediaContext?.subActions ?? [];
@@ -232,6 +234,13 @@ export function VideoGeneration({
           params: finalParams,
           source_data: data,
         },
+        // Include ai_config if model is selected
+        ...(selectedModel && {
+          ai_config: {
+            provider: selectedProvider || undefined,
+            model: selectedModel,
+          },
+        }),
       };
 
       const handleEvent = (
@@ -295,6 +304,8 @@ export function VideoGeneration({
       registerGeneration,
       subActions,
       queue.actions,
+      selectedProvider,
+      selectedModel,
     ]
   );
 

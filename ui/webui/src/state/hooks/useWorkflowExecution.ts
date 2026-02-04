@@ -58,6 +58,8 @@ export function useWorkflowExecution() {
   const lastMessage = useWorkflowStore((state) => state.lastMessage);
   const moduleOutputs = useWorkflowStore((state) => state.moduleOutputs);
   const events = useWorkflowStore((state) => state.events);
+  const selectedProvider = useWorkflowStore((state) => state.selectedProvider);
+  const selectedModel = useWorkflowStore((state) => state.selectedModel);
 
   // ==========================================================================
   // Store Actions (STABLE - never changes, safe for useCallback dependencies)
@@ -95,10 +97,14 @@ export function useWorkflowExecution() {
   // them as dependencies (which would make the callbacks unstable)
   const workflowRunIdRef = useRef(workflowRunId);
   const currentInteractionRef = useRef(currentInteraction);
+  const selectedProviderRef = useRef(selectedProvider);
+  const selectedModelRef = useRef(selectedModel);
 
   // Keep refs in sync with state
   workflowRunIdRef.current = workflowRunId;
   currentInteractionRef.current = currentInteraction;
+  selectedProviderRef.current = selectedProvider;
+  selectedModelRef.current = selectedModel;
 
   /**
    * Refresh current interaction's display_data from server.
@@ -427,12 +433,28 @@ export function useWorkflowExecution() {
       try {
         actions.setConnected(true);
 
-        // Build request
-        const requestBody = {
+        // Build request with optional ai_config override
+        const currentProvider = selectedProviderRef.current;
+        const currentModel = selectedModelRef.current;
+        const requestBody: {
+          workflow_run_id: string;
+          interaction_id: string;
+          response: InteractionResponseData;
+          ai_config?: { provider: string; model: string };
+        } = {
           workflow_run_id: currentWorkflowRunId,
           interaction_id: interaction.interaction_id,
           response,
         };
+        
+        // Include ai_config only if user has selected a specific model
+        if (currentProvider && currentModel) {
+          requestBody.ai_config = {
+            provider: currentProvider,
+            model: currentModel,
+          };
+        }
+        
         console.log("[respond] Sending request body:", requestBody);
         console.log("[respond] response.form_data:", response.form_data);
 

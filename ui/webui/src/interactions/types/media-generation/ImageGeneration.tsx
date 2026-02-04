@@ -70,6 +70,8 @@ export function ImageGeneration({
   const inputContext = useInputSchemaOptional();
   const { request } = useInteraction();
   const workflowRunId = useWorkflowStore((s) => s.workflowRunId);
+  const selectedProvider = useWorkflowStore((s) => s.selectedProvider);
+  const selectedModel = useWorkflowStore((s) => s.selectedModel);
 
   // Extract values from context (with defaults if context is null)
   // NOTE: These must be extracted before using in hooks
@@ -223,6 +225,13 @@ export function ImageGeneration({
           params,
           source_data: data,
         },
+        // Include ai_config if model is selected
+        ...(selectedModel && {
+          ai_config: {
+            provider: selectedProvider || undefined,
+            model: selectedModel,
+          },
+        }),
       };
 
       const handleEvent = (
@@ -284,6 +293,8 @@ export function ImageGeneration({
       registerGeneration,
       subActions,
       queue.actions,
+      selectedProvider,
+      selectedModel,
     ]
   );
 

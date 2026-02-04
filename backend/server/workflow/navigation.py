@@ -39,7 +39,8 @@ class NavigationHandler:
         self,
         workflow_run_id: str,
         target_module: str,
-        feedback: Optional[str] = None
+        feedback: Optional[str] = None,
+        ai_config: Optional[Dict[str, Any]] = None
     ) -> WorkflowResponse:
         """
         Retry a module with optional feedback.
@@ -48,6 +49,7 @@ class NavigationHandler:
             workflow_run_id: Workflow ID
             target_module: Module to re-execute
             feedback: Optional user feedback
+            ai_config: Optional runtime override for AI configuration (provider, model)
 
         Returns:
             WorkflowResponse with status
@@ -94,6 +96,11 @@ class NavigationHandler:
 
         # Rebuild services
         services = rebuild_services(workflow, workflow_def, self.db, self.logger)
+
+        # Apply runtime ai_config override if provided
+        if ai_config:
+            self.logger.info(f"[RETRY] Applying ai_config override: {ai_config}")
+            services['ai_config'] = {**services.get('ai_config', {}), **ai_config}
 
         # Execute from target module with retry context
         return self.executor.execute_from_module(

@@ -30,6 +30,7 @@ active_state_streams: Dict[str, Dict] = {}
 from models import (
     RespondRequest,
     SubActionRequest,
+    CancelRequest,
 )
 from backend.db import DbEventType
 
@@ -122,6 +123,8 @@ async def stream_respond(
 
     logger.info(f"[SSE] Stream respond for workflow {workflow_run_id[:8]}..., interaction={request.interaction_id}")
     logger.info(f"[SSE] Response data: value={request.response.value}, selected_indices={request.response.selected_indices}, form_data={request.response.form_data}")
+    if request.ai_config:
+        logger.info(f"[SSE] ai_config override: {request.ai_config}")
 
     cancel_event = threading.Event()
     active_streams[workflow_run_id] = cancel_event
@@ -132,6 +135,7 @@ async def stream_respond(
                 workflow_run_id=workflow_run_id,
                 interaction_id=request.interaction_id,
                 response=request.response,
+                ai_config=request.ai_config,
                 cancel_event=cancel_event
             ):
                 if cancel_event.is_set():
@@ -164,6 +168,7 @@ async def stream_respond(
 @router.post("/{workflow_run_id}/cancel")
 async def cancel_workflow(
     workflow_run_id: str,
+    request: CancelRequest = CancelRequest(),
     user_id: str = Depends(get_current_user_id)
 ):
     """
@@ -171,7 +176,10 @@ async def cancel_workflow(
 
     If the workflow has an active streaming connection, this will
     signal cancellation to abort any in-progress API calls.
+    
+    Request body is optional and accepts ai_config for API consistency.
     """
+    # Request body is optional - ai_config not used for cancel but accepted for consistency
     if workflow_run_id in active_streams:
         active_streams[workflow_run_id].set()
         logger.info(f"[SSE] Cancellation requested for workflow {workflow_run_id[:8]}...")
@@ -205,6 +213,8 @@ async def execute_sub_action(
         f"[SubAction] Request for workflow {workflow_run_id[:8]}..., "
         f"sub_action_id={request.sub_action_id}, interaction={request.interaction_id}"
     )
+    if request.ai_config:
+        logger.info(f"[SubAction] ai_config override: {request.ai_config}")
 
     workflow = db.workflow_repo.get_workflow(workflow_run_id)
     if not workflow:
@@ -217,6 +227,7 @@ async def execute_sub_action(
                 interaction_id=request.interaction_id,
                 sub_action_id=request.sub_action_id,
                 params=request.params,
+                ai_config=request.ai_config,
             ):
                 yield {"event": event.type.value, "data": json.dumps(event.data)}
         except Exception as e:

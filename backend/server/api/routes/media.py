@@ -6,24 +6,17 @@ These are non-streaming endpoints for getting resolution and credit information.
 """
 
 import logging
-from typing import Any, Dict
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
 from ..dependencies import get_db, get_current_user_id
+from models import MediaPreviewRequest
 from modules.media import MediaProviderRegistry
 from backend.providers.media.base import GenerationError
 
 logger = logging.getLogger('workflow.api')
 
 router = APIRouter(prefix="/workflow", tags=["media"])
-
-
-class MediaPreviewRequest(BaseModel):
-    """Request body for media preview endpoint."""
-    provider: str
-    action_type: str
-    params: Dict[str, Any]
 
 
 class ResolutionResponse(BaseModel):

@@ -64,6 +64,7 @@ class SubActionHandler:
         interaction_id: str,
         sub_action_id: str,
         params: Dict[str, Any] = None,
+        ai_config: Dict[str, Any] = None,
     ) -> AsyncIterator[SSEEvent]:
         """
         Execute sub-action and yield progress events.
@@ -73,6 +74,7 @@ class SubActionHandler:
             interaction_id: Current interaction ID
             sub_action_id: Sub-action ID from schema (e.g., "image_generation")
             params: Optional parameters (e.g., feedback)
+            ai_config: Optional runtime override for AI configuration (provider, model)
 
         Yields:
             SSEEvent objects for streaming
@@ -147,7 +149,7 @@ class SubActionHandler:
             # 5. Execute based on type (both return child_state dict)
             if action_type == "target_sub_action":
                 child_state, child_workflow_id = await self._execute_target_sub_actions(
-                    workflow_run_id, execution_id, sub_action_def, params
+                    workflow_run_id, execution_id, sub_action_def, params, ai_config
                 )
             elif action_type == "self_sub_action":
                 # self_sub_action yields progress events before returning result
@@ -245,9 +247,17 @@ class SubActionHandler:
         execution_id: str,
         sub_action_def: Dict,
         params: Dict,
+        ai_config: Dict = None,
     ) -> Tuple[Dict, str]:
         """
         Execute target_sub_action chain as child workflow.
+
+        Args:
+            parent_workflow_run_id: Parent workflow run ID
+            execution_id: Unique execution ID for this sub-action run
+            sub_action_def: Sub-action definition from module config
+            params: Parameters passed to sub-action
+            ai_config: Optional runtime override for AI configuration (provider, model)
 
         Returns:
             Tuple of (child_state, child_workflow_id)
@@ -259,6 +269,11 @@ class SubActionHandler:
         workflow = self.db.workflow_repo.get_workflow(parent_workflow_run_id)
         workflow_def = get_workflow_def(workflow, self.db, logger)
         services = rebuild_services(workflow, workflow_def, self.db, logger)
+
+        # Apply runtime ai_config override if provided
+        if ai_config:
+            logger.info(f"[SubAction] Applying ai_config override: {ai_config}")
+            services['ai_config'] = {**services.get('ai_config', {}), **ai_config}
 
         # Inject feedback if provided
         if params.get("feedback"):

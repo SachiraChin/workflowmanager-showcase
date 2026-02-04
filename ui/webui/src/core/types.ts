@@ -206,6 +206,31 @@ export interface RespondRequest {
   workflow_run_id: string;
   interaction_id: string;
   response: InteractionResponseData;
+  ai_config?: {
+    provider?: string;
+    model?: string;
+  };
+}
+
+// =============================================================================
+// Models Configuration
+// =============================================================================
+
+export interface ModelInfo {
+  id: string;
+  name: string;
+}
+
+export interface ProviderConfig {
+  name: string;
+  default: string;
+  models: ModelInfo[];
+}
+
+export interface ModelsResponse {
+  default_provider: string;
+  default_model: string;
+  providers: Record<string, ProviderConfig>;
 }
 
 // =============================================================================
@@ -412,6 +437,11 @@ export interface SubActionRequest {
   sub_action_id: string;
   /** Action-specific params - includes all data needed for the operation */
   params?: Record<string, unknown>;
+  /** Optional runtime override for AI configuration (provider, model) */
+  ai_config?: {
+    provider?: string;
+    model?: string;
+  };
 }
 
 /**

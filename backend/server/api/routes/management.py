@@ -16,6 +16,7 @@ from ..api_utils import resolve_workflow_from_content, set_api_keys_from_config
 from ..workflow_diff_utils import compute_workflow_diff
 from models import (
     ResumeWorkflowRequest,
+    ResetRequest,
     WorkflowResponse,
     WorkflowStatusResponse,
     WorkflowStatus,
@@ -505,10 +506,15 @@ async def delete_workflow(
 @router.post("/{workflow_run_id}/reset")
 async def reset_workflow(
     workflow_run_id: str,
+    request: ResetRequest = ResetRequest(),
     db = Depends(get_db),
     user_id: str = Depends(get_current_user_id)
 ):
-    """Reset a workflow - clear all events but keep workflow record"""
+    """
+    Reset a workflow - clear all events but keep workflow record.
+    
+    Request body is optional and accepts ai_config for API consistency.
+    """
     workflow = db.workflow_repo.get_workflow(workflow_run_id)
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")

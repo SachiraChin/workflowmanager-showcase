@@ -10,7 +10,28 @@ from pydantic import BaseModel, Field, model_validator
 from .interaction import InteractionResponseData
 
 
-class StartWorkflowByVersionRequest(BaseModel):
+# =============================================================================
+# Base Request Class
+# =============================================================================
+
+class BaseWorkflowRequest(BaseModel):
+    """
+    Base class for all workflow API requests.
+    
+    Provides common fields that can be used across all endpoints:
+    - ai_config: Runtime override for AI configuration (provider, model)
+    
+    All request models should inherit from this class to ensure consistent
+    support for AI configuration across the API.
+    """
+    ai_config: Optional[Dict[str, Any]] = None  # Runtime override for model/provider
+
+
+# =============================================================================
+# Workflow Start Requests
+# =============================================================================
+
+class StartWorkflowByVersionRequest(BaseWorkflowRequest):
     """
     Request to start workflow with an existing version.
 
@@ -18,12 +39,11 @@ class StartWorkflowByVersionRequest(BaseModel):
     The version_id comes from the path parameter.
     """
     project_name: str  # Unique project identifier within user + template scope
-    ai_config: Optional[Dict[str, Any]] = None  # AI config dict with api_key
     force_new: bool = False  # Force new workflow even if one exists
     capabilities: List[str] = Field(default_factory=list)  # Client capabilities for resolution selection
 
 
-class StartWorkflowRequest(BaseModel):
+class StartWorkflowRequest(BaseWorkflowRequest):
     """
     Request to start workflow with uploaded content.
 
@@ -45,7 +65,6 @@ class StartWorkflowRequest(BaseModel):
     project_name: str  # Unique project identifier within user + template scope
     workflow_content: Union[str, Dict[str, Any]]  # Workflow: base64 zip or JSON dict (required)
     workflow_entry_point: Optional[str] = None  # Path to main workflow file within zip
-    ai_config: Optional[Dict[str, Any]] = None  # AI config dict with api_key
     force_new: bool = False  # Force new workflow even if one exists
     capabilities: List[str] = Field(default_factory=list)  # Client capabilities for resolution selection
 
@@ -58,45 +77,25 @@ class StartWorkflowRequest(BaseModel):
         return self
 
 
-class RespondRequest(BaseModel):
+# =============================================================================
+# Interaction Requests
+# =============================================================================
+
+class RespondRequest(BaseWorkflowRequest):
     """Request to respond to an interaction"""
     workflow_run_id: str
     interaction_id: str
     response: InteractionResponseData
 
 
-class RetryRequest(BaseModel):
+class RetryRequest(BaseWorkflowRequest):
     """Request to retry a module with optional feedback"""
     workflow_run_id: str
     target_module: str
     feedback: Optional[str] = None
 
 
-class ResumeWorkflowRequest(BaseModel):
-    """
-    Optional request body for resume endpoint.
-
-    Can be used in two ways:
-    1. Simple resume: No content, loads stored workflow definition
-    2. Resume with update: Provide new workflow_content to update before resuming
-
-    When workflow_content is provided:
-    - Server compares with stored version
-    - If changed, returns requires_confirmation with version diff
-    - Client must call /resume/confirm to proceed with the update
-    """
-    # Optional workflow content for "resume with update"
-    workflow_content: Optional[Union[Dict[str, Any], str]] = None  # JSON dict or base64-encoded ZIP
-    workflow_entry_point: Optional[str] = None  # Required for ZIP files
-
-    # AI configuration override
-    ai_config: Optional[Dict[str, Any]] = None
-
-    # Client capabilities for resolution selection
-    capabilities: List[str] = Field(default_factory=list)
-
-
-class SubActionRequest(BaseModel):
+class SubActionRequest(BaseWorkflowRequest):
     """
     Request to execute a sub-action within an interaction.
 
@@ -113,3 +112,68 @@ class SubActionRequest(BaseModel):
     interaction_id: str  # ID of the current interaction
     sub_action_id: str  # References sub_action.id in module schema
     params: Dict[str, Any] = Field(default_factory=dict)  # Action-specific params
+
+
+# =============================================================================
+# Workflow Resume Requests
+# =============================================================================
+
+class ResumeWorkflowRequest(BaseWorkflowRequest):
+    """
+    Optional request body for resume endpoint.
+
+    Can be used in two ways:
+    1. Simple resume: No content, loads stored workflow definition
+    2. Resume with update: Provide new workflow_content to update before resuming
+
+    When workflow_content is provided:
+    - Server compares with stored version
+    - If changed, returns requires_confirmation with version diff
+    - Client must call /resume/confirm to proceed with the update
+    """
+    # Optional workflow content for "resume with update"
+    workflow_content: Optional[Union[Dict[str, Any], str]] = None  # JSON dict or base64-encoded ZIP
+    workflow_entry_point: Optional[str] = None  # Required for ZIP files
+
+    # Client capabilities for resolution selection
+    capabilities: List[str] = Field(default_factory=list)
+
+
+# =============================================================================
+# Workflow Control Requests
+# =============================================================================
+
+class CancelRequest(BaseWorkflowRequest):
+    """
+    Request to cancel an active workflow.
+    
+    Used with POST /workflow/{workflow_run_id}/cancel endpoint.
+    The workflow_run_id comes from the path parameter.
+    """
+    pass  # Only inherits ai_config from base
+
+
+class ResetRequest(BaseWorkflowRequest):
+    """
+    Request to reset a workflow to its initial state.
+    
+    Used with POST /workflow/{workflow_run_id}/reset endpoint.
+    The workflow_run_id comes from the path parameter.
+    """
+    pass  # Only inherits ai_config from base
+
+
+# =============================================================================
+# Media Requests
+# =============================================================================
+
+class MediaPreviewRequest(BaseWorkflowRequest):
+    """
+    Request to get preview info for a media generation configuration.
+    
+    Used with POST /workflow/{workflow_run_id}/media/preview endpoint.
+    Returns expected resolution and credit cost before generating.
+    """
+    provider: str  # Media provider (e.g., "ideogram", "runway")
+    action_type: str  # Action type (e.g., "generate", "upscale")
+    params: Dict[str, Any] = Field(default_factory=dict)  # Provider-specific parameters

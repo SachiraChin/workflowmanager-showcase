@@ -14,6 +14,7 @@ import type {
   WorkflowTemplatesResponse,
   SubActionRequest,
   WorkflowFileContent,
+  ModelsResponse,
 } from "./types";
 import { API_URL } from "./config";
 
@@ -409,6 +410,18 @@ class ApiClient {
       method: "POST",
       body: JSON.stringify(request),
     });
+  }
+
+  // ============================================================
+  // Models Configuration
+  // ============================================================
+
+  /**
+   * Get available LLM models configuration.
+   * Returns providers with their models, human-friendly names, and defaults.
+   */
+  async getModels(): Promise<ModelsResponse> {
+    return this.request<ModelsResponse>("/models");
   }
 
   // ============================================================

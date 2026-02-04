@@ -4,15 +4,27 @@
  * Shows:
  * - Execution status (progress, elapsed time, messages)
  * - Action buttons (cancel, start new)
+ * - Model selector dropdown
  * - Project info (project name, run ID)
  */
 
+import { useEffect } from "react";
 import { LogOut, RefreshCw, Layers, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 // TODO: Re-enable when ExecutionStatus is fixed
 // import { ExecutionStatus } from "./ExecutionStatus";
 import { useWorkflowStore } from "@/state/workflow-store";
+import { api } from "@/core/api";
 import type { WorkflowProgress, WorkflowStatus } from "@/core/types";
 
 // =============================================================================
@@ -83,6 +95,53 @@ export function WorkflowSidebar({
   void _statusDisplayFields;
   const viewMode = useWorkflowStore((s) => s.viewMode);
   const toggleViewMode = useWorkflowStore((s) => s.toggleViewMode);
+  const modelsConfig = useWorkflowStore((s) => s.modelsConfig);
+  const selectedProvider = useWorkflowStore((s) => s.selectedProvider);
+  const selectedModel = useWorkflowStore((s) => s.selectedModel);
+  const setModelsConfig = useWorkflowStore((s) => s.setModelsConfig);
+  const setSelectedModel = useWorkflowStore((s) => s.setSelectedModel);
+
+  // Fetch models config on mount
+  useEffect(() => {
+    if (!modelsConfig) {
+      api.getModels()
+        .then(setModelsConfig)
+        .catch((err) => console.error("Failed to fetch models:", err));
+    }
+  }, [modelsConfig, setModelsConfig]);
+
+  // Build display value for model selector
+  const getModelDisplayValue = () => {
+    if (!modelsConfig) return "Loading...";
+    if (!selectedModel) {
+      // Show default
+      const defaultModel = modelsConfig.default_model;
+      const defaultProvider = modelsConfig.providers[modelsConfig.default_provider];
+      const modelInfo = defaultProvider?.models.find((m) => m.id === defaultModel);
+      return `Default (${modelInfo?.name || defaultModel})`;
+    }
+    // Show selected
+    const provider = selectedProvider ? modelsConfig.providers[selectedProvider] : null;
+    const modelInfo = provider?.models.find((m) => m.id === selectedModel);
+    return modelInfo?.name || selectedModel;
+  };
+
+  // Handle model selection change
+  const handleModelChange = (value: string) => {
+    if (value === "default" || !modelsConfig) {
+      setSelectedModel(null, null);
+      return;
+    }
+    // Value is in format "provider:modelId"
+    const [provider, modelId] = value.split(":");
+    setSelectedModel(provider, modelId);
+  };
+
+  // Get current selection value for Select component
+  const getSelectValue = () => {
+    if (!selectedModel || !selectedProvider) return "default";
+    return `${selectedProvider}:${selectedModel}`;
+  };
 
   return (
     <div className="space-y-4">
@@ -99,7 +158,7 @@ export function WorkflowSidebar({
       */}
 
       {/* Action buttons */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         {/* Exit button - always available */}
         <Button variant="outline" onClick={onCancel} size="sm">
           <LogOut className="mr-2 h-4 w-4" />
@@ -126,6 +185,33 @@ export function WorkflowSidebar({
             Start New
           </Button>
         )}
+      </div>
+
+      {/* Model selector */}
+      <div className="space-y-1">
+        <label className="text-sm text-muted-foreground">Model</label>
+        <Select value={getSelectValue()} onValueChange={handleModelChange}>
+          <SelectTrigger className="w-full">
+            <SelectValue>{getModelDisplayValue()}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="default">
+              Default ({modelsConfig?.providers[modelsConfig.default_provider]?.models.find(
+                (m) => m.id === modelsConfig.default_model
+              )?.name || modelsConfig?.default_model || "..."})
+            </SelectItem>
+            {modelsConfig && Object.entries(modelsConfig.providers).map(([providerId, provider]) => (
+              <SelectGroup key={providerId}>
+                <SelectLabel>{provider.name}</SelectLabel>
+                {provider.models.map((model) => (
+                  <SelectItem key={model.id} value={`${providerId}:${model.id}`}>
+                    {model.name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Project info */}

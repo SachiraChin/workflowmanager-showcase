@@ -8,7 +8,7 @@
  * - Modules from execution_groups are displayed nested under their parent group
  */
 
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { ChevronRight, ChevronDown, Circle, Search, Settings, Maximize2, Copy, Check, Layers, Expand, Pencil, Save, X } from "lucide-react";
 import Editor, { type OnMount } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
@@ -113,30 +113,127 @@ function getNodeMetadata(value: unknown): { nodeType: string | null; metadata: R
 }
 
 /**
- * Check if a node or any of its descendants match the search term
+ * Search index containing paths that match or have matching descendants.
+ * Pre-computed once at top level for O(1) lookups in child components.
  */
-function nodeMatchesSearch(node: TreeNodeData, searchTerm: string): boolean {
-  if (!searchTerm) return true;
+interface SearchIndex {
+  /** Paths where the key directly matches the search term */
+  matchingPaths: Set<string>;
+  /** Paths that have matching descendants (for auto-expand) */
+  ancestorPaths: Set<string>;
+  /** The search term used to build this index */
+  term: string;
+}
+
+/** Empty search index for when there's no search term */
+const EMPTY_SEARCH_INDEX: SearchIndex = {
+  matchingPaths: new Set(),
+  ancestorPaths: new Set(),
+  term: "",
+};
+
+/**
+ * Check if a string looks like binary/blob data (base64, hex, or very long without spaces)
+ */
+function isBlobLikeString(str: string): boolean {
+  if (str.length < 100) return false;
+  // Base64 pattern (long string of alphanumeric + /+=)
+  if (/^[A-Za-z0-9+/=]{100,}$/.test(str)) return true;
+  // Hex pattern
+  if (/^[0-9a-fA-F]{100,}$/.test(str)) return true;
+  // Very long string without spaces (likely encoded data)
+  if (str.length > 500 && !str.includes(' ')) return true;
+  return false;
+}
+
+/**
+ * Build search index by traversing the state tree once.
+ * Returns sets of matching paths and ancestor paths for O(1) lookups.
+ * 
+ * Searches:
+ * - Object property names (keys)
+ * - String values (but not blob-like data)
+ * - Array items (but not blob-like strings)
+ */
+function buildSearchIndex(
+  state: Record<string, unknown>,
+  searchTerm: string,
+  maxDepth: number = 15
+): SearchIndex {
+  if (!searchTerm) return EMPTY_SEARCH_INDEX;
+  
   const term = searchTerm.toLowerCase();
-
-  if (node.key.toLowerCase().includes(term)) return true;
-
-  if (node.value && typeof node.value === "object") {
-    const entries = Array.isArray(node.value)
-      ? node.value.map((v, i) => [String(i), v])
-      : Object.entries(node.value);
-
-    for (const [key, value] of entries) {
-      const childNode: TreeNodeData = {
-        key: String(key),
-        value,
-        path: [...node.path, String(key)],
-      };
-      if (nodeMatchesSearch(childNode, searchTerm)) return true;
+  const matchingPaths = new Set<string>();
+  const ancestorPaths = new Set<string>();
+  const visited = new WeakSet<object>();
+  
+  type StackItem = { path: string[]; value: unknown; depth: number };
+  const stack: StackItem[] = [];
+  
+  // Initialize stack with root entries
+  for (const [key, value] of Object.entries(state)) {
+    stack.push({ path: [key], value, depth: 0 });
+  }
+  
+  let iterations = 0;
+  const maxIterations = 50000;
+  
+  /**
+   * Mark a path and all its ancestors as matching
+   */
+  function addMatch(path: string[]) {
+    const pathStr = path.join(".");
+    matchingPaths.add(pathStr);
+    for (let i = 1; i <= path.length; i++) {
+      ancestorPaths.add(path.slice(0, i).join("."));
     }
   }
-
-  return false;
+  
+  while (stack.length > 0) {
+    iterations++;
+    if (iterations > maxIterations) break;
+    
+    const { path, value, depth } = stack.pop()!;
+    const key = path[path.length - 1];
+    const isArrayIndex = /^\d+$/.test(key);
+    
+    // Check if key matches (skip array indices for key matching)
+    if (!isArrayIndex && key.toLowerCase().includes(term)) {
+      addMatch(path);
+    }
+    
+    // Check string values (but skip blobs)
+    if (typeof value === "string" && !isBlobLikeString(value)) {
+      if (value.toLowerCase().includes(term)) {
+        addMatch(path);
+      }
+      continue; // Strings have no children
+    }
+    
+    // Don't go deeper than maxDepth
+    if (depth >= maxDepth) continue;
+    
+    // Process objects
+    if (value && typeof value === "object") {
+      if (visited.has(value as object)) continue;
+      visited.add(value as object);
+      
+      if (Array.isArray(value)) {
+        // For arrays, only process first 100 items to avoid huge arrays
+        const limit = Math.min(value.length, 100);
+        for (let i = 0; i < limit; i++) {
+          stack.push({ path: [...path, String(i)], value: value[i], depth: depth + 1 });
+        }
+      } else {
+        for (const [k, v] of Object.entries(value)) {
+          if (k === "_metadata") continue;
+          stack.push({ path: [...path, k], value: v, depth: depth + 1 });
+        }
+      }
+    }
+  }
+  
+  return { matchingPaths, ancestorPaths, term };
 }
 
 /**
@@ -258,7 +355,7 @@ function organizeModulesIntoGroups(
 interface TreeNodeProps {
   node: TreeNodeData;
   level: number;
-  searchTerm: string;
+  searchIndex: SearchIndex;
   indexInParent?: number;
   stepIndex?: number;
   stepId?: string;
@@ -266,6 +363,8 @@ interface TreeNodeProps {
   parentNumber?: string;
   /** Whether this node is a child of a group */
   isGroupChild?: boolean;
+  /** If true, don't filter children by search - show all children */
+  skipChildFiltering?: boolean;
   onLeafDoubleClick: (path: string, value: unknown) => void;
   onShowModuleConfig?: (stepId: string, moduleName: string, isGroup: boolean) => void;
 }
@@ -273,23 +372,36 @@ interface TreeNodeProps {
 function TreeNode({
   node,
   level,
-  searchTerm,
+  searchIndex,
   indexInParent,
   stepIndex,
   stepId,
   parentNumber,
   isGroupChild: _isGroupChild,
+  skipChildFiltering = false,
   onLeafDoubleClick,
   onShowModuleConfig
 }: TreeNodeProps) {
-  const hasMatchingDescendant = useMemo(() => {
-    if (!searchTerm) return false;
-    return nodeMatchesSearch(node, searchTerm);
-  }, [node, searchTerm]);
+  const pathStr = node.path.join(".");
+  // O(1) lookup - no traversal needed
+  const hasMatchingDescendant = searchIndex.ancestorPaths.has(pathStr);
+  const isDirectMatch = searchIndex.matchingPaths.has(pathStr);
 
+  // Track both open state and whether user has explicitly collapsed
   const [isOpen, setIsOpen] = useState(false);
+  const [userCollapsed, setUserCollapsed] = useState(false);
+  
+  // Reset userCollapsed when search term changes
+  const prevSearchTerm = useRef(searchIndex.term);
+  if (prevSearchTerm.current !== searchIndex.term) {
+    prevSearchTerm.current = searchIndex.term;
+    if (userCollapsed) setUserCollapsed(false);
+  }
 
-  const effectiveIsOpen = isOpen || (searchTerm && hasMatchingDescendant);
+  // Auto-expand for search results, but respect user's explicit collapse
+  const effectiveIsOpen = userCollapsed 
+    ? false 
+    : (isOpen || (searchIndex.term && hasMatchingDescendant));
   const isLeaf = isLeafNode(node.value);
 
   const { nodeType } = getNodeMetadata(node.value);
@@ -309,9 +421,17 @@ function TreeNode({
 
   const handleToggle = useCallback(() => {
     if (!isLeaf) {
-      setIsOpen((prev) => !prev);
+      if (effectiveIsOpen) {
+        // User is collapsing - mark as explicitly collapsed
+        setUserCollapsed(true);
+        setIsOpen(false);
+      } else {
+        // User is expanding - clear the collapsed flag
+        setUserCollapsed(false);
+        setIsOpen(true);
+      }
     }
-  }, [isLeaf]);
+  }, [isLeaf, effectiveIsOpen]);
 
   const handleShowConfig = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -343,7 +463,8 @@ function TreeNode({
   }
 
   const childCount = children.filter((c) => c.key !== "_metadata").length;
-  const keyMatches = searchTerm && node.key.toLowerCase().includes(searchTerm.toLowerCase());
+  // O(1) lookup for key match
+  const keyMatches = searchIndex.matchingPaths.has(pathStr);
 
   // Calculate display number
   let displayNumber = "";
@@ -436,9 +557,21 @@ function TreeNode({
             let moduleIndex = 0;
             let stepIdx = 0;
 
-            return children
-              .filter((child) => child.key !== "_metadata")
-              .map((child) => {
+            // Filter children: exclude _metadata
+            // When searching: if this node is a direct match OR skipChildFiltering is true,
+            // show all children. Otherwise, only show children in ancestorPaths.
+            const shouldFilterChildren = searchIndex.term && !skipChildFiltering && !isDirectMatch;
+            
+            const filteredChildren = children.filter((child) => {
+              if (child.key === "_metadata") return false;
+              if (shouldFilterChildren) {
+                const childPath = child.path.join(".");
+                return searchIndex.ancestorPaths.has(childPath);
+              }
+              return true;
+            });
+
+            return filteredChildren.map((child) => {
                 const childMetadata = getNodeMetadata(child.value);
                 const childIsModule = childMetadata.nodeType === "module";
                 const childIsStep = childMetadata.nodeType === "step";
@@ -451,15 +584,19 @@ function TreeNode({
                 const currentModuleIndex = childIsModule ? moduleIndex++ : undefined;
                 const currentStepIndex = childIsStep ? stepIdx++ : undefined;
 
+                // If this node is a direct match, its children should skip filtering
+                const childSkipFiltering = isDirectMatch || skipChildFiltering;
+
                 return (
                   <TreeNode
                     key={child.key}
                     node={child}
                     level={level + 1}
-                    searchTerm={searchTerm}
+                    searchIndex={searchIndex}
                     indexInParent={currentModuleIndex}
                     stepIndex={currentStepIndex}
                     stepId={childStepId}
+                    skipChildFiltering={childSkipFiltering}
                     onLeafDoubleClick={onLeafDoubleClick}
                     onShowModuleConfig={onShowModuleConfig}
                   />
@@ -479,9 +616,11 @@ function TreeNode({
 interface GroupNodeProps {
   organizedModule: OrganizedModule;
   level: number;
-  searchTerm: string;
+  searchIndex: SearchIndex;
   stepId: string;
   groupIndex: number;
+  /** If true, don't filter children by search - show all children */
+  skipChildFiltering?: boolean;
   onLeafDoubleClick: (path: string, value: unknown) => void;
   onShowModuleConfig: (stepId: string, moduleName: string, isGroup: boolean) => void;
 }
@@ -489,15 +628,19 @@ interface GroupNodeProps {
 function GroupNode({
   organizedModule,
   level,
-  searchTerm,
+  searchIndex,
   stepId,
   groupIndex,
+  skipChildFiltering = false,
   onLeafDoubleClick,
   onShowModuleConfig,
 }: GroupNodeProps) {
   const [isOpen, setIsOpen] = useState(true);  // Groups start expanded
 
-  const keyMatches = searchTerm && organizedModule.name.toLowerCase().includes(searchTerm.toLowerCase());
+  const pathStr = `steps.${stepId}.${organizedModule.name}`;
+  // O(1) lookup
+  const isDirectMatch = searchIndex.matchingPaths.has(pathStr);
+  const keyMatches = isDirectMatch;
 
   const handleToggle = useCallback(() => {
     setIsOpen((prev) => !prev);
@@ -581,28 +724,42 @@ function GroupNode({
       {/* Group children */}
       {isOpen && (
         <div className="border-l border-border/50 ml-4">
-          {organizedModule.children.map((child, childIndex) => {
-            const childNode: TreeNodeData = {
-              key: child.name,
-              value: child.stateValue,
-              path: ["steps", stepId, child.name],
-            };
+          {organizedModule.children
+            .filter((child) => {
+              // If this group is a direct match or skipChildFiltering, show all children
+              const shouldFilter = searchIndex.term && !skipChildFiltering && !isDirectMatch;
+              if (shouldFilter) {
+                const childPath = `steps.${stepId}.${child.name}`;
+                return searchIndex.ancestorPaths.has(childPath);
+              }
+              return true;
+            })
+            .map((child, childIndex) => {
+              const childNode: TreeNodeData = {
+                key: child.name,
+                value: child.stateValue,
+                path: ["steps", stepId, child.name],
+              };
 
-            return (
-              <TreeNode
-                key={child.name}
-                node={childNode}
-                level={level + 1}
-                searchTerm={searchTerm}
-                indexInParent={childIndex}
-                stepId={stepId}
-                parentNumber={displayNumber}
-                isGroupChild={true}
-                onLeafDoubleClick={onLeafDoubleClick}
-                onShowModuleConfig={onShowModuleConfig}
-              />
-            );
-          })}
+              // If this group is a direct match, children should skip filtering
+              const childSkipFiltering = isDirectMatch || skipChildFiltering;
+
+              return (
+                <TreeNode
+                  key={child.name}
+                  node={childNode}
+                  level={level + 1}
+                  searchIndex={searchIndex}
+                  indexInParent={childIndex}
+                  stepId={stepId}
+                  parentNumber={displayNumber}
+                  isGroupChild={true}
+                  skipChildFiltering={childSkipFiltering}
+                  onLeafDoubleClick={onLeafDoubleClick}
+                  onShowModuleConfig={onShowModuleConfig}
+                />
+              );
+            })}
         </div>
       )}
     </div>
@@ -618,9 +775,11 @@ interface OrganizedStepNodeProps {
   stepValue: unknown;
   stepIndex: number;
   level: number;
-  searchTerm: string;
+  searchIndex: SearchIndex;
   rawModules: ModuleConfig[] | undefined;
   flattenedModules: ModuleConfig[] | undefined;
+  /** If true, don't filter children by search - show all children */
+  skipChildFiltering?: boolean;
   onLeafDoubleClick: (path: string, value: unknown) => void;
   onShowModuleConfig: (stepId: string, moduleName: string, isGroup: boolean) => void;
 }
@@ -630,26 +789,43 @@ function OrganizedStepNode({
   stepValue,
   stepIndex,
   level,
-  searchTerm,
+  searchIndex,
   rawModules,
   flattenedModules,
+  skipChildFiltering = false,
   onLeafDoubleClick,
   onShowModuleConfig,
 }: OrganizedStepNodeProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [userCollapsed, setUserCollapsed] = useState(false);
 
-  const hasMatchingDescendant = useMemo(() => {
-    if (!searchTerm) return false;
-    const node: TreeNodeData = { key: stepId, value: stepValue, path: ["steps", stepId] };
-    return nodeMatchesSearch(node, searchTerm);
-  }, [stepId, stepValue, searchTerm]);
+  const pathStr = `steps.${stepId}`;
+  // O(1) lookups
+  const hasMatchingDescendant = searchIndex.ancestorPaths.has(pathStr);
+  const isDirectMatch = searchIndex.matchingPaths.has(pathStr);
+  const keyMatches = isDirectMatch;
 
-  const effectiveIsOpen = isOpen || (searchTerm && hasMatchingDescendant);
-  const keyMatches = searchTerm && stepId.toLowerCase().includes(searchTerm.toLowerCase());
+  // Reset userCollapsed when search term changes
+  const prevSearchTerm = useRef(searchIndex.term);
+  if (prevSearchTerm.current !== searchIndex.term) {
+    prevSearchTerm.current = searchIndex.term;
+    if (userCollapsed) setUserCollapsed(false);
+  }
+
+  // Auto-expand for search results, but respect user's explicit collapse
+  const effectiveIsOpen = userCollapsed 
+    ? false 
+    : (isOpen || (searchIndex.term && hasMatchingDescendant));
 
   const handleToggle = useCallback(() => {
-    setIsOpen((prev) => !prev);
-  }, []);
+    if (effectiveIsOpen) {
+      setUserCollapsed(true);
+      setIsOpen(false);
+    } else {
+      setUserCollapsed(false);
+      setIsOpen(true);
+    }
+  }, [effectiveIsOpen]);
 
   const handleExpandClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -718,41 +894,56 @@ function OrganizedStepNode({
       {/* Step children - organized modules */}
       {effectiveIsOpen && (
         <div className="border-l border-border/50 ml-4">
-          {organizedModules.map((orgMod, index) => {
-            if (orgMod.isGroup) {
-              return (
-                <GroupNode
-                  key={orgMod.name}
-                  organizedModule={orgMod}
-                  level={level + 1}
-                  searchTerm={searchTerm}
-                  stepId={stepId}
-                  groupIndex={index}
-                  onLeafDoubleClick={onLeafDoubleClick}
-                  onShowModuleConfig={onShowModuleConfig}
-                />
-              );
-            } else {
-              const childNode: TreeNodeData = {
-                key: orgMod.name,
-                value: orgMod.stateValue,
-                path: ["steps", stepId, orgMod.name],
-              };
+          {organizedModules
+            .filter((orgMod) => {
+              // If this step is a direct match or skipChildFiltering, show all modules
+              const shouldFilter = searchIndex.term && !skipChildFiltering && !isDirectMatch;
+              if (shouldFilter) {
+                const modPath = `steps.${stepId}.${orgMod.name}`;
+                return searchIndex.ancestorPaths.has(modPath);
+              }
+              return true;
+            })
+            .map((orgMod, index) => {
+              // If this step is a direct match, children should skip filtering
+              const childSkipFiltering = isDirectMatch || skipChildFiltering;
 
-              return (
-                <TreeNode
-                  key={orgMod.name}
-                  node={childNode}
-                  level={level + 1}
-                  searchTerm={searchTerm}
-                  indexInParent={index}
-                  stepId={stepId}
-                  onLeafDoubleClick={onLeafDoubleClick}
-                  onShowModuleConfig={onShowModuleConfig}
-                />
-              );
-            }
-          })}
+              if (orgMod.isGroup) {
+                return (
+                  <GroupNode
+                    key={orgMod.name}
+                    organizedModule={orgMod}
+                    level={level + 1}
+                    searchIndex={searchIndex}
+                    stepId={stepId}
+                    groupIndex={index}
+                    skipChildFiltering={childSkipFiltering}
+                    onLeafDoubleClick={onLeafDoubleClick}
+                    onShowModuleConfig={onShowModuleConfig}
+                  />
+                );
+              } else {
+                const childNode: TreeNodeData = {
+                  key: orgMod.name,
+                  value: orgMod.stateValue,
+                  path: ["steps", stepId, orgMod.name],
+                };
+
+                return (
+                  <TreeNode
+                    key={orgMod.name}
+                    node={childNode}
+                    level={level + 1}
+                    searchIndex={searchIndex}
+                    indexInParent={index}
+                    stepId={stepId}
+                    skipChildFiltering={childSkipFiltering}
+                    onLeafDoubleClick={onLeafDoubleClick}
+                    onShowModuleConfig={onShowModuleConfig}
+                  />
+                );
+              }
+            })}
         </div>
       )}
     </div>
@@ -765,7 +956,7 @@ function OrganizedStepNode({
 
 interface StepsNodeProps {
   stepsValue: Record<string, unknown>;
-  searchTerm: string;
+  searchIndex: SearchIndex;
   rawWorkflowDefinition: WorkflowDefinition | null;
   workflowDefinition: WorkflowDefinition | null;
   onLeafDoubleClick: (path: string, value: unknown) => void;
@@ -774,31 +965,46 @@ interface StepsNodeProps {
 
 function StepsNode({
   stepsValue,
-  searchTerm,
+  searchIndex,
   rawWorkflowDefinition,
   workflowDefinition,
   onLeafDoubleClick,
   onShowModuleConfig,
 }: StepsNodeProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [userCollapsed, setUserCollapsed] = useState(false);
 
   const stepEntries = useMemo(() =>
     Object.entries(stepsValue).filter(([k]) => k !== "_metadata"),
     [stepsValue]
   );
 
-  const hasMatchingDescendant = useMemo(() => {
-    if (!searchTerm) return false;
-    const node: TreeNodeData = { key: "steps", value: stepsValue, path: ["steps"] };
-    return nodeMatchesSearch(node, searchTerm);
-  }, [stepsValue, searchTerm]);
+  // O(1) lookups
+  const hasMatchingDescendant = searchIndex.ancestorPaths.has("steps");
+  const isDirectMatch = searchIndex.matchingPaths.has("steps");
+  const keyMatches = isDirectMatch;
 
-  const effectiveIsOpen = isOpen || (searchTerm && hasMatchingDescendant);
-  const keyMatches = searchTerm && "steps".toLowerCase().includes(searchTerm.toLowerCase());
+  // Reset userCollapsed when search term changes
+  const prevSearchTerm = useRef(searchIndex.term);
+  if (prevSearchTerm.current !== searchIndex.term) {
+    prevSearchTerm.current = searchIndex.term;
+    if (userCollapsed) setUserCollapsed(false);
+  }
+
+  // Auto-expand for search results, but respect user's explicit collapse
+  const effectiveIsOpen = userCollapsed 
+    ? false 
+    : (isOpen || (searchIndex.term && hasMatchingDescendant));
 
   const handleToggle = useCallback(() => {
-    setIsOpen((prev) => !prev);
-  }, []);
+    if (effectiveIsOpen) {
+      setUserCollapsed(true);
+      setIsOpen(false);
+    } else {
+      setUserCollapsed(false);
+      setIsOpen(true);
+    }
+  }, [effectiveIsOpen]);
 
   const handleExpandClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -852,20 +1058,31 @@ function StepsNode({
       {/* Step children */}
       {effectiveIsOpen && (
         <div className="border-l border-border/50 ml-4">
-          {stepEntries.map(([stepId, stepValue], stepIndex) => (
-            <OrganizedStepNode
-              key={stepId}
-              stepId={stepId}
-              stepValue={stepValue}
-              stepIndex={stepIndex}
-              level={1}
-              searchTerm={searchTerm}
-              rawModules={getStepModules(stepId, rawWorkflowDefinition)}
-              flattenedModules={getStepModules(stepId, workflowDefinition)}
-              onLeafDoubleClick={onLeafDoubleClick}
-              onShowModuleConfig={onShowModuleConfig}
-            />
-          ))}
+          {stepEntries
+            .filter(([stepId]) => {
+              // If "steps" is a direct match, show all steps
+              const shouldFilter = searchIndex.term && !isDirectMatch;
+              if (shouldFilter) {
+                const stepPath = `steps.${stepId}`;
+                return searchIndex.ancestorPaths.has(stepPath);
+              }
+              return true;
+            })
+            .map(([stepId, stepValue], stepIndex) => (
+              <OrganizedStepNode
+                key={stepId}
+                stepId={stepId}
+                stepValue={stepValue}
+                stepIndex={stepIndex}
+                level={1}
+                searchIndex={searchIndex}
+                rawModules={getStepModules(stepId, rawWorkflowDefinition)}
+                flattenedModules={getStepModules(stepId, workflowDefinition)}
+                skipChildFiltering={isDirectMatch}
+                onLeafDoubleClick={onLeafDoubleClick}
+                onShowModuleConfig={onShowModuleConfig}
+              />
+            ))}
         </div>
       )}
     </div>
@@ -970,7 +1187,27 @@ export function StateTreeView() {
   // Debug mode - only show edit functionality when enabled
   const { isDebugMode } = useDebugMode();
 
+  // Debounced search: inputValue updates immediately, searchTerm after delay
+  const [inputValue, setInputValue] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  
+  // Minimum characters required to trigger search
+  const MIN_SEARCH_LENGTH = 3;
+  
+  // Debounce search with 300ms delay, require minimum 3 characters
+  useEffect(() => {
+    const effectiveValue = inputValue.length >= MIN_SEARCH_LENGTH ? inputValue : "";
+    
+    if (effectiveValue === searchTerm) {
+      return;
+    }
+    
+    const timer = setTimeout(() => {
+      setSearchTerm(effectiveValue);
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, [inputValue, searchTerm]);
   const [isMaximized, setIsMaximized] = useState(false);
   const [popup, setPopup] = useState<ValuePopupState>({
     open: false,
@@ -1104,19 +1341,29 @@ export function StateTreeView() {
 
   // Build root nodes from state - only show steps and state_mapped
   const disallowedKeys = ["files"];
-  const rootNodes: TreeNodeData[] = Object.entries(state)
-    .filter(([key]) => !disallowedKeys.includes(key))
-    .map(([key, value]) => ({
-      key,
-      value,
-      path: [key],
-    }));
+  const rootNodes: TreeNodeData[] = useMemo(() => 
+    Object.entries(state)
+      .filter(([key]) => !disallowedKeys.includes(key))
+      .map(([key, value]) => ({
+        key,
+        value,
+        path: [key],
+      })),
+    [state]
+  );
 
-  // Filter root nodes based on search
+  // Build search index ONCE when searchTerm changes
+  // This is the key optimization - traverse the tree only once
+  const searchIndex = useMemo(() => {
+    if (!searchTerm) return EMPTY_SEARCH_INDEX;
+    return buildSearchIndex(state, searchTerm);
+  }, [state, searchTerm]);
+
+  // Filter root nodes based on search index
   const filteredNodes = useMemo(() => {
     if (!searchTerm) return rootNodes;
-    return rootNodes.filter((node) => nodeMatchesSearch(node, searchTerm));
-  }, [rootNodes, searchTerm]);
+    return rootNodes.filter((node) => searchIndex.ancestorPaths.has(node.key));
+  }, [rootNodes, searchTerm, searchIndex]);
 
   // Render tree content (shared between card and maximized views)
   const renderTreeContent = () => {
@@ -1137,7 +1384,7 @@ export function StateTreeView() {
               <StepsNode
                 key="steps"
                 stepsValue={node.value as Record<string, unknown>}
-                searchTerm={searchTerm}
+                searchIndex={searchIndex}
                 rawWorkflowDefinition={rawWorkflowDefinition}
                 workflowDefinition={workflowDefinition}
                 onLeafDoubleClick={handleLeafDoubleClick}
@@ -1152,7 +1399,7 @@ export function StateTreeView() {
               key={node.key}
               node={node}
               level={0}
-              searchTerm={searchTerm}
+              searchIndex={searchIndex}
               onLeafDoubleClick={handleLeafDoubleClick}
               onShowModuleConfig={handleShowModuleConfig}
             />
@@ -1189,9 +1436,9 @@ export function StateTreeView() {
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Search state..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search state (min 3 chars)..."
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
               className="pl-9 h-9"
             />
           </div>
@@ -1333,9 +1580,9 @@ export function StateTreeView() {
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Search state..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search state (min 3 chars)..."
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
               className="pl-9 h-9"
             />
           </div>

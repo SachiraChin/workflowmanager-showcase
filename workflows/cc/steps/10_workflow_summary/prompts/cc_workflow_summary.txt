@@ -24,23 +24,19 @@ Audio Duration: {{ state.duration_selection.sound_track_duration }} seconds
 SCENE CONCEPT
 ================================================================================
 
-Title: {{ state.selected_scene.title }}
-
-Hook: {{ state.selected_scene.hook }}
-
+Title: {{ state.select_scene.selected_data.title }}
+Hook: {{ state.select_scene.select_data.hook }}
 Narrative:
-{{ state.selected_scene.narrative }}
+{{ state.select_scene.selected_data.narrative }}
 
-Setting: {{ state.selected_scene.setting }}
-
-Pet Behavior: {{ state.selected_scene.pet_behavior }}
-
-Emotional Arc: {{ state.selected_scene.emotional_arc }}
+Setting: {{ state.select_scene.selected_data.setting }}
+Pet Behavior: {{ state.select_scene.selected_data.pet_behavior }}
+Emotional Arc: {{ state.select_scene.selected_data.emotional_arc }}
 
 Visual Moments:
-{% for moment in state.selected_scene.visual_moments %}
+{%- for moment in state.select_scene.selected_data.visual_moments %}
 - {{ moment }}
-{% endfor %}
+{%- endfor %}
 
 ================================================================================
 IMAGE PROMPTS
@@ -48,90 +44,100 @@ IMAGE PROMPTS
 
 {% if state.image_prompts %}
 --- Midjourney ---
+Prompt: 
 {{ state.image_prompts.prompts.midjourney.prompt }}
-{% if state.image_prompts.prompts.midjourney.style_suffix %}
-Style: {{ state.image_prompts.prompts.midjourney.style_suffix }}
-{% endif %}
-{% if state.image_prompts.prompts.midjourney.aspect_ratio %}
-Aspect Ratio: {{ state.image_prompts.prompts.midjourney.aspect_ratio }}
-{% endif %}
+
+Aspect Ratio: {{ state.image_prompts.prompts.midjourney.style_notes }}
 
 --- Leonardo Phoenix 1.0 ---
-{{ state.image_prompts.prompts.leonardo_phoenix.prompt }}
+Prompt: 
+{{ state.image_prompts.prompts.leonardo.prompt }}
+
+Style notes: {{ state.image_prompts.prompts.leonardo.style_notes }}
 
 --- OpenAI ---
+Prompt:
 {{ state.image_prompts.prompts.openai.prompt }}
-{% endif %}
+
+Camera notes: {{ state.image_prompts.prompts.openai.camera_notes }}
+
+--- Stable Diffusion --
+Tag prompt:
+{{ state.image_prompts.prompts.stable_diffusion.tag_prompt }}
+
+Natural language prompt:
+{{ state.image_prompts.prompts.stable_diffusion.natural_prompt }}
+
+Negative prompt:
+{{ state.image_prompts.prompts.stable_diffusion.negative_prompt }}
+
+Style notes: {{ state.image_prompts.prompts.stable_diffusion.style_notes }}
+{%- endif %}
 
 ================================================================================
 VIDEO PROMPTS
 ================================================================================
 
 {% if state.video_prompts %}
---- Motion 2.0 ---
-Positive: {{ state.video_prompts.prompts.motion_2_0.positive_prompt }}
-Negative: {{ state.video_prompts.prompts.motion_2_0.negative_prompt }}
-Motion Strength: {{ state.video_prompts.prompts.motion_2_0.motion_strength }}
+--- Leonardo ---
+Positive: 
+{{ state.video_prompts.prompts.leonardo.positive_prompt }}
 
---- Midjourney Animate ---
-Prompt A: {{ state.video_prompts.prompts.midjourney_animate.prompt_a }}
-Prompt B: {{ state.video_prompts.prompts.midjourney_animate.prompt_b }}
-Negative: {{ state.video_prompts.prompts.midjourney_animate.negative_prompt }}
-Transition: {{ state.video_prompts.prompts.midjourney_animate.transition_style }}
-{% endif %}
+Negative: 
+{{ state.video_prompts.prompts.leonardo.negative_prompt }}
+
+Motion strength: {{ state.video_prompts.prompts.leonardo.motion_strength }}
+Motion notes: {{ state.video_prompts.prompts.leonardo.motion_notes }}
+
+--- Sora ---
+Prompt:
+{{ state.video_prompts.prompts.sora.prompt }}
+
+Style notes: {{ state.video_prompts.prompts.sora.style_notes }}
+{%- endif %}
+
+===================================================================
+MUSIC
+================================================================================
+
+{% for music in state.music_prompts.prompts.elevenlabs.data %}
+Name: {{ music.name }}
+Description: {{ music.description }}
+Prompt: {{ music.prompt }}
+BPM: {{ music.suggested_bpm }}
+Instruments: {{ music.instruments | join(', ') }}
+Mood: {{ music.mood | join(', ') }}
+BPM: {{ music.energy }}
+
+{% endfor %}
 
 ================================================================================
 TEXT OVERLAYS
 ================================================================================
 
-{% if state.selected_text_overlay %}
+{% if state.selected_text_overlay -%}
 Style: {{ state.selected_text_overlay.set_id }}
 Description: {{ state.selected_text_overlay.set_description }}
 
 Text:
-{% for para in state.selected_text_overlay.paragraphs %}
-{% for sentence in para.sentences %}
+{%- for para in state.selected_text_overlay.paragraphs %}
+{%- for sentence in para.sentences %}
 {{ sentence }}
-{% endfor %}
-{% endfor %}
-{% endif %}
+{%- endfor %}
+{%- endfor %}
+{%- endif %}
 
 ================================================================================
 TITLES & SOCIAL
 ================================================================================
 
-{% if state.selected_title_description %}
+{% if state.selected_title_description -%}
 Selected Title: {{ state.selected_title_description.title }}
 
 Selected Description:
-{{ state.selected_title_description.description }}
-{{ state.selected_title_description.emojis }}
-{% endif %}
+{{ state.selected_title_description.description }} {{ state.selected_title_description.emojis }}
+{%- endif %}
 
-================================================================================
-MUSIC
-================================================================================
-
-{% if state.music_prompts %}
---- Music Prompts ---
-{% for prompt in state.music_prompts.prompts %}
-Style: {{ prompt.name }}
-{{ prompt.description }}
-Prompt: {{ prompt.prompt }}
-BPM: {{ prompt.suggested_bpm }}
-Instruments: {{ prompt.instruments | join(', ') }}
-Mood: {{ prompt.mood | join(', ') }}
-Energy: {{ prompt.energy }}
-{% if not loop.last %}
-
-{% endif %}
-{% endfor %}
-{% endif %}
-
-{% if state.selected_audio_id %}
-Selected Audio ID: {{ state.selected_audio_id }}
-{% endif %}
-
-================================================================================
+=============================================================================================
 END OF WORKFLOW SUMMARY
 ================================================================================
