@@ -209,6 +209,10 @@ class WorkflowResolver:
         - Remove leading ./
         - Collapse .. and redundant slashes
         - Remove leading/trailing whitespace
+        - SECURITY: Reject paths that would escape the virtual filesystem root
+
+        Raises:
+            ValueError: If path would escape the virtual filesystem root
         """
         # Strip whitespace and convert backslashes
         path = path.strip().replace('\\', '/')
@@ -217,14 +221,28 @@ class WorkflowResolver:
         while path.startswith('./'):
             path = path[2:]
 
-        # Use PurePosixPath to normalize
+        # Track depth to detect root escape attempts
+        # We traverse the path and track the minimum depth reached
+        current_depth = 0
+        min_depth = 0
         parts = []
+
         for part in path.split('/'):
             if part == '..':
+                current_depth -= 1
+                min_depth = min(min_depth, current_depth)
                 if parts:
                     parts.pop()
+                # If parts is empty, we'd be escaping root - tracked by min_depth
             elif part and part != '.':
                 parts.append(part)
+                current_depth += 1
+
+        # If min_depth went negative, the path tried to escape the root
+        if min_depth < 0:
+            raise ValueError(
+                f"Path traversal not allowed: '{path}' attempts to escape root directory"
+            )
 
         return '/'.join(parts)
 
