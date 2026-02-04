@@ -15,7 +15,7 @@ from typing import Dict, Any, Optional, List
 from fastapi import APIRouter, HTTPException, Query, Depends, Request
 from fastapi.responses import FileResponse, StreamingResponse
 
-from ..dependencies import get_db, get_current_user_id
+from ..dependencies import get_db, get_current_user_id, get_verified_workflow
 from backend.db.path_utils import resolve_local_path
 
 router = APIRouter(prefix="/workflow", tags=["files"])
@@ -40,8 +40,8 @@ async def get_workflow_files(
     category: Optional[str] = Query(None, description="Filter by category: api_calls, outputs, root"),
     step_id: Optional[str] = Query(None, description="Filter by step_id"),
     since: Optional[str] = Query(None, description="ISO timestamp to fetch files created after"),
+    workflow: dict = Depends(get_verified_workflow),
     db = Depends(get_db),
-    user_id: str = Depends(get_current_user_id)
 ):
     """
     Get all files for a workflow run.
@@ -57,15 +57,12 @@ async def get_workflow_files(
 
     serialized_files = [_serialize_file_doc(f) for f in files]
 
-    workflow = db.workflow_repo.get_workflow(workflow_run_id)
-    workflow_state = None
-    if workflow:
-        status = workflow.get("status", "running")
-        workflow_state = {
-            "status": status,
-            "current_step": workflow.get("current_step", ""),
-            "current_step_name": workflow.get("current_step_name", "")
-        }
+    status = workflow.get("status", "running")
+    workflow_state = {
+        "status": status,
+        "current_step": workflow.get("current_step", ""),
+        "current_step_name": workflow.get("current_step_name", "")
+    }
 
     return {
         "files": serialized_files,
@@ -78,8 +75,8 @@ async def get_workflow_files(
 async def get_workflow_file(
     workflow_run_id: str,
     file_id: str,
+    workflow: dict = Depends(get_verified_workflow),
     db = Depends(get_db),
-    user_id: str = Depends(get_current_user_id)
 ):
     """
     Get a specific file by ID.
@@ -98,8 +95,8 @@ async def get_workflow_file(
 @router.get("/{workflow_run_id}/api-calls")
 async def list_api_calls(
     workflow_run_id: str,
+    workflow: dict = Depends(get_verified_workflow),
     db = Depends(get_db),
-    user_id: str = Depends(get_current_user_id)
 ):
     """
     List all API calls for a workflow run (grouped by group_id).
@@ -112,8 +109,8 @@ async def list_api_calls(
 async def get_api_call_files(
     workflow_run_id: str,
     group_id: str,
+    workflow: dict = Depends(get_verified_workflow),
     db = Depends(get_db),
-    user_id: str = Depends(get_current_user_id)
 ):
     """
     Get all files for a specific API call.
@@ -172,8 +169,8 @@ async def get_media_file(
     extension: str,
     request: Request,
     download: bool = Query(False, description="Force download with Content-Disposition: attachment"),
+    workflow: dict = Depends(get_verified_workflow),
     db = Depends(get_db),
-    user_id: str = Depends(get_current_user_id)
 ):
     """
     Serve a downloaded media file.
@@ -318,14 +315,10 @@ def _create_zip_response(
 @router.get("/{workflow_run_id}/files/download")
 async def download_all_workflow_files(
     workflow_run_id: str,
+    workflow: dict = Depends(get_verified_workflow),
     db=Depends(get_db),
-    user_id: str = Depends(get_current_user_id)
 ):
     """Download all workflow files as ZIP."""
-    workflow = db.workflow_repo.get_workflow(workflow_run_id)
-    if not workflow:
-        raise HTTPException(status_code=404, detail="Workflow not found")
-
     files = db.file_repo.get_workflow_files(workflow_run_id)
 
     zip_buffer = io.BytesIO()
@@ -349,14 +342,10 @@ async def download_all_workflow_files(
 async def download_category_files(
     workflow_run_id: str,
     category: str,
+    workflow: dict = Depends(get_verified_workflow),
     db=Depends(get_db),
-    user_id: str = Depends(get_current_user_id)
 ):
     """Download all files in a category as ZIP."""
-    workflow = db.workflow_repo.get_workflow(workflow_run_id)
-    if not workflow:
-        raise HTTPException(status_code=404, detail="Workflow not found")
-
     files = db.file_repo.get_workflow_files(workflow_run_id, category=category)
     if not files:
         raise HTTPException(status_code=404, detail="Category not found or empty")
@@ -376,14 +365,10 @@ async def download_step_files(
     workflow_run_id: str,
     category: str,
     step_id: str,
+    workflow: dict = Depends(get_verified_workflow),
     db=Depends(get_db),
-    user_id: str = Depends(get_current_user_id)
 ):
     """Download all files in a step as ZIP."""
-    workflow = db.workflow_repo.get_workflow(workflow_run_id)
-    if not workflow:
-        raise HTTPException(status_code=404, detail="Workflow not found")
-
     files = db.file_repo.get_workflow_files(
         workflow_run_id, category=category, step_id=step_id
     )
@@ -404,14 +389,10 @@ async def download_group_files(
     category: str,
     step_id: str,
     group_id: str,
+    workflow: dict = Depends(get_verified_workflow),
     db=Depends(get_db),
-    user_id: str = Depends(get_current_user_id)
 ):
     """Download all files in a group as ZIP."""
-    workflow = db.workflow_repo.get_workflow(workflow_run_id)
-    if not workflow:
-        raise HTTPException(status_code=404, detail="Workflow not found")
-
     files = db.file_repo.get_workflow_files(workflow_run_id, group_id=group_id)
     if not files:
         raise HTTPException(status_code=404, detail="Group not found or empty")
@@ -431,14 +412,10 @@ async def download_group_files(
 @router.get("/{workflow_run_id}/media/download")
 async def download_all_media(
     workflow_run_id: str,
+    workflow: dict = Depends(get_verified_workflow),
     db=Depends(get_db),
-    user_id: str = Depends(get_current_user_id)
 ):
     """Download all media files as ZIP."""
-    workflow = db.workflow_repo.get_workflow(workflow_run_id)
-    if not workflow:
-        raise HTTPException(status_code=404, detail="Workflow not found")
-
     # Get all completed generations
     metadata_list = list(db.content_repo.metadata.find(
         {"workflow_run_id": workflow_run_id, "status": "completed"},
@@ -466,14 +443,10 @@ async def download_all_media(
 async def download_provider_media(
     workflow_run_id: str,
     provider: str,
+    workflow: dict = Depends(get_verified_workflow),
     db=Depends(get_db),
-    user_id: str = Depends(get_current_user_id)
 ):
     """Download all media from a provider as ZIP."""
-    workflow = db.workflow_repo.get_workflow(workflow_run_id)
-    if not workflow:
-        raise HTTPException(status_code=404, detail="Workflow not found")
-
     metadata_list = list(db.content_repo.metadata.find(
         {
             "workflow_run_id": workflow_run_id,
@@ -506,14 +479,10 @@ async def download_generation_media(
     workflow_run_id: str,
     provider: str,
     metadata_id: str,
+    workflow: dict = Depends(get_verified_workflow),
     db=Depends(get_db),
-    user_id: str = Depends(get_current_user_id)
 ):
     """Download all media from a generation as ZIP."""
-    workflow = db.workflow_repo.get_workflow(workflow_run_id)
-    if not workflow:
-        raise HTTPException(status_code=404, detail="Workflow not found")
-
     content_items = list(db.content_repo.content.find(
         {
             "content_generation_metadata_id": metadata_id,
@@ -541,8 +510,8 @@ async def download_single_media(
     metadata_id: str,
     content_id: str,
     request: Request,
+    workflow: dict = Depends(get_verified_workflow),
     db=Depends(get_db),
-    user_id: str = Depends(get_current_user_id)
 ):
     """Download a single media file."""
     content = db.content_repo.get_content_by_id(content_id)

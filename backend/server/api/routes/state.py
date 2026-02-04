@@ -12,7 +12,7 @@ import logging
 from fastapi import APIRouter, HTTPException, Query, Depends
 from sse_starlette.sse import EventSourceResponse
 
-from ..dependencies import get_db, get_current_user_id
+from ..dependencies import get_db, get_current_user_id, get_verified_workflow
 from .streaming import active_state_streams
 from utils import sanitize_error_message
 from models import SSEEventType
@@ -25,18 +25,14 @@ router = APIRouter(prefix="/workflow", tags=["state"])
 @router.get("/{workflow_run_id}/state")
 async def get_workflow_state(
     workflow_run_id: str,
+    workflow: dict = Depends(get_verified_workflow),
     db = Depends(get_db),
-    user_id: str = Depends(get_current_user_id)
 ):
     """
     Get current workflow state (all module outputs and state-mapped values).
 
     Returns the complete state as a dictionary.
     """
-    workflow = db.workflow_repo.get_workflow(workflow_run_id)
-    if not workflow:
-        raise HTTPException(status_code=404, detail="Workflow not found")
-
     state = db.state_repo.get_module_outputs(workflow_run_id)
 
     return {
@@ -48,8 +44,8 @@ async def get_workflow_state(
 @router.get("/{workflow_run_id}/state/v2")
 async def get_workflow_state_v2(
     workflow_run_id: str,
+    workflow: dict = Depends(get_verified_workflow),
     db = Depends(get_db),
-    user_id: str = Depends(get_current_user_id)
 ):
     """
     Get current workflow state in hierarchical format including files.
@@ -74,10 +70,6 @@ async def get_workflow_state_v2(
         }
     }
     """
-    workflow = db.workflow_repo.get_workflow(workflow_run_id)
-    if not workflow:
-        raise HTTPException(status_code=404, detail="Workflow not found")
-
     state = db.state_repo.get_full_workflow_state(workflow_run_id)
 
     return {
@@ -90,8 +82,8 @@ async def get_workflow_state_v2(
 async def stream_workflow_state_v2(
     workflow_run_id: str,
     poll_interval: float = Query(1.0, description="Polling interval in seconds"),
+    workflow: dict = Depends(get_verified_workflow),
     db = Depends(get_db),
-    user_id: str = Depends(get_current_user_id)
 ):
     """
     Stream workflow state updates via SSE in hierarchical format including files.
@@ -103,9 +95,6 @@ async def stream_workflow_state_v2(
         "files": { ... }
     }
     """
-    workflow = db.workflow_repo.get_workflow(workflow_run_id)
-    if not workflow:
-        raise HTTPException(status_code=404, detail="Workflow not found")
 
     logger.info(f"[STATE STREAM V2] Client connected for workflow {workflow_run_id[:8]}...")
 
@@ -172,8 +161,8 @@ async def stream_workflow_state_v2(
 @router.get("/{workflow_run_id}/definition")
 async def get_workflow_definition(
     workflow_run_id: str,
+    workflow: dict = Depends(get_verified_workflow),
     db = Depends(get_db),
-    user_id: str = Depends(get_current_user_id)
 ):
     """
     Get the resolved workflow definition for a workflow run.
@@ -181,10 +170,6 @@ async def get_workflow_definition(
     Returns the full workflow definition including all steps and module configurations.
     If the current version is resolved, also includes the source (parent) definition.
     """
-    workflow = db.workflow_repo.get_workflow(workflow_run_id)
-    if not workflow:
-        raise HTTPException(status_code=404, detail="Workflow not found")
-
     version_id = workflow.get("current_workflow_version_id")
     if not version_id:
         raise HTTPException(status_code=404, detail="Workflow version not found")
@@ -214,8 +199,8 @@ async def get_workflow_definition(
 async def stream_workflow_state(
     workflow_run_id: str,
     poll_interval: float = Query(1.0, description="Polling interval in seconds"),
+    workflow: dict = Depends(get_verified_workflow),
     db = Depends(get_db),
-    user_id: str = Depends(get_current_user_id)
 ):
     """
     Stream workflow state updates via Server-Sent Events (SSE).
@@ -230,9 +215,6 @@ async def stream_workflow_state(
     - state_update: Changed keys only (when state changes)
     - error: Error occurred
     """
-    workflow = db.workflow_repo.get_workflow(workflow_run_id)
-    if not workflow:
-        raise HTTPException(status_code=404, detail="Workflow not found")
 
     logger.info(f"[STATE STREAM] Client connected for workflow {workflow_run_id[:8]}...")
 

@@ -12,7 +12,7 @@ from typing import Dict
 from fastapi import APIRouter, HTTPException, Query, Depends
 from sse_starlette.sse import EventSourceResponse
 
-from ..dependencies import get_db, get_processor, get_current_user_id
+from ..dependencies import get_db, get_processor, get_current_user_id, get_verified_workflow
 from utils import sanitize_error_message
 
 # =============================================================================
@@ -42,9 +42,8 @@ router = APIRouter(prefix="/workflow", tags=["streaming"])
 @router.get("/{workflow_run_id}/stream")
 async def stream_workflow(
     workflow_run_id: str,
-    db = Depends(get_db),
+    workflow: dict = Depends(get_verified_workflow),
     processor = Depends(get_processor),
-    user_id: str = Depends(get_current_user_id)
 ):
     """
     Stream workflow execution events via Server-Sent Events (SSE).
@@ -60,9 +59,6 @@ async def stream_workflow(
     - error: Error occurred
     - cancelled: Request was cancelled
     """
-    workflow = db.workflow_repo.get_workflow(workflow_run_id)
-    if not workflow:
-        raise HTTPException(status_code=404, detail="Workflow not found")
 
     logger.info(f"[SSE] Client connected for workflow {workflow_run_id[:8]}...")
 
@@ -97,9 +93,8 @@ async def stream_workflow(
 async def stream_respond(
     workflow_run_id: str,
     request: RespondRequest,
-    db = Depends(get_db),
+    workflow: dict = Depends(get_verified_workflow),
     processor = Depends(get_processor),
-    user_id: str = Depends(get_current_user_id)
 ):
     """
     Respond to an interaction and stream the resulting execution.
@@ -107,19 +102,6 @@ async def stream_respond(
     Combines respond + stream into a single SSE connection.
     Returns SSE stream with execution events.
     """
-    import time
-    t_start = time.time()
-    logger.info(f"[SSE TIMING] stream_respond called at t=0ms")
-
-    t_after_processor_check = time.time()
-    logger.info(f"[SSE TIMING] processor check: {(t_after_processor_check - t_start)*1000:.0f}ms")
-
-    workflow = db.workflow_repo.get_workflow(workflow_run_id)
-    t_after_db = time.time()
-    logger.info(f"[SSE TIMING] db.get_workflow: {(t_after_db - t_after_processor_check)*1000:.0f}ms")
-
-    if not workflow:
-        raise HTTPException(status_code=404, detail="Workflow not found")
 
     logger.info(f"[SSE] Stream respond for workflow {workflow_run_id[:8]}..., interaction={request.interaction_id}")
     logger.info(f"[SSE] Response data: value={request.response.value}, selected_indices={request.response.selected_indices}, form_data={request.response.form_data}")
@@ -169,7 +151,7 @@ async def stream_respond(
 async def cancel_workflow(
     workflow_run_id: str,
     request: CancelRequest = CancelRequest(),
-    user_id: str = Depends(get_current_user_id)
+    workflow: dict = Depends(get_verified_workflow),
 ):
     """
     Cancel an active workflow execution.
@@ -180,6 +162,7 @@ async def cancel_workflow(
     Request body is optional and accepts ai_config for API consistency.
     """
     # Request body is optional - ai_config not used for cancel but accepted for consistency
+    # workflow is verified by get_verified_workflow dependency
     if workflow_run_id in active_streams:
         active_streams[workflow_run_id].set()
         logger.info(f"[SSE] Cancellation requested for workflow {workflow_run_id[:8]}...")
@@ -192,9 +175,8 @@ async def cancel_workflow(
 async def execute_sub_action(
     workflow_run_id: str,
     request: SubActionRequest,
-    db = Depends(get_db),
+    workflow: dict = Depends(get_verified_workflow),
     processor = Depends(get_processor),
-    user_id: str = Depends(get_current_user_id)
 ):
     """
     Execute a sub-action via SSE streaming.
@@ -215,10 +197,6 @@ async def execute_sub_action(
     )
     if request.ai_config:
         logger.info(f"[SubAction] ai_config override: {request.ai_config}")
-
-    workflow = db.workflow_repo.get_workflow(workflow_run_id)
-    if not workflow:
-        raise HTTPException(status_code=404, detail="Workflow not found")
 
     async def event_generator():
         try:
@@ -242,8 +220,8 @@ async def get_interaction_generations(
     workflow_run_id: str,
     interaction_id: str,
     content_type: str = Query(..., description="Content type to filter by (e.g., 'image', 'video')"),
+    workflow: dict = Depends(get_verified_workflow),
     db = Depends(get_db),
-    user_id: str = Depends(get_current_user_id)
 ):
     """
     Get all generations for an interaction.
@@ -259,9 +237,6 @@ async def get_interaction_generations(
         List of generations with their content items, formatted for
         the MediaGeneration component.
     """
-    workflow = db.workflow_repo.get_workflow(workflow_run_id)
-    if not workflow:
-        raise HTTPException(status_code=404, detail="Workflow not found")
 
     # Get generations from content repository, filtered by content_type
     generations = db.content_repo.get_generations_for_interaction(

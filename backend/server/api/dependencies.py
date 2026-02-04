@@ -5,8 +5,8 @@ Provides dependency injection functions for database access, authentication, etc
 """
 
 import os
-from typing import Optional
-from fastapi import Request, Header, HTTPException
+from typing import Optional, Dict, Any
+from fastapi import Request, Header, HTTPException, Depends, Path
 
 from .auth import verify_access_token
 
@@ -136,3 +136,39 @@ async def get_current_user_id(
         status_code=401,
         detail="Unauthorized - provide access_token cookie or X-Access-Key header"
     )
+
+
+async def get_verified_workflow(
+    workflow_run_id: str = Path(..., description="Workflow run ID"),
+    user_id: str = Depends(get_current_user_id),
+) -> Dict[str, Any]:
+    """
+    Get workflow after verifying user ownership.
+
+    This dependency combines authentication with authorization:
+    1. Authenticates the user via get_current_user_id
+    2. Verifies the workflow exists
+    3. Verifies the authenticated user owns the workflow
+
+    Args:
+        workflow_run_id: The workflow run ID from the path
+        user_id: The authenticated user's ID (injected via dependency)
+
+    Returns:
+        The workflow document if access is granted
+
+    Raises:
+        HTTPException 401: User not authenticated
+        HTTPException 403: Access denied (user doesn't own workflow)
+        HTTPException 404: Workflow not found
+    """
+    db = get_db()
+
+    user_owns, exists = db.workflow_repo.workflow_run_exists(user_id, workflow_run_id)
+
+    if not exists:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+    if not user_owns:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    return db.workflow_repo.get_workflow(workflow_run_id)

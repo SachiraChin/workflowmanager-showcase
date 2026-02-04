@@ -1,5 +1,10 @@
 /**
  * API client for communicating with the workflow server.
+ *
+ * Architecture:
+ * - fetchResponse(): Core fetch that returns Response object (for streaming)
+ * - request(): Calls fetchResponse() + .json() (for JSON responses)
+ * - All methods use one of these two, so error handling is centralized
  */
 
 import type {
@@ -17,6 +22,25 @@ import type {
   ModelsResponse,
 } from "./types";
 import { API_URL } from "./config";
+
+// =============================================================================
+// Global 403 Handler
+// =============================================================================
+
+type AccessDeniedHandler = () => void;
+let globalAccessDeniedHandler: AccessDeniedHandler | null = null;
+
+/**
+ * Register a global handler for 403 Access Denied errors.
+ * Called once from the app root to connect API errors to store actions.
+ */
+export function setAccessDeniedHandler(handler: AccessDeniedHandler): void {
+  globalAccessDeniedHandler = handler;
+}
+
+// =============================================================================
+// API Client
+// =============================================================================
 
 interface ApiClientConfig {
   baseUrl?: string;
@@ -49,24 +73,6 @@ class ApiClient {
   private isRefreshing = false;
   private refreshPromise: Promise<boolean> | null = null;
 
-  /**
-   * Wrap any async method with auth retry logic.
-   * If the method throws a 401, refresh token and retry once.
-   */
-  private async withAuth<T>(fn: () => Promise<T>): Promise<T> {
-    try {
-      return await fn();
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
-        const refreshed = await this.tryRefreshToken();
-        if (refreshed) {
-          return await fn();
-        }
-      }
-      throw err;
-    }
-  }
-
   private async tryRefreshToken(): Promise<boolean> {
     if (this.isRefreshing && this.refreshPromise) {
       return this.refreshPromise;
@@ -94,7 +100,84 @@ class ApiClient {
     }
   }
 
-  /** Raw request without auth retry - use for auth endpoints */
+  // ===========================================================================
+  // Core Request Methods
+  // ===========================================================================
+
+  /**
+   * Core fetch that returns Response object.
+   * Handles:
+   * - 401: Attempts token refresh and retry
+   * - 403: Calls global access denied handler
+   * - Other errors: Throws ApiError
+   *
+   * Use this for streaming responses where you need the Response body.
+   */
+  async fetchResponse(
+    endpoint: string,
+    options: RequestInit = {},
+    signal?: AbortSignal
+  ): Promise<Response> {
+    const url = endpoint.startsWith("http") ? endpoint : `${this.baseUrl}${endpoint}`;
+
+    const doFetch = async (): Promise<Response> => {
+      const response = await fetch(url, {
+        ...options,
+        credentials: "include",
+        signal,
+        headers: {
+          ...this.getHeaders(),
+          ...options.headers,
+        },
+      });
+
+      if (!response.ok) {
+        // Handle 403 globally
+        if (response.status === 403) {
+          if (globalAccessDeniedHandler) {
+            globalAccessDeniedHandler();
+          }
+          throw new ApiError(403, "Access denied");
+        }
+
+        const errorData = await response.json().catch(() => ({}));
+        throw new ApiError(
+          response.status,
+          errorData.detail || response.statusText
+        );
+      }
+
+      return response;
+    };
+
+    // First attempt
+    try {
+      return await doFetch();
+    } catch (err) {
+      // On 401, try refresh and retry once
+      if (err instanceof ApiError && err.status === 401) {
+        const refreshed = await this.tryRefreshToken();
+        if (refreshed) {
+          return await doFetch();
+        }
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * Request that returns parsed JSON.
+   * Built on fetchResponse() - same error handling applies.
+   */
+  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    const response = await this.fetchResponse(endpoint, options);
+    return response.json();
+  }
+
+  /**
+   * Raw request without auth retry - use for auth endpoints only.
+   * Does NOT handle 403 globally (auth endpoints shouldn't trigger access denied).
+   */
   async requestRaw<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     const response = await fetch(url, {
@@ -115,11 +198,6 @@ class ApiClient {
     }
 
     return response.json();
-  }
-
-  /** Request with auth retry */
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    return this.withAuth(() => this.requestRaw<T>(endpoint, options));
   }
 
   // ============================================================
@@ -567,29 +645,19 @@ class ApiClient {
     onError?: (error: Error) => void,
     onStart?: () => void
   ): () => void {
-    const url = `${this.baseUrl}/workflow/${request.workflow_run_id}/stream/respond`;
-
-    // For POST requests with SSE, we need to use fetch + ReadableStream
     const controller = new AbortController();
 
     (async () => {
       try {
-        const doFetch = async () => {
-          const response = await fetch(url, {
+        // Use centralized fetchResponse - handles 401 retry and 403 globally
+        const response = await this.fetchResponse(
+          `/workflow/${request.workflow_run_id}/stream/respond`,
+          {
             method: "POST",
-            headers: this.getHeaders(),
             body: JSON.stringify(request),
-            signal: controller.signal,
-            credentials: "include",
-          });
-
-          if (!response.ok) {
-            throw new ApiError(response.status, response.statusText);
-          }
-          return response;
-        };
-
-        const response = await this.withAuth(doFetch);
+          },
+          controller.signal
+        );
 
         // Request succeeded - notify caller before streaming
         onStart?.();
@@ -666,27 +734,19 @@ class ApiClient {
     onEvent: (eventType: SSEEventType, data: Record<string, unknown>) => void,
     onError?: (error: Error) => void
   ): () => void {
-    const url = `${this.baseUrl}/workflow/${workflowRunId}/sub-action`;
     const controller = new AbortController();
 
     (async () => {
       try {
-        const doFetch = async () => {
-          const response = await fetch(url, {
+        // Use centralized fetchResponse - handles 401 retry and 403 globally
+        const response = await this.fetchResponse(
+          `/workflow/${workflowRunId}/sub-action`,
+          {
             method: "POST",
-            headers: this.getHeaders(),
             body: JSON.stringify(request),
-            signal: controller.signal,
-            credentials: "include",
-          });
-
-          if (!response.ok) {
-            throw new ApiError(response.status, response.statusText);
-          }
-          return response;
-        };
-
-        const response = await this.withAuth(doFetch);
+          },
+          controller.signal
+        );
 
         const reader = response.body?.getReader();
         if (!reader) {

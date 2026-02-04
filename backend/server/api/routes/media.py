@@ -9,7 +9,7 @@ import logging
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
-from ..dependencies import get_db, get_current_user_id
+from ..dependencies import get_db, get_current_user_id, get_verified_workflow
 from models import MediaPreviewRequest
 from modules.media import MediaProviderRegistry
 from backend.providers.media.base import GenerationError
@@ -46,8 +46,7 @@ class MediaPreviewResponse(BaseModel):
 async def get_media_preview(
     workflow_run_id: str,
     request: MediaPreviewRequest,
-    db = Depends(get_db),
-    user_id: str = Depends(get_current_user_id)
+    workflow: dict = Depends(get_verified_workflow),
 ):
     """
     Get preview information for a media generation configuration.
@@ -62,10 +61,6 @@ async def get_media_preview(
     Returns:
         MediaPreviewResponse with resolution and credit information
     """
-    # Verify workflow exists (for auth purposes)
-    workflow = db.workflow_repo.get_workflow(workflow_run_id)
-    if not workflow:
-        raise HTTPException(status_code=404, detail="Workflow not found")
 
     # Get provider
     try:

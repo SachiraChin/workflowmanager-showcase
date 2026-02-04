@@ -11,7 +11,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Query, Depends
 
 from backend.db import DbEventType
-from ..dependencies import get_db, get_processor, get_current_user_id
+from ..dependencies import get_db, get_processor, get_current_user_id, get_verified_workflow
 from ..api_utils import resolve_workflow_from_content, set_api_keys_from_config
 from ..workflow_diff_utils import compute_workflow_diff
 from models import (
@@ -37,13 +37,10 @@ router = APIRouter(prefix="/workflow", tags=["management"])
 @router.get("/{workflow_run_id}/status", response_model=WorkflowStatusResponse)
 async def get_workflow_status(
     workflow_run_id: str,
+    workflow: dict = Depends(get_verified_workflow),
     db = Depends(get_db),
-    user_id: str = Depends(get_current_user_id)
 ):
     """Get current status of a workflow"""
-    workflow = db.workflow_repo.get_workflow(workflow_run_id)
-    if not workflow:
-        raise HTTPException(status_code=404, detail="Workflow not found")
 
     position = db.state_repo.get_workflow_position(workflow_run_id)
     status = WorkflowStatus(workflow.get("status", "created"))
@@ -81,9 +78,9 @@ async def get_workflow_status(
 async def resume_workflow(
     workflow_run_id: str,
     request: Optional[ResumeWorkflowRequest] = None,
+    workflow: dict = Depends(get_verified_workflow),
     db = Depends(get_db),
     processor = Depends(get_processor),
-    user_id: str = Depends(get_current_user_id)
 ):
     """
     Resume an existing workflow by ID.
@@ -102,17 +99,9 @@ async def resume_workflow(
     - If version changed: Returns requires_confirmation with diff
     """
     try:
-        user_owns, workflow_exists = db.workflow_repo.workflow_run_exists(user_id, workflow_run_id)
-        if not workflow_exists:
-            raise HTTPException(status_code=404, detail="Workflow not found")
-        if not user_owns:
-            raise HTTPException(status_code=403, detail="Access denied")
-
         recovery = db.recover_workflow(workflow_run_id)
         if recovery:
             logger.info(f"[RESUME] Applied recovery: {recovery['reason']}")
-
-        workflow = db.workflow_repo.get_workflow(workflow_run_id)
 
         current_version_id = workflow.get("current_workflow_version_id")
         if not current_version_id:
@@ -223,9 +212,9 @@ async def resume_workflow(
 async def confirm_resume_with_update(
     workflow_run_id: str,
     request: ResumeWorkflowRequest,
+    workflow: dict = Depends(get_verified_workflow),
     db = Depends(get_db),
     processor = Depends(get_processor),
-    user_id: str = Depends(get_current_user_id)
 ):
     """
     Confirm resume with updated workflow after version change was detected.
@@ -234,12 +223,7 @@ async def confirm_resume_with_update(
     Creates new version and resumes execution with it.
     """
     try:
-        workflow = db.workflow_repo.get_workflow(workflow_run_id)
-        if not workflow:
-            raise HTTPException(status_code=404, detail="Workflow not found")
-
-        if workflow.get("user_id") != user_id:
-            raise HTTPException(status_code=403, detail="Access denied")
+        user_id = workflow.get("user_id")
 
         if not request.workflow_content:
             raise HTTPException(status_code=400, detail="workflow_content is required for confirm")
@@ -296,8 +280,8 @@ async def get_workflow_events(
     event_type: Optional[str] = Query(None, description="Filter by event type"),
     module_name: Optional[str] = Query(None, description="Filter by module name"),
     limit: Optional[int] = Query(None, description="Limit number of events"),
+    workflow: dict = Depends(get_verified_workflow),
     db = Depends(get_db),
-    user_id: str = Depends(get_current_user_id)
 ):
     """
     Get events for a workflow.
@@ -305,9 +289,6 @@ async def get_workflow_events(
     Events are returned in chronological order.
     Use filters to narrow down results.
     """
-    workflow = db.workflow_repo.get_workflow(workflow_run_id)
-    if not workflow:
-        raise HTTPException(status_code=404, detail="Workflow not found")
 
     events = db.event_repo.get_events(
         workflow_run_id=workflow_run_id,
@@ -336,8 +317,8 @@ async def get_workflow_events(
 @router.get("/{workflow_run_id}/interaction-history", response_model=InteractionHistoryResponse)
 async def get_interaction_history(
     workflow_run_id: str,
+    workflow: dict = Depends(get_verified_workflow),
     db = Depends(get_db),
-    user_id: str = Depends(get_current_user_id)
 ):
     """
     Get interaction history for a workflow.
@@ -347,11 +328,6 @@ async def get_interaction_history(
 
     Used by WebUI to display scrollable interaction history.
     """
-    user_owns, exists = db.workflow_repo.workflow_run_exists(user_id, workflow_run_id)
-    if not exists:
-        raise HTTPException(status_code=404, detail="Workflow not found")
-    if not user_owns:
-        raise HTTPException(status_code=403, detail="Access denied")
 
     interactions = db.state_repo.get_interaction_history(workflow_run_id)
 
@@ -401,9 +377,9 @@ async def get_interaction_history(
 async def get_interaction_data(
     workflow_run_id: str,
     interaction_id: str,
+    workflow: dict = Depends(get_verified_workflow),
     db = Depends(get_db),
     processor = Depends(get_processor),
-    user_id: str = Depends(get_current_user_id)
 ):
     """
     Get resolved display_data for an interaction using current workflow state.
@@ -420,12 +396,7 @@ async def get_interaction_data(
     """
     from workflow.workflow_utils import get_workflow_def, rebuild_services
 
-    # Verify access
-    user_owns, exists = db.workflow_repo.workflow_run_exists(user_id, workflow_run_id)
-    if not exists:
-        raise HTTPException(status_code=404, detail="Workflow not found")
-    if not user_owns:
-        raise HTTPException(status_code=403, detail="Access denied")
+    user_id = workflow.get("user_id")
 
     # Find the interaction_requested event
     interaction_event = db.events.find_one({
@@ -444,11 +415,7 @@ async def get_interaction_data(
     if not module_id:
         raise HTTPException(status_code=400, detail="Interaction missing module_id")
 
-    # Get workflow and definition
-    workflow = db.workflow_repo.get_workflow(workflow_run_id)
-    if not workflow:
-        raise HTTPException(status_code=404, detail="Workflow not found")
-
+    # Get workflow definition (workflow already verified by dependency)
     workflow_def = get_workflow_def(workflow, db, logger)
 
     # Find module config in workflow definition
@@ -487,13 +454,10 @@ async def get_interaction_data(
 @router.delete("/{workflow_run_id}")
 async def delete_workflow(
     workflow_run_id: str,
+    workflow: dict = Depends(get_verified_workflow),
     db = Depends(get_db),
-    user_id: str = Depends(get_current_user_id)
 ):
     """Delete a workflow and all its events"""
-    workflow = db.workflow_repo.get_workflow(workflow_run_id)
-    if not workflow:
-        raise HTTPException(status_code=404, detail="Workflow not found")
 
     # Delete from all related collections
     db.event_repo.delete_workflow_events(workflow_run_id)
@@ -507,17 +471,14 @@ async def delete_workflow(
 async def reset_workflow(
     workflow_run_id: str,
     request: ResetRequest = ResetRequest(),
+    workflow: dict = Depends(get_verified_workflow),
     db = Depends(get_db),
-    user_id: str = Depends(get_current_user_id)
 ):
     """
     Reset a workflow - clear all events but keep workflow record.
     
     Request body is optional and accepts ai_config for API consistency.
     """
-    workflow = db.workflow_repo.get_workflow(workflow_run_id)
-    if not workflow:
-        raise HTTPException(status_code=404, detail="Workflow not found")
 
     # Delete all events for this workflow
     db.event_repo.delete_workflow_events(workflow_run_id)
@@ -548,17 +509,14 @@ async def reset_workflow(
 @router.get("/{workflow_run_id}/tokens")
 async def get_workflow_tokens(
     workflow_run_id: str,
+    workflow: dict = Depends(get_verified_workflow),
     db = Depends(get_db),
-    user_id: str = Depends(get_current_user_id)
 ):
     """
     Get all token usage records for a workflow.
 
     Returns array of token usage events with step/module context.
     """
-    workflow = db.workflow_repo.get_workflow(workflow_run_id)
-    if not workflow:
-        raise HTTPException(status_code=404, detail="Workflow not found")
 
     tokens = db.token_repo.get_token_usage(workflow_run_id)
     return {"workflow_run_id": workflow_run_id, "tokens": tokens}
@@ -567,8 +525,8 @@ async def get_workflow_tokens(
 @router.get("/{workflow_run_id}/status-display")
 async def get_workflow_status_display(
     workflow_run_id: str,
+    workflow: dict = Depends(get_verified_workflow),
     db = Depends(get_db),
-    user_id: str = Depends(get_current_user_id)
 ):
     """
     Get status display data for a workflow.
@@ -578,9 +536,6 @@ async def get_workflow_status_display(
     - Dynamic fields resolved from workflow's status_display config
     - Layout for display arrangement
     """
-    workflow = db.workflow_repo.get_workflow(workflow_run_id)
-    if not workflow:
-        raise HTTPException(status_code=404, detail="Workflow not found")
 
     workflow_path = workflow.get("workflow_path")
 

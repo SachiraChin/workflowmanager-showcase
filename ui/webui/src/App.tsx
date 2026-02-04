@@ -12,8 +12,9 @@ import { Loader2 } from "lucide-react";
 import { WorkflowStartPage } from "@/pages/WorkflowStartPage";
 import { WorkflowRunnerPage } from "@/pages/WorkflowRunnerPage";
 import { LoginPage } from "@/pages/LoginPage";
-import { api } from "@/core/api";
+import { api, setAccessDeniedHandler } from "@/core/api";
 import { useWorkflowExecution } from "@/state/hooks/useWorkflowExecution";
+import { useWorkflowStore } from "@/state/workflow-store";
 
 interface User {
   user_id: string;
@@ -42,15 +43,17 @@ function RunnerPageRoute() {
   const navigate = useNavigate();
   const { runId } = useParams<{ runId: string }>();
   const { workflowRunId, resumeWorkflow } = useWorkflowExecution();
+  const accessDenied = useWorkflowStore((s) => s.accessDenied);
 
   // If we have a runId in URL but not in store, try to resume
+  // Skip if access was denied (prevents infinite loop on 403)
   useEffect(() => {
-    if (runId && runId !== workflowRunId) {
+    if (runId && runId !== workflowRunId && !accessDenied) {
       // Resume with the run ID from URL
       // Project name will be fetched from server when stream connects
       resumeWorkflow(runId, "Resuming...");
     }
-  }, [runId, workflowRunId, resumeWorkflow]);
+  }, [runId, workflowRunId, resumeWorkflow, accessDenied]);
 
   // If no runId in URL, redirect to start
   if (!runId) {
@@ -94,6 +97,19 @@ function AppContent({ user, onLogout }: { user: User; onLogout: () => void }) {
 function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  // Get store actions for global 403 handling
+  const reset = useWorkflowStore((s) => s.reset);
+  const setAccessDenied = useWorkflowStore((s) => s.setAccessDenied);
+
+  // Register global 403 handler once on mount
+  useEffect(() => {
+    setAccessDeniedHandler(() => {
+      // Clear workflow state and show access denied view
+      reset();
+      setAccessDenied(true);
+    });
+  }, [reset, setAccessDenied]);
 
   // Check if user is already logged in on mount
   useEffect(() => {

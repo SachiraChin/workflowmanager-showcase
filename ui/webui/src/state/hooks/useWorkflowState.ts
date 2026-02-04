@@ -5,7 +5,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { API_URL } from "@/core/config";
-import { api } from "@/core/api";
+import { api, ApiError } from "@/core/api";
 
 interface UseWorkflowStateOptions {
   baseUrl?: string;
@@ -124,6 +124,10 @@ export function useWorkflowState(
       setState(newState);
       onStateChange?.(newState);
     } catch (e) {
+      // 403 is handled globally by api - silently return
+      if (e instanceof ApiError && e.status === 403) {
+        return;
+      }
       setError((e as Error).message);
     }
   }, [workflowRunId, onStateChange]);

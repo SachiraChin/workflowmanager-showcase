@@ -13,7 +13,7 @@
 import { useCallback, useRef, useState } from "react";
 import { useWorkflowStore } from "@/state/workflow-store";
 import { useShallow } from "zustand/react/shallow";
-import { api } from "@/core/api";
+import { api, ApiError } from "@/core/api";
 import { API_URL } from "@/core/config";
 import type {
   CompletedInteraction,
@@ -84,6 +84,7 @@ export function useWorkflowExecution() {
       setModuleOutputs: state.setModuleOutputs,
       addEvent: state.addEvent,
       clearEvents: state.clearEvents,
+      setAccessDenied: state.setAccessDenied,
     }))
   );
 
@@ -426,7 +427,6 @@ export function useWorkflowExecution() {
       actions.setProcessing(true);
       isDisconnectedRef.current = false;  // Reset for new connection
 
-      const url = `${API_URL}/workflow/${currentWorkflowRunId}/stream/respond`;
       const controller = new AbortController();
       abortControllerRef.current = controller;
 
@@ -458,86 +458,65 @@ export function useWorkflowExecution() {
         console.log("[respond] Sending request body:", requestBody);
         console.log("[respond] response.form_data:", response.form_data);
 
-        const fetchResponse = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify(requestBody),
-          signal: controller.signal,
-        });
+        // Use centralized fetchResponse - handles 401 retry and 403 globally
+        const fetchResponse = await api.fetchResponse(
+          `/workflow/${currentWorkflowRunId}/stream/respond`,
+          {
+            method: "POST",
+            body: JSON.stringify(requestBody),
+          },
+          controller.signal
+        );
 
-        // Handle 401 - try to refresh token and retry
-        if (fetchResponse.status === 401) {
-          try {
-            await api.refreshToken();
-            // Retry the request
-            const retryResponse = await fetch(url, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              credentials: "include",
-              body: JSON.stringify(requestBody),
-              signal: controller.signal,
-            });
-            if (!retryResponse.ok) {
-              throw new Error(`HTTP ${retryResponse.status}: ${retryResponse.statusText}`);
-            }
-            // Continue with retry response
-            await processStreamResponse(retryResponse);
-          } catch (refreshError) {
-            throw new Error("Session expired. Please log in again.");
-          }
-        } else if (!fetchResponse.ok) {
-          throw new Error(`HTTP ${fetchResponse.status}: ${fetchResponse.statusText}`);
-        } else {
-          await processStreamResponse(fetchResponse);
+        // Track this as a completed interaction
+        const completedInteraction: CompletedInteraction = {
+          interaction_id: previousInteraction.interaction_id,
+          request: previousInteraction,
+          response,
+          timestamp: new Date().toISOString(),
+        };
+        actions.addCompletedInteraction(completedInteraction);
+
+        // Process the streaming response
+        const reader = fetchResponse.body?.getReader();
+        if (!reader) {
+          throw new Error("No response body");
         }
 
-        // Helper to process the stream response
-        // Note: We capture previousInteraction which is guaranteed non-null at this point
-        async function processStreamResponse(streamResponse: Response) {
-          // Track this as a completed interaction
-          const completedInteraction: CompletedInteraction = {
-            interaction_id: previousInteraction.interaction_id,
-            request: previousInteraction,
-            response,
-            timestamp: new Date().toISOString(),
-          };
-          actions.addCompletedInteraction(completedInteraction);
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let currentEventType: SSEEventType | null = null;
 
-          const reader = streamResponse.body?.getReader();
-          if (!reader) {
-            throw new Error("No response body");
-          }
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-          const decoder = new TextDecoder();
-          let buffer = "";
-          let currentEventType: SSEEventType | null = null;
+          buffer += decoder.decode(value, { stream: true });
 
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-
-            const lines = buffer.split("\n");
-            buffer = lines.pop() || "";
-            for (const line of lines) {
-              if (line.startsWith("event: ")) {
-                currentEventType = line.slice(7).trim() as SSEEventType;
-              } else if (line.startsWith("data: ") && currentEventType) {
-                try {
-                  const data = JSON.parse(line.slice(6));
-                  handleSSEEvent(currentEventType, data);
-                } catch (e) {
-                  console.error("Failed to parse SSE data", e);
-                }
-                currentEventType = null;
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+          for (const line of lines) {
+            if (line.startsWith("event: ")) {
+              currentEventType = line.slice(7).trim() as SSEEventType;
+            } else if (line.startsWith("data: ") && currentEventType) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                handleSSEEvent(currentEventType, data);
+              } catch (e) {
+                console.error("Failed to parse SSE data", e);
               }
+              currentEventType = null;
             }
           }
         }
       } catch (error) {
         if ((error as Error).name !== "AbortError") {
+          // 403 is handled globally by api.fetchResponse
+          // For 403, the global handler already reset state and set accessDenied
+          // Just silently return to avoid showing duplicate error
+          if (error instanceof ApiError && error.status === 403) {
+            return;
+          }
           actions.setError((error as Error).message);
           // Restore the interaction so user can retry
           actions.setCurrentInteraction(previousInteraction);
@@ -631,6 +610,11 @@ export function useWorkflowExecution() {
           actions.setError(data.error || "Workflow failed");
         }
       } catch (error) {
+        // 403 is handled globally by api.fetchResponse (called internally by api.resume)
+        // Just silently return to avoid showing duplicate error
+        if (error instanceof ApiError && error.status === 403) {
+          return;
+        }
         actions.setError((error as Error).message);
       }
     },

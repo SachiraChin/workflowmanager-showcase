@@ -57,6 +57,9 @@ export interface WorkflowExecutionState {
   modelsConfig: ModelsResponse | null;
   selectedProvider: string | null;
   selectedModel: string | null;
+
+  // Access denied state (403 errors)
+  accessDenied: boolean;
 }
 
 export interface WorkflowEvent {
@@ -105,6 +108,9 @@ export interface WorkflowActions {
   // Model selection
   setModelsConfig: (config: ModelsResponse) => void;
   setSelectedModel: (provider: string | null, model: string | null) => void;
+
+  // Access denied
+  setAccessDenied: (denied: boolean) => void;
 }
 
 // =============================================================================
@@ -158,6 +164,7 @@ const initialState: WorkflowExecutionState = {
   modelsConfig: null,
   selectedProvider: null,
   selectedModel: null,
+  accessDenied: false,
 };
 
 // =============================================================================
@@ -283,6 +290,9 @@ export const useWorkflowStore = create<WorkflowExecutionState & WorkflowActions>
       selectedProvider: provider,
       selectedModel: model,
     }),
+
+    // Access denied
+    setAccessDenied: (denied) => set({ accessDenied: denied }),
   })
 );
 
@@ -303,3 +313,4 @@ export const selectCurrentViewIndex = (state: WorkflowExecutionState) => state.c
 export const selectModelsConfig = (state: WorkflowExecutionState) => state.modelsConfig;
 export const selectSelectedProvider = (state: WorkflowExecutionState) => state.selectedProvider;
 export const selectSelectedModel = (state: WorkflowExecutionState) => state.selectedModel;
+export const selectAccessDenied = (state: WorkflowExecutionState) => state.accessDenied;

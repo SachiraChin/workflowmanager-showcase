@@ -20,6 +20,7 @@ import { VersionDiffDialog } from "@/features/workflow-start/VersionDiffDialog";
 import { WorkflowSidebar, StateTreeView, FilesTreeView } from "@/features/workflow-state";
 import { InteractionPanel, WorkflowCompletion } from "@/features/workflow-runner";
 import { CompletedInteractionCard } from "@/features/workflow-history";
+import { AccessDeniedView } from "@/components/AccessDeniedView";
 import { useWorkflowExecution } from "@/state/hooks/useWorkflowExecution";
 import { useWorkflowStore } from "@/state/workflow-store";
 import { WorkflowStateProvider } from "@/state/WorkflowStateContext";
@@ -89,6 +90,9 @@ export function WorkflowRunnerPage({ onRestart }: WorkflowRunnerPageProps) {
   const currentViewIndex = useWorkflowStore((s) => s.currentViewIndex);
   const setCurrentViewIndex = useWorkflowStore((s) => s.setCurrentViewIndex);
   const navigateView = useWorkflowStore((s) => s.navigateView);
+
+  // Access denied state
+  const accessDenied = useWorkflowStore((s) => s.accessDenied);
 
   // Flatten interactions with step context (for showing step headers on first item)
   const interactionsWithSteps = useMemo<InteractionWithStep[]>(() => {
@@ -218,6 +222,11 @@ export function WorkflowRunnerPage({ onRestart }: WorkflowRunnerPageProps) {
   const handleCancelVersion = useCallback(() => {
     cancelVersionConfirmation();
   }, [cancelVersionConfirmation]);
+
+  // Show access denied view if user doesn't have permission
+  if (accessDenied) {
+    return <AccessDeniedView onGoHome={handleExit} />;
+  }
 
   return (
     <div className="container mx-auto px-4 pt-2 pb-4">
