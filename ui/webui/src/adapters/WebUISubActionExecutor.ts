@@ -22,15 +22,11 @@ import type { SSEEventType } from "@wfm/shared";
 export function createWebUISubActionExecutor(
   interactionId: string
 ): SubActionExecutor {
-  console.log("[WebUISubActionExecutor] Creating executor for", interactionId);
   return {
     execute: (subActionId, params, callbacks) => {
-      console.log("[WebUISubActionExecutor] execute called", { interactionId, subActionId, params });
-      
       // Read current state from store at execution time
       const state = useWorkflowStore.getState();
       const { workflowRunId, selectedProvider, selectedModel } = state;
-      console.log("[WebUISubActionExecutor] store state", { workflowRunId });
 
       if (!workflowRunId) {
         console.error("[WebUISubActionExecutor] No workflow run ID");
@@ -63,17 +59,14 @@ export function createWebUISubActionExecutor(
         eventType: SSEEventType,
         data: Record<string, unknown>
       ) => {
-        console.log("[WebUISubActionExecutor] SSE event:", eventType, data);
         switch (eventType) {
           case "progress":
             callbacks.onProgress?.((data.message as string) || "Processing...");
             break;
           case "complete":
-            console.log("[WebUISubActionExecutor] Calling onComplete");
             callbacks.onComplete?.(data);
             break;
           case "error":
-            console.log("[WebUISubActionExecutor] Calling onError");
             callbacks.onError?.((data.message as string) || "Sub-action failed");
             break;
         }
@@ -86,7 +79,6 @@ export function createWebUISubActionExecutor(
       };
 
       // Execute via SSE
-      console.log("[WebUISubActionExecutor] Calling api.streamSubAction with request:", request);
       api.streamSubAction(workflowRunId, request, handleEvent, handleError);
     },
   };

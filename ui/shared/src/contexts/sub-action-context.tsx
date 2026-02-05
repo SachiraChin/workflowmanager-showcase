@@ -149,8 +149,6 @@ export function SubActionProvider({
   // Trigger sub-action execution
   const trigger = useCallback(
     (subActionId: string, params: Record<string, unknown> = {}) => {
-      console.log("[SubActionProvider] trigger called", { subActionId, params, hasExecutor: !!executor });
-      
       if (!executor) {
         console.error("[SubActionProvider] No executor configured");
         setError("No sub-action executor configured");
@@ -170,7 +168,6 @@ export function SubActionProvider({
       setProgress(subAction.loading_label || "Processing...");
       setError(null);
 
-      console.log("[SubActionProvider] Calling executor.execute");
       // Execute via injected executor
       executor.execute(subActionId, params, {
         onProgress: (message) => {

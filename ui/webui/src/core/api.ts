@@ -669,6 +669,9 @@ class ApiClient {
 
         const decoder = new TextDecoder();
         let buffer = "";
+        // Track current event type across chunks - large events may be split
+        // across multiple reader.read() calls
+        let currentEventType: SSEEventType | null = null;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -680,7 +683,6 @@ class ApiClient {
           const lines = buffer.split("\n");
           buffer = lines.pop() || "";
 
-          let currentEventType: SSEEventType | null = null;
           for (const line of lines) {
             if (line.startsWith("event: ")) {
               currentEventType = line.slice(7).trim() as SSEEventType;
@@ -755,6 +757,9 @@ class ApiClient {
 
         const decoder = new TextDecoder();
         let buffer = "";
+        // Track current event type across chunks - large events may be split
+        // across multiple reader.read() calls
+        let currentEventType: SSEEventType | null = null;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -766,22 +771,14 @@ class ApiClient {
           // Parse SSE events from buffer
           // When done, process entire buffer (no incomplete lines expected)
           const lines = buffer.split("\n");
-          
-          if (done) {
-            console.log("[API] SSE stream done=true, buffer before processing:", JSON.stringify(buffer));
-            console.log("[API] SSE lines count:", lines.length, "lines:", lines);
-          }
-          
           buffer = done ? "" : (lines.pop() || "");
 
-          let currentEventType: SSEEventType | null = null;
           for (const line of lines) {
             if (line.startsWith("event: ")) {
               currentEventType = line.slice(7).trim() as SSEEventType;
             } else if (line.startsWith("data: ") && currentEventType) {
               try {
                 const data = JSON.parse(line.slice(6));
-                console.log("[API] SSE event parsed:", currentEventType);
                 onEvent(currentEventType, data);
               } catch (e) {
                 console.error("[SubAction] Failed to parse SSE data", e);
@@ -790,10 +787,7 @@ class ApiClient {
             }
           }
           
-          if (done) {
-            console.log("[API] SSE stream ending, final buffer:", JSON.stringify(buffer));
-            break;
-          }
+          if (done) break;
         }
       } catch (error) {
         if ((error as Error).name !== "AbortError") {
