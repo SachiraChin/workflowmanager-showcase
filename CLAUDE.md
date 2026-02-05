@@ -133,6 +133,7 @@ This makes it easy to see which issues are resolved vs still open.
   When you see "[REMINDER] Uncommitted changes detected" from the Stop hook, immediately commit before continuing. Use meaningful commit messages describing what was changed and why.
 - Never create modules that are specific to a single workflow. Modules must be generic, reusable, and workflow-agnostic. All workflow-specific logic should be handled through module configuration (inputs), not hardcoded in module code. If a complex scenario requires new functionality, design a generic module that can handle similar patterns across different workflows.
 - **Test all changes directly before reporting completion.** Every change made to any file - whether it's an API change, database change, or any other modification - MUST be tested directly before telling the operator that the change has been completed. Do not rely on the operator to test your changes. Call the method directly, query the database, or invoke the endpoint programmatically to verify the change works as expected.
+- **Never run deploy scripts without explicit request.** Do not run `deploy/deploy.sh` or any deployment scripts unless the operator specifically asks you to deploy. After making code changes, wait for the operator to handle deployment themselves.
 
 ### Verification Checkpoints
 

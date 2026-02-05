@@ -333,10 +333,13 @@ export function AudioGeneration({
     };
 
     loadGenerations();
-  }, [mediaContext, workflowRunId, request.interaction_id, readonly, provider, promptId, inputActions]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mediaContext excluded: changes on selection, would reset user inputs
+  }, [workflowRunId, request.interaction_id, readonly, provider, promptId, inputActions]);
 
   // Fetch preview when input values change
   // Uses inputState?.values to trigger re-fetch when values change
+  // NOTE: Do NOT depend on mediaContext directly - it changes when selection changes
+  // which would cause unnecessary preview refreshes
   useEffect(() => {
     if (!mediaContext || readonly || !workflowRunId || !provider) return;
 
@@ -361,7 +364,8 @@ export function AudioGeneration({
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [mediaContext, inputState?.values, readonly, workflowRunId, provider, promptId, inputActions]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally exclude mediaContext to avoid re-fetch on selection change
+  }, [inputState?.values, readonly, workflowRunId, provider, promptId, inputActions, adapter]);
 
   // Execute generation via SSE
   const handleGenerate = useCallback(
@@ -514,25 +518,36 @@ export function AudioGeneration({
 
   return (
     <div className="space-y-4">
-      {/* Preview Info (Cost/Credits) */}
-      {!readonly && preview && !previewLoading && (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground bg-muted/30 rounded-md px-3 py-2">
-          {preview.credits.total_cost_usd > 0 && (
+      {/* Preview Info (Cost/Credits) - always show container to prevent layout shift */}
+      {!readonly && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground bg-muted/30 rounded-md px-3 py-2 min-h-[36px]">
+          {previewLoading ? (
             <span className="flex items-center gap-1.5">
-              <span className="font-medium text-foreground">Est. Cost:</span>
-              ${preview.credits.total_cost_usd.toFixed(2)}
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Loading preview...
             </span>
-          )}
-          {preview.credits.credits > 0 && (
+          ) : preview ? (
             <>
               {preview.credits.total_cost_usd > 0 && (
-                <span className="text-muted-foreground/50">•</span>
+                <span className="flex items-center gap-1.5">
+                  <span className="font-medium text-foreground">Est. Cost:</span>
+                  ${preview.credits.total_cost_usd.toFixed(2)}
+                </span>
               )}
-              <span className="flex items-center gap-1.5">
-                <span className="font-medium text-foreground">Credits:</span>
-                ~{preview.credits.credits}
-              </span>
+              {preview.credits.credits > 0 && (
+                <>
+                  {preview.credits.total_cost_usd > 0 && (
+                    <span className="text-muted-foreground/50">•</span>
+                  )}
+                  <span className="flex items-center gap-1.5">
+                    <span className="font-medium text-foreground">Credits:</span>
+                    ~{preview.credits.credits}
+                  </span>
+                </>
+              )}
             </>
+          ) : (
+            <span className="text-muted-foreground/70">Preview will load when inputs are set</span>
           )}
         </div>
       )}
@@ -548,13 +563,6 @@ export function AudioGeneration({
           >
             {queue.derived.buttonLabel}
           </Button>
-          {/* Preview loading indicator */}
-          {previewLoading && (
-            <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-              <Loader2 className="w-3 h-3 animate-spin" />
-              Loading preview...
-            </span>
-          )}
           {/* Generation progress indicator */}
           {queue.derived.isLoading && (
             <span className="flex items-center gap-2 text-sm text-muted-foreground">

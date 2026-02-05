@@ -171,10 +171,13 @@ export function VideoGeneration({
     };
 
     loadGenerations();
-  }, [mediaContext, workflowRunId, request.interaction_id, readonly, provider, promptId, inputActions]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mediaContext excluded: changes on selection, would reset user inputs
+  }, [workflowRunId, request.interaction_id, readonly, provider, promptId, inputActions]);
 
   // Fetch preview when input values change
   // Uses inputState?.values to trigger re-fetch when values change
+  // NOTE: Do NOT depend on mediaContext directly - it changes when selection changes
+  // which would cause unnecessary preview refreshes
   useEffect(() => {
     if (!mediaContext || readonly || !workflowRunId || !provider) return;
 
@@ -199,7 +202,8 @@ export function VideoGeneration({
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [mediaContext, inputState?.values, readonly, workflowRunId, provider, promptId, inputActions]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally exclude mediaContext to avoid re-fetch on selection change
+  }, [inputState?.values, readonly, workflowRunId, provider, promptId, inputActions, adapter]);
 
   // Execute generation with crop
   const executeWithCrop = useCallback(
@@ -405,61 +409,72 @@ export function VideoGeneration({
 
   return (
     <div className="space-y-4">
-      {/* Preview Info (Resolution/Credits/Cost/Crop) */}
-      {!readonly && preview && !previewLoading && (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground bg-muted/30 rounded-md px-3 py-2">
-          <span className="flex items-center gap-1.5">
-            <span className="font-medium text-foreground">Resolution:</span>
-            {preview.resolution.width} × {preview.resolution.height}
-            <span className="text-xs">({preview.resolution.megapixels}MP)</span>
-          </span>
-          {preview.credits.credits > 0 && (
+      {/* Preview Info (Resolution/Credits/Cost/Crop) - always show container to prevent layout shift */}
+      {!readonly && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground bg-muted/30 rounded-md px-3 py-2 min-h-[36px]">
+          {previewLoading ? (
+            <span className="flex items-center gap-1.5">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Loading preview...
+            </span>
+          ) : preview ? (
             <>
-              <span className="text-muted-foreground/50">•</span>
               <span className="flex items-center gap-1.5">
-                <span className="font-medium text-foreground">Credits:</span>
-                {preview.credits.credits} ({preview.credits.credits_per_image}/vid)
+                <span className="font-medium text-foreground">Resolution:</span>
+                {preview.resolution.width} × {preview.resolution.height}
+                <span className="text-xs">({preview.resolution.megapixels}MP)</span>
               </span>
+              {preview.credits.credits > 0 && (
+                <>
+                  <span className="text-muted-foreground/50">•</span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="font-medium text-foreground">Credits:</span>
+                    {preview.credits.credits} ({preview.credits.credits_per_image}/vid)
+                  </span>
+                </>
+              )}
+              {preview.credits.total_cost_usd > 0 && (
+                <>
+                  <span className="text-muted-foreground/50">•</span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="font-medium text-foreground">Cost:</span>
+                    ${preview.credits.total_cost_usd.toFixed(4)} (${preview.credits.cost_per_image_usd.toFixed(4)}/vid)
+                  </span>
+                </>
+              )}
+              {/* Crop selection info */}
+              {savedCrop && (
+                <>
+                  <span className="text-muted-foreground/50">•</span>
+                  <span className="flex items-center gap-1.5">
+                    <Crop className="w-3 h-3" />
+                    <span className="font-medium text-foreground">Crop:</span>
+                    {savedCrop.region.width} × {savedCrop.region.height}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 w-5 p-0 ml-1"
+                      onClick={() => {
+                        setCropModalViewOnly(true);
+                        setShowCropModal(true);
+                      }}
+                    >
+                      <span className="text-xs underline">view</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 w-5 p-0"
+                      onClick={() => setSavedCrop(null)}
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </span>
+                </>
+              )}
             </>
-          )}
-          {preview.credits.total_cost_usd > 0 && (
-            <>
-              <span className="text-muted-foreground/50">•</span>
-              <span className="flex items-center gap-1.5">
-                <span className="font-medium text-foreground">Cost:</span>
-                ${preview.credits.total_cost_usd.toFixed(4)} (${preview.credits.cost_per_image_usd.toFixed(4)}/vid)
-              </span>
-            </>
-          )}
-          {/* Crop selection info */}
-          {savedCrop && (
-            <>
-              <span className="text-muted-foreground/50">•</span>
-              <span className="flex items-center gap-1.5">
-                <Crop className="w-3 h-3" />
-                <span className="font-medium text-foreground">Crop:</span>
-                {savedCrop.region.width} × {savedCrop.region.height}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-5 w-5 p-0 ml-1"
-                  onClick={() => {
-                    setCropModalViewOnly(true);
-                    setShowCropModal(true);
-                  }}
-                >
-                  <span className="text-xs underline">view</span>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-5 w-5 p-0"
-                  onClick={() => setSavedCrop(null)}
-                >
-                  <X className="w-3 h-3" />
-                </Button>
-              </span>
-            </>
+          ) : (
+            <span className="text-muted-foreground/70">Preview will load when inputs are set</span>
           )}
         </div>
       )}
@@ -475,13 +490,6 @@ export function VideoGeneration({
           >
             {queue.derived.buttonLabel}
           </Button>
-          {/* Preview loading indicator */}
-          {previewLoading && (
-            <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-              <Loader2 className="w-3 h-3 animate-spin" />
-              Loading preview...
-            </span>
-          )}
           {/* Generation progress indicator */}
           {queue.derived.isLoading && (
             <span className="flex items-center gap-2 text-sm text-muted-foreground">
