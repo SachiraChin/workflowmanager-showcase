@@ -1,19 +1,21 @@
 /**
  * InputSchemaContext - Shared context for input schema rendering.
  *
- * Provides:
- * - Values management (get/set input values)
- * - Error management (validation errors per field)
- * - Dynamic options for controlled select fields
- * - Visibility control for conditional field display
- * - Disabled/readonly state propagation
- * - Schema reference for validation rules
+ * Split into two contexts for performance:
+ * - InputSchemaActionsContext: Stable functions that don't change between renders
+ * - InputSchemaStateContext: Reactive state that changes when values/errors change
+ *
+ * This split prevents components that only need to call functions (like setValue)
+ * from re-rendering when values change. Components can choose which context
+ * they need:
+ * - useInputSchemaActions() - for calling functions only (stable, no re-renders)
+ * - useInputSchemaState() - for reactive values (re-renders on state change)
+ * - useInputSchema() - for both (convenience, re-renders on state change)
  *
  * Used by:
- * - InputSchemaComposer (provides the context)
- * - Input renderers (read/write values, display errors, get dynamic options)
- * - InputSchemaRenderer (check field visibility)
- * - Consumers (validate and submit values via getMappedValues)
+ * - InputSchemaComposer (provides both contexts)
+ * - Input renderers (need both: display values + update on change)
+ * - Generation components (need actions only for setValue/getMappedValues)
  */
 
 import { createContext, useContext } from "react";
@@ -64,22 +66,19 @@ export interface InputSchema {
 }
 
 /**
- * Context value for input schema management.
+ * Stable actions context - functions that don't change between renders.
+ * Components using only these won't re-render when values change.
  */
-export interface InputSchemaContextValue {
-  // Source data (original data object for resolving enum_source paths)
+export interface InputSchemaActions {
+  // Source data (stable reference)
   sourceData: Record<string, unknown>;
 
-  // Values management
-  values: Record<string, unknown>;
+  // Values management (functions are stable)
   getValue: (key: string) => unknown;
   setValue: (key: string, value: unknown) => void;
-
-  // Get values with destination_field mapping applied (for submission)
   getMappedValues: () => Record<string, unknown>;
 
-  // Validation errors
-  errors: Record<string, string>;
+  // Error management
   setError: (key: string, error: string) => void;
   clearError: (key: string) => void;
   clearAllErrors: () => void;
@@ -89,58 +88,140 @@ export interface InputSchemaContextValue {
   setDynamicOptions: (key: string, options: DynamicOption[]) => void;
 
   // Alternative input mode tracking
-  alternativeMode: Record<string, boolean>;
   isAlternativeMode: (key: string) => boolean;
   setAlternativeMode: (key: string, active: boolean) => void;
 
   // Visibility control for conditional field display
-  visibility: Record<string, boolean>;
   isVisible: (key: string) => boolean;
   setVisibility: (key: string, visible: boolean) => void;
 
-  // State
-  isValid: boolean;
+  // Schema reference (stable)
+  inputSchema: InputSchema;
+
+  // Props (stable per render)
   disabled: boolean;
   readonly: boolean;
-
-  // Schema reference (for validation rules)
-  inputSchema: InputSchema;
 }
 
+/**
+ * Reactive state context - values that change and trigger re-renders.
+ */
+export interface InputSchemaState {
+  // Current values (reactive - changes trigger re-render)
+  values: Record<string, unknown>;
+
+  // Validation errors (reactive)
+  errors: Record<string, string>;
+
+  // Alternative mode state (reactive)
+  alternativeMode: Record<string, boolean>;
+
+  // Visibility state (reactive)
+  visibility: Record<string, boolean>;
+
+  // Computed state
+  isValid: boolean;
+}
+
+/**
+ * Combined context value for backward compatibility.
+ * Components that need both actions and state can use this.
+ */
+export interface InputSchemaContextValue extends InputSchemaActions, InputSchemaState {}
+
 // =============================================================================
-// Context
+// Contexts
 // =============================================================================
 
 /**
- * Context for input schema state management.
- * Null when not within an InputSchemaComposer.
+ * Context for stable actions (functions that don't change).
+ * Components using only this won't re-render when values change.
  */
-export const InputSchemaContext = createContext<InputSchemaContextValue | null>(null);
+export const InputSchemaActionsContext = createContext<InputSchemaActions | null>(null);
+
+/**
+ * Context for reactive state (values that change).
+ * Components using this will re-render when values/errors change.
+ */
+export const InputSchemaStateContext = createContext<InputSchemaState | null>(null);
 
 // =============================================================================
 // Hooks
 // =============================================================================
 
 /**
- * Hook to access input schema context.
- * Throws if used outside of InputSchemaComposer.
+ * Hook to access stable actions only.
+ * Components using this WON'T re-render when values change.
+ * Use this for components that only need to call functions like setValue.
  *
- * Use this when the component MUST be within an input schema context.
+ * @throws Error if used outside of InputSchemaComposer
  */
-export function useInputSchema(): InputSchemaContextValue {
-  const ctx = useContext(InputSchemaContext);
+export function useInputSchemaActions(): InputSchemaActions {
+  const ctx = useContext(InputSchemaActionsContext);
   if (!ctx) {
-    throw new Error("useInputSchema must be used within InputSchemaComposer");
+    throw new Error("useInputSchemaActions must be used within InputSchemaComposer");
   }
   return ctx;
 }
 
 /**
- * Hook to optionally access input schema context.
+ * Hook to optionally access stable actions.
  * Returns null if not within InputSchemaComposer.
+ * Components using this WON'T re-render when values change.
+ */
+export function useInputSchemaActionsOptional(): InputSchemaActions | null {
+  return useContext(InputSchemaActionsContext);
+}
+
+/**
+ * Hook to access reactive state only.
+ * Components using this WILL re-render when values/errors change.
+ * Use this for components that need to display current values.
  *
- * Use this when the component can work with or without input schema context.
+ * @throws Error if used outside of InputSchemaComposer
+ */
+export function useInputSchemaState(): InputSchemaState {
+  const ctx = useContext(InputSchemaStateContext);
+  if (!ctx) {
+    throw new Error("useInputSchemaState must be used within InputSchemaComposer");
+  }
+  return ctx;
+}
+
+/**
+ * Hook to optionally access reactive state.
+ * Returns null if not within InputSchemaComposer.
+ */
+export function useInputSchemaStateOptional(): InputSchemaState | null {
+  return useContext(InputSchemaStateContext);
+}
+
+/**
+ * Hook to access both actions and state (combined).
+ * This is a convenience hook for components that need both.
+ * Components using this WILL re-render when values change.
+ *
+ * @throws Error if used outside of InputSchemaComposer
+ */
+export function useInputSchema(): InputSchemaContextValue {
+  const actions = useContext(InputSchemaActionsContext);
+  const state = useContext(InputSchemaStateContext);
+  if (!actions || !state) {
+    throw new Error("useInputSchema must be used within InputSchemaComposer");
+  }
+  return { ...actions, ...state };
+}
+
+/**
+ * Hook to optionally access both actions and state.
+ * Returns null if not within InputSchemaComposer.
+ * Components using this WILL re-render when values change.
  */
 export function useInputSchemaOptional(): InputSchemaContextValue | null {
-  return useContext(InputSchemaContext);
+  const actions = useContext(InputSchemaActionsContext);
+  const state = useContext(InputSchemaStateContext);
+  if (!actions || !state) {
+    return null;
+  }
+  return { ...actions, ...state };
 }

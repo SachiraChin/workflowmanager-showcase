@@ -78,13 +78,15 @@ export interface MediaAdapter {
 
   /**
    * Get the selected AI provider.
+   * Returns null if no provider is selected.
    */
-  getSelectedProvider: () => string | undefined;
+  getSelectedProvider: () => string | null;
 
   /**
    * Get the selected AI model.
+   * Returns null if no model is selected.
    */
-  getSelectedModel: () => string | undefined;
+  getSelectedModel: () => string | null;
 
   /**
    * Convert a relative media URL to a full URL.

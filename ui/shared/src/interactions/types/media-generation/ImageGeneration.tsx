@@ -17,7 +17,11 @@ import { Button } from "../../../components/ui/button";
 import { Loader2 } from "lucide-react";
 import { useInteraction } from "../../../contexts/interaction-context";
 import { useMediaAdapter } from "../../../contexts/MediaAdapterContext";
-import { useInputSchemaOptional, pathToKey } from "../../../schema/input/InputSchemaContext";
+import {
+  useInputSchemaActionsOptional,
+  useInputSchemaStateOptional,
+  pathToKey,
+} from "../../../schema/input/InputSchemaContext";
 import { useMediaGeneration } from "./MediaGenerationContext";
 import { useGenerationQueue } from "./useGenerationQueue";
 import { MediaGrid } from "./MediaGrid";
@@ -65,7 +69,9 @@ export function ImageGeneration({
 
   // All hooks must be called unconditionally and in the same order
   const mediaContext = useMediaGeneration();
-  const inputContext = useInputSchemaOptional();
+  // Split input context: actions are stable (no re-renders), state is reactive
+  const inputActions = useInputSchemaActionsOptional();
+  const inputState = useInputSchemaStateOptional();
   const { request } = useInteraction();
   const adapter = useMediaAdapter();
   const workflowRunId = adapter.getWorkflowRunId();
@@ -95,6 +101,9 @@ export function ImageGeneration({
   const promptKey = pathToKey(path);
 
   // Load existing generations on mount (also in readonly mode to show history)
+  // Uses inputActions (stable) instead of full inputContext to avoid re-triggering
+  // when values change. The setValue calls would change values, but inputActions
+  // reference is stable so the effect doesn't re-run.
   useEffect(() => {
     if (!mediaContext || !workflowRunId || !request.interaction_id || !provider) {
       return;
@@ -114,11 +123,11 @@ export function ImageGeneration({
         if (myGenerations.length > 0) {
           // Restore input values from most recent generation's request_params
           const latestGen = myGenerations[myGenerations.length - 1] as Record<string, unknown>;
-          if (latestGen.request_params && inputContext) {
+          if (latestGen.request_params && inputActions) {
             for (const [key, value] of Object.entries(latestGen.request_params as Record<string, unknown>)) {
               // Skip internal fields that shouldn't be restored to inputs
               if (key === "prompt_id" || key === "prompt") continue;
-              inputContext.setValue(key, value);
+              inputActions.setValue(key, value);
             }
           }
 
@@ -141,13 +150,14 @@ export function ImageGeneration({
     };
 
     loadGenerations();
-  }, [mediaContext, workflowRunId, request.interaction_id, readonly, provider, promptId, adapter, inputContext, promptKey, registerGeneration]);
+  }, [mediaContext, workflowRunId, request.interaction_id, provider, promptId, adapter, promptKey, registerGeneration, inputActions]);
 
   // Fetch preview when input values change (debounced)
+  // Uses inputState?.values to trigger re-fetch when values change
   useEffect(() => {
     if (!mediaContext || readonly || !workflowRunId || !provider) return;
 
-    const params = inputContext?.getMappedValues() || {};
+    const params = inputActions?.getMappedValues() || {};
     params.prompt_id = promptId;
 
     setPreviewLoading(true);
@@ -168,18 +178,18 @@ export function ImageGeneration({
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [mediaContext, inputContext?.values, readonly, workflowRunId, provider, promptId, adapter, request.interaction_id, promptKey]);
+  }, [mediaContext, inputState?.values, readonly, workflowRunId, provider, promptId, adapter, request.interaction_id, promptKey, inputActions]);
 
   // Execute generation via SSE
   const handleGenerate = useCallback(
     async () => {
-      if (!mediaContext || !workflowRunId || !inputContext || !provider) return;
+      if (!mediaContext || !workflowRunId || !inputActions || !provider) return;
 
-      const params = inputContext.getMappedValues();
+      const params = inputActions.getMappedValues();
 
       // Validate required fields
       const errors: string[] = [];
-      inputContext.clearAllErrors();
+      inputActions.clearAllErrors();
 
       const properties =
         (ux.input_schema as { properties?: Record<string, unknown> })?.properties || {};
@@ -191,7 +201,7 @@ export function ImageGeneration({
             const fieldTitle = (schemaRecord.title as string) || key;
             const errorMsg = `${fieldTitle} is required`;
             errors.push(errorMsg);
-            inputContext.setError(key, errorMsg);
+            inputActions.setError(key, errorMsg);
           }
         }
       }
@@ -281,7 +291,7 @@ export function ImageGeneration({
       mediaContext,
       workflowRunId,
       request.interaction_id,
-      inputContext,
+      inputActions,
       provider,
       promptId,
       promptKey,

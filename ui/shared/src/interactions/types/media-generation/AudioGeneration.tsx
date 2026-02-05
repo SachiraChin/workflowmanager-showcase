@@ -17,7 +17,11 @@ import { Loader2, Play, Pause, Volume2, Download } from "lucide-react";
 import WaveSurfer from "wavesurfer.js";
 import { useInteraction } from "../../../contexts/interaction-context";
 import { useMediaAdapter } from "../../../contexts/MediaAdapterContext";
-import { useInputSchemaOptional, pathToKey } from "../../../schema/input/InputSchemaContext";
+import {
+  useInputSchemaActionsOptional,
+  useInputSchemaStateOptional,
+  pathToKey,
+} from "../../../schema/input/InputSchemaContext";
 import { useMediaGeneration } from "./MediaGenerationContext";
 import { useGenerationQueue } from "./useGenerationQueue";
 import type { SchemaProperty, UxConfig } from "../../../types/schema";
@@ -250,7 +254,9 @@ export function AudioGeneration({
 
   // Hooks - must be called unconditionally
   const mediaContext = useMediaGeneration();
-  const inputContext = useInputSchemaOptional();
+  // Split input context: actions are stable (no re-renders), state is reactive
+  const inputActions = useInputSchemaActionsOptional();
+  const inputState = useInputSchemaStateOptional();
   const { request } = useInteraction();
   const adapter = useMediaAdapter();
   const workflowRunId = adapter.getWorkflowRunId();
@@ -301,10 +307,10 @@ export function AudioGeneration({
         if (myGenerations.length > 0) {
           // Restore input values
           const latestGen = myGenerations[myGenerations.length - 1];
-          if (latestGen.request_params && inputContext) {
+          if (latestGen.request_params && inputActions) {
             for (const [key, value] of Object.entries(latestGen.request_params)) {
               if (key === "prompt_id" || key === "prompt") continue;
-              inputContext.setValue(key, value);
+              inputActions.setValue(key, value);
             }
           }
 
@@ -327,13 +333,14 @@ export function AudioGeneration({
     };
 
     loadGenerations();
-  }, [mediaContext, workflowRunId, request.interaction_id, readonly, provider, promptId]);
+  }, [mediaContext, workflowRunId, request.interaction_id, readonly, provider, promptId, inputActions]);
 
   // Fetch preview when input values change
+  // Uses inputState?.values to trigger re-fetch when values change
   useEffect(() => {
     if (!mediaContext || readonly || !workflowRunId || !provider) return;
 
-    const params = inputContext?.getMappedValues() || {};
+    const params = inputActions?.getMappedValues() || {};
     params.prompt_id = promptId;
 
     setPreviewLoading(true);
@@ -354,18 +361,18 @@ export function AudioGeneration({
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [mediaContext, inputContext?.values, readonly, workflowRunId, provider, promptId]);
+  }, [mediaContext, inputState?.values, readonly, workflowRunId, provider, promptId, inputActions]);
 
   // Execute generation via SSE
   const handleGenerate = useCallback(
     async () => {
-      if (!mediaContext || !workflowRunId || !inputContext || !provider) return;
+      if (!mediaContext || !workflowRunId || !inputActions || !provider) return;
 
-      const params = inputContext.getMappedValues();
+      const params = inputActions.getMappedValues();
 
       // Validate required fields
       const errors: string[] = [];
-      inputContext.clearAllErrors();
+      inputActions.clearAllErrors();
 
       const properties =
         (ux.input_schema as { properties?: Record<string, unknown> })?.properties || {};
@@ -377,7 +384,7 @@ export function AudioGeneration({
             const fieldTitle = (schemaRecord.title as string) || key;
             const errorMsg = `${fieldTitle} is required`;
             errors.push(errorMsg);
-            inputContext.setError(key, errorMsg);
+            inputActions.setError(key, errorMsg);
           }
         }
       }
@@ -467,7 +474,7 @@ export function AudioGeneration({
       mediaContext,
       workflowRunId,
       request.interaction_id,
-      inputContext,
+      inputActions,
       provider,
       promptId,
       promptKey,
@@ -478,6 +485,7 @@ export function AudioGeneration({
       queue.actions,
       selectedProvider,
       selectedModel,
+      adapter,
     ]
   );
 

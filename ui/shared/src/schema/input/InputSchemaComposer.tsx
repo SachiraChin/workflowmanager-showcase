@@ -4,21 +4,26 @@
  * This component is invoked by SchemaRenderer's bracket syntax parsing when
  * "input_schema" is a sibling (e.g., "media[input_schema,image_generation]").
  * It:
- * 1. Provides InputSchemaContext for value/error management
- * 2. Renders InputSchemaRenderer for the input fields
- * 3. Renders children (other siblings like ImageGeneration)
+ * 1. Provides InputSchemaActionsContext for stable functions
+ * 2. Provides InputSchemaStateContext for reactive values
+ * 3. Renders InputSchemaRenderer for the input fields
+ * 4. Renders children (other siblings like ImageGeneration)
  *
- * The context is shared between:
- * - Input renderers (read/write values, display error styling)
- * - Generation components (validate, submit values via getMappedValues)
+ * The contexts are split for performance:
+ * - Actions context: stable functions (setValue, getMappedValues, etc.)
+ * - State context: reactive values (values, errors)
+ *
+ * Components can choose which context they need to avoid unnecessary re-renders.
  */
 
 import { useState, useMemo, useCallback, useEffect, useRef, type ReactNode } from "react";
 import type { SchemaProperty, UxConfig } from "../../types/schema";
 import { useRenderContext } from "../../contexts/RenderContext";
 import {
-  InputSchemaContext,
-  type InputSchemaContextValue,
+  InputSchemaActionsContext,
+  InputSchemaStateContext,
+  type InputSchemaActions,
+  type InputSchemaState,
   type InputSchema,
   type DynamicOption,
 } from "./InputSchemaContext";
@@ -66,7 +71,7 @@ export function InputSchemaComposer({
   const { templateState, debugMode } = useRenderContext();
 
   // Helper: Get nested value by dot-notated path (e.g., "nested.field.path")
-  const getNestedValue = (obj: Record<string, unknown>, path: string): unknown => {
+  const getNestedValue = useCallback((obj: Record<string, unknown>, path: string): unknown => {
     const parts = path.split(".");
     let current: unknown = obj;
     for (const part of parts) {
@@ -76,7 +81,7 @@ export function InputSchemaComposer({
       current = (current as Record<string, unknown>)[part];
     }
     return current;
-  };
+  }, []);
 
   // Initialize values from data, handling source_data/source_field
   const [values, setValues] = useState<Record<string, unknown>>(() => {
@@ -170,133 +175,183 @@ export function InputSchemaComposer({
     }
 
     setValues(newValues);
-  }, [data, inputSchema]);
+  }, [data, inputSchema, debugMode, getNestedValue]);
 
   // Dynamic options for controlled select fields
   const [dynamicOptions, setDynamicOptionsState] = useState<Record<string, DynamicOption[]>>({});
 
-  const getDynamicOptions = useCallback(
-    (key: string): DynamicOption[] | undefined => dynamicOptions[key],
-    [dynamicOptions]
-  );
-
-  const setDynamicOptions = useCallback(
-    (key: string, options: DynamicOption[]) => {
-      setDynamicOptionsState(prev => ({ ...prev, [key]: options }));
-    },
-    []
-  );
-
   // Alternative input mode tracking
   const [alternativeMode, setAlternativeModeState] = useState<Record<string, boolean>>({});
-
-  const isAlternativeMode = useCallback(
-    (key: string): boolean => alternativeMode[key] ?? false,
-    [alternativeMode]
-  );
-
-  const setAlternativeMode = useCallback(
-    (key: string, active: boolean) => {
-      setAlternativeModeState(prev => ({ ...prev, [key]: active }));
-    },
-    []
-  );
 
   // Visibility control for conditional field display
   const [visibility, setVisibilityState] = useState<Record<string, boolean>>({});
 
-  const isVisible = useCallback(
-    (key: string): boolean => visibility[key] ?? true, // Default to visible
-    [visibility]
-  );
+  // =============================================================================
+  // Stable refs for actions (to ensure getValue reads latest values)
+  // =============================================================================
 
-  const setVisibility = useCallback(
-    (key: string, visible: boolean) => {
-      setVisibilityState(prev => ({ ...prev, [key]: visible }));
-    },
-    []
-  );
+  // Use refs to access latest state in stable callbacks
+  const valuesRef = useRef(values);
+  valuesRef.current = values;
 
-  // Create context value
-  const sourceData = (data || {}) as Record<string, unknown>;
-  const contextValue = useMemo<InputSchemaContextValue>(() => ({
-    sourceData,
-    values,
-    getValue: (key) => values[key],
-    setValue: (key, value) => {
-      setValues(prev => ({ ...prev, [key]: value }));
-      // Clear error when value changes
-      if (errors[key]) {
-        setErrors(prev => {
-          const { [key]: _, ...rest } = prev;
-          return rest;
-        });
-      }
-    },
+  const errorsRef = useRef(errors);
+  errorsRef.current = errors;
 
-    // Get values with destination_field mapping applied
-    getMappedValues: () => {
-      const result: Record<string, unknown> = {};
-      const properties = inputSchema?.properties || {};
-      for (const [key, fieldSchema] of Object.entries(properties)) {
-        const schemaRecord = fieldSchema as Record<string, unknown>;
-        const destKey = (schemaRecord.destination_field as string) || key;
-        if (values[key] !== undefined) {
-          result[destKey] = values[key];
-        }
-      }
-      return result;
-    },
+  const dynamicOptionsRef = useRef(dynamicOptions);
+  dynamicOptionsRef.current = dynamicOptions;
 
-    errors,
-    setError: (key, error) => {
-      setErrors(prev => ({ ...prev, [key]: error }));
-    },
-    clearError: (key) => {
-      setErrors(prev => {
+  const alternativeModeRef = useRef(alternativeMode);
+  alternativeModeRef.current = alternativeMode;
+
+  const visibilityRef = useRef(visibility);
+  visibilityRef.current = visibility;
+
+  // =============================================================================
+  // Stable action callbacks (these never change)
+  // =============================================================================
+
+  const getValue = useCallback((key: string): unknown => {
+    return valuesRef.current[key];
+  }, []);
+
+  const setValue = useCallback((key: string, value: unknown): void => {
+    setValues(prev => ({ ...prev, [key]: value }));
+    // Clear error when value changes
+    setErrors(prev => {
+      if (prev[key]) {
         const { [key]: _, ...rest } = prev;
         return rest;
-      });
-    },
-    clearAllErrors: () => setErrors({}),
+      }
+      return prev;
+    });
+  }, []);
 
-    // Dynamic options for controlled select fields
+  const getMappedValues = useCallback((): Record<string, unknown> => {
+    const result: Record<string, unknown> = {};
+    const properties = inputSchema?.properties || {};
+    const currentValues = valuesRef.current;
+    for (const [key, fieldSchema] of Object.entries(properties)) {
+      const schemaRecord = fieldSchema as Record<string, unknown>;
+      const destKey = (schemaRecord.destination_field as string) || key;
+      if (currentValues[key] !== undefined) {
+        result[destKey] = currentValues[key];
+      }
+    }
+    return result;
+  }, [inputSchema]);
+
+  const setError = useCallback((key: string, error: string): void => {
+    setErrors(prev => ({ ...prev, [key]: error }));
+  }, []);
+
+  const clearError = useCallback((key: string): void => {
+    setErrors(prev => {
+      const { [key]: _, ...rest } = prev;
+      return rest;
+    });
+  }, []);
+
+  const clearAllErrors = useCallback((): void => {
+    setErrors({});
+  }, []);
+
+  const getDynamicOptions = useCallback((key: string): DynamicOption[] | undefined => {
+    return dynamicOptionsRef.current[key];
+  }, []);
+
+  const setDynamicOptions = useCallback((key: string, options: DynamicOption[]): void => {
+    setDynamicOptionsState(prev => ({ ...prev, [key]: options }));
+  }, []);
+
+  const isAlternativeMode = useCallback((key: string): boolean => {
+    return alternativeModeRef.current[key] ?? false;
+  }, []);
+
+  const setAlternativeMode = useCallback((key: string, active: boolean): void => {
+    setAlternativeModeState(prev => ({ ...prev, [key]: active }));
+  }, []);
+
+  const isVisible = useCallback((key: string): boolean => {
+    return visibilityRef.current[key] ?? true; // Default to visible
+  }, []);
+
+  const setVisibility = useCallback((key: string, visible: boolean): void => {
+    setVisibilityState(prev => ({ ...prev, [key]: visible }));
+  }, []);
+
+  // =============================================================================
+  // Context values
+  // =============================================================================
+
+  const sourceData = (data || {}) as Record<string, unknown>;
+
+  // Actions context - STABLE, never changes after mount
+  // Uses useCallback functions that read from refs
+  const actionsValue = useMemo<InputSchemaActions>(() => ({
+    sourceData,
+    getValue,
+    setValue,
+    getMappedValues,
+    setError,
+    clearError,
+    clearAllErrors,
     getDynamicOptions,
     setDynamicOptions,
-
-    // Alternative input mode tracking
-    alternativeMode,
     isAlternativeMode,
     setAlternativeMode,
-
-    // Visibility control for conditional field display
-    visibility,
     isVisible,
     setVisibility,
-
-    // State
-    isValid: Object.keys(errors).length === 0,
+    inputSchema,
     disabled,
     readonly,
-
+  }), [
+    sourceData,
+    getValue,
+    setValue,
+    getMappedValues,
+    setError,
+    clearError,
+    clearAllErrors,
+    getDynamicOptions,
+    setDynamicOptions,
+    isAlternativeMode,
+    setAlternativeMode,
+    isVisible,
+    setVisibility,
     inputSchema,
-  }), [sourceData, values, errors, getDynamicOptions, setDynamicOptions, alternativeMode, isAlternativeMode, setAlternativeMode, visibility, isVisible, setVisibility, disabled, readonly, inputSchema]);
+    disabled,
+    readonly,
+  ]);
 
-  // Render input fields + children (other siblings from bracket syntax)
+  // State context - REACTIVE, changes when values/errors change
+  const stateValue = useMemo<InputSchemaState>(() => ({
+    values,
+    errors,
+    alternativeMode,
+    visibility,
+    isValid: Object.keys(errors).length === 0,
+  }), [values, errors, alternativeMode, visibility]);
+
+  // =============================================================================
+  // Render
+  // =============================================================================
+
   return (
-    <InputSchemaContext.Provider value={contextValue}>
-      <div className="space-y-4">
-        {/* Render input fields */}
-        <InputSchemaRenderer
-          schema={inputSchema}
-          data={(data || {}) as Record<string, unknown>}
-          path={[...path, "_inputs"]}
-          disabled={disabled}
-          readonly={readonly}
-        />
-        {/* Render other siblings (e.g., ImageGeneration) */}
-        {children}
-      </div>
-    </InputSchemaContext.Provider>
+    <InputSchemaActionsContext.Provider value={actionsValue}>
+      <InputSchemaStateContext.Provider value={stateValue}>
+        <div className="space-y-4">
+          {/* Render input fields */}
+          <InputSchemaRenderer
+            schema={inputSchema}
+            data={(data || {}) as Record<string, unknown>}
+            path={[...path, "_inputs"]}
+            disabled={disabled}
+            readonly={readonly}
+          />
+          {/* Render other siblings (e.g., ImageGeneration) */}
+          {children}
+        </div>
+      </InputSchemaStateContext.Provider>
+    </InputSchemaActionsContext.Provider>
   );
 }

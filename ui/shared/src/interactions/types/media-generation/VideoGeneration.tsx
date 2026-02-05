@@ -16,7 +16,11 @@ import { Button } from "../../../components/ui/button";
 import { Loader2, Crop, X } from "lucide-react";
 import { useInteraction } from "../../../contexts/interaction-context";
 import { useMediaAdapter } from "../../../contexts/MediaAdapterContext";
-import { useInputSchemaOptional, pathToKey } from "../../../schema/input/InputSchemaContext";
+import {
+  useInputSchemaActionsOptional,
+  useInputSchemaStateOptional,
+  pathToKey,
+} from "../../../schema/input/InputSchemaContext";
 import { useMediaGeneration } from "./MediaGenerationContext";
 import { useGenerationQueue } from "./useGenerationQueue";
 import { MediaGrid } from "./MediaGrid";
@@ -67,7 +71,9 @@ export function VideoGeneration({
 
   // All hooks must be called unconditionally
   const mediaContext = useMediaGeneration();
-  const inputContext = useInputSchemaOptional();
+  // Split input context: actions are stable (no re-renders), state is reactive
+  const inputActions = useInputSchemaActionsOptional();
+  const inputState = useInputSchemaStateOptional();
   const { request } = useInteraction();
   const adapter = useMediaAdapter();
   const workflowRunId = adapter.getWorkflowRunId();
@@ -138,11 +144,11 @@ export function VideoGeneration({
         if (myGenerations.length > 0) {
           // Restore input values from most recent generation's request_params
           const latestGen = myGenerations[myGenerations.length - 1];
-          if (latestGen.request_params && inputContext) {
+          if (latestGen.request_params && inputActions) {
             for (const [key, value] of Object.entries(latestGen.request_params)) {
               // Skip internal fields that shouldn't be restored to inputs
               if (key === "prompt_id" || key === "prompt") continue;
-              inputContext.setValue(key, value);
+              inputActions.setValue(key, value);
             }
           }
 
@@ -165,13 +171,14 @@ export function VideoGeneration({
     };
 
     loadGenerations();
-  }, [mediaContext, workflowRunId, request.interaction_id, readonly, provider, promptId]);
+  }, [mediaContext, workflowRunId, request.interaction_id, readonly, provider, promptId, inputActions]);
 
   // Fetch preview when input values change
+  // Uses inputState?.values to trigger re-fetch when values change
   useEffect(() => {
     if (!mediaContext || readonly || !workflowRunId || !provider) return;
 
-    const params = inputContext?.getMappedValues() || {};
+    const params = inputActions?.getMappedValues() || {};
     params.prompt_id = promptId;
 
     setPreviewLoading(true);
@@ -192,7 +199,7 @@ export function VideoGeneration({
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [mediaContext, inputContext?.values, readonly, workflowRunId, provider, promptId]);
+  }, [mediaContext, inputState?.values, readonly, workflowRunId, provider, promptId, inputActions]);
 
   // Execute generation with crop
   const executeWithCrop = useCallback(
@@ -327,13 +334,13 @@ export function VideoGeneration({
   // Handle generate click
   const handleGenerate = useCallback(
     async () => {
-      if (!mediaContext || !workflowRunId || !inputContext || !provider) return;
+      if (!mediaContext || !workflowRunId || !inputActions || !provider) return;
 
-      const params = inputContext.getMappedValues();
+      const params = inputActions.getMappedValues();
 
       // Validate required fields
       const errors: string[] = [];
-      inputContext.clearAllErrors();
+      inputActions.clearAllErrors();
 
       const properties =
         (ux.input_schema as { properties?: Record<string, unknown> })?.properties || {};
@@ -345,7 +352,7 @@ export function VideoGeneration({
             const fieldTitle = (schemaRecord.title as string) || key;
             const errorMsg = `${fieldTitle} is required`;
             errors.push(errorMsg);
-            inputContext.setError(key, errorMsg);
+            inputActions.setError(key, errorMsg);
           }
         }
       }
@@ -372,12 +379,13 @@ export function VideoGeneration({
     [
       mediaContext,
       workflowRunId,
-      inputContext,
+      inputActions,
       ux.input_schema,
       sourceImageUrl,
       savedCrop,
       executeWithCrop,
       queue.actions,
+      provider,
     ]
   );
 

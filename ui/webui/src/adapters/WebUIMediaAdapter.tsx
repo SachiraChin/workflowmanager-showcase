@@ -39,9 +39,9 @@ export function WebUIMediaAdapterProvider({
     () => ({
       getWorkflowRunId: () => workflowRunId,
 
-      getSelectedProvider: () => selectedProvider ?? undefined,
+      getSelectedProvider: () => selectedProvider,
 
-      getSelectedModel: () => selectedModel ?? undefined,
+      getSelectedModel: () => selectedModel,
 
       toMediaUrl: (url: string) => toMediaUrl(url),
 

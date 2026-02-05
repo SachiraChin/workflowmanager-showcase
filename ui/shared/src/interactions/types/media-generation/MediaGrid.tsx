@@ -91,8 +91,10 @@ export function MediaGrid({
     .filter((gen) => gen.content_ids && gen.content_ids.length > 0);
 
   // Flatten all generations into content items for preview navigation
+  // Note: content_ids is guaranteed by the filter above, but TypeScript doesn't
+  // narrow through filter(), so we use nullish coalescing for safety
   const allContent: ContentItem[] = reversedGenerations.flatMap((gen, genIdx) =>
-    gen.content_ids!.map((contentId, idx) => {
+    (gen.content_ids ?? []).map((contentId, idx) => {
       const url = gen.urls[idx];
       return {
         contentId,
@@ -137,7 +139,7 @@ export function MediaGrid({
       <div className="space-y-2">
         {reversedGenerations.map((gen, genIdx) => (
           <div key={gen.metadata_id ?? genIdx} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-            {gen.content_ids!.map((contentId, idx) => {
+            {(gen.content_ids ?? []).map((contentId, idx) => {
               const flatIndex = contentIndexMap.get(contentId) ?? 0;
               const url = gen.urls[idx];
               return (

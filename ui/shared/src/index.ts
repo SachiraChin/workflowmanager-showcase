@@ -172,11 +172,18 @@ export { TabLayout } from "./schema/tabs/TabLayout";
 
 // Schema input
 export {
-  InputSchemaContext,
+  InputSchemaActionsContext,
+  InputSchemaStateContext,
   useInputSchema,
   useInputSchemaOptional,
+  useInputSchemaActions,
+  useInputSchemaActionsOptional,
+  useInputSchemaState,
+  useInputSchemaStateOptional,
   pathToKey,
   type InputSchemaContextValue,
+  type InputSchemaActions,
+  type InputSchemaState,
   type InputSchema,
   type DynamicOption,
 } from "./schema/input/InputSchemaContext";
