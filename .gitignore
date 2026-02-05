@@ -1,5 +1,6 @@
-# Deployment configs (contains server-specific settings)
-deploy/
+# Deployment configs - track templates but ignore secrets and backups
+deploy/.env
+deploy/backups/
 
 OPENAI_API_KEY.txt
 /test*

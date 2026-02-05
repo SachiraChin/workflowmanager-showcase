@@ -1,0 +1,207 @@
+# Docker Compose for Workflow Manager
+# 
+# Services:
+#   - mongo: MongoDB database (accessible from host on port 27017)
+#   - server: Backend API server
+#   - worker: Background task worker
+#   - webui: Frontend static files served by nginx
+#
+# Usage:
+#   docker-compose up -d          # Start all services
+#   docker-compose logs -f        # View logs
+#   docker-compose down           # Stop all services
+#
+# MongoDB is exposed on port 27017 for:
+#   - Local MongoDB Compass access
+#   - Running user scripts from host machine
+#   - Network backup access
+
+version: '3.8'
+
+services:
+  # ===========================================================================
+  # MongoDB Database
+  # ===========================================================================
+  mongo:
+    image: mongo:7
+    container_name: wfm-mongo
+    restart: unless-stopped
+    ports:
+      # Exposed to host for:
+      # - MongoDB Compass access
+      # - Running scripts from local machine
+      # - Backup from network machines
+      - "27017:27017"
+    volumes:
+      # Persistent data storage
+      - mongo_data:/data/db
+      # Backup directory (mount your backup location here)
+      - ${MONGO_BACKUP_PATH:-./backups}:/backups
+    environment:
+      # Optional: Add authentication if needed
+      # MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-admin}
+      # MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-changeme}
+      TZ: ${TZ:-UTC}
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - wfm-network
+
+  # ===========================================================================
+  # Backend API Server
+  # ===========================================================================
+  server:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.server
+    container_name: wfm-server
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    ports:
+      # Exposed on 9090, nginx proxy points here
+      - "9090:9000"
+    volumes:
+      # Media storage - mount host path for persistence
+      - ${MEDIA_HOST_PATH:-/tmp/wfm-media}:/app/media
+      # Workflows directory (if you want to update without rebuild)
+      - ../workflows:/app/workflows:ro
+    environment:
+      # Database
+      MONGODB_URI: mongodb://mongo:27017
+      MONGODB_DATABASE: ${MONGODB_DATABASE:-workflow_db}
+      
+      # Server
+      SERVER_BASE_URL: ${SERVER_BASE_URL:-http://localhost:9000}
+      
+      # SSE/Streaming settings
+      PROGRESS_INTERVAL: ${PROGRESS_INTERVAL:-0.1}
+      POLL_INTERVAL: ${POLL_INTERVAL:-0.05}
+      CANCEL_CHECK_INTERVAL: ${CANCEL_CHECK_INTERVAL:-0.1}
+      
+      # Authentication
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY is required}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      COOKIE_SAMESITE: ${COOKIE_SAMESITE:-lax}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
+      
+      # CORS - your frontend domain
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://arandomsitein.space}
+      
+      # API Keys - LLM
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      
+      # API Keys - Media providers
+      LEONARDO_API_KEY: ${LEONARDO_API_KEY:-}
+      MIDAPI_API_KEY: ${MIDAPI_API_KEY:-}
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
+      
+      # SD Forge (local Stable Diffusion)
+      SD_FORGE_API_URL: ${SD_FORGE_API_URL:-}
+      
+      # Media
+      MEDIA_BASE_PATH: /app/media
+      
+      # Timezone
+      TZ: ${TZ:-UTC}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - wfm-network
+
+  # ===========================================================================
+  # Background Task Worker
+  # ===========================================================================
+  worker:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.worker
+    container_name: wfm-worker
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    volumes:
+      # Media storage - mount host path for file writing
+      - ${MEDIA_HOST_PATH:-/tmp/wfm-media}:/app/media
+    environment:
+      # Database
+      MONGODB_URI: mongodb://mongo:27017
+      MONGODB_DATABASE: ${MONGODB_DATABASE:-workflow_db}
+      
+      # Server URL (for generating media URLs)
+      SERVER_BASE_URL: ${SERVER_BASE_URL:-http://localhost:9000}
+      
+      # Worker settings
+      WORKER_HEARTBEAT_INTERVAL: ${WORKER_HEARTBEAT_INTERVAL:-5}
+      WORKER_STALE_THRESHOLD: ${WORKER_STALE_THRESHOLD:-30}
+      WORKER_POLL_INTERVAL: ${WORKER_POLL_INTERVAL:-1}
+      WORKER_VERBOSE: ${WORKER_VERBOSE:-false}
+      
+      # API Keys - LLM
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      
+      # API Keys - Media providers
+      LEONARDO_API_KEY: ${LEONARDO_API_KEY:-}
+      MIDAPI_API_KEY: ${MIDAPI_API_KEY:-}
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
+      
+      # SD Forge (local Stable Diffusion)
+      SD_FORGE_API_URL: ${SD_FORGE_API_URL:-}
+      
+      # Media
+      MEDIA_BASE_PATH: /app/media
+      
+      # Timezone
+      TZ: ${TZ:-UTC}
+    networks:
+      - wfm-network
+
+  # ===========================================================================
+  # WebUI Frontend (nginx)
+  # ===========================================================================
+  webui:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.webui
+      args:
+        VITE_API_PROD_URL: ${VITE_API_PROD_URL:-https://api.arandomsitein.space}
+    container_name: wfm-webui
+    restart: unless-stopped
+    ports:
+      # Internal port - your nginx proxy should point here
+      - "8080:80"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    networks:
+      - wfm-network
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  wfm-network:
+    driver: bridge
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  mongo_data:
+    driver: local
+  # Note: media storage uses host path mount (MEDIA_HOST_PATH) instead of volume

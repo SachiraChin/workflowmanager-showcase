@@ -72,11 +72,8 @@ export function WebUIMediaAdapterProvider({
           action_type: params.action_type || "",
           params: params.params || {},
         });
-        return {
-          urls: [],
-          resolution: `${response.resolution.width}x${response.resolution.height}`,
-          credits: response.credits.credits,
-        };
+        // Pass through the API response directly - it matches PreviewInfo structure
+        return response as unknown as MediaPreviewResponse;
       },
 
       streamSubAction: (

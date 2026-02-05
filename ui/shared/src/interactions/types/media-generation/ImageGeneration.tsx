@@ -155,7 +155,8 @@ export function ImageGeneration({
   // Fetch preview when input values change (debounced)
   // Uses inputState?.values to trigger re-fetch when values change
   useEffect(() => {
-    if (!mediaContext || readonly || !workflowRunId || !provider) return;
+    // Guard: skip if no provider configured or empty string
+    if (!mediaContext || readonly || !workflowRunId || !provider || provider === '') return;
 
     const params = inputActions?.getMappedValues() || {};
     params.prompt_id = promptId;
@@ -165,9 +166,9 @@ export function ImageGeneration({
     const timeoutId = setTimeout(async () => {
       try {
         const previewResult = await adapter.getMediaPreview({
-          interaction_id: request.interaction_id,
-          prompt_key: promptKey,
-          prompt: (params.prompt as string) || "",
+          provider,
+          action_type: "txt2img",
+          params,
         });
         setPreview(previewResult as unknown as PreviewInfo);
       } catch (err) {
