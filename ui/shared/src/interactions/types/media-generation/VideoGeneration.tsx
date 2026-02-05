@@ -405,75 +405,66 @@ export function VideoGeneration({
 
   return (
     <div className="space-y-4">
-      {/* Preview Info */}
-      {!readonly && (preview || previewLoading) && (
+      {/* Preview Info (Resolution/Credits/Cost/Crop) */}
+      {!readonly && preview && !previewLoading && (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground bg-muted/30 rounded-md px-3 py-2">
-          {previewLoading ? (
-            <span className="flex items-center gap-1.5">
-              <Loader2 className="w-3 h-3 animate-spin" />
-              Loading preview...
-            </span>
-          ) : preview ? (
+          <span className="flex items-center gap-1.5">
+            <span className="font-medium text-foreground">Resolution:</span>
+            {preview.resolution.width} × {preview.resolution.height}
+            <span className="text-xs">({preview.resolution.megapixels}MP)</span>
+          </span>
+          {preview.credits.credits > 0 && (
             <>
+              <span className="text-muted-foreground/50">•</span>
               <span className="flex items-center gap-1.5">
-                <span className="font-medium text-foreground">Resolution:</span>
-                {preview.resolution.width} × {preview.resolution.height}
-                <span className="text-xs">({preview.resolution.megapixels}MP)</span>
+                <span className="font-medium text-foreground">Credits:</span>
+                {preview.credits.credits} ({preview.credits.credits_per_image}/vid)
               </span>
-              {preview.credits.credits > 0 && (
-                <>
-                  <span className="text-muted-foreground/50">•</span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="font-medium text-foreground">Credits:</span>
-                    {preview.credits.credits} ({preview.credits.credits_per_image}/vid)
-                  </span>
-                </>
-              )}
-              {preview.credits.total_cost_usd > 0 && (
-                <>
-                  <span className="text-muted-foreground/50">•</span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="font-medium text-foreground">Cost:</span>
-                    ${preview.credits.total_cost_usd.toFixed(4)} (${preview.credits.cost_per_image_usd.toFixed(4)}/vid)
-                  </span>
-                </>
-              )}
-              {/* Crop selection info */}
-              {savedCrop && (
-                <>
-                  <span className="text-muted-foreground/50">•</span>
-                  <span className="flex items-center gap-1.5">
-                    <Crop className="w-3 h-3" />
-                    <span className="font-medium text-foreground">Crop:</span>
-                    {savedCrop.region.width} × {savedCrop.region.height}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-5 w-5 p-0 ml-1"
-                      onClick={() => {
-                        setCropModalViewOnly(true);
-                        setShowCropModal(true);
-                      }}
-                    >
-                      <span className="text-xs underline">view</span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-5 w-5 p-0"
-                      onClick={() => setSavedCrop(null)}
-                    >
-                      <X className="w-3 h-3" />
-                    </Button>
-                  </span>
-                </>
-              )}
             </>
-          ) : null}
+          )}
+          {preview.credits.total_cost_usd > 0 && (
+            <>
+              <span className="text-muted-foreground/50">•</span>
+              <span className="flex items-center gap-1.5">
+                <span className="font-medium text-foreground">Cost:</span>
+                ${preview.credits.total_cost_usd.toFixed(4)} (${preview.credits.cost_per_image_usd.toFixed(4)}/vid)
+              </span>
+            </>
+          )}
+          {/* Crop selection info */}
+          {savedCrop && (
+            <>
+              <span className="text-muted-foreground/50">•</span>
+              <span className="flex items-center gap-1.5">
+                <Crop className="w-3 h-3" />
+                <span className="font-medium text-foreground">Crop:</span>
+                {savedCrop.region.width} × {savedCrop.region.height}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-5 w-5 p-0 ml-1"
+                  onClick={() => {
+                    setCropModalViewOnly(true);
+                    setShowCropModal(true);
+                  }}
+                >
+                  <span className="text-xs underline">view</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-5 w-5 p-0"
+                  onClick={() => setSavedCrop(null)}
+                >
+                  <X className="w-3 h-3" />
+                </Button>
+              </span>
+            </>
+          )}
         </div>
       )}
 
-      {/* Generate/Queue Button + Progress */}
+      {/* Generate/Queue Button + Progress (all status text on same row) */}
       {!readonly && (
         <div className="flex flex-wrap items-center gap-3">
           <Button
@@ -484,6 +475,14 @@ export function VideoGeneration({
           >
             {queue.derived.buttonLabel}
           </Button>
+          {/* Preview loading indicator */}
+          {previewLoading && (
+            <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Loading preview...
+            </span>
+          )}
+          {/* Generation progress indicator */}
           {queue.derived.isLoading && (
             <span className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="w-4 h-4 animate-spin" />

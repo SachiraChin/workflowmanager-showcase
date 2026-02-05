@@ -323,46 +323,37 @@ export function ImageGeneration({
 
   return (
     <div className="space-y-4">
-      {/* Preview Info */}
-      {!readonly && (preview || previewLoading) && (
+      {/* Preview Info (Resolution/Credits/Cost) */}
+      {!readonly && preview && !previewLoading && (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground bg-muted/30 rounded-md px-3 py-2">
-          {previewLoading ? (
-            <span className="flex items-center gap-1.5">
-              <Loader2 className="w-3 h-3 animate-spin" />
-              Loading preview...
-            </span>
-          ) : preview ? (
+          <span className="flex items-center gap-1.5">
+            <span className="font-medium text-foreground">Resolution:</span>
+            {preview.resolution.width} × {preview.resolution.height}
+            <span className="text-xs">({preview.resolution.megapixels}MP)</span>
+          </span>
+          {preview.credits.credits > 0 && (
             <>
+              <span className="text-muted-foreground/50">•</span>
               <span className="flex items-center gap-1.5">
-                <span className="font-medium text-foreground">Resolution:</span>
-                {preview.resolution.width} × {preview.resolution.height}
-                <span className="text-xs">({preview.resolution.megapixels}MP)</span>
+                <span className="font-medium text-foreground">Credits:</span>
+                {preview.credits.credits} ({preview.credits.credits_per_image}/img)
               </span>
-              {preview.credits.credits > 0 && (
-                <>
-                  <span className="text-muted-foreground/50">•</span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="font-medium text-foreground">Credits:</span>
-                    {preview.credits.credits} ({preview.credits.credits_per_image}/img)
-                  </span>
-                </>
-              )}
-              {preview.credits.total_cost_usd > 0 && (
-                <>
-                  <span className="text-muted-foreground/50">•</span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="font-medium text-foreground">Cost:</span>
-                    ${preview.credits.total_cost_usd.toFixed(4)} ($
-                    {preview.credits.cost_per_image_usd.toFixed(4)}/img)
-                  </span>
-                </>
-              )}
             </>
-          ) : null}
+          )}
+          {preview.credits.total_cost_usd > 0 && (
+            <>
+              <span className="text-muted-foreground/50">•</span>
+              <span className="flex items-center gap-1.5">
+                <span className="font-medium text-foreground">Cost:</span>
+                ${preview.credits.total_cost_usd.toFixed(4)} ($
+                {preview.credits.cost_per_image_usd.toFixed(4)}/img)
+              </span>
+            </>
+          )}
         </div>
       )}
 
-      {/* Generate/Queue Button + Progress */}
+      {/* Generate/Queue Button + Progress (all status text on same row) */}
       {!readonly && (
         <div className="flex flex-wrap items-center gap-3">
           <Button
@@ -373,6 +364,14 @@ export function ImageGeneration({
           >
             {queue.derived.buttonLabel}
           </Button>
+          {/* Preview loading indicator */}
+          {previewLoading && (
+            <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Loading preview...
+            </span>
+          )}
+          {/* Generation progress indicator */}
           {queue.derived.isLoading && (
             <span className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="w-4 h-4 animate-spin" />
