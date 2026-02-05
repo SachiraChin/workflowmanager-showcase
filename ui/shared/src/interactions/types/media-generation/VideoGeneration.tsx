@@ -325,8 +325,10 @@ export function VideoGeneration({
         setSavedCrop({ region: cropRegion, aspectRatio });
       }
 
-      if (pendingParams && cropRegion) {
-        executeWithCrop(pendingParams, cropRegion);
+      // Execute generation with or without crop region
+      // cropRegion is null when "Use Full Image" is clicked
+      if (pendingParams) {
+        executeWithCrop(pendingParams, cropRegion ?? undefined);
       }
 
       setShowCropModal(false);
