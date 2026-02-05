@@ -28,3 +28,4 @@ server-logs
 build/
 dist/
 logs/
+**/node_modules

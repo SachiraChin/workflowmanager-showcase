@@ -154,7 +154,8 @@ async def stream_workflow_state_v2(
 
     return EventSourceResponse(
         event_generator(),
-        send_timeout=5
+        send_timeout=5,
+        headers={"X-Accel-Buffering": "no"}  # Disable proxy buffering (nginx, cloudflare)
     )
 
 
@@ -300,5 +301,7 @@ async def stream_workflow_state(
 
     return EventSourceResponse(
         event_generator(),
-        send_timeout=5
+        send_timeout=5,
+        headers={"X-Accel-Buffering": "no"}  # Disable proxy buffering (nginx, cloudflare)
     )
+

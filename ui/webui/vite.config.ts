@@ -11,6 +11,10 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  // Don't pre-bundle the shared package so changes are picked up immediately
+  optimizeDeps: {
+    exclude: ["@wfm/shared"],
+  },
   server: {
     allowedHosts: ["arandomsitein.space"],
     host: "0.0.0.0",

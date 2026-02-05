@@ -7,9 +7,12 @@ Supports two action types:
 - self_sub_action: Invoke the module's own sub_action() method
 """
 
+import asyncio
+import concurrent.futures
 import copy
 import json
 import logging
+import time
 from datetime import datetime
 from typing import Dict, Any, Tuple, Optional, AsyncIterator
 
@@ -21,6 +24,7 @@ from engine.module_interface import InteractiveModule
 
 from .executor import WorkflowExecutor
 from .workflow_utils import get_workflow_def, rebuild_services
+from .streaming import get_poll_interval, get_progress_interval
 
 
 logger = logging.getLogger("workflow.sub_action")
@@ -124,6 +128,7 @@ class SubActionHandler:
             },
         )
 
+        logger.info(f"[SubAction] Yielding initial PROGRESS event for {execution_id}")
         yield SSEEvent(
             type=SSEEventType.PROGRESS,
             data={
@@ -132,6 +137,7 @@ class SubActionHandler:
                 "message": sub_action_def.get("loading_label", "Processing..."),
             },
         )
+        logger.info(f"[SubAction] Initial PROGRESS event yielded for {execution_id}")
 
         # 4. Determine action type and execute
         actions = sub_action_def.get("actions", [])
@@ -146,18 +152,16 @@ class SubActionHandler:
         action_type = first_action.get("type")
 
         try:
-            # 5. Execute based on type (both return child_state dict)
+            # 5. Execute based on type (both yield progress and return child_state)
             if action_type == "target_sub_action":
-                child_state, child_workflow_id = await self._execute_target_sub_actions(
-                    workflow_run_id, execution_id, sub_action_def, params, ai_config
-                )
-            elif action_type == "self_sub_action":
-                # self_sub_action yields progress events before returning result
+                logger.info(f"[SubAction] Executing target_sub_action for {execution_id}")
                 child_state = None
-                async for event_type, event_data in self._execute_self_sub_action(
-                    workflow_run_id, execution_id, interaction, sub_action_def, params
+                child_workflow_id = None
+                async for event_type, event_data in self._execute_target_sub_actions(
+                    workflow_run_id, execution_id, sub_action_def, params, ai_config
                 ):
                     if event_type == "progress":
+                        logger.info(f"[SubAction] Yielding target_sub_action PROGRESS for {execution_id}")
                         yield SSEEvent(
                             type=SSEEventType.PROGRESS,
                             data={
@@ -167,6 +171,32 @@ class SubActionHandler:
                             },
                         )
                     elif event_type == "result":
+                        logger.info(f"[SubAction] Received result from target_sub_action for {execution_id}")
+                        child_state, child_workflow_id = event_data
+
+                if child_state is None:
+                    raise ValueError("target_sub_action did not return a result")
+
+            elif action_type == "self_sub_action":
+                # self_sub_action yields progress events before returning result
+                logger.info(f"[SubAction] Executing self_sub_action for {execution_id}")
+                child_state = None
+                async for event_type, event_data in self._execute_self_sub_action(
+                    workflow_run_id, execution_id, interaction, sub_action_def, params
+                ):
+                    if event_type == "progress":
+                        logger.info(f"[SubAction] Yielding self_sub_action PROGRESS for {execution_id}")
+                        yield SSEEvent(
+                            type=SSEEventType.PROGRESS,
+                            data={
+                                "workflow_run_id": workflow_run_id,
+                                "execution_id": execution_id,
+                                **event_data,
+                            },
+                        )
+                        logger.info(f"[SubAction] self_sub_action PROGRESS yielded for {execution_id}")
+                    elif event_type == "result":
+                        logger.info(f"[SubAction] Received result from self_sub_action for {execution_id}")
                         child_state = event_data
                 child_workflow_id = None
 
@@ -185,8 +215,6 @@ class SubActionHandler:
             logger.info(
                 f"[SubAction] Child workflow completed. child_state keys: {list(child_state.keys()) if child_state else 'None'}"
             )
-            logger.debug(f"[SubAction] Full child_state: {child_state}")
-            logger.debug(f"[SubAction] Parent outputs keys: {list(parent_outputs.keys())}")
 
             # 7. Apply result_mapping
             out_state = self._apply_result_mapping(sub_action_def, child_state, parent_outputs)
@@ -194,7 +222,6 @@ class SubActionHandler:
             logger.info(
                 f"[SubAction] Result mapping applied. out_state keys: {list(out_state.keys()) if out_state else 'None'}"
             )
-            logger.debug(f"[SubAction] Full out_state: {out_state}")
 
             # 8. Store sub_action_completed event in PARENT
             completed_data = {
@@ -210,7 +237,6 @@ class SubActionHandler:
                 f"[SubAction] Storing sub_action_completed event in parent workflow {workflow_run_id[:8]}... "
                 f"with _state_mapped keys: {list(out_state.keys()) if out_state else 'None'}"
             )
-            logger.info(f"[SubAction] Full out_state being stored:\n{json.dumps(out_state, indent=2, default=str)}")
 
             self.db.event_repo.store_event(
                 workflow_run_id=workflow_run_id,
@@ -248,9 +274,12 @@ class SubActionHandler:
         sub_action_def: Dict,
         params: Dict,
         ai_config: Dict = None,
-    ) -> Tuple[Dict, str]:
+    ) -> AsyncIterator[Tuple[str, Any]]:
         """
         Execute target_sub_action chain as child workflow.
+
+        Runs the synchronous execute_step_modules in a ThreadPoolExecutor
+        while yielding progress events to keep the SSE connection alive.
 
         Args:
             parent_workflow_run_id: Parent workflow run ID
@@ -259,8 +288,10 @@ class SubActionHandler:
             params: Parameters passed to sub-action
             ai_config: Optional runtime override for AI configuration (provider, model)
 
-        Returns:
-            Tuple of (child_state, child_workflow_id)
+        Yields:
+            Tuples of (event_type, data):
+            - ("progress", {...}) for progress updates
+            - ("result", (child_state, child_workflow_id)) for the final result
         """
         # Get parent's state for Jinja resolution
         parent_outputs = self.db.state_repo.get_module_outputs(parent_workflow_run_id)
@@ -310,28 +341,61 @@ class SubActionHandler:
         # Create child workflow run
         child_id = self._create_child_workflow_run(parent_workflow_run_id, execution_id)
 
-        # Execute using existing executor
-        response = self.executor.execute_step_modules(
-            workflow_run_id=child_id,
-            step=virtual_step,
-            step_id=virtual_step["step_id"],
-            module_start=0,
-            module_outputs=parent_outputs,
-            services=services,
-            config=workflow_def.get("config", {}),
-            workflow_def=workflow_def,
-        )
+        # Run sync executor in thread pool while yielding progress events
+        loop = asyncio.get_event_loop()
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+        start_time = time.time()
 
-        if response.status == WorkflowStatus.ERROR:
-            raise ValueError(f"Sub-action failed: {response.error}")
+        def run_executor():
+            return self.executor.execute_step_modules(
+                workflow_run_id=child_id,
+                step=virtual_step,
+                step_id=virtual_step["step_id"],
+                module_start=0,
+                module_outputs=parent_outputs,
+                services=services,
+                config=workflow_def.get("config", {}),
+                workflow_def=workflow_def,
+            )
 
-        logger.info(
-            f"[SubAction] Child workflow {child_id[:8]}... completed with status={response.status}"
-        )
+        future = loop.run_in_executor(executor, run_executor)
 
-        # Get child's state from its events
-        child_state = self.db.state_repo.get_module_outputs(child_id)
-        return child_state, child_id
+        # Use same intervals as main workflow streaming
+        poll_interval = get_poll_interval()
+        progress_interval = get_progress_interval()
+        last_progress_time = start_time
+
+        try:
+            while not future.done():
+                now = time.time()
+                elapsed_ms = int((now - start_time) * 1000)
+
+                # Yield progress event periodically
+                if now - last_progress_time >= progress_interval:
+                    yield ("progress", {
+                        "elapsed_ms": elapsed_ms,
+                        "message": "Processing...",
+                    })
+                    last_progress_time = now
+
+                await asyncio.sleep(poll_interval)
+
+            response = future.result()
+
+            if response.status == WorkflowStatus.ERROR:
+                raise ValueError(f"Sub-action failed: {response.error}")
+
+            logger.info(
+                f"[SubAction] Child workflow {child_id[:8]}... completed with "
+                f"status={response.status}"
+            )
+
+            # Get child's state from its events
+            child_state = self.db.state_repo.get_module_outputs(child_id)
+            yield ("result", (child_state, child_id))
+
+        finally:
+            executor.shutdown(wait=False)
 
     def _create_child_workflow_run(
         self,
@@ -485,7 +549,7 @@ class SubActionHandler:
 
             if mode == "replace":
                 self._set_nested_value(out_state, target_path, source_value)
-                logger.info(f"[SubAction] Replace result:\n{json.dumps(source_value, indent=2, default=str)}")
+                logger.info(f"[SubAction] Replace mode applied to {target_path}")
             elif mode == "merge":
                 existing = self._get_nested_value(parent_outputs, target_path) or []
                 new_value = source_value or []
@@ -495,9 +559,6 @@ class SubActionHandler:
                     f"new_len={len(new_value) if isinstance(new_value, list) else 'N/A'}, "
                     f"merged_len={len(merged) if isinstance(merged, list) else 'N/A'}"
                 )
-                logger.info(f"[SubAction] Existing data:\n{json.dumps(existing, indent=2, default=str)}")
-                logger.info(f"[SubAction] New data:\n{json.dumps(new_value, indent=2, default=str)}")
-                logger.info(f"[SubAction] Merged result:\n{json.dumps(merged, indent=2, default=str)}")
                 self._set_nested_value(out_state, target_path, merged)
 
         return out_state

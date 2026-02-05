@@ -758,13 +758,21 @@ class ApiClient {
 
         while (true) {
           const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-
+          
+          if (value) {
+            buffer += decoder.decode(value, { stream: true });
+          }
+          
           // Parse SSE events from buffer
+          // When done, process entire buffer (no incomplete lines expected)
           const lines = buffer.split("\n");
-          buffer = lines.pop() || "";
+          
+          if (done) {
+            console.log("[API] SSE stream done=true, buffer before processing:", JSON.stringify(buffer));
+            console.log("[API] SSE lines count:", lines.length, "lines:", lines);
+          }
+          
+          buffer = done ? "" : (lines.pop() || "");
 
           let currentEventType: SSEEventType | null = null;
           for (const line of lines) {
@@ -773,12 +781,18 @@ class ApiClient {
             } else if (line.startsWith("data: ") && currentEventType) {
               try {
                 const data = JSON.parse(line.slice(6));
+                console.log("[API] SSE event parsed:", currentEventType);
                 onEvent(currentEventType, data);
               } catch (e) {
                 console.error("[SubAction] Failed to parse SSE data", e);
               }
               currentEventType = null;
             }
+          }
+          
+          if (done) {
+            console.log("[API] SSE stream ending, final buffer:", JSON.stringify(buffer));
+            break;
           }
         }
       } catch (error) {
@@ -789,6 +803,7 @@ class ApiClient {
     })();
 
     return () => {
+      console.log("[API] SSE stream cleanup called - aborting");
       controller.abort();
     };
   }

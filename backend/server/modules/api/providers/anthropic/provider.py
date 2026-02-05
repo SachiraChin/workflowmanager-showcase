@@ -147,7 +147,6 @@ class AnthropicProvider(LLMProviderBase):
         # Log and save request
         logger = get_api_call_logger()
         context.logger.info(f"[AI REQUEST] Anthropic messages - model={model}")
-        context.logger.info(f"[AI REQUEST BODY]\n{json.dumps(logger._sanitize_for_logging(request_params), indent=2)}")
 
         step_id = require_step_id_from_metadata(metadata)
         call_ctx = logger.save_request(context, step_id, 'anthropic', model, request_params, output_schema, metadata)
@@ -186,10 +185,9 @@ class AnthropicProvider(LLMProviderBase):
         # Save response
         logger.save_response(call_ctx, response, usage)
 
-        # Log full response body
+        # Log response summary
         cached_tokens = usage.get("cached_tokens", 0)
         context.logger.info(f"[AI RESPONSE] Anthropic - elapsed={elapsed:.1f}s, tokens={usage['total_tokens']} (prompt={usage['prompt_tokens']}, completion={usage['completion_tokens']}, cached={cached_tokens})")
-        context.logger.info(f"[AI RESPONSE BODY]\n{content}")
 
         # Parse JSON if schema was provided
         parsed_content = content
@@ -274,7 +272,6 @@ class AnthropicProvider(LLMProviderBase):
         # Log request
         logger = get_api_call_logger()
         context.logger.info(f"[AI REQUEST STREAMING] Anthropic messages - model={model}")
-        context.logger.info(f"[AI REQUEST BODY]\n{json.dumps(logger._sanitize_for_logging(request_params), indent=2)}")
 
         step_id = require_step_id_from_metadata(metadata)
         call_ctx = logger.save_request(context, step_id, 'anthropic', model, request_params, output_schema, metadata)
@@ -324,10 +321,9 @@ class AnthropicProvider(LLMProviderBase):
         }
         logger.save_response(call_ctx, response_data, usage)
 
-        # Log response
+        # Log response summary
         cached_tokens = usage.get("cached_tokens", 0)
         context.logger.info(f"[AI RESPONSE STREAMING] Anthropic - elapsed={elapsed:.1f}s, tokens={usage['total_tokens']} (prompt={usage['prompt_tokens']}, completion={usage['completion_tokens']}, cached={cached_tokens})")
-        context.logger.info(f"[AI RESPONSE BODY]\n{content}")
 
         # Parse JSON if schema was provided
         parsed_content = content

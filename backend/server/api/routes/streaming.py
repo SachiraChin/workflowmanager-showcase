@@ -85,7 +85,8 @@ async def stream_workflow(
 
     return EventSourceResponse(
         event_generator(),
-        send_timeout=5
+        send_timeout=5,
+        headers={"X-Accel-Buffering": "no"}  # Disable proxy buffering (nginx, cloudflare)
     )
 
 
@@ -143,7 +144,8 @@ async def stream_respond(
 
     return EventSourceResponse(
         event_generator(),
-        send_timeout=5
+        send_timeout=5,
+        headers={"X-Accel-Buffering": "no"}  # Disable proxy buffering (nginx, cloudflare)
     )
 
 
@@ -200,6 +202,7 @@ async def execute_sub_action(
 
     async def event_generator():
         try:
+            logger.info(f"[SubAction] Starting event generator for {workflow_run_id[:8]}")
             async for event in processor.sub_action_handler.execute_sub_action(
                 workflow_run_id=workflow_run_id,
                 interaction_id=request.interaction_id,
@@ -207,12 +210,18 @@ async def execute_sub_action(
                 params=request.params,
                 ai_config=request.ai_config,
             ):
+                logger.info(f"[SubAction] Yielding event: {event.type.value}")
                 yield {"event": event.type.value, "data": json.dumps(event.data)}
+            logger.info(f"[SubAction] Event generator completed for {workflow_run_id[:8]}")
         except Exception as e:
             logger.error(f"[SubAction] Error for workflow {workflow_run_id[:8]}: {e}")
             yield {"event": "error", "data": json.dumps({"message": sanitize_error_message(str(e))})}
 
-    return EventSourceResponse(event_generator(), send_timeout=30)
+    return EventSourceResponse(
+        event_generator(),
+        send_timeout=5,  # Match workflow streaming config
+        headers={"X-Accel-Buffering": "no"}  # Disable proxy buffering (nginx, cloudflare)
+    )
 
 
 @router.get("/{workflow_run_id}/interaction/{interaction_id}/generations")

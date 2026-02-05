@@ -21,7 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { JsonTreeView } from "@/components/ui/json-tree-view";
+import { JsonTreeView } from "@wfm/shared";
 import { useWorkflowStateContext } from "@/state/WorkflowStateContext";
 import { useWorkflowStore } from "@/state/workflow-store";
 import { useDebugMode } from "@/state/hooks/useDebugMode";

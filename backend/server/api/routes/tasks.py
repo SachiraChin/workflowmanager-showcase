@@ -283,7 +283,8 @@ async def stream_task(
 
     return EventSourceResponse(
         event_generator(),
-        send_timeout=5
+        send_timeout=5,
+        headers={"X-Accel-Buffering": "no"}  # Disable proxy buffering (nginx, cloudflare)
     )
 
 

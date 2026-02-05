@@ -176,9 +176,7 @@ class OpenAIProvider(LLMProviderBase):
 
         # Log and save request
         logger = get_api_call_logger()
-        sanitized_params = logger._sanitize_for_logging(request_params)
         context.logger.info(f"[AI REQUEST] OpenAI {api_endpoint} - model={model}")
-        context.logger.info(f"[AI REQUEST BODY]\n{json.dumps(sanitized_params, indent=2)}")
 
         step_id = require_step_id_from_metadata(metadata)
         call_ctx = logger.save_request(context, step_id, 'openai', model, request_params, output_schema, metadata)
@@ -238,10 +236,9 @@ class OpenAIProvider(LLMProviderBase):
         # Store token usage to database
         self._store_token_usage(model, usage, context)
 
-        # Log full response body
+        # Log response summary
         cached_tokens = usage.get("cached_tokens", 0)
         context.logger.info(f"[AI RESPONSE] OpenAI - elapsed={elapsed:.1f}s, tokens={usage['total_tokens']} (prompt={usage['prompt_tokens']}, completion={usage['completion_tokens']}, cached={cached_tokens})")
-        context.logger.info(f"[AI RESPONSE BODY]\n{content}")
 
         # Parse JSON if schema was provided
         parsed_content = content
@@ -355,7 +352,6 @@ class OpenAIProvider(LLMProviderBase):
         logger = get_api_call_logger()
         sanitized_params = logger._sanitize_for_logging(request_params)
         context.logger.info(f"[AI REQUEST STREAMING] OpenAI {api_endpoint} - model={model}")
-        context.logger.info(f"[AI REQUEST BODY]\n{json.dumps(sanitized_params, indent=2)}")
 
         step_id = require_step_id_from_metadata(metadata)
         call_ctx = logger.save_request(context, step_id, 'openai', model, request_params, output_schema, metadata)
@@ -423,10 +419,9 @@ class OpenAIProvider(LLMProviderBase):
         # Store token usage
         self._store_token_usage(model, usage, context)
 
-        # Log response
+        # Log response summary
         cached_tokens = usage.get("cached_tokens", 0)
         context.logger.info(f"[AI RESPONSE STREAMING] OpenAI - elapsed={elapsed:.1f}s, tokens={usage['total_tokens']} (prompt={usage['prompt_tokens']}, completion={usage['completion_tokens']}, cached={cached_tokens})")
-        context.logger.info(f"[AI RESPONSE BODY]\n{content}")
 
         # Parse JSON if schema was provided
         parsed_content = content

@@ -34,7 +34,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { JsonTreeView } from "@/components/ui/json-tree-view";
+import { JsonTreeView } from "@wfm/shared";
 import { MediaPreviewDialog } from "./MediaPreviewDialog";
 import { useWorkflowStateContext } from "@/state/WorkflowStateContext";
 import { cn } from "@/core/utils";

@@ -14,7 +14,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MagneticScrollContainer, MagneticScrollCard } from "@/components/ui/magnetic-scroll-container";
+import { MagneticScrollContainer, MagneticScrollCard } from "@wfm/shared";
 import { Loader2, Database, FolderTree, ChevronLeft, ChevronRight } from "lucide-react";
 import { VersionDiffDialog } from "@/features/workflow-start/VersionDiffDialog";
 import { WorkflowSidebar, StateTreeView, FilesTreeView } from "@/features/workflow-state";
