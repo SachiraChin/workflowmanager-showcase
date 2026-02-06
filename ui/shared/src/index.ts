@@ -69,6 +69,7 @@ export * from "./types/interaction-state";
 
 // Contexts
 export * from "./contexts/RenderContext";
+export * from "./contexts/WorkflowStateContext";
 export * from "./contexts/MediaAdapterContext";
 export {
   SubActionProvider,
@@ -205,6 +206,57 @@ export { StructuredSelect } from "./interactions/types/structured-select";
 export { ReviewGrouped } from "./interactions/types/review-grouped";
 export { FormInput } from "./interactions/types/form-input";
 export { MediaGenerationHost } from "./interactions/types/media-generation";
+
+// Core - API and config
+export { api, ApiClient, ApiError, setAccessDeniedHandler } from "./core/api";
+export { API_URL, IS_DEV, IS_PROD, getApiUrl, toMediaUrl } from "./core/config";
+export {
+  validateAgainstSchema,
+  validateSchema,
+  validateField,
+  formatErrorsForDisplay,
+  type ValidationError as CoreValidationError,
+  type ValidationResult as CoreValidationResult,
+} from "./core/validation";
+
+// State management
+export {
+  useWorkflowStore,
+  type ViewMode,
+  type WorkflowExecutionState,
+  type WorkflowActions,
+  type WorkflowEvent,
+  selectWorkflowRunId,
+  selectStatus,
+  selectProgress,
+  selectCurrentInteraction,
+  selectCompletedInteractions,
+  selectIsProcessing,
+  selectError,
+  selectModuleOutputs,
+  selectViewMode,
+  selectCurrentViewIndex,
+  selectModelsConfig,
+  selectSelectedProvider,
+  selectSelectedModel,
+  selectAccessDenied,
+} from "./state/workflow-store";
+
+// State hooks
+export { useWorkflowState as useWorkflowStateHook } from "./state/hooks/useWorkflowState";
+export {
+  useWorkflowExecution,
+  setCapabilities,
+  getCapabilities,
+  type VersionConfirmationState,
+} from "./state/hooks/useWorkflowExecution";
+export { useDebugMode, getDebugMode } from "./state/hooks/useDebugMode";
+
+// Workflow state features
+export { StateTreeView } from "./features/workflow-state/StateTreeView";
+export { FilesTreeView } from "./features/workflow-state/FilesTreeView";
+export { MediaPreviewDialog } from "./features/workflow-state/MediaPreviewDialog";
+export { ExecutionStatus } from "./features/workflow-state/ExecutionStatus";
 
 // UI Components - Re-export all shadcn components
 export * from "./components/ui/accordion";

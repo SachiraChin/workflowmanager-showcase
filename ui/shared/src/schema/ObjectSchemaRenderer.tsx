@@ -13,7 +13,7 @@ import { normalizeDisplay } from "../types/schema";
 import { getUx } from "../utils/ux-utils";
 import { getLayout } from "../layouts";
 import { renderTemplate } from "../utils/template-service";
-import { useRenderContext } from "../contexts/RenderContext";
+import { useWorkflowState } from "../contexts/WorkflowStateContext";
 import { ErrorRenderer } from "../renderers";
 
 // Forward declaration to avoid circular import
@@ -57,7 +57,8 @@ export function ObjectSchemaRenderer({
   disabled = false,
   readonly = false,
 }: ObjectSchemaRendererProps) {
-  const { templateState } = useRenderContext();
+  const { state: workflowState } = useWorkflowState();
+  const templateState = (workflowState?.state_mapped || {}) as Record<string, unknown>;
 
   const displayMode = normalizeDisplay(ux.display);
 

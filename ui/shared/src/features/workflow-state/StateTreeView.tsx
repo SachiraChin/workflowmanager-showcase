@@ -12,21 +12,20 @@ import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { ChevronRight, ChevronDown, Circle, Search, Settings, Maximize2, Copy, Check, Layers, Expand, Pencil, Save, X } from "lucide-react";
 import Editor, { type OnMount } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "../../components/ui/input";
+import { Button } from "../../components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { JsonTreeView } from "@wfm/shared";
-import { useWorkflowStateContext } from "@/state/WorkflowStateContext";
-import { useWorkflowStore } from "@/state/workflow-store";
-import { useDebugMode } from "@/state/hooks/useDebugMode";
-import { cn } from "@/core/utils";
-import type { ModuleConfig, WorkflowDefinition } from "@/core/types";
+} from "../../components/ui/dialog";
+import { JsonTreeView } from "../../components/ui/json-tree-view";
+import { useWorkflowState, type ModuleConfig, type WorkflowDefinition } from "../../contexts/WorkflowStateContext";
+import { useWorkflowStore } from "../../state/workflow-store";
+import { useDebugMode } from "../../state/hooks/useDebugMode";
+import { cn } from "../../utils/cn";
 
 // =============================================================================
 // Types
@@ -1179,7 +1178,7 @@ export function StateTreeView() {
     getModuleConfig,
     getRawModuleConfig,
     updateStateAtPath,
-  } = useWorkflowStateContext();
+  } = useWorkflowState();
 
   const currentInteraction = useWorkflowStore((s) => s.currentInteraction);
   const updateCurrentInteractionDisplayData = useWorkflowStore((s) => s.updateCurrentInteractionDisplayData);

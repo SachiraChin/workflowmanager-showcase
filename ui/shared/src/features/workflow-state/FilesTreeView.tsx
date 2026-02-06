@@ -26,20 +26,20 @@ import {
   Music,
   Download,
 } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "../../components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { JsonTreeView } from "@wfm/shared";
+} from "../../components/ui/dialog";
+import { JsonTreeView } from "../../components/ui/json-tree-view";
 import { MediaPreviewDialog } from "./MediaPreviewDialog";
-import { useWorkflowStateContext } from "@/state/WorkflowStateContext";
-import { cn } from "@/core/utils";
-import { API_URL } from "@/core/config";
-import type { FileTreeNode, TreeNodeMetadata } from "@/core/types";
+import { useWorkflowState } from "../../contexts/WorkflowStateContext";
+import { cn } from "../../utils/cn";
+import { API_URL } from "../../core/config";
+import type { FileTreeNode, TreeNodeMetadata } from "../../types/index";
 
 // =============================================================================
 // Types
@@ -350,7 +350,7 @@ function TreeNodeComponent({
 // =============================================================================
 
 export function FilesTreeView() {
-  const { files, isConnected, fetchFileContent } = useWorkflowStateContext();
+  const { files, isConnected, fetchFileContent } = useWorkflowState();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isMaximized, setIsMaximized] = useState(false);

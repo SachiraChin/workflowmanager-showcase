@@ -14,11 +14,11 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "../../components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { Button } from "@/components/ui/button";
-import { toMediaUrl } from "@/core/config";
-import type { WorkflowFile } from "@/core/types";
+import { Button } from "../../components/ui/button";
+import { toMediaUrl } from "../../core/config";
+import type { WorkflowFile } from "../../types/index";
 
 // =============================================================================
 // Types

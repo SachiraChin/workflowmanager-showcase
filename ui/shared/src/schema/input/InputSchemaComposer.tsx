@@ -19,6 +19,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef, type ReactNode } from "react";
 import type { SchemaProperty, UxConfig } from "../../types/schema";
 import { useRenderContext } from "../../contexts/RenderContext";
+import { useWorkflowState } from "../../contexts/WorkflowStateContext";
 import {
   InputSchemaActionsContext,
   InputSchemaStateContext,
@@ -67,8 +68,11 @@ export function InputSchemaComposer({
   void _schema; // Schema is available but we use ux.input_schema
   const inputSchema = ux.input_schema as InputSchema;
 
-  // Get template state and debug mode from RenderContext
-  const { templateState, debugMode } = useRenderContext();
+  // Get debug mode from RenderContext
+  const { debugMode } = useRenderContext();
+  // Get template state from WorkflowStateContext (reactive to state changes)
+  const { state: workflowState } = useWorkflowState();
+  const templateState = (workflowState?.state_mapped || {}) as Record<string, unknown>;
 
   // Helper: Get nested value by dot-notated path (e.g., "nested.field.path")
   const getNestedValue = useCallback((obj: Record<string, unknown>, path: string): unknown => {

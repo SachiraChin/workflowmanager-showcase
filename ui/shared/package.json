@@ -14,6 +14,8 @@
     "react-dom": "^19.0.0"
   },
   "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
     "@monaco-editor/react": "^4.7.0",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-checkbox": "^1.3.3",
@@ -40,11 +42,13 @@
     "nunjucks": "^3.2.4",
     "react-image-crop": "^11.0.10",
     "tailwind-merge": "^3.4.0",
-    "wavesurfer.js": "^7.9.4"
+    "wavesurfer.js": "^7.9.4",
+    "zustand": "^5.0.5"
   },
   "devDependencies": {
     "@types/nunjucks": "^3.2.6",
     "@types/react": "^19.2.5",
-    "typescript": "~5.9.3"
+    "typescript": "~5.9.3",
+    "vite": "^6.0.11"
   }
 }

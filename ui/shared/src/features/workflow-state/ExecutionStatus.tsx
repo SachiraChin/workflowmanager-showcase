@@ -9,11 +9,11 @@
  */
 
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import { Progress } from "../../components/ui/progress";
+import { Badge } from "../../components/ui/badge";
 import { Loader2, CheckCircle2, XCircle, Clock, Zap } from "lucide-react";
-import type { WorkflowStatus, WorkflowProgress } from "@/core/types";
+import type { WorkflowStatus, WorkflowProgress } from "../../types/index";
 
 interface StatusDisplayField {
   id: string;

@@ -23,7 +23,7 @@ import { CompletedInteractionCard } from "@/features/workflow-history";
 import { AccessDeniedView } from "@/components/AccessDeniedView";
 import { useWorkflowExecution } from "@/state/hooks/useWorkflowExecution";
 import { useWorkflowStore } from "@/state/workflow-store";
-import { WorkflowStateProvider } from "@/state/WorkflowStateContext";
+import { WorkflowStateProvider } from "@wfm/shared";
 // import { api } from "@/core/api";  // TEMPORARILY DISABLED - status display polling
 import type { CompletedInteraction, InteractionResponseData } from "@/core/types";
 

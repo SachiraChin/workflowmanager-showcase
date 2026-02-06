@@ -22,7 +22,7 @@ import type { SchemaProperty, ComputedField, UxConfig } from "../types/schema";
 import { normalizeDisplay } from "../types/schema";
 import { getUx } from "../utils/ux-utils";
 import { renderTemplate } from "../utils/template-service";
-import { useRenderContext } from "../contexts/RenderContext";
+import { useWorkflowState } from "../contexts/WorkflowStateContext";
 import { ErrorRenderer } from "../renderers";
 import { useSelectionOptional } from "./selection/SelectionContext";
 import {
@@ -217,7 +217,8 @@ export function TableSchemaRenderer({
   readonly = false,
 }: TableSchemaRendererProps) {
   const selection = useSelectionOptional();
-  const { templateState } = useRenderContext();
+  const { state: workflowState } = useWorkflowState();
+  const templateState = (workflowState?.state_mapped || {}) as Record<string, unknown>;
 
   // Determine if data is array or object
   const isArray = Array.isArray(data);

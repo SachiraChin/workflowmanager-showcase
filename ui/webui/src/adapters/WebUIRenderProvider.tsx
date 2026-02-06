@@ -2,15 +2,15 @@
  * WebUIRenderProvider - Bridges @wfm/shared RenderContext to webui state.
  *
  * Provides:
- * - templateState from WorkflowStateContext (SSE-synced workflow state)
  * - debugMode from localStorage
  * - readonly flag based on viewMode
  * - onUpdateDisplayData callback to update display data in store
+ *
+ * Note: Template state is now provided by WorkflowStateContext directly.
  */
 
 import { type ReactNode, useMemo, useCallback } from "react";
 import { RenderProvider } from "@wfm/shared";
-import { useWorkflowStateContext } from "@/state/WorkflowStateContext";
 import { useWorkflowStore } from "@/state/workflow-store";
 import { getDebugMode } from "@/state/hooks/useDebugMode";
 
@@ -22,9 +22,6 @@ interface WebUIRenderProviderProps {
  * Provider that connects @wfm/shared RenderContext to webui state sources.
  */
 export function WebUIRenderProvider({ children }: WebUIRenderProviderProps) {
-  // Get template state from SSE-synced workflow state
-  const { state: templateState } = useWorkflowStateContext();
-
   // Get update function from store
   const updateCurrentInteractionDisplayData = useWorkflowStore(
     (s) => s.updateCurrentInteractionDisplayData
@@ -68,12 +65,11 @@ export function WebUIRenderProvider({ children }: WebUIRenderProviderProps) {
   // Memoize the context value to prevent unnecessary re-renders
   const contextValue = useMemo(
     () => ({
-      templateState: templateState as Record<string, unknown>,
       debugMode,
       readonly,
       onUpdateDisplayData: handleUpdateDisplayData,
     }),
-    [templateState, debugMode, readonly, handleUpdateDisplayData]
+    [debugMode, readonly, handleUpdateDisplayData]
   );
 
   return (

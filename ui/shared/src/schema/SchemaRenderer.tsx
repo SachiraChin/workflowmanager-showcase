@@ -38,6 +38,7 @@ import { TerminalRenderer } from "../renderers";
 import { InputRenderer } from "../interactions/InputRenderer";
 import { renderTemplate } from "../utils/template-service";
 import { useRenderContext } from "../contexts/RenderContext";
+import { useWorkflowState } from "../contexts/WorkflowStateContext";
 import { JsonEditorDialog } from "../components/ui/json-editor-dialog";
 import { cn } from "../utils/cn";
 
@@ -232,7 +233,8 @@ function SchemaRendererCore({
   disabled = false,
   readonly = false,
 }: SchemaRendererCoreProps) {
-  const { templateState } = useRenderContext();
+  const { state: workflowState } = useWorkflowState();
+  const templateState = (workflowState?.state_mapped || {}) as Record<string, unknown>;
 
   // Extract UX config if not provided (supports _ux namespace, _ux.* flat, and legacy root)
   const ux = uxProp ?? getUx(schema as Record<string, unknown>);

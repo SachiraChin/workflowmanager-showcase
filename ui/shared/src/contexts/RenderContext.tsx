@@ -1,12 +1,13 @@
 /**
- * RenderContext - Provides template state and debug mode to rendering components.
+ * RenderContext - Provides debug mode and UI settings to rendering components.
  *
- * This context abstracts away the state management implementation, allowing:
- * - webui to provide SSE-synced workflow state
- * - editor to provide example/mock state for preview
+ * This context provides UI-related settings that are not workflow state:
+ * - Debug mode for edit functionality
+ * - Readonly mode for history viewing
+ * - Display data update callback
  *
- * Components use useRenderContext() to access template state for Jinja2/Nunjucks
- * rendering and debug mode for edit functionality.
+ * Note: Template state for Jinja2/Nunjucks rendering is provided by
+ * WorkflowStateContext, not this context.
  */
 
 import { createContext, useContext, type ReactNode } from "react";
@@ -16,9 +17,6 @@ import { createContext, useContext, type ReactNode } from "react";
 // =============================================================================
 
 export interface RenderContextValue {
-  /** State for template rendering ({{ state.foo }}) */
-  templateState: Record<string, unknown>;
-
   /** Whether debug mode is enabled */
   debugMode: boolean;
 
@@ -43,7 +41,6 @@ export interface RenderContextValue {
 // =============================================================================
 
 const defaultContext: RenderContextValue = {
-  templateState: {},
   debugMode: false,
   readonly: false,
   onUpdateDisplayData: undefined,

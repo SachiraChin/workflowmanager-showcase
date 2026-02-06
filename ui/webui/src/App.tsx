@@ -13,8 +13,9 @@ import { WorkflowStartPage } from "@/pages/WorkflowStartPage";
 import { WorkflowRunnerPage } from "@/pages/WorkflowRunnerPage";
 import { LoginPage } from "@/pages/LoginPage";
 import { api, setAccessDeniedHandler } from "@/core/api";
-import { useWorkflowExecution } from "@/state/hooks/useWorkflowExecution";
+import { useWorkflowExecution, setCapabilities } from "@/state/hooks/useWorkflowExecution";
 import { useWorkflowStore } from "@/state/workflow-store";
+import { WEBUI_CAPABILITIES } from "@/lib/capabilities";
 
 interface User {
   user_id: string;
@@ -102,8 +103,11 @@ function App() {
   const reset = useWorkflowStore((s) => s.reset);
   const setAccessDenied = useWorkflowStore((s) => s.setAccessDenied);
 
-  // Register global 403 handler once on mount
+  // Register global 403 handler and set capabilities once on mount
   useEffect(() => {
+    // Set WebUI capabilities for the shared package
+    setCapabilities(WEBUI_CAPABILITIES);
+    
     setAccessDeniedHandler(() => {
       // Clear workflow state and show access denied view
       reset();
