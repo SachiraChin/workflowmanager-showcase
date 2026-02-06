@@ -425,88 +425,19 @@ class MediaActor(ActorBase):
         module_index = step_context.get("module_index", 0)
 
         try:
-            # Store usage based on provider type
-            if provider_name == "openai":
-                if action_type == "img2vid":
-                    self._db.token_repo.store_media_openai_usage(
-                        workflow_run_id=workflow_run_id,
-                        step_id=step_id,
-                        step_name=step_name,
-                        module_name=module_name,
-                        module_index=module_index,
-                        model=usage.model,
-                        action_type=action_type,
-                        total_cost=usage.total_cost,
-                        duration_seconds=usage.duration_seconds,
-                    )
-                else:
-                    self._db.token_repo.store_media_openai_usage(
-                        workflow_run_id=workflow_run_id,
-                        step_id=step_id,
-                        step_name=step_name,
-                        module_name=module_name,
-                        module_index=module_index,
-                        model=usage.model,
-                        action_type=action_type,
-                        total_cost=usage.total_cost,
-                        image_count=usage.image_count,
-                    )
-            elif provider_name == "leonardo":
-                self._db.token_repo.store_media_leonardo_usage(
-                    workflow_run_id=workflow_run_id,
-                    step_id=step_id,
-                    step_name=step_name,
-                    module_name=module_name,
-                    module_index=module_index,
-                    model=usage.model,
-                    action_type=action_type,
-                    credits=usage.credits or 0,
-                    total_cost=usage.total_cost,
-                )
-            elif provider_name == "midjourney":
-                self._db.token_repo.store_media_midjourney_usage(
-                    workflow_run_id=workflow_run_id,
-                    step_id=step_id,
-                    step_name=step_name,
-                    module_name=module_name,
-                    module_index=module_index,
-                    model=usage.model,
-                    action_type=action_type,
-                    credits=usage.credits or 0,
-                    total_cost=usage.total_cost,
-                )
-            elif provider_name == "elevenlabs":
-                self._db.token_repo.store_media_elevenlabs_usage(
-                    workflow_run_id=workflow_run_id,
-                    step_id=step_id,
-                    step_name=step_name,
-                    module_name=module_name,
-                    module_index=module_index,
-                    model=usage.model,
-                    action_type=action_type,
-                    audio_type=usage.audio_type or "music",
-                    total_cost=usage.total_cost,
-                    characters=usage.characters,
-                    credits=usage.credits,
-                )
-            else:
-                logger.warning(
-                    f"[MediaActor] Unknown provider {provider_name}, using generic storage"
-                )
-                # Use generic storage for unknown providers
-                self._db.token_repo.store_usage(
-                    workflow_run_id=workflow_run_id,
-                    step_id=step_id,
-                    step_name=step_name,
-                    module_name=module_name,
-                    module_index=module_index,
-                    provider_key=f"media.{provider_name}",
-                    provider_data={
-                        "model": usage.model,
-                        "action_type": action_type,
-                        "total_cost": usage.total_cost,
-                    },
-                )
+            # Convert UsageInfo dataclass to dict, filtering out None values
+            from dataclasses import asdict
+            usage_entry = {k: v for k, v in asdict(usage).items() if v is not None}
+
+            # Store using unified API
+            self._db.token_repo.store_usage(
+                workflow_run_id=workflow_run_id,
+                step_id=step_id,
+                step_name=step_name,
+                module_name=module_name,
+                module_index=module_index,
+                usage=[usage_entry],
+            )
 
             logger.info(
                 f"[MediaActor] Stored token usage: provider={provider_name}, "

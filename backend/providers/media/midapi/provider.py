@@ -70,6 +70,15 @@ CREDIT_COSTS = {
 # Cost per credit in USD (placeholder - update with actual value)
 COST_PER_CREDIT_USD = 5 / 1000
 
+# Version display names for UI and usage tracking
+VERSION_DISPLAY_NAMES = {
+    "7": "MidJourney V7",
+    "6.1": "MidJourney V6.1",
+    "6": "MidJourney V6",
+    "5.2": "MidJourney V5.2",
+    "niji6": "MidJourney Niji 6",
+}
+
 
 @register("midjourney", concurrency=1)
 class MidAPIProvider(MediaProviderBase):
@@ -287,9 +296,11 @@ class MidAPIProvider(MediaProviderBase):
 
         # Calculate credits/cost
         preview_info = self.get_preview_info("txt2img", params)
+        version = params.get("version", "7")
         usage = UsageInfo(
             provider="midjourney",
-            model="midjourney",
+            model=f"midjourney-v{version}",
+            display_name=VERSION_DISPLAY_NAMES.get(version, f"MidJourney V{version}"),
             action_type="txt2img",
             total_cost=preview_info.credits.total_cost_usd,
             credits=int(preview_info.credits.credits),
@@ -388,7 +399,8 @@ class MidAPIProvider(MediaProviderBase):
         preview_info = self.get_preview_info("txt2img", {})
         usage = UsageInfo(
             provider="midjourney",
-            model="midjourney",
+            model="midjourney-vary",
+            display_name="MidJourney Vary",
             action_type="vary",
             total_cost=preview_info.credits.total_cost_usd,
             credits=int(preview_info.credits.credits),
@@ -481,9 +493,11 @@ class MidAPIProvider(MediaProviderBase):
 
         # Calculate credits/cost
         preview_info = self.get_preview_info("img2vid", params)
+        is_hd = params.get("hd", False)
         usage = UsageInfo(
             provider="midjourney",
-            model="midjourney",
+            model="midjourney-video-hd" if is_hd else "midjourney-video",
+            display_name="MidJourney Video HD" if is_hd else "MidJourney Video",
             action_type="img2vid",
             total_cost=preview_info.credits.total_cost_usd,
             credits=int(preview_info.credits.credits),

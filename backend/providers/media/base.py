@@ -44,11 +44,12 @@ class UsageInfo:
     - ElevenLabs: charged by characters (TTS) or credits (music)
 
     All fields are optional to accommodate different provider billing models.
-    The total_cost field should always be set.
+    The total_cost and display_name fields should always be set.
 
     Attributes:
         provider: Provider identifier (e.g., "openai", "leonardo")
         model: Model used for generation
+        display_name: User-friendly display name (e.g., "Leonardo Phoenix 1.0")
         action_type: Type of generation (txt2img, img2img, img2vid, txt2audio)
         total_cost: Total cost in USD (always required)
 
@@ -67,6 +68,7 @@ class UsageInfo:
     """
     provider: str
     model: str
+    display_name: str
     action_type: str
     total_cost: float
 

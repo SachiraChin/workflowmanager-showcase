@@ -78,6 +78,33 @@ VIDEO_MODELS = [
     "KLING2_5",      # Kling 2.5
 ]
 
+# Model display names for UI and usage tracking
+MODEL_DISPLAY_NAMES = {
+    # Image models (UUIDs)
+    "de7d3faf-762f-48e0-b3b7-9d0ac3a3fcf3": "Leonardo Phoenix 1.0",
+    "6b645e3a-d64f-4341-a6d8-7a3690fbf042": "Leonardo Phoenix 0.9",
+    "7b592283-e8a7-4c5a-9ba6-d18c31f258b9": "Leonardo Lucid Origin",
+    "05ce0082-2d80-4a2d-8653-4d1c85e2418e": "Leonardo Lucid Realism",
+    "b2614463-296c-462a-9586-aafdb8f00e36": "Leonardo Flux Dev",
+    "1dd50843-d653-4516-a8e3-f0238ee453ff": "Leonardo Flux Schnell",
+    "28aeddf8-bd19-4803-80fc-79602d1a9989": "Leonardo FLUX.1 Kontext",
+    "e71a1c2f-4f80-4800-934f-2c68979d8cc8": "Leonardo Anime XL",
+    "b24e16ff-06e3-43eb-8d33-4416c2d75876": "Leonardo Lightning XL",
+    "aa77f04e-3eec-4034-9c07-d0f619684628": "Leonardo Kino XL",
+    "5c232a9e-9061-4777-980a-ddc8e65647c6": "Leonardo Vision XL",
+    "1e60896f-3c26-4296-8ecc-53e2afecc132": "Leonardo Diffusion XL",
+    "16e7060a-803e-4df3-97ee-edcfa5dc9cc8": "Leonardo SDXL 1.0",
+    "b63f7119-31dc-4540-969b-2a9df997e173": "Leonardo SDXL 0.9",
+    "2067ae52-33fd-4a82-bb92-c2c55e7d2786": "Leonardo AlbedoBase XL",
+    # Video models
+    "MOTION2": "Leonardo Motion 2.0",
+    "MOTION2FAST": "Leonardo Motion 2.0 Fast",
+    "VEO3": "Leonardo VEO 3",
+    "VEO3FAST": "Leonardo VEO 3 Fast",
+    "KLING2_1": "Leonardo Kling 2.1",
+    "KLING2_5": "Leonardo Kling 2.5",
+}
+
 # Model type classification by model_id
 # Used for pricing API to determine isSDXL and isPhoenix flags
 PHOENIX_MODEL_IDS = {
@@ -486,9 +513,11 @@ class LeonardoProvider(MediaProviderBase):
 
         # Calculate credits/cost
         preview_info = self.get_preview_info("txt2img", params)
+        model_id = params.get("model_id", params.get("model", "unknown"))
         usage = UsageInfo(
             provider="leonardo",
-            model=params.get("model_id", params.get("model", "unknown")),
+            model=model_id,
+            display_name=MODEL_DISPLAY_NAMES.get(model_id, f"Leonardo {model_id}"),
             action_type="txt2img",
             total_cost=preview_info.credits.total_cost_usd,
             credits=int(preview_info.credits.credits),
@@ -610,9 +639,11 @@ class LeonardoProvider(MediaProviderBase):
 
         # Calculate credits/cost
         preview_info = self.get_preview_info("img2img", params)
+        model_id = params.get("model_id", params.get("model", "unknown"))
         usage = UsageInfo(
             provider="leonardo",
-            model=params.get("model_id", params.get("model", "unknown")),
+            model=model_id,
+            display_name=MODEL_DISPLAY_NAMES.get(model_id, f"Leonardo {model_id}"),
             action_type="img2img",
             total_cost=preview_info.credits.total_cost_usd,
             credits=int(preview_info.credits.credits),
@@ -919,9 +950,11 @@ class LeonardoProvider(MediaProviderBase):
 
         # Calculate credits/cost
         preview_info = self.get_preview_info("img2vid", params)
+        model_id = params.get("model", "MOTION2")
         usage = UsageInfo(
             provider="leonardo",
-            model=params.get("model", "MOTION2"),
+            model=model_id,
+            display_name=MODEL_DISPLAY_NAMES.get(model_id, f"Leonardo {model_id}"),
             action_type="img2vid",
             total_cost=preview_info.credits.total_cost_usd,
             credits=int(preview_info.credits.credits),

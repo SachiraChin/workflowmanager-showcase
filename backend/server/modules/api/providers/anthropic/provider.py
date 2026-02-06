@@ -886,8 +886,9 @@ class AnthropicProvider(LLMProviderBase):
             cache_creation_tokens = usage.get("cache_creation_tokens", 0)
             total_tokens = usage.get("total_tokens", 0)
 
-            # Get pricing from model config
+            # Get model config (includes display_name and pricing)
             capabilities = self.get_model_capabilities(model)
+            display_name = capabilities.get("display_name", f"Anthropic {model}")
             pricing = capabilities.get("pricing", {})
             input_price = pricing.get("input_token", 0.0)
             output_price = pricing.get("output_token", 0.0)
@@ -909,6 +910,23 @@ class AnthropicProvider(LLMProviderBase):
                 cache_creation_token_cost
             )
 
+            # Build usage entry
+            usage_entry = {
+                "provider": "anthropic",
+                "model": model,
+                "display_name": display_name,
+                "input_tokens": input_tokens,
+                "input_token_cost": input_token_cost,
+                "output_tokens": output_tokens,
+                "output_token_cost": output_token_cost,
+                "cache_read_tokens": cache_read_tokens,
+                "cache_read_token_cost": cache_read_token_cost,
+                "cache_creation_tokens": cache_creation_tokens,
+                "cache_creation_token_cost": cache_creation_token_cost,
+                "total_tokens": total_tokens,
+                "total_cost": total_cost,
+            }
+
             # Store to database
             has_db = hasattr(context, 'db') and context.db is not None
             context.logger.info(
@@ -917,23 +935,13 @@ class AnthropicProvider(LLMProviderBase):
                 f"total_cost=${total_cost:.6f}"
             )
             if has_db:
-                context.db.token_repo.store_llm_anthropic_usage(
+                context.db.token_repo.store_usage(
                     workflow_run_id=context.workflow_run_id,
                     step_id=step_id,
                     step_name=step_name,
                     module_name=module_name,
                     module_index=module_index,
-                    model=model,
-                    input_tokens=input_tokens,
-                    input_token_cost=input_token_cost,
-                    output_tokens=output_tokens,
-                    output_token_cost=output_token_cost,
-                    cache_read_tokens=cache_read_tokens,
-                    cache_read_token_cost=cache_read_token_cost,
-                    cache_creation_tokens=cache_creation_tokens,
-                    cache_creation_token_cost=cache_creation_token_cost,
-                    total_tokens=total_tokens,
-                    total_cost=total_cost,
+                    usage=[usage_entry],
                 )
         except Exception as e:
             context.logger.warning(f"Failed to store token usage: {e}")

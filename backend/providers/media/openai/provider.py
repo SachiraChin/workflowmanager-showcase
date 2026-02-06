@@ -62,6 +62,16 @@ SUPPORTED_VIDEO_MODELS = [
     "sora-2-pro",  # Higher quality, production use
 ]
 
+# Model display names for UI and usage tracking
+MODEL_DISPLAY_NAMES = {
+    "gpt-image-1.5": "OpenAI GPT Image 1.5",
+    "chatgpt-image-latest": "OpenAI ChatGPT Image",
+    "gpt-image-1": "OpenAI GPT Image 1",
+    "gpt-image-1-mini": "OpenAI GPT Image 1 Mini",
+    "sora-2": "OpenAI Sora 2",
+    "sora-2-pro": "OpenAI Sora 2 Pro",
+}
+
 # Available image sizes (only these 3 supported by GPT Image models)
 SUPPORTED_IMAGE_SIZES = [
     "1024x1024",  # Square (1:1)
@@ -419,6 +429,7 @@ class OpenAIProvider(MediaProviderBase):
         usage = UsageInfo(
             provider="openai",
             model=model,
+            display_name=MODEL_DISPLAY_NAMES.get(model, f"OpenAI {model}"),
             action_type="txt2img",
             total_cost=preview_info.credits.total_cost_usd,
             image_count=len(content),
@@ -535,6 +546,7 @@ class OpenAIProvider(MediaProviderBase):
         usage = UsageInfo(
             provider="openai",
             model=model,
+            display_name=MODEL_DISPLAY_NAMES.get(model, f"OpenAI {model}"),
             action_type="img2img",
             total_cost=preview_info.credits.total_cost_usd,
             image_count=len(content),
@@ -704,6 +716,7 @@ class OpenAIProvider(MediaProviderBase):
         usage = UsageInfo(
             provider="openai",
             model=model,
+            display_name=MODEL_DISPLAY_NAMES.get(model, f"OpenAI {model}"),
             action_type="img2vid",
             total_cost=preview_info.credits.total_cost_usd,
             duration_seconds=duration,

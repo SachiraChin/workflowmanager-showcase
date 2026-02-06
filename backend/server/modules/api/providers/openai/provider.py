@@ -838,8 +838,9 @@ class OpenAIProvider(LLMProviderBase):
             cached_tokens = usage.get("cached_tokens", 0)
             total_tokens = usage.get("total_tokens", 0)
 
-            # Get pricing from model config
+            # Get model config (includes display_name and pricing)
             capabilities = self.get_model_capabilities(model)
+            display_name = capabilities.get("display_name", f"OpenAI {model}")
             pricing = capabilities.get("pricing", {})
             prompt_price = pricing.get("prompt_token", 0.0)
             completion_price = pricing.get("completion_token", 0.0)
@@ -854,6 +855,21 @@ class OpenAIProvider(LLMProviderBase):
             cached_token_cost = cached_tokens * cached_price
             total_cost = prompt_token_cost + completion_token_cost + cached_token_cost
 
+            # Build usage entry
+            usage_entry = {
+                "provider": "openai",
+                "model": model,
+                "display_name": display_name,
+                "prompt_tokens": prompt_tokens,
+                "prompt_token_cost": prompt_token_cost,
+                "completion_tokens": completion_tokens,
+                "completion_token_cost": completion_token_cost,
+                "cached_tokens": cached_tokens,
+                "cached_token_cost": cached_token_cost,
+                "total_tokens": total_tokens,
+                "total_cost": total_cost,
+            }
+
             # Store to database
             has_db = hasattr(context, 'db') and context.db is not None
             context.logger.info(
@@ -862,21 +878,13 @@ class OpenAIProvider(LLMProviderBase):
                 f"total_cost=${total_cost:.6f}"
             )
             if has_db:
-                context.db.token_repo.store_llm_openai_usage(
+                context.db.token_repo.store_usage(
                     workflow_run_id=context.workflow_run_id,
                     step_id=step_id,
                     step_name=step_name,
                     module_name=module_name,
                     module_index=module_index,
-                    model=model,
-                    prompt_tokens=prompt_tokens,
-                    prompt_token_cost=prompt_token_cost,
-                    completion_tokens=completion_tokens,
-                    completion_token_cost=completion_token_cost,
-                    cached_tokens=cached_tokens,
-                    cached_token_cost=cached_token_cost,
-                    total_tokens=total_tokens,
-                    total_cost=total_cost,
+                    usage=[usage_entry],
                 )
         except Exception as e:
             context.logger.warning(f"Failed to store token usage: {e}")

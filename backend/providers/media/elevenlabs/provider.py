@@ -360,6 +360,7 @@ class ElevenLabsProvider(MediaProviderBase):
         usage = UsageInfo(
             provider="elevenlabs",
             model="eleven_music",
+            display_name="ElevenLabs Music",
             action_type="txt2audio",
             total_cost=preview_info.credits.total_cost_usd,
             audio_type="music",

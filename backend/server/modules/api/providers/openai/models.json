@@ -1,25 +1,281 @@
 {
   "default": {
+    "display_name": "OpenAI",
     "api_endpoint": "responses",
     "supports": {
-      "temperature": { "min": 0, "max": 2, "default": 1 },
-      "max_tokens": { "max": 16384 },
+      "temperature": {
+        "min": 0,
+        "max": 2,
+        "default": 1
+      }
+    }
+  },
+  "gpt-5.2": {
+    "display_name": "OpenAI GPT-5.2",
+    "api_endpoint": "responses",
+    "supports": {
+      "temperature": false,
+      "max_tokens": {
+        "max": 100000
+      },
+      "vision": true,
+      "structured_output": true,
+      "reasoning_effort": {
+        "values": [
+          "low",
+          "medium",
+          "high"
+        ],
+        "default": "medium"
+      },
+      "cache_control": true
+    },
+    "pricing": {
+      "prompt_token": 0.00000175,
+      "completion_token": 0.000014,
+      "cached_token": 1.8E-7
+    }
+  },
+  "gpt-5.2-codex": {
+    "display_name": "OpenAI GPT-5.2 Codex",
+    "api_endpoint": "responses",
+    "supports": {
+      "temperature": false,
+      "max_tokens": {
+        "max": 100000
+      },
+      "vision": true,
+      "structured_output": true,
+      "reasoning_effort": {
+        "values": [
+          "low",
+          "medium",
+          "high"
+        ],
+        "default": "medium"
+      },
+      "cache_control": true
+    },
+    "pricing": {
+      "prompt_token": 0.00000175,
+      "completion_token": 0.000014,
+      "cached_token": 1.8E-7
+    }
+  },
+  "gpt-5.1": {
+    "display_name": "OpenAI GPT-5.1",
+    "api_endpoint": "responses",
+    "supports": {
+      "temperature": false,
+      "max_tokens": {
+        "max": 100000
+      },
+      "vision": true,
+      "structured_output": true,
+      "reasoning_effort": {
+        "values": [
+          "low",
+          "medium",
+          "high"
+        ],
+        "default": "medium"
+      },
+      "cache_control": true
+    },
+    "pricing": {
+      "prompt_token": 0.00000125,
+      "completion_token": 0.00001,
+      "cached_token": 1.2E-7
+    }
+  },
+  "gpt-5.1-codex": {
+    "display_name": "OpenAI GPT-5.1 Codex",
+    "api_endpoint": "responses",
+    "supports": {
+      "temperature": false,
+      "max_tokens": {
+        "max": 100000
+      },
+      "vision": true,
+      "structured_output": true,
+      "reasoning_effort": {
+        "values": [
+          "low",
+          "medium",
+          "high"
+        ],
+        "default": "medium"
+      },
+      "cache_control": true
+    },
+    "pricing": {
+      "prompt_token": 0.00000125,
+      "completion_token": 0.00001,
+      "cached_token": 1.2E-7
+    }
+  },
+  "gpt-5.1-codex-max": {
+    "display_name": "OpenAI GPT-5.1 Codex Max",
+    "api_endpoint": "responses",
+    "supports": {
+      "temperature": false,
+      "max_tokens": {
+        "max": 100000
+      },
+      "vision": true,
+      "structured_output": true,
+      "reasoning_effort": {
+        "values": [
+          "low",
+          "medium",
+          "high"
+        ],
+        "default": "medium"
+      },
+      "cache_control": true
+    },
+    "pricing": {
+      "prompt_token": 0.00000125,
+      "completion_token": 0.00001,
+      "cached_token": 1.2E-7
+    }
+  },
+  "gpt-5": {
+    "display_name": "OpenAI GPT-5",
+    "api_endpoint": "responses",
+    "supports": {
+      "temperature": false,
+      "max_tokens": {
+        "max": 100000
+      },
+      "vision": true,
+      "structured_output": true,
+      "reasoning_effort": {
+        "values": [
+          "low",
+          "medium",
+          "high"
+        ],
+        "default": "medium"
+      },
+      "cache_control": true
+    },
+    "pricing": {
+      "prompt_token": 0.00000125,
+      "completion_token": 0.00001,
+      "cached_token": 1.2E-7
+    }
+  },
+  "gpt-5-codex": {
+    "display_name": "OpenAI GPT-5 Codex",
+    "api_endpoint": "responses",
+    "supports": {
+      "temperature": false,
+      "max_tokens": {
+        "max": 100000
+      },
+      "vision": true,
+      "structured_output": true,
+      "reasoning_effort": {
+        "values": [
+          "low",
+          "medium",
+          "high"
+        ],
+        "default": "medium"
+      },
+      "cache_control": true
+    },
+    "pricing": {
+      "prompt_token": 0.00000125,
+      "completion_token": 0.00001,
+      "cached_token": 1.2E-7
+    }
+  },
+  "gpt-5-mini": {
+    "display_name": "OpenAI GPT-5 Mini",
+    "api_endpoint": "responses",
+    "supports": {
+      "temperature": false,
+      "max_tokens": {
+        "max": 65536
+      },
+      "vision": false,
+      "structured_output": true,
+      "reasoning_effort": {
+        "values": [
+          "low",
+          "medium",
+          "high"
+        ],
+        "default": "low"
+      },
+      "cache_control": true
+    },
+    "pricing": {
+      "prompt_token": 2.5E-7,
+      "completion_token": 0.000002,
+      "cached_token": 1.2E-7
+    }
+  },
+  "gpt-4.1": {
+    "display_name": "OpenAI GPT-4.1",
+    "api_endpoint": "responses",
+    "supports": {
+      "temperature": {
+        "min": 0,
+        "max": 2,
+        "default": 1
+      },
+      "max_tokens": {
+        "max": 32768
+      },
       "vision": true,
       "structured_output": true,
       "reasoning_effort": false,
       "cache_control": false
     },
     "pricing": {
-      "prompt_token": 0.0000025,
-      "completion_token": 0.00001,
-      "cached_token": 0.00000125
+      "prompt_token": 0.000002,
+      "completion_token": 0.000008,
+      "cached_token": 5E-7
+    }
+  },
+  "gpt-4.1-mini": {
+    "display_name": "OpenAI GPT-4.1 Mini",
+    "api_endpoint": "responses",
+    "supports": {
+      "temperature": {
+        "min": 0,
+        "max": 2,
+        "default": 1
+      },
+      "max_tokens": {
+        "max": 32768
+      },
+      "vision": true,
+      "structured_output": true,
+      "reasoning_effort": false,
+      "cache_control": false
+    },
+    "pricing": {
+      "prompt_token": 4E-7,
+      "completion_token": 0.0000016,
+      "cached_token": 1E-7
     }
   },
   "gpt-4o": {
+    "display_name": "OpenAI GPT-4o",
     "api_endpoint": "responses",
     "supports": {
-      "temperature": { "min": 0, "max": 2, "default": 1 },
-      "max_tokens": { "max": 16384 },
+      "temperature": {
+        "min": 0,
+        "max": 2,
+        "default": 1
+      },
+      "max_tokens": {
+        "max": 16384
+      },
       "vision": true,
       "structured_output": true,
       "reasoning_effort": false,
@@ -32,227 +288,26 @@
     }
   },
   "gpt-4o-mini": {
+    "display_name": "OpenAI GPT-4o Mini",
     "api_endpoint": "responses",
     "supports": {
-      "temperature": { "min": 0, "max": 2, "default": 1 },
-      "max_tokens": { "max": 16384 },
+      "temperature": {
+        "min": 0,
+        "max": 2,
+        "default": 1
+      },
+      "max_tokens": {
+        "max": 16384
+      },
       "vision": true,
       "structured_output": true,
       "reasoning_effort": false,
       "cache_control": false
     },
     "pricing": {
-      "prompt_token": 0.00000015,
-      "completion_token": 0.0000006,
-      "cached_token": 0.000000075
-    }
-  },
-  "gpt-4.1": {
-    "api_endpoint": "responses",
-    "supports": {
-      "temperature": { "min": 0, "max": 2, "default": 1 },
-      "max_tokens": { "max": 32768 },
-      "vision": true,
-      "structured_output": true,
-      "reasoning_effort": false,
-      "cache_control": false
-    },
-    "pricing": {
-      "prompt_token": 0.000002,
-      "completion_token": 0.000008,
-      "cached_token": 0.0000005
-    }
-  },
-  "gpt-4.1-mini": {
-    "api_endpoint": "responses",
-    "supports": {
-      "temperature": { "min": 0, "max": 2, "default": 1 },
-      "max_tokens": { "max": 32768 },
-      "vision": true,
-      "structured_output": true,
-      "reasoning_effort": false,
-      "cache_control": false
-    },
-    "pricing": {
-      "prompt_token": 0.0000004,
-      "completion_token": 0.0000016,
-      "cached_token": 0.0000001
-    }
-  },
-  "gpt-5.2": {
-    "api_endpoint": "responses",
-    "supports": {
-      "temperature": false,
-      "max_tokens": { "max": 100000 },
-      "vision": true,
-      "structured_output": true,
-      "reasoning_effort": { "values": ["low", "medium", "high"], "default": "medium" },
-      "cache_control": true
-    },
-    "pricing": {
-      "prompt_token": 0.000004,
-      "completion_token": 0.000016,
-      "cached_token": 0.000001
-    }
-  },
-  "gpt-5.1": {
-    "api_endpoint": "responses",
-    "supports": {
-      "temperature": false,
-      "max_tokens": { "max": 100000 },
-      "vision": true,
-      "structured_output": true,
-      "reasoning_effort": { "values": ["low", "medium", "high"], "default": "medium" },
-      "cache_control": true
-    },
-    "pricing": {
-      "prompt_token": 0.000004,
-      "completion_token": 0.000016,
-      "cached_token": 0.000001
-    }
-  },
-  "gpt-5-mini": {
-    "api_endpoint": "responses",
-    "supports": {
-      "temperature": false,
-      "max_tokens": { "max": 65536 },
-      "vision": false,
-      "structured_output": true,
-      "reasoning_effort": { "values": ["low", "medium", "high"], "default": "low" },
-      "cache_control": true
-    },
-    "pricing": {
-      "prompt_token": 0.0000012,
-      "completion_token": 0.0000048,
-      "cached_token": 0.0000003
-    }
-  },
-  "o1": {
-    "api_endpoint": "responses",
-    "supports": {
-      "temperature": false,
-      "max_tokens": { "max": 100000 },
-      "vision": true,
-      "structured_output": true,
-      "reasoning_effort": { "values": ["low", "medium", "high"], "default": "medium" },
-      "cache_control": false
-    },
-    "pricing": {
-      "prompt_token": 0.000015,
-      "completion_token": 0.00006,
-      "cached_token": 0.0000075
-    }
-  },
-  "o1-mini": {
-    "api_endpoint": "responses",
-    "supports": {
-      "temperature": false,
-      "max_tokens": { "max": 65536 },
-      "vision": false,
-      "structured_output": true,
-      "reasoning_effort": { "values": ["low", "medium", "high"], "default": "low" },
-      "cache_control": false
-    },
-    "pricing": {
-      "prompt_token": 0.000001,
-      "completion_token": 0.000004,
-      "cached_token": 0.0000005
-    }
-  },
-  "o3": {
-    "api_endpoint": "responses",
-    "supports": {
-      "temperature": false,
-      "max_tokens": { "max": 100000 },
-      "vision": true,
-      "structured_output": true,
-      "reasoning_effort": { "values": ["low", "medium", "high"], "default": "medium" },
-      "cache_control": false
-    },
-    "pricing": {
-      "prompt_token": 0.00001,
-      "completion_token": 0.00004,
-      "cached_token": 0.000005
-    }
-  },
-  "o3-mini": {
-    "api_endpoint": "responses",
-    "supports": {
-      "temperature": false,
-      "max_tokens": { "max": 65536 },
-      "vision": false,
-      "structured_output": true,
-      "reasoning_effort": { "values": ["low", "medium", "high"], "default": "low" },
-      "cache_control": false
-    },
-    "pricing": {
-      "prompt_token": 0.0000011,
-      "completion_token": 0.0000044,
-      "cached_token": 0.00000055
-    }
-  },
-  "o4-mini": {
-    "api_endpoint": "responses",
-    "supports": {
-      "temperature": false,
-      "max_tokens": { "max": 100000 },
-      "vision": true,
-      "structured_output": true,
-      "reasoning_effort": { "values": ["low", "medium", "high"], "default": "low" },
-      "cache_control": false
-    },
-    "pricing": {
-      "prompt_token": 0.0000011,
-      "completion_token": 0.0000044,
-      "cached_token": 0.00000055
-    }
-  },
-  "gpt-4-turbo": {
-    "api_endpoint": "completions",
-    "supports": {
-      "temperature": { "min": 0, "max": 2, "default": 1 },
-      "max_tokens": { "max": 4096 },
-      "vision": true,
-      "structured_output": false,
-      "reasoning_effort": false,
-      "cache_control": false
-    },
-    "pricing": {
-      "prompt_token": 0.00001,
-      "completion_token": 0.00003,
-      "cached_token": 0.000005
-    }
-  },
-  "gpt-4": {
-    "api_endpoint": "completions",
-    "supports": {
-      "temperature": { "min": 0, "max": 2, "default": 1 },
-      "max_tokens": { "max": 8192 },
-      "vision": false,
-      "structured_output": false,
-      "reasoning_effort": false,
-      "cache_control": false
-    },
-    "pricing": {
-      "prompt_token": 0.00003,
-      "completion_token": 0.00006,
-      "cached_token": 0.000015
-    }
-  },
-  "gpt-3.5-turbo": {
-    "api_endpoint": "completions",
-    "supports": {
-      "temperature": { "min": 0, "max": 2, "default": 1 },
-      "max_tokens": { "max": 4096 },
-      "vision": false,
-      "structured_output": false,
-      "reasoning_effort": false,
-      "cache_control": false
-    },
-    "pricing": {
-      "prompt_token": 0.0000005,
-      "completion_token": 0.0000015,
-      "cached_token": 0.00000025
+      "prompt_token": 1.5E-7,
+      "completion_token": 0.000000,
+      "cached_token": 2E-8
     }
   }
 }

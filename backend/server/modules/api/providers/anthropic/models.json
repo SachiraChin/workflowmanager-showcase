@@ -1,9 +1,17 @@
 {
   "default": {
+    "display_name": "Anthropic Claude",
     "api_endpoint": "messages",
     "supports": {
-      "temperature": { "min": 0, "max": 1, "default": 1 },
-      "max_tokens": { "max": 8192, "required": true },
+      "temperature": {
+        "min": 0,
+        "max": 1,
+        "default": 1
+      },
+      "max_tokens": {
+        "max": 8192,
+        "required": true
+      },
       "vision": true,
       "structured_output": false,
       "extended_thinking": false,
@@ -12,15 +20,23 @@
     "pricing": {
       "input_token": 0.000003,
       "output_token": 0.000015,
-      "cache_read_token": 0.0000003,
+      "cache_read_token": 3E-7,
       "cache_creation_token": 0.00000375
     }
   },
   "claude-opus-4-6": {
+    "display_name": "Anthropic Claude Opus 4.6",
     "api_endpoint": "messages",
     "supports": {
-      "temperature": { "min": 0, "max": 1, "default": 1 },
-      "max_tokens": { "max": 128000, "required": true },
+      "temperature": {
+        "min": 0,
+        "max": 1,
+        "default": 1
+      },
+      "max_tokens": {
+        "max": 128000,
+        "required": true
+      },
       "vision": true,
       "structured_output": true,
       "extended_thinking": true,
@@ -28,119 +44,50 @@
       "cache_control": true
     },
     "pricing": {
-      "input_token": 0.000018,
-      "output_token": 0.000090,
-      "cache_read_token": 0.0000018,
-      "cache_creation_token": 0.0000225
-    }
-  },
-  "claude-sonnet-4-5": {
-    "api_endpoint": "messages",
-    "supports": {
-      "temperature": { "min": 0, "max": 1, "default": 1 },
-      "max_tokens": { "max": 64000, "required": true },
-      "vision": true,
-      "structured_output": true,
-      "extended_thinking": true,
-      "cache_control": true
-    },
-    "pricing": {
-      "input_token": 0.000004,
-      "output_token": 0.000020,
-      "cache_read_token": 0.0000004,
-      "cache_creation_token": 0.000005
-    }
-  },
-  "claude-sonnet-4-5-20250929": {
-    "api_endpoint": "messages",
-    "supports": {
-      "temperature": { "min": 0, "max": 1, "default": 1 },
-      "max_tokens": { "max": 64000, "required": true },
-      "vision": true,
-      "structured_output": true,
-      "extended_thinking": true,
-      "cache_control": true
-    },
-    "pricing": {
-      "input_token": 0.000004,
-      "output_token": 0.000020,
-      "cache_read_token": 0.0000004,
-      "cache_creation_token": 0.000005
-    }
-  },
-  "claude-haiku-4-5": {
-    "api_endpoint": "messages",
-    "supports": {
-      "temperature": { "min": 0, "max": 1, "default": 1 },
-      "max_tokens": { "max": 64000, "required": true },
-      "vision": true,
-      "structured_output": true,
-      "extended_thinking": true,
-      "cache_control": true
-    },
-    "pricing": {
-      "input_token": 0.0000008,
-      "output_token": 0.000004,
-      "cache_read_token": 0.00000008,
-      "cache_creation_token": 0.000001
-    }
-  },
-  "claude-haiku-4-5-20251001": {
-    "api_endpoint": "messages",
-    "supports": {
-      "temperature": { "min": 0, "max": 1, "default": 1 },
-      "max_tokens": { "max": 64000, "required": true },
-      "vision": true,
-      "structured_output": true,
-      "extended_thinking": true,
-      "cache_control": true
-    },
-    "pricing": {
-      "input_token": 0.0000008,
-      "output_token": 0.000004,
-      "cache_read_token": 0.00000008,
-      "cache_creation_token": 0.000001
+      "input_token": 0.000005,
+      "output_token": 0.000025,
+      "cache_read_token": 5E-7,
+      "cache_creation_token": 0.00001
     }
   },
   "claude-opus-4-5": {
+    "display_name": "Anthropic Claude Opus 4.5",
     "api_endpoint": "messages",
     "supports": {
-      "temperature": { "min": 0, "max": 1, "default": 1 },
-      "max_tokens": { "max": 64000, "required": true },
+      "temperature": {
+        "min": 0,
+        "max": 1,
+        "default": 1
+      },
+      "max_tokens": {
+        "max": 64000,
+        "required": true
+      },
       "vision": true,
       "structured_output": true,
       "extended_thinking": true,
       "cache_control": true
     },
     "pricing": {
-      "input_token": 0.000015,
-      "output_token": 0.000075,
-      "cache_read_token": 0.0000015,
-      "cache_creation_token": 0.00001875
-    }
-  },
-  "claude-opus-4-5-20251101": {
-    "api_endpoint": "messages",
-    "supports": {
-      "temperature": { "min": 0, "max": 1, "default": 1 },
-      "max_tokens": { "max": 64000, "required": true },
-      "vision": true,
-      "structured_output": true,
-      "extended_thinking": true,
-      "cache_control": true
-    },
-    "pricing": {
-      "input_token": 0.000015,
-      "output_token": 0.000075,
-      "cache_read_token": 0.0000015,
-      "cache_creation_token": 0.00001875
+      "input_token": 0.000005,
+      "output_token": 0.000025,
+      "cache_read_token": 5E-7,
+      "cache_creation_token": 0.00001
     }
   },
   "claude-opus-4-1": {
+    "display_name": "Anthropic Claude Opus 4.1",
     "api_endpoint": "messages",
     "supports": {
-      "temperature": { "min": 0, "max": 1, "default": 1 },
-      "max_tokens": { "max": 32000, "required": true },
+      "temperature": {
+        "min": 0,
+        "max": 1,
+        "default": 1
+      },
+      "max_tokens": {
+        "max": 32000,
+        "required": true
+      },
       "vision": true,
       "structured_output": false,
       "extended_thinking": true,
@@ -150,65 +97,22 @@
       "input_token": 0.000015,
       "output_token": 0.000075,
       "cache_read_token": 0.0000015,
-      "cache_creation_token": 0.00001875
-    }
-  },
-  "claude-opus-4-1-20250805": {
-    "api_endpoint": "messages",
-    "supports": {
-      "temperature": { "min": 0, "max": 1, "default": 1 },
-      "max_tokens": { "max": 32000, "required": true },
-      "vision": true,
-      "structured_output": false,
-      "extended_thinking": true,
-      "cache_control": true
-    },
-    "pricing": {
-      "input_token": 0.000015,
-      "output_token": 0.000075,
-      "cache_read_token": 0.0000015,
-      "cache_creation_token": 0.00001875
-    }
-  },
-  "claude-sonnet-4-0": {
-    "api_endpoint": "messages",
-    "supports": {
-      "temperature": { "min": 0, "max": 1, "default": 1 },
-      "max_tokens": { "max": 64000, "required": true },
-      "vision": true,
-      "structured_output": false,
-      "extended_thinking": true,
-      "cache_control": true
-    },
-    "pricing": {
-      "input_token": 0.000003,
-      "output_token": 0.000015,
-      "cache_read_token": 0.0000003,
-      "cache_creation_token": 0.00000375
-    }
-  },
-  "claude-sonnet-4-20250514": {
-    "api_endpoint": "messages",
-    "supports": {
-      "temperature": { "min": 0, "max": 1, "default": 1 },
-      "max_tokens": { "max": 64000, "required": true },
-      "vision": true,
-      "structured_output": false,
-      "extended_thinking": true,
-      "cache_control": true
-    },
-    "pricing": {
-      "input_token": 0.000003,
-      "output_token": 0.000015,
-      "cache_read_token": 0.0000003,
-      "cache_creation_token": 0.00000375
+      "cache_creation_token": 0.00003
     }
   },
   "claude-opus-4-0": {
+    "display_name": "Anthropic Claude Opus 4",
     "api_endpoint": "messages",
     "supports": {
-      "temperature": { "min": 0, "max": 1, "default": 1 },
-      "max_tokens": { "max": 32000, "required": true },
+      "temperature": {
+        "min": 0,
+        "max": 1,
+        "default": 1
+      },
+      "max_tokens": {
+        "max": 32000,
+        "required": true
+      },
       "vision": true,
       "structured_output": false,
       "extended_thinking": true,
@@ -218,31 +122,47 @@
       "input_token": 0.000015,
       "output_token": 0.000075,
       "cache_read_token": 0.0000015,
-      "cache_creation_token": 0.00001875
+      "cache_creation_token": 0.00003
     }
   },
-  "claude-opus-4-20250514": {
+  "claude-sonnet-4-5": {
+    "display_name": "Anthropic Claude Sonnet 4.5",
     "api_endpoint": "messages",
     "supports": {
-      "temperature": { "min": 0, "max": 1, "default": 1 },
-      "max_tokens": { "max": 32000, "required": true },
+      "temperature": {
+        "min": 0,
+        "max": 1,
+        "default": 1
+      },
+      "max_tokens": {
+        "max": 64000,
+        "required": true
+      },
       "vision": true,
-      "structured_output": false,
+      "structured_output": true,
       "extended_thinking": true,
       "cache_control": true
     },
     "pricing": {
-      "input_token": 0.000015,
-      "output_token": 0.000075,
-      "cache_read_token": 0.0000015,
-      "cache_creation_token": 0.00001875
+      "input_token": 0.000003,
+      "output_token": 0.000015,
+      "cache_read_token": 3E-7,
+      "cache_creation_token": 0.000006
     }
   },
-  "claude-3-7-sonnet-20250219": {
+  "claude-sonnet-4-0": {
+    "display_name": "Anthropic Claude Sonnet 4",
     "api_endpoint": "messages",
     "supports": {
-      "temperature": { "min": 0, "max": 1, "default": 1 },
-      "max_tokens": { "max": 64000, "required": true },
+      "temperature": {
+        "min": 0,
+        "max": 1,
+        "default": 1
+      },
+      "max_tokens": {
+        "max": 64000,
+        "required": true
+      },
       "vision": true,
       "structured_output": false,
       "extended_thinking": true,
@@ -251,42 +171,33 @@
     "pricing": {
       "input_token": 0.000003,
       "output_token": 0.000015,
-      "cache_read_token": 0.0000003,
-      "cache_creation_token": 0.00000375
+      "cache_read_token": 3E-7,
+      "cache_creation_token": 0.000006
     }
   },
-  "claude-3-7-sonnet-latest": {
+  "claude-haiku-4-5": {
+    "display_name": "Anthropic Claude Haiku 4.5",
     "api_endpoint": "messages",
     "supports": {
-      "temperature": { "min": 0, "max": 1, "default": 1 },
-      "max_tokens": { "max": 64000, "required": true },
+      "temperature": {
+        "min": 0,
+        "max": 1,
+        "default": 1
+      },
+      "max_tokens": {
+        "max": 64000,
+        "required": true
+      },
       "vision": true,
-      "structured_output": false,
+      "structured_output": true,
       "extended_thinking": true,
       "cache_control": true
     },
     "pricing": {
-      "input_token": 0.000003,
-      "output_token": 0.000015,
-      "cache_read_token": 0.0000003,
-      "cache_creation_token": 0.00000375
-    }
-  },
-  "claude-3-haiku-20240307": {
-    "api_endpoint": "messages",
-    "supports": {
-      "temperature": { "min": 0, "max": 1, "default": 1 },
-      "max_tokens": { "max": 4096, "required": true },
-      "vision": true,
-      "structured_output": false,
-      "extended_thinking": false,
-      "cache_control": true
-    },
-    "pricing": {
-      "input_token": 0.00000025,
-      "output_token": 0.00000125,
-      "cache_read_token": 0.00000003,
-      "cache_creation_token": 0.0000003
+      "input_token": 0.000001,
+      "output_token": 0.000005,
+      "cache_read_token": 1E-7,
+      "cache_creation_token": 0.000002
     }
   }
 }
