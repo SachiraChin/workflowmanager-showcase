@@ -1,5 +1,5 @@
 /**
- * LoginPage - Email/password login form.
+ * LoginPage - Username/email + password login form.
  *
  * Handles authentication via httpOnly cookies.
  */
@@ -11,14 +11,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, LogIn } from "lucide-react";
-import { API_URL } from "@/core/config";
+import { api } from "@/core/api";
 
 interface LoginPageProps {
-  onLoginSuccess: (user: { user_id: string; email: string; username: string }) => void;
+  onLoginSuccess: (user: { user_id: string; email?: string | null; username: string }) => void;
 }
 
 export function LoginPage({ onLoginSuccess }: LoginPageProps) {
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,21 +30,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
       setError(null);
 
       try {
-        const response = await fetch(`${API_URL}/auth/login`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include", // Important: include cookies
-          body: JSON.stringify({ email, password }),
-        });
-
-        if (!response.ok) {
-          const data = await response.json().catch(() => ({}));
-          throw new Error(data.detail || `Login failed: ${response.status}`);
-        }
-
-        const data = await response.json();
+        const data = await api.login(identifier, password);
         onLoginSuccess({
           user_id: data.user_id,
           email: data.email,
@@ -56,7 +42,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
         setIsLoading(false);
       }
     },
-    [email, password, onLoginSuccess]
+    [identifier, password, onLoginSuccess]
   );
 
   return (
@@ -65,22 +51,22 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold">Login</CardTitle>
           <CardDescription>
-            Enter your credentials to access the workflow engine
+            Sign in with your username or email address
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="identifier">Username or Email</Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="identifier"
+                type="text"
+                placeholder="yourname or you@example.com"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
                 disabled={isLoading}
                 required
-                autoComplete="email"
+                autoComplete="username"
                 autoFocus
               />
             </div>
@@ -118,6 +104,10 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
                 </>
               )}
             </Button>
+
+            <p className="text-xs text-muted-foreground text-center">
+              Need an account? Open your invitation link to create one.
+            </p>
           </form>
         </CardContent>
       </Card>

@@ -506,20 +506,54 @@ class ApiClient {
   // Authentication Endpoints
   // ============================================================
 
-  async login(email: string, password: string): Promise<{
+  async login(identifier: string, password: string): Promise<{
     user_id: string;
-    email: string;
+    email?: string | null;
     username: string;
     message: string;
   }> {
     return this.requestRaw<{
       user_id: string;
-      email: string;
+      email?: string | null;
       username: string;
       message: string;
     }>("/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ identifier, password }),
+    });
+  }
+
+  async getInvitationStatus(invitationCode: string): Promise<{
+    invitation_code: string;
+    remaining_uses: number;
+    expires_at?: string | null;
+  }> {
+    return this.requestRaw<{
+      invitation_code: string;
+      remaining_uses: number;
+      expires_at?: string | null;
+    }>(`/auth/invitation/${encodeURIComponent(invitationCode)}`);
+  }
+
+  async registerWithInvitation(request: {
+    invitation_code: string;
+    username: string;
+    password: string;
+    email?: string;
+  }): Promise<{
+    user_id: string;
+    email?: string | null;
+    username: string;
+    message: string;
+  }> {
+    return this.requestRaw<{
+      user_id: string;
+      email?: string | null;
+      username: string;
+      message: string;
+    }>("/auth/register", {
+      method: "POST",
+      body: JSON.stringify(request),
     });
   }
 
@@ -537,13 +571,13 @@ class ApiClient {
 
   async getCurrentUser(): Promise<{
     user_id: string;
-    email: string;
+    email?: string | null;
     username: string;
   }> {
     // Use request (with auth retry) so expired access tokens trigger refresh
     return this.request<{
       user_id: string;
-      email: string;
+      email?: string | null;
       username: string;
     }>("/auth/me");
   }

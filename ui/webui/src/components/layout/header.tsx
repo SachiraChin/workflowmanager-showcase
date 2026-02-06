@@ -7,7 +7,7 @@ import { cn } from "@/core/utils";
 interface HeaderProps {
   showBackButton?: boolean;
   onBack?: () => void;
-  user?: { username: string; email: string } | null;
+  user?: { username: string; email?: string | null } | null;
   onLogout?: () => void;
   /** Callback when debug mode is toggled (to trigger view refresh) */
   onDebugModeChange?: (enabled: boolean) => void;

@@ -12,6 +12,7 @@ import { Loader2 } from "lucide-react";
 import { WorkflowStartPage } from "@/pages/WorkflowStartPage";
 import { WorkflowRunnerPage } from "@/pages/WorkflowRunnerPage";
 import { LoginPage } from "@/pages/LoginPage";
+import { InvitationSignupPage } from "@/pages/InvitationSignupPage";
 import { api, setAccessDeniedHandler } from "@/core/api";
 import { useWorkflowExecution, setCapabilities } from "@/state/hooks/useWorkflowExecution";
 import { useWorkflowStore } from "@/state/workflow-store";
@@ -19,7 +20,7 @@ import { WEBUI_CAPABILITIES } from "@/lib/capabilities";
 
 interface User {
   user_id: string;
-  email: string;
+  email?: string | null;
   username: string;
 }
 
@@ -95,6 +96,18 @@ function AppContent({ user, onLogout }: { user: User; onLogout: () => void }) {
   );
 }
 
+function PublicAppContent({ onLoginSuccess }: { onLoginSuccess: (user: User) => void }) {
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginPage onLoginSuccess={onLoginSuccess} />} />
+      <Route path="/invite" element={<InvitationSignupPage onLoginSuccess={onLoginSuccess} />} />
+      <Route path="/invite/:invitationCode" element={<InvitationSignupPage onLoginSuccess={onLoginSuccess} />} />
+      <Route path="/invite/*" element={<InvitationSignupPage onLoginSuccess={onLoginSuccess} />} />
+      <Route path="*" element={<Navigate to="/login" replace />} />
+    </Routes>
+  );
+}
+
 function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
@@ -144,24 +157,17 @@ function App() {
     setUser(null);
   }, []);
 
-  // Show loading while checking auth
-  if (isCheckingAuth) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  // Show login page if not authenticated
-  if (!user) {
-    return <LoginPage onLoginSuccess={handleLoginSuccess} />;
-  }
-
-  // Authenticated - show app with routing
   return (
     <BrowserRouter>
-      <AppContent user={user} onLogout={handleLogout} />
+      {isCheckingAuth ? (
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : user ? (
+        <AppContent user={user} onLogout={handleLogout} />
+      ) : (
+        <PublicAppContent onLoginSuccess={handleLoginSuccess} />
+      )}
     </BrowserRouter>
   );
 }

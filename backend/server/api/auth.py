@@ -80,13 +80,13 @@ def verify_password(password: str, password_hash: str) -> bool:
 # JWT Token Creation
 # =============================================================================
 
-def create_access_token(user_id: str, email: str) -> str:
+def create_access_token(user_id: str, email: Optional[str] = None) -> str:
     """
     Create a short-lived access token (JWT).
 
     Args:
         user_id: User's unique identifier
-        email: User's email
+        email: User's email (optional)
 
     Returns:
         Encoded JWT string
@@ -95,11 +95,12 @@ def create_access_token(user_id: str, email: str) -> str:
 
     payload = {
         "user_id": user_id,
-        "email": email,
         "type": "access",
         "exp": expires_at,
         "iat": datetime.utcnow(),
     }
+    if email:
+        payload["email"] = email
 
     return jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
 

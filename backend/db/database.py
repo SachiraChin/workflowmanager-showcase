@@ -111,6 +111,7 @@ class Database(DatabaseHistoryMixin, DatabaseMigrationsMixin, DatabaseConfigMixi
         self.users: Collection = self.db.users
         self.access_keys: Collection = self.db.access_keys
         self.refresh_tokens: Collection = self.db.refresh_tokens
+        self.invitation_codes: Collection = self.db.invitation_codes
         self.workflow_runs: Collection = self.db.workflow_runs
         self.branches: Collection = self.db.branches
         self.events: Collection = self.db.events
