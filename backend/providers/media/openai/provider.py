@@ -29,6 +29,7 @@ from ..base import (
     MediaProviderBase,
     ContentItem,
     GenerationResult,
+    UsageInfo,
     ProgressCallback,
     AuthenticationError,
     RateLimitError,
@@ -413,10 +414,21 @@ class OpenAIProvider(MediaProviderBase):
 
         logger.info(f"[OpenAI] Generation complete: {len(content)} images")
 
+        # Calculate cost using preview info
+        preview_info = self.get_preview_info("txt2img", params)
+        usage = UsageInfo(
+            provider="openai",
+            model=model,
+            action_type="txt2img",
+            total_cost=preview_info.credits.total_cost_usd,
+            image_count=len(content),
+        )
+
         return GenerationResult(
             content=content,
             raw_response=result,
-            provider_task_id=None  # No task ID for sync API
+            provider_task_id=None,  # No task ID for sync API
+            usage=usage,
         )
 
     def img2img(
@@ -518,10 +530,21 @@ class OpenAIProvider(MediaProviderBase):
 
         logger.info(f"[OpenAI] Edit complete: {len(content)} images")
 
+        # Calculate cost using preview info (same as txt2img pricing)
+        preview_info = self.get_preview_info("img2img", params)
+        usage = UsageInfo(
+            provider="openai",
+            model=model,
+            action_type="img2img",
+            total_cost=preview_info.credits.total_cost_usd,
+            image_count=len(content),
+        )
+
         return GenerationResult(
             content=content,
             raw_response=result,
-            provider_task_id=None
+            provider_task_id=None,
+            usage=usage,
         )
 
     def img2vid(
@@ -676,11 +699,22 @@ class OpenAIProvider(MediaProviderBase):
 
         logger.info(f"[OpenAI/Sora] Video generation complete: {video_id}")
 
+        # Calculate cost using preview info
+        preview_info = self._get_video_preview_info(params)
+        usage = UsageInfo(
+            provider="openai",
+            model=model,
+            action_type="img2vid",
+            total_cost=preview_info.credits.total_cost_usd,
+            duration_seconds=duration,
+        )
+
         return GenerationResult(
             content=[ContentItem(url=video_url, seed=-1)],
             raw_response=job_result,
             provider_task_id=video_id,
-            preview_local_path=cropped_image_path
+            preview_local_path=cropped_image_path,
+            usage=usage,
         )
 
     def _read_image_for_upload(self, source: str) -> tuple:

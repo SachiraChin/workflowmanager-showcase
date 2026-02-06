@@ -869,7 +869,7 @@ class AnthropicProvider(LLMProviderBase):
         return text
 
     def _store_token_usage(self, model: str, usage: Dict, context):
-        """Store token usage to database."""
+        """Store token usage to database with cost calculation."""
         try:
             # Get step info from context (required)
             step_id = require_step_id(context)
@@ -878,21 +878,62 @@ class AnthropicProvider(LLMProviderBase):
             module_name = require_module_name(context)
             module_index = getattr(context, 'current_module_index', 0)
 
+            # Get token counts (Anthropic uses input/output terminology)
+            # We map from the internal usage dict which uses prompt/completion
+            input_tokens = usage.get("prompt_tokens", 0)
+            output_tokens = usage.get("completion_tokens", 0)
+            cache_read_tokens = usage.get("cached_tokens", 0)
+            cache_creation_tokens = usage.get("cache_creation_tokens", 0)
+            total_tokens = usage.get("total_tokens", 0)
+
+            # Get pricing from model config
+            capabilities = self.get_model_capabilities(model)
+            pricing = capabilities.get("pricing", {})
+            input_price = pricing.get("input_token", 0.0)
+            output_price = pricing.get("output_token", 0.0)
+            cache_read_price = pricing.get("cache_read_token", 0.0)
+            cache_creation_price = pricing.get("cache_creation_token", 0.0)
+
+            # Calculate costs
+            # Note: cache_read_tokens are part of input but charged differently
+            # We need to subtract cache_read from input to get regular input cost
+            regular_input_tokens = input_tokens - cache_read_tokens
+            input_token_cost = regular_input_tokens * input_price
+            output_token_cost = output_tokens * output_price
+            cache_read_token_cost = cache_read_tokens * cache_read_price
+            cache_creation_token_cost = cache_creation_tokens * cache_creation_price
+            total_cost = (
+                input_token_cost +
+                output_token_cost +
+                cache_read_token_cost +
+                cache_creation_token_cost
+            )
+
             # Store to database
             has_db = hasattr(context, 'db') and context.db is not None
-            context.logger.info(f"[TOKEN] Storing token usage: has_db={has_db}, workflow_run_id={getattr(context, 'workflow_run_id', None)}")
+            context.logger.info(
+                f"[TOKEN] Storing token usage: has_db={has_db}, "
+                f"workflow_run_id={getattr(context, 'workflow_run_id', None)}, "
+                f"total_cost=${total_cost:.6f}"
+            )
             if has_db:
-                context.db.token_repo.store_token_usage(
+                context.db.token_repo.store_llm_anthropic_usage(
                     workflow_run_id=context.workflow_run_id,
                     step_id=step_id,
                     step_name=step_name,
                     module_name=module_name,
                     module_index=module_index,
                     model=model,
-                    prompt_tokens=usage.get("prompt_tokens", 0),
-                    completion_tokens=usage.get("completion_tokens", 0),
-                    cached_tokens=usage.get("cached_tokens", 0),
-                    total_tokens=usage.get("total_tokens", 0)
+                    input_tokens=input_tokens,
+                    input_token_cost=input_token_cost,
+                    output_tokens=output_tokens,
+                    output_token_cost=output_token_cost,
+                    cache_read_tokens=cache_read_tokens,
+                    cache_read_token_cost=cache_read_token_cost,
+                    cache_creation_tokens=cache_creation_tokens,
+                    cache_creation_token_cost=cache_creation_token_cost,
+                    total_tokens=total_tokens,
+                    total_cost=total_cost,
                 )
         except Exception as e:
             context.logger.warning(f"Failed to store token usage: {e}")

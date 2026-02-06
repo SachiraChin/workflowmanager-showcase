@@ -363,6 +363,15 @@ class WorkflowExecutor:
                     request_data = serialize_interaction_request(interaction_request)
                     request_data['_resolved_inputs'] = resolved_inputs
                     request_data['module_id'] = module_id  # For sub-action routing
+                    # Store step context for token tracking in media providers
+                    # Get step_name from step config (replace placeholder if present)
+                    step_name_for_ctx = step.get('name', step_id)
+                    request_data['_step_context'] = {
+                        'step_id': step_id,
+                        'step_name': step_name_for_ctx,
+                        'module_name': module_name,
+                        'module_index': i,
+                    }
                     if resolver_schema:
                         request_data['resolver_schema'] = resolver_schema
                     self.db.event_repo.store_event(

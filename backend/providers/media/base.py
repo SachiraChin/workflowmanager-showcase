@@ -31,6 +31,54 @@ class ContentItem:
 
 
 @dataclass
+class UsageInfo:
+    """
+    Usage/cost information for a media generation.
+
+    This dataclass captures provider-specific usage metrics and costs.
+    Different providers use different billing models:
+    - OpenAI images: charged per image based on model/quality/size
+    - OpenAI video: charged per second of video
+    - Leonardo: charged in credits
+    - MidJourney: charged in credits
+    - ElevenLabs: charged by characters (TTS) or credits (music)
+
+    All fields are optional to accommodate different provider billing models.
+    The total_cost field should always be set.
+
+    Attributes:
+        provider: Provider identifier (e.g., "openai", "leonardo")
+        model: Model used for generation
+        action_type: Type of generation (txt2img, img2img, img2vid, txt2audio)
+        total_cost: Total cost in USD (always required)
+
+        # Image-specific (OpenAI images)
+        image_count: Number of images generated
+
+        # Video-specific (OpenAI Sora)
+        duration_seconds: Duration of generated video in seconds
+
+        # Credit-based providers (Leonardo, MidJourney)
+        credits: Credits used for this generation
+
+        # Audio/TTS-specific (ElevenLabs)
+        audio_type: Type of audio (tts, music, sfx)
+        characters: Characters processed (for TTS)
+    """
+    provider: str
+    model: str
+    action_type: str
+    total_cost: float
+
+    # Provider-specific fields (all optional)
+    image_count: Optional[int] = None
+    duration_seconds: Optional[int] = None
+    credits: Optional[int] = None
+    audio_type: Optional[str] = None
+    characters: Optional[int] = None
+
+
+@dataclass
 class GenerationResult:
     """
     Result from a media generation operation.
@@ -40,11 +88,13 @@ class GenerationResult:
         raw_response: Full response from provider for storage
         provider_task_id: Provider's task/generation ID
         preview_local_path: Local path to preview image (for img2vid, the cropped source)
+        usage: Usage/cost information for this generation
     """
     content: List[ContentItem]
     raw_response: Dict[str, Any]
     provider_task_id: Optional[str] = None
     preview_local_path: Optional[str] = None
+    usage: Optional[UsageInfo] = None
 
 
 @dataclass

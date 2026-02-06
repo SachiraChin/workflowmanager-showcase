@@ -22,6 +22,7 @@ from ..base import (
     MediaProviderBase,
     ContentItem,
     GenerationResult,
+    UsageInfo,
     ProgressCallback,
     AuthenticationError,
     InsufficientCreditsError,
@@ -354,6 +355,16 @@ class ElevenLabsProvider(MediaProviderBase):
             f"song_id={song_id}, size={len(audio_data)} bytes"
         )
 
+        # Calculate cost
+        preview_info = self.get_preview_info("txt2audio", params)
+        usage = UsageInfo(
+            provider="elevenlabs",
+            model="eleven_music",
+            action_type="txt2audio",
+            total_cost=preview_info.credits.total_cost_usd,
+            audio_type="music",
+        )
+
         return GenerationResult(
             content=[ContentItem(url=data_uri, seed=-1)],
             raw_response={
@@ -362,7 +373,8 @@ class ElevenLabsProvider(MediaProviderBase):
                 "size_bytes": len(audio_data),
                 "audio_type": "music",
             },
-            provider_task_id=song_id
+            provider_task_id=song_id,
+            usage=usage,
         )
 
     # =========================================================================

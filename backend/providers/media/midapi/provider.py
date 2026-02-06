@@ -23,6 +23,7 @@ from ..base import (
     MediaProviderBase,
     ContentItem,
     GenerationResult,
+    UsageInfo,
     ProgressCallback,
     AuthenticationError,
     InsufficientCreditsError,
@@ -284,10 +285,21 @@ class MidAPIProvider(MediaProviderBase):
 
         logger.info(f"[MidAPI] Generation complete: {len(content)} images")
 
+        # Calculate credits/cost
+        preview_info = self.get_preview_info("txt2img", params)
+        usage = UsageInfo(
+            provider="midjourney",
+            model="midjourney",
+            action_type="txt2img",
+            total_cost=preview_info.credits.total_cost_usd,
+            credits=int(preview_info.credits.credits),
+        )
+
         return GenerationResult(
             content=content,
             raw_response=task_result,
-            provider_task_id=task_id
+            provider_task_id=task_id,
+            usage=usage,
         )
 
     def img2img(
@@ -372,10 +384,21 @@ class MidAPIProvider(MediaProviderBase):
 
         logger.info(f"[MidAPI] Variation complete: {len(content)} images")
 
+        # Use txt2img pricing for vary (same credit cost)
+        preview_info = self.get_preview_info("txt2img", {})
+        usage = UsageInfo(
+            provider="midjourney",
+            model="midjourney",
+            action_type="vary",
+            total_cost=preview_info.credits.total_cost_usd,
+            credits=int(preview_info.credits.credits),
+        )
+
         return GenerationResult(
             content=content,
             raw_response=task_result,
-            provider_task_id=new_task_id
+            provider_task_id=new_task_id,
+            usage=usage,
         )
 
     def img2vid(
@@ -456,10 +479,21 @@ class MidAPIProvider(MediaProviderBase):
 
         logger.info(f"[MidAPI] Video generation complete: {len(content)} videos")
 
+        # Calculate credits/cost
+        preview_info = self.get_preview_info("img2vid", params)
+        usage = UsageInfo(
+            provider="midjourney",
+            model="midjourney",
+            action_type="img2vid",
+            total_cost=preview_info.credits.total_cost_usd,
+            credits=int(preview_info.credits.credits),
+        )
+
         return GenerationResult(
             content=content,
             raw_response=task_result,
-            provider_task_id=task_id
+            provider_task_id=task_id,
+            usage=usage,
         )
 
     def txt2audio(

@@ -296,6 +296,15 @@ class MediaActor(ActorBase):
                 f"metadata_id={metadata_id}"
             )
 
+            # Store token/usage information (if provider returned usage data)
+            self._store_token_usage(
+                workflow_run_id=workflow_run_id,
+                interaction_id=interaction_id,
+                provider_name=provider_name,
+                action_type=action_type,
+                usage=result.usage,
+            )
+
             # Return data only - server constructs URLs
             # Include raw_response for storage in task queue
             return {
@@ -342,3 +351,167 @@ class MediaActor(ActorBase):
         except Exception as e:
             logger.warning(f"[MediaActor] Failed to look up source_image: {e}")
         return None
+
+    def _get_step_context_from_interaction(
+        self,
+        interaction_id: str
+    ) -> Dict[str, Any] | None:
+        """
+        Look up step context from the interaction event.
+
+        The step context is stored in _step_context when the interaction
+        was created. This provides step_id, step_name, module_name, and
+        module_index for token tracking.
+
+        Args:
+            interaction_id: The interaction ID to look up
+
+        Returns:
+            Dict with step_id, step_name, module_name, module_index or None
+        """
+        try:
+            interaction_event = self._db.events.find_one({
+                "data.interaction_id": interaction_id
+            })
+            if interaction_event:
+                step_context = interaction_event.get("data", {}).get("_step_context")
+                if step_context:
+                    logger.info(
+                        f"[MediaActor] Found step_context: "
+                        f"step_id={step_context.get('step_id')}, "
+                        f"module_name={step_context.get('module_name')}"
+                    )
+                    return step_context
+        except Exception as e:
+            logger.warning(f"[MediaActor] Failed to look up step_context: {e}")
+        return None
+
+    def _store_token_usage(
+        self,
+        workflow_run_id: str,
+        interaction_id: str,
+        provider_name: str,
+        action_type: str,
+        usage,  # UsageInfo from provider
+    ) -> None:
+        """
+        Store token/usage information for a media generation.
+
+        Args:
+            workflow_run_id: Workflow run ID
+            interaction_id: Interaction ID (to look up step context)
+            provider_name: Provider name (e.g., "openai", "leonardo")
+            action_type: Action type (e.g., "txt2img", "img2vid")
+            usage: UsageInfo object from the provider (or None)
+        """
+        if usage is None:
+            logger.warning(
+                f"[MediaActor] No usage info returned from provider {provider_name}"
+            )
+            return
+
+        # Get step context from interaction event
+        step_context = self._get_step_context_from_interaction(interaction_id)
+        if not step_context:
+            logger.warning(
+                f"[MediaActor] No step context found for interaction {interaction_id}, "
+                "skipping token storage"
+            )
+            return
+
+        step_id = step_context.get("step_id", "unknown")
+        step_name = step_context.get("step_name", step_id)
+        module_name = step_context.get("module_name", "unknown")
+        module_index = step_context.get("module_index", 0)
+
+        try:
+            # Store usage based on provider type
+            if provider_name == "openai":
+                if action_type == "img2vid":
+                    self._db.token_repo.store_media_openai_usage(
+                        workflow_run_id=workflow_run_id,
+                        step_id=step_id,
+                        step_name=step_name,
+                        module_name=module_name,
+                        module_index=module_index,
+                        model=usage.model,
+                        action_type=action_type,
+                        total_cost=usage.total_cost,
+                        duration_seconds=usage.duration_seconds,
+                    )
+                else:
+                    self._db.token_repo.store_media_openai_usage(
+                        workflow_run_id=workflow_run_id,
+                        step_id=step_id,
+                        step_name=step_name,
+                        module_name=module_name,
+                        module_index=module_index,
+                        model=usage.model,
+                        action_type=action_type,
+                        total_cost=usage.total_cost,
+                        image_count=usage.image_count,
+                    )
+            elif provider_name == "leonardo":
+                self._db.token_repo.store_media_leonardo_usage(
+                    workflow_run_id=workflow_run_id,
+                    step_id=step_id,
+                    step_name=step_name,
+                    module_name=module_name,
+                    module_index=module_index,
+                    model=usage.model,
+                    action_type=action_type,
+                    credits=usage.credits or 0,
+                    total_cost=usage.total_cost,
+                )
+            elif provider_name == "midjourney":
+                self._db.token_repo.store_media_midjourney_usage(
+                    workflow_run_id=workflow_run_id,
+                    step_id=step_id,
+                    step_name=step_name,
+                    module_name=module_name,
+                    module_index=module_index,
+                    model=usage.model,
+                    action_type=action_type,
+                    credits=usage.credits or 0,
+                    total_cost=usage.total_cost,
+                )
+            elif provider_name == "elevenlabs":
+                self._db.token_repo.store_media_elevenlabs_usage(
+                    workflow_run_id=workflow_run_id,
+                    step_id=step_id,
+                    step_name=step_name,
+                    module_name=module_name,
+                    module_index=module_index,
+                    model=usage.model,
+                    action_type=action_type,
+                    audio_type=usage.audio_type or "music",
+                    total_cost=usage.total_cost,
+                    characters=usage.characters,
+                    credits=usage.credits,
+                )
+            else:
+                logger.warning(
+                    f"[MediaActor] Unknown provider {provider_name}, using generic storage"
+                )
+                # Use generic storage for unknown providers
+                self._db.token_repo.store_usage(
+                    workflow_run_id=workflow_run_id,
+                    step_id=step_id,
+                    step_name=step_name,
+                    module_name=module_name,
+                    module_index=module_index,
+                    provider_key=f"media.{provider_name}",
+                    provider_data={
+                        "model": usage.model,
+                        "action_type": action_type,
+                        "total_cost": usage.total_cost,
+                    },
+                )
+
+            logger.info(
+                f"[MediaActor] Stored token usage: provider={provider_name}, "
+                f"total_cost=${usage.total_cost:.4f}"
+            )
+
+        except Exception as e:
+            logger.warning(f"[MediaActor] Failed to store token usage: {e}")

@@ -20,6 +20,7 @@ from ..base import (
     MediaProviderBase,
     ContentItem,
     GenerationResult,
+    UsageInfo,
     ProgressCallback,
     AuthenticationError,
     InsufficientCreditsError,
@@ -483,10 +484,21 @@ class LeonardoProvider(MediaProviderBase):
 
         logger.info(f"[Leonardo] Generation complete: {len(content)} images")
 
+        # Calculate credits/cost
+        preview_info = self.get_preview_info("txt2img", params)
+        usage = UsageInfo(
+            provider="leonardo",
+            model=params.get("model_id", params.get("model", "unknown")),
+            action_type="txt2img",
+            total_cost=preview_info.credits.total_cost_usd,
+            credits=int(preview_info.credits.credits),
+        )
+
         return GenerationResult(
             content=content,
             raw_response=generation_data,
-            provider_task_id=generation_id
+            provider_task_id=generation_id,
+            usage=usage,
         )
 
     def img2img(
@@ -596,10 +608,21 @@ class LeonardoProvider(MediaProviderBase):
 
         logger.info(f"[Leonardo] img2img complete: {len(content)} images")
 
+        # Calculate credits/cost
+        preview_info = self.get_preview_info("img2img", params)
+        usage = UsageInfo(
+            provider="leonardo",
+            model=params.get("model_id", params.get("model", "unknown")),
+            action_type="img2img",
+            total_cost=preview_info.credits.total_cost_usd,
+            credits=int(preview_info.credits.credits),
+        )
+
         return GenerationResult(
             content=content,
             raw_response=generation_data,
-            provider_task_id=generation_id
+            provider_task_id=generation_id,
+            usage=usage,
         )
 
     def _upload_init_image(self, file_path: str) -> str:
@@ -894,11 +917,22 @@ class LeonardoProvider(MediaProviderBase):
 
         logger.info(f"[Leonardo] Video generation complete: {len(content)} videos")
 
+        # Calculate credits/cost
+        preview_info = self.get_preview_info("img2vid", params)
+        usage = UsageInfo(
+            provider="leonardo",
+            model=params.get("model", "MOTION2"),
+            action_type="img2vid",
+            total_cost=preview_info.credits.total_cost_usd,
+            credits=int(preview_info.credits.credits),
+        )
+
         return GenerationResult(
             content=content,
             raw_response=generation_data,
             provider_task_id=generation_id,
-            preview_local_path=cropped_image_path
+            preview_local_path=cropped_image_path,
+            usage=usage,
         )
 
     def txt2audio(

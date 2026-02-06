@@ -8,6 +8,11 @@
       "structured_output": true,
       "reasoning_effort": false,
       "cache_control": false
+    },
+    "pricing": {
+      "prompt_token": 0.0000025,
+      "completion_token": 0.00001,
+      "cached_token": 0.00000125
     }
   },
   "gpt-4o": {
@@ -19,6 +24,11 @@
       "structured_output": true,
       "reasoning_effort": false,
       "cache_control": false
+    },
+    "pricing": {
+      "prompt_token": 0.0000025,
+      "completion_token": 0.00001,
+      "cached_token": 0.00000125
     }
   },
   "gpt-4o-mini": {
@@ -30,6 +40,11 @@
       "structured_output": true,
       "reasoning_effort": false,
       "cache_control": false
+    },
+    "pricing": {
+      "prompt_token": 0.00000015,
+      "completion_token": 0.0000006,
+      "cached_token": 0.000000075
     }
   },
   "gpt-4.1": {
@@ -41,6 +56,11 @@
       "structured_output": true,
       "reasoning_effort": false,
       "cache_control": false
+    },
+    "pricing": {
+      "prompt_token": 0.000002,
+      "completion_token": 0.000008,
+      "cached_token": 0.0000005
     }
   },
   "gpt-4.1-mini": {
@@ -52,6 +72,11 @@
       "structured_output": true,
       "reasoning_effort": false,
       "cache_control": false
+    },
+    "pricing": {
+      "prompt_token": 0.0000004,
+      "completion_token": 0.0000016,
+      "cached_token": 0.0000001
     }
   },
   "gpt-5.2": {
@@ -63,6 +88,11 @@
       "structured_output": true,
       "reasoning_effort": { "values": ["low", "medium", "high"], "default": "medium" },
       "cache_control": true
+    },
+    "pricing": {
+      "prompt_token": 0.000004,
+      "completion_token": 0.000016,
+      "cached_token": 0.000001
     }
   },
   "gpt-5.1": {
@@ -74,6 +104,11 @@
       "structured_output": true,
       "reasoning_effort": { "values": ["low", "medium", "high"], "default": "medium" },
       "cache_control": true
+    },
+    "pricing": {
+      "prompt_token": 0.000004,
+      "completion_token": 0.000016,
+      "cached_token": 0.000001
     }
   },
   "gpt-5-mini": {
@@ -85,6 +120,11 @@
       "structured_output": true,
       "reasoning_effort": { "values": ["low", "medium", "high"], "default": "low" },
       "cache_control": true
+    },
+    "pricing": {
+      "prompt_token": 0.0000012,
+      "completion_token": 0.0000048,
+      "cached_token": 0.0000003
     }
   },
   "o1": {
@@ -96,6 +136,11 @@
       "structured_output": true,
       "reasoning_effort": { "values": ["low", "medium", "high"], "default": "medium" },
       "cache_control": false
+    },
+    "pricing": {
+      "prompt_token": 0.000015,
+      "completion_token": 0.00006,
+      "cached_token": 0.0000075
     }
   },
   "o1-mini": {
@@ -107,6 +152,11 @@
       "structured_output": true,
       "reasoning_effort": { "values": ["low", "medium", "high"], "default": "low" },
       "cache_control": false
+    },
+    "pricing": {
+      "prompt_token": 0.000001,
+      "completion_token": 0.000004,
+      "cached_token": 0.0000005
     }
   },
   "o3": {
@@ -118,6 +168,11 @@
       "structured_output": true,
       "reasoning_effort": { "values": ["low", "medium", "high"], "default": "medium" },
       "cache_control": false
+    },
+    "pricing": {
+      "prompt_token": 0.00001,
+      "completion_token": 0.00004,
+      "cached_token": 0.000005
     }
   },
   "o3-mini": {
@@ -129,6 +184,11 @@
       "structured_output": true,
       "reasoning_effort": { "values": ["low", "medium", "high"], "default": "low" },
       "cache_control": false
+    },
+    "pricing": {
+      "prompt_token": 0.0000011,
+      "completion_token": 0.0000044,
+      "cached_token": 0.00000055
     }
   },
   "o4-mini": {
@@ -140,6 +200,11 @@
       "structured_output": true,
       "reasoning_effort": { "values": ["low", "medium", "high"], "default": "low" },
       "cache_control": false
+    },
+    "pricing": {
+      "prompt_token": 0.0000011,
+      "completion_token": 0.0000044,
+      "cached_token": 0.00000055
     }
   },
   "gpt-4-turbo": {
@@ -151,6 +216,11 @@
       "structured_output": false,
       "reasoning_effort": false,
       "cache_control": false
+    },
+    "pricing": {
+      "prompt_token": 0.00001,
+      "completion_token": 0.00003,
+      "cached_token": 0.000005
     }
   },
   "gpt-4": {
@@ -162,6 +232,11 @@
       "structured_output": false,
       "reasoning_effort": false,
       "cache_control": false
+    },
+    "pricing": {
+      "prompt_token": 0.00003,
+      "completion_token": 0.00006,
+      "cached_token": 0.000015
     }
   },
   "gpt-3.5-turbo": {
@@ -173,6 +248,11 @@
       "structured_output": false,
       "reasoning_effort": false,
       "cache_control": false
+    },
+    "pricing": {
+      "prompt_token": 0.0000005,
+      "completion_token": 0.0000015,
+      "cached_token": 0.00000025
     }
   }
 }

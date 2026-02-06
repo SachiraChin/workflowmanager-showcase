@@ -823,7 +823,7 @@ class OpenAIProvider(LLMProviderBase):
         return text
 
     def _store_token_usage(self, model: str, usage: Dict, context):
-        """Store token usage to database."""
+        """Store token usage to database with cost calculation."""
         try:
             # Get step info from context (required)
             step_id = require_step_id(context)
@@ -832,21 +832,51 @@ class OpenAIProvider(LLMProviderBase):
             module_name = require_module_name(context)
             module_index = getattr(context, 'current_module_index', 0)
 
+            # Get token counts
+            prompt_tokens = usage.get("prompt_tokens", 0)
+            completion_tokens = usage.get("completion_tokens", 0)
+            cached_tokens = usage.get("cached_tokens", 0)
+            total_tokens = usage.get("total_tokens", 0)
+
+            # Get pricing from model config
+            capabilities = self.get_model_capabilities(model)
+            pricing = capabilities.get("pricing", {})
+            prompt_price = pricing.get("prompt_token", 0.0)
+            completion_price = pricing.get("completion_token", 0.0)
+            cached_price = pricing.get("cached_token", 0.0)
+
+            # Calculate costs
+            # Note: cached_tokens are already included in prompt_tokens count,
+            # so we need to subtract them to get the non-cached prompt tokens
+            non_cached_prompt_tokens = prompt_tokens - cached_tokens
+            prompt_token_cost = non_cached_prompt_tokens * prompt_price
+            completion_token_cost = completion_tokens * completion_price
+            cached_token_cost = cached_tokens * cached_price
+            total_cost = prompt_token_cost + completion_token_cost + cached_token_cost
+
             # Store to database
             has_db = hasattr(context, 'db') and context.db is not None
-            context.logger.info(f"[TOKEN] Storing token usage: has_db={has_db}, workflow_run_id={getattr(context, 'workflow_run_id', None)}")
+            context.logger.info(
+                f"[TOKEN] Storing token usage: has_db={has_db}, "
+                f"workflow_run_id={getattr(context, 'workflow_run_id', None)}, "
+                f"total_cost=${total_cost:.6f}"
+            )
             if has_db:
-                context.db.token_repo.store_token_usage(
+                context.db.token_repo.store_llm_openai_usage(
                     workflow_run_id=context.workflow_run_id,
                     step_id=step_id,
                     step_name=step_name,
                     module_name=module_name,
                     module_index=module_index,
                     model=model,
-                    prompt_tokens=usage.get("prompt_tokens", 0),
-                    completion_tokens=usage.get("completion_tokens", 0),
-                    cached_tokens=usage.get("cached_tokens", 0),
-                    total_tokens=usage.get("total_tokens", 0)
+                    prompt_tokens=prompt_tokens,
+                    prompt_token_cost=prompt_token_cost,
+                    completion_tokens=completion_tokens,
+                    completion_token_cost=completion_token_cost,
+                    cached_tokens=cached_tokens,
+                    cached_token_cost=cached_token_cost,
+                    total_tokens=total_tokens,
+                    total_cost=total_cost,
                 )
         except Exception as e:
             context.logger.warning(f"Failed to store token usage: {e}")
