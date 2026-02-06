@@ -5,7 +5,7 @@
       "temperature": { "min": 0, "max": 1, "default": 1 },
       "max_tokens": { "max": 8192, "required": true },
       "vision": true,
-      "structured_output": true,
+      "structured_output": false,
       "extended_thinking": false,
       "cache_control": true
     }
@@ -94,7 +94,7 @@
       "temperature": { "min": 0, "max": 1, "default": 1 },
       "max_tokens": { "max": 32000, "required": true },
       "vision": true,
-      "structured_output": true,
+      "structured_output": false,
       "extended_thinking": true,
       "cache_control": true
     }
@@ -105,7 +105,7 @@
       "temperature": { "min": 0, "max": 1, "default": 1 },
       "max_tokens": { "max": 32000, "required": true },
       "vision": true,
-      "structured_output": true,
+      "structured_output": false,
       "extended_thinking": true,
       "cache_control": true
     }
@@ -116,7 +116,7 @@
       "temperature": { "min": 0, "max": 1, "default": 1 },
       "max_tokens": { "max": 64000, "required": true },
       "vision": true,
-      "structured_output": true,
+      "structured_output": false,
       "extended_thinking": true,
       "cache_control": true
     }
@@ -127,7 +127,7 @@
       "temperature": { "min": 0, "max": 1, "default": 1 },
       "max_tokens": { "max": 64000, "required": true },
       "vision": true,
-      "structured_output": true,
+      "structured_output": false,
       "extended_thinking": true,
       "cache_control": true
     }
@@ -138,7 +138,7 @@
       "temperature": { "min": 0, "max": 1, "default": 1 },
       "max_tokens": { "max": 32000, "required": true },
       "vision": true,
-      "structured_output": true,
+      "structured_output": false,
       "extended_thinking": true,
       "cache_control": true
     }
@@ -149,7 +149,7 @@
       "temperature": { "min": 0, "max": 1, "default": 1 },
       "max_tokens": { "max": 32000, "required": true },
       "vision": true,
-      "structured_output": true,
+      "structured_output": false,
       "extended_thinking": true,
       "cache_control": true
     }
@@ -160,7 +160,7 @@
       "temperature": { "min": 0, "max": 1, "default": 1 },
       "max_tokens": { "max": 64000, "required": true },
       "vision": true,
-      "structured_output": true,
+      "structured_output": false,
       "extended_thinking": true,
       "cache_control": true
     }
@@ -171,7 +171,7 @@
       "temperature": { "min": 0, "max": 1, "default": 1 },
       "max_tokens": { "max": 64000, "required": true },
       "vision": true,
-      "structured_output": true,
+      "structured_output": false,
       "extended_thinking": true,
       "cache_control": true
     }
@@ -182,7 +182,7 @@
       "temperature": { "min": 0, "max": 1, "default": 1 },
       "max_tokens": { "max": 4096, "required": true },
       "vision": true,
-      "structured_output": true,
+      "structured_output": false,
       "extended_thinking": false,
       "cache_control": true
     }

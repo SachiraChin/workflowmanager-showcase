@@ -121,8 +121,6 @@ class AnthropicProvider(LLMProviderBase):
         Returns:
             Dict with content, usage, and raw_response
         """
-        # Debug: log the model being requested
-        context.logger.info(f"[ANTHROPIC DEBUG] call() received model='{model}'")
         
         try:
             from anthropic import Anthropic
@@ -645,27 +643,146 @@ class AnthropicProvider(LLMProviderBase):
             }
             context.logger.debug(f"Extended thinking enabled with budget: {budget_tokens}")
 
-        # Handle structured output via JSON mode
+        # Handle structured output
         if output_schema:
-            # Anthropic doesn't have native JSON schema enforcement like OpenAI
-            # We add the schema to the prompt and set response_format if available
-            # For now, append schema instruction to last user message
-            for i in range(len(messages) - 1, -1, -1):
-                if messages[i].get("role") == "user":
-                    schema_text = f"\n\nPlease respond with JSON matching this schema:\n```json\n{json.dumps(output_schema, indent=2)}\n```\n\nRespond ONLY with valid JSON, no other text."
-                    content = messages[i]["content"]
-                    if isinstance(content, str):
-                        messages[i]["content"] = content + schema_text
-                    elif isinstance(content, list):
-                        # Find last text block and append
-                        for item in reversed(content):
-                            if item.get("type") == "text":
-                                item["text"] = item["text"] + schema_text
-                                break
-                    break
-            context.logger.debug("Added JSON schema instruction to prompt for structured output")
+            if supports.get("structured_output"):
+                # Sanitize schema for Anthropic (remove unsupported constraints)
+                sanitized_schema = self._sanitize_schema_for_anthropic(output_schema)
+                # Use native JSON schema enforcement via output_config.format
+                # Available for Claude Opus 4.6, Sonnet 4.5, Opus 4.5, Haiku 4.5
+                request["output_config"] = {
+                    "format": {
+                        "type": "json_schema",
+                        "schema": sanitized_schema
+                    }
+                }
+                context.logger.debug("Using native JSON schema enforcement via output_config.format")
+            else:
+                # Fallback for older models: add schema to prompt
+                for i in range(len(messages) - 1, -1, -1):
+                    if messages[i].get("role") == "user":
+                        schema_text = f"\n\nPlease respond with JSON matching this schema:\n```json\n{json.dumps(output_schema, indent=2)}\n```\n\nRespond ONLY with valid JSON, no other text."
+                        content = messages[i]["content"]
+                        if isinstance(content, str):
+                            messages[i]["content"] = content + schema_text
+                        elif isinstance(content, list):
+                            # Find last text block and append
+                            for item in reversed(content):
+                                if item.get("type") == "text":
+                                    item["text"] = item["text"] + schema_text
+                                    break
+                        break
+                context.logger.debug("Added JSON schema instruction to prompt for structured output (fallback)")
 
         return request
+
+    def _sanitize_schema_for_anthropic(self, schema: Dict) -> Dict:
+        """
+        Sanitize JSON schema for Anthropic's structured output.
+        
+        Removes unsupported constraints and adds them to descriptions.
+        Anthropic doesn't support:
+        - minimum, maximum, exclusiveMinimum, exclusiveMaximum, multipleOf
+        - minLength, maxLength, pattern (complex patterns)
+        - minItems, maxItems (beyond minItems of 0 or 1)
+        - additionalProperties other than false
+        
+        This method:
+        1. Recursively processes the schema
+        2. Removes unsupported constraints
+        3. Appends constraint info to descriptions
+        4. Ensures additionalProperties: false on all objects
+        """
+        import copy
+        return self._sanitize_schema_node(copy.deepcopy(schema))
+
+    def _sanitize_schema_node(self, node: Any) -> Any:
+        """Recursively sanitize a schema node."""
+        if not isinstance(node, dict):
+            return node
+
+        # Constraints to remove and potentially add to description
+        numeric_constraints = ['minimum', 'maximum', 'exclusiveMinimum', 'exclusiveMaximum', 'multipleOf']
+        string_constraints = ['minLength', 'maxLength']
+        array_constraints = ['minItems', 'maxItems']
+        
+        # Build description additions
+        desc_parts = []
+        
+        # Handle numeric constraints
+        for constraint in numeric_constraints:
+            if constraint in node:
+                value = node.pop(constraint)
+                if constraint == 'minimum':
+                    desc_parts.append(f"Minimum: {value}")
+                elif constraint == 'maximum':
+                    desc_parts.append(f"Maximum: {value}")
+                elif constraint == 'exclusiveMinimum':
+                    desc_parts.append(f"Must be greater than {value}")
+                elif constraint == 'exclusiveMaximum':
+                    desc_parts.append(f"Must be less than {value}")
+                elif constraint == 'multipleOf':
+                    desc_parts.append(f"Must be multiple of {value}")
+        
+        # Handle string constraints
+        for constraint in string_constraints:
+            if constraint in node:
+                value = node.pop(constraint)
+                if constraint == 'minLength':
+                    desc_parts.append(f"Minimum length: {value}")
+                elif constraint == 'maxLength':
+                    desc_parts.append(f"Maximum length: {value}")
+        
+        # Handle array constraints (minItems 0 or 1 is supported, others not)
+        if 'minItems' in node:
+            value = node['minItems']
+            if value > 1:
+                node.pop('minItems')
+                desc_parts.append(f"Minimum items: {value}")
+        
+        if 'maxItems' in node:
+            value = node.pop('maxItems')
+            desc_parts.append(f"Maximum items: {value}")
+        
+        # Append constraints to description if any were removed
+        if desc_parts:
+            existing_desc = node.get('description', '')
+            constraint_text = ' (' + ', '.join(desc_parts) + ')'
+            if existing_desc:
+                node['description'] = existing_desc + constraint_text
+            else:
+                node['description'] = constraint_text.strip(' ()')
+        
+        # Ensure additionalProperties: false for objects
+        if node.get('type') == 'object':
+            node['additionalProperties'] = False
+        
+        # Recursively process nested structures
+        if 'properties' in node:
+            for key, value in node['properties'].items():
+                node['properties'][key] = self._sanitize_schema_node(value)
+        
+        if 'items' in node:
+            node['items'] = self._sanitize_schema_node(node['items'])
+        
+        if 'anyOf' in node:
+            node['anyOf'] = [self._sanitize_schema_node(item) for item in node['anyOf']]
+        
+        if 'allOf' in node:
+            node['allOf'] = [self._sanitize_schema_node(item) for item in node['allOf']]
+        
+        if 'oneOf' in node:
+            node['oneOf'] = [self._sanitize_schema_node(item) for item in node['oneOf']]
+        
+        if '$defs' in node:
+            for key, value in node['$defs'].items():
+                node['$defs'][key] = self._sanitize_schema_node(value)
+        
+        if 'definitions' in node:
+            for key, value in node['definitions'].items():
+                node['definitions'][key] = self._sanitize_schema_node(value)
+        
+        return node
 
     def _extract_content(self, response, context) -> str:
         """Extract text content from Anthropic response."""
