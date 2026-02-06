@@ -7,19 +7,6 @@
     "workflow_name": "Cuddle Crew"
   },
   "config": {
-    "llm_providers": {
-      "default": "openai",
-      "providers": {
-        "openai": {
-          "default_model": "gpt-5.2",
-          "models_config": "providers/openai/models.json"
-        },
-        "anthropic": {
-          "default_model": "claude-sonnet-4-20250514",
-          "models_config": "providers/anthropic/models.json"
-        }
-      }
-    }
   },
   "status_display": {
     "fields": [
