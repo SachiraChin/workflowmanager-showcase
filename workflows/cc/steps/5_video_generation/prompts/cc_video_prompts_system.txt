@@ -21,6 +21,7 @@ Negative prompts are ESSENTIAL for quality video generation. They prevent:
 - Unnatural movement
 - Flickering and inconsistency
 - Anatomical errors during motion
+- Maximum character limit **600 characters**
 
 ### Standard Negative Elements
 Always include in negative prompts:

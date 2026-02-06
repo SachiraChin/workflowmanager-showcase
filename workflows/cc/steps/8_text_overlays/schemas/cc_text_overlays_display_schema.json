@@ -41,7 +41,7 @@
                   "type": "array",
                   "_ux": {
                     "display": true,
-                    "display_format": "{{ value | join('\n') }}",
+                    "display_format": "{{ value | join('\n') }}\n",
                     "nudges": ["copy"]
                   }
                 }
