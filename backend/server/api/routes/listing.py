@@ -10,7 +10,8 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, Query, Depends
 from jinja2 import Environment, BaseLoader
 
-from ..dependencies import get_db, get_current_user_id
+from ..dependencies import get_db, get_current_user_id, require_admin_user
+from models import PublishGlobalTemplateRequest
 
 logger = logging.getLogger('workflow.api')
 
@@ -42,10 +43,43 @@ async def list_workflow_templates(
                 - content_hash: Hash of the workflow content
                 - source_type: How it was uploaded (json, zip, stored)
     """
-    templates = list(db.workflow_templates.find(
-        {"user_id": user_id},
-        {"_id": 0, "workflow_template_id": 1, "workflow_template_name": 1, "created_at": 1}
+    user_templates = list(db.workflow_templates.find(
+        {
+            "user_id": user_id,
+            "$and": [
+                {"$or": [{"scope": {"$exists": False}}, {"scope": "user"}]},
+                {"$or": [
+                    {"visibility": {"$exists": False}},
+                    {"visibility": "visible"},
+                ]},
+            ],
+        },
+        {
+            "_id": 0,
+            "workflow_template_id": 1,
+            "workflow_template_name": 1,
+            "created_at": 1,
+            "scope": 1,
+            "visibility": 1,
+            "derived_from": 1,
+        }
     ))
+    global_templates = list(db.workflow_templates.find(
+        {
+            "scope": "global",
+            "visibility": "public",
+        },
+        {
+            "_id": 0,
+            "workflow_template_id": 1,
+            "workflow_template_name": 1,
+            "created_at": 1,
+            "scope": 1,
+            "visibility": 1,
+            "derived_from": 1,
+        }
+    ))
+    templates = user_templates + global_templates
 
     result = []
     for template in templates:
@@ -67,10 +101,85 @@ async def list_workflow_templates(
                 "template_name": template.get("workflow_template_name"),
                 "template_id": template_id,
                 "name": workflow_name,  # Human-readable name from workflow JSON
-                "versions": versions
+                "versions": versions,
+                "scope": template.get("scope", "user"),
+                "visibility": template.get("visibility", "visible"),
+                "derived_from": template.get("derived_from"),
             })
+    result.sort(
+        key=lambda t: (
+            0 if t.get("scope") == "global" else 1,
+            t.get("template_name", ""),
+        )
+    )
 
     return {"templates": result, "count": len(result)}
+
+
+@router.post("/workflow-templates/global/publish")
+async def publish_global_template(
+    request: PublishGlobalTemplateRequest,
+    db = Depends(get_db),
+    admin_user: dict = Depends(require_admin_user),
+):
+    """
+    Publish a user workflow version to the global template list.
+    """
+    source_version = db.version_repo.get_workflow_version_by_id(
+        request.source_version_id
+    )
+    if not source_version:
+        raise HTTPException(status_code=404, detail="Workflow version not found")
+
+    version_type = source_version.get("version_type")
+    if version_type == "resolved":
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot publish a resolved version",
+        )
+
+    source_template = db.version_repo.get_template_by_id(
+        source_version.get("workflow_template_id")
+    )
+    if not source_template:
+        raise HTTPException(status_code=500, detail="Template not found")
+
+    if source_template.get("scope") == "global":
+        raise HTTPException(
+            status_code=400,
+            detail="Source version is already global",
+        )
+
+    if source_template.get("user_id") != admin_user.get("user_id"):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    resolved_workflow = source_version.get("resolved_workflow", {})
+    workflow_template_name = (
+        resolved_workflow.get("workflow_id")
+        or source_template.get("workflow_template_name")
+    )
+    if not workflow_template_name:
+        raise HTTPException(status_code=400, detail="Workflow template name missing")
+
+    global_template_id, _ = db.version_repo.get_or_create_global_template(
+        workflow_template_name=workflow_template_name,
+        owner_user_id=admin_user.get("user_id"),
+    )
+
+    sync_result = db.version_repo.copy_version_tree(
+        source_version_id=source_version.get("workflow_version_id"),
+        target_template_id=global_template_id,
+    )
+    db.workflow_templates.update_one(
+        {"workflow_template_id": global_template_id},
+        {"$set": {"updated_at": datetime.utcnow()}},
+    )
+
+    return {
+        "global_template_id": global_template_id,
+        "inserted": sync_result.get("inserted", 0),
+        "existing": sync_result.get("existing", 0),
+    }
 
 
 @router.get("/workflows/active")

@@ -169,6 +169,9 @@ export interface WorkflowTemplate {
   template_name: string;
   template_id: string;
   name?: string;  // Human-readable name from workflow JSON
+  scope?: "global" | "user";
+  visibility?: "public" | "visible" | "hidden";
+  derived_from?: string;
   versions: WorkflowVersion[];
 }
 

@@ -351,6 +351,21 @@ class ApiClient {
     return this.request<WorkflowTemplatesResponse>("/workflow-templates");
   }
 
+  async publishGlobalTemplate(sourceVersionId: string): Promise<{
+    global_template_id: string;
+    inserted: number;
+    existing: number;
+  }> {
+    return this.request<{
+      global_template_id: string;
+      inserted: number;
+      existing: number;
+    }>("/workflow-templates/global/publish", {
+      method: "POST",
+      body: JSON.stringify({ source_version_id: sourceVersionId }),
+    });
+  }
+
   async listWorkflowRuns(limit: number = 10, offset: number = 0): Promise<{
     workflows: Array<{
       workflow_run_id: string;
@@ -510,12 +525,14 @@ class ApiClient {
     user_id: string;
     email?: string | null;
     username: string;
+    role?: string | null;
     message: string;
   }> {
     return this.requestRaw<{
       user_id: string;
       email?: string | null;
       username: string;
+      role?: string | null;
       message: string;
     }>("/auth/login", {
       method: "POST",
@@ -544,12 +561,14 @@ class ApiClient {
     user_id: string;
     email?: string | null;
     username: string;
+    role?: string | null;
     message: string;
   }> {
     return this.requestRaw<{
       user_id: string;
       email?: string | null;
       username: string;
+      role?: string | null;
       message: string;
     }>("/auth/register", {
       method: "POST",
@@ -573,12 +592,14 @@ class ApiClient {
     user_id: string;
     email?: string | null;
     username: string;
+    role?: string | null;
   }> {
     // Use request (with auth retry) so expired access tokens trigger refresh
     return this.request<{
       user_id: string;
       email?: string | null;
       username: string;
+      role?: string | null;
     }>("/auth/me");
   }
 

@@ -30,6 +30,7 @@ from .requests import (
     CancelRequest,
     ResetRequest,
     MediaPreviewRequest,
+    PublishGlobalTemplateRequest,
 )
 from .responses import (
     WorkflowStatusResponse,
@@ -73,6 +74,7 @@ __all__ = [
     'CancelRequest',
     'ResetRequest',
     'MediaPreviewRequest',
+    'PublishGlobalTemplateRequest',
     # Responses
     'WorkflowStatusResponse',
     'EventResponse',

@@ -66,6 +66,7 @@ class LoginResponse(BaseModel):
     user_id: str
     email: Optional[str] = None
     username: str
+    role: Optional[str] = None
     message: str = "Login successful"
 
 
@@ -90,6 +91,7 @@ class UserResponse(BaseModel):
     user_id: str
     email: Optional[str] = None
     username: str
+    role: Optional[str] = None
 
 
 class InvitationStatusResponse(BaseModel):
@@ -318,6 +320,7 @@ async def login(
         user_id=user["user_id"],
         email=user.get("email"),
         username=get_display_username(user),
+        role=user.get("role"),
     )
 
 
@@ -438,6 +441,7 @@ async def register(
         user_id=user_id,
         email=email,
         username=username,
+        role=user_doc.get("role"),
     )
 
 
@@ -602,6 +606,7 @@ async def get_current_user(request: Request):
         user_id=user["user_id"],
         email=user.get("email"),
         username=get_display_username(user),
+        role=user.get("role"),
     )
 
 

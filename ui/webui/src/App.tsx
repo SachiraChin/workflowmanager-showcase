@@ -22,13 +22,14 @@ interface User {
   user_id: string;
   email?: string | null;
   username: string;
+  role?: string | null;
 }
 
 // =============================================================================
 // Route Components (with navigation wiring)
 // =============================================================================
 
-function StartPageRoute() {
+function StartPageRoute({ user }: { user: User }) {
   const navigate = useNavigate();
 
   const handleWorkflowStarted = useCallback(
@@ -38,7 +39,7 @@ function StartPageRoute() {
     [navigate]
   );
 
-  return <WorkflowStartPage onWorkflowStarted={handleWorkflowStarted} />;
+  return <WorkflowStartPage onWorkflowStarted={handleWorkflowStarted} user={user} />;
 }
 
 function RunnerPageRoute() {
@@ -87,7 +88,7 @@ function AppContent({ user, onLogout }: { user: User; onLogout: () => void }) {
       <Header user={user} onLogout={onLogout} onDebugModeChange={handleDebugModeChange} />
       <main key={refreshKey} className="flex-1 min-h-0 overflow-hidden">
         <Routes>
-          <Route path="/" element={<StartPageRoute />} />
+          <Route path="/" element={<StartPageRoute user={user} />} />
           <Route path="/run/:runId" element={<RunnerPageRoute />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

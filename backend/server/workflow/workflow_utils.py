@@ -151,8 +151,10 @@ def rebuild_services(
         raise ValueError("Workflow definition missing 'workflow_id' field")
 
     # Get workflow_template_id for db.query context filtering
-    template = db.get_workflow_template_by_name(workflow_template_name, user_id)
-    workflow_template_id = template['workflow_template_id'] if template else None
+    workflow_template_id = workflow.get("workflow_template_id")
+    if not workflow_template_id:
+        template = db.get_workflow_template_by_name(workflow_template_name, user_id)
+        workflow_template_id = template['workflow_template_id'] if template else None
 
     # Get ai_config from stored workflow document
     ai_config = workflow.get('ai_config', {})

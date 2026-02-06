@@ -14,7 +14,7 @@ import { Loader2, LogIn } from "lucide-react";
 import { api } from "@/core/api";
 
 interface LoginPageProps {
-  onLoginSuccess: (user: { user_id: string; email?: string | null; username: string }) => void;
+  onLoginSuccess: (user: { user_id: string; email?: string | null; username: string; role?: string | null }) => void;
 }
 
 export function LoginPage({ onLoginSuccess }: LoginPageProps) {
@@ -35,6 +35,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
           user_id: data.user_id,
           email: data.email,
           username: data.username,
+          role: data.role,
         });
       } catch (err) {
         setError((err as Error).message);

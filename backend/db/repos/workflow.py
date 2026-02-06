@@ -63,33 +63,44 @@ class WorkflowRepository(BaseRepository):
         return (workflow.get("user_id") == user_id, True)
 
     def get_workflow_by_project(
-        self, user_id: str, project_name: str, workflow_template_name: str
+        self,
+        user_id: str,
+        project_name: str,
+        workflow_template_name: str = None,
+        workflow_template_id: str = None,
     ) -> Optional[Dict[str, Any]]:
         """Get active workflow for user + project + template."""
-        return self.workflow_runs.find_one(
-            {
-                "user_id": user_id,
-                "project_name": project_name,
-                "workflow_template_name": workflow_template_name,
-                "status": {"$nin": ["completed", "error"]},
-            }
-        )
+        query = {
+            "user_id": user_id,
+            "project_name": project_name,
+            "status": {"$nin": ["completed", "error"]},
+        }
+        if workflow_template_id:
+            query["workflow_template_id"] = workflow_template_id
+        elif workflow_template_name:
+            query["workflow_template_name"] = workflow_template_name
+
+        return self.workflow_runs.find_one(query)
 
     def find_existing_workflow(
         self,
         user_id: str,
         workflow_template_name: str,
         project_name: str,
+        workflow_template_id: str = None,
     ) -> Optional[Dict[str, Any]]:
         """Find existing active workflow for user + template + project."""
-        return self.workflow_runs.find_one(
-            {
-                "user_id": user_id,
-                "workflow_template_name": workflow_template_name,
-                "project_name": project_name,
-                "status": {"$nin": ["completed", "error"]},
-            }
-        )
+        query = {
+            "user_id": user_id,
+            "project_name": project_name,
+            "status": {"$nin": ["completed", "error"]},
+        }
+        if workflow_template_id:
+            query["workflow_template_id"] = workflow_template_id
+        else:
+            query["workflow_template_name"] = workflow_template_name
+
+        return self.workflow_runs.find_one(query)
 
     def get_or_create_workflow_run(
         self,
@@ -114,7 +125,12 @@ class WorkflowRepository(BaseRepository):
             - branch_id is returned so caller can store WORKFLOW_CREATED event
         """
         # Try to find existing active workflow
-        existing = self.find_existing_workflow(user_id, workflow_template_name, project_name)
+        existing = self.find_existing_workflow(
+            user_id,
+            workflow_template_name,
+            project_name,
+            workflow_template_id=workflow_template_id,
+        )
         if existing:
             logger.info(f"[DB] get_or_create_workflow_run: found existing workflow={existing['workflow_run_id']}")
             return existing["workflow_run_id"], False, existing.get("current_branch_id")

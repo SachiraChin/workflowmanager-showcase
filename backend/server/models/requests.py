@@ -164,6 +164,16 @@ class ResetRequest(BaseWorkflowRequest):
 
 
 # =============================================================================
+# Workflow Template Requests
+# =============================================================================
+
+
+class PublishGlobalTemplateRequest(BaseWorkflowRequest):
+    """Request to publish a workflow version globally."""
+    source_version_id: str
+
+
+# =============================================================================
 # Media Requests
 # =============================================================================
 

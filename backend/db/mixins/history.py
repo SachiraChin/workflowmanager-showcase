@@ -44,6 +44,16 @@ class DatabaseHistoryMixin:
             "workflow_template_name": workflow_template_name
         })
         if existing:
+            updates = {}
+            if "scope" not in existing:
+                updates["scope"] = "user"
+            if "visibility" not in existing:
+                updates["visibility"] = "visible"
+            if updates:
+                self.workflow_templates.update_one(
+                    {"workflow_template_id": existing["workflow_template_id"]},
+                    {"$set": updates},
+                )
             return existing["workflow_template_id"]
 
         # Create new template
@@ -53,7 +63,9 @@ class DatabaseHistoryMixin:
             "user_id": user_id,
             "workflow_template_name": workflow_template_name,
             "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow()
+            "updated_at": datetime.utcnow(),
+            "scope": "user",
+            "visibility": "visible",
         })
         return template_id
 

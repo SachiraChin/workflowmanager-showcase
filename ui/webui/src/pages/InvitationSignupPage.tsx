@@ -10,7 +10,7 @@ import { Loader2, UserPlus } from "lucide-react";
 import { api } from "@/core/api";
 
 interface InvitationSignupPageProps {
-  onLoginSuccess: (user: { user_id: string; email?: string | null; username: string }) => void;
+  onLoginSuccess: (user: { user_id: string; email?: string | null; username: string; role?: string | null }) => void;
 }
 
 interface PasswordStrength {
@@ -112,6 +112,7 @@ export function InvitationSignupPage({ onLoginSuccess }: InvitationSignupPagePro
           user_id: data.user_id,
           email: data.email,
           username: data.username,
+          role: data.role,
         });
       } catch (err) {
         setSubmitError((err as Error).message);

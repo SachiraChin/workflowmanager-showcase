@@ -231,19 +231,52 @@ async def start_workflow_by_version(
             detail="Cannot start with a resolved version. Use the source version (raw or unresolved) from /workflow-templates."
         )
 
-    # 3. Get workflow_template_name
-    template = db.workflow_templates.find_one(
-        {"workflow_template_id": version.get("workflow_template_id")},
-        {"workflow_template_name": 1}
-    )
+    # 3. Get workflow_template_name and template scope
+    template = db.version_repo.get_template_by_id(version.get("workflow_template_id"))
     if not template:
         raise HTTPException(status_code=500, detail="Could not find template for this version")
 
-    workflow_template_name = template.get("workflow_template_name")
+    template_scope = template.get("scope") or "user"
+    template_owner = template.get("user_id")
+    if template_scope != "global" and template_owner != user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    resolved_workflow = version.get("resolved_workflow") or {}
+    workflow_template_name = resolved_workflow.get("workflow_id") or template.get(
+        "workflow_template_name"
+    )
 
     # 4. Validate version has content
-    if not version.get("resolved_workflow"):
+    if not resolved_workflow:
         raise HTTPException(status_code=500, detail="Version is missing resolved_workflow content")
+
+    selected_version_id = workflow_version_id
+    if template_scope == "global":
+        global_template_id = template.get("workflow_template_id")
+        hidden_template_id, _, _ = db.version_repo.get_or_create_hidden_template(
+            global_template_id=global_template_id,
+            user_id=user_id,
+        )
+        db.version_repo.sync_template_versions(
+            source_template_id=global_template_id,
+            target_template_id=hidden_template_id,
+        )
+        content_hash = version.get("content_hash")
+        if not content_hash:
+            raise HTTPException(
+                status_code=500,
+                detail="Global version missing content hash",
+            )
+        hidden_version = db.version_repo.get_version_by_content_hash(
+            template_id=hidden_template_id,
+            content_hash=content_hash,
+        )
+        if not hidden_version:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to sync global version for user",
+            )
+        selected_version_id = hidden_version.get("workflow_version_id")
 
     # 5. Set API keys in environment
     ai_config = request.ai_config or {}
@@ -252,13 +285,13 @@ async def start_workflow_by_version(
     # 6. Call processor with version_id
     result = await asyncio.to_thread(
         processor.start_workflow,
-        version_id=workflow_version_id,
+        version_id=selected_version_id,
         project_name=request.project_name,
         workflow_template_name=workflow_template_name,
         user_id=user_id,
         ai_config=ai_config,
         force_new=request.force_new,
-        capabilities=request.capabilities
+        capabilities=request.capabilities,
     )
 
     elapsed_ms = (time.time() - start_time) * 1000
@@ -272,6 +305,7 @@ async def start_workflow_by_version(
 async def check_existing_workflow(
     project_name: str = Query(..., description="Project name to check"),
     workflow_template_name: str = Query(..., description="Workflow template name (workflow_run_id from JSON)"),
+    workflow_template_id: str = Query(None, description="Workflow template ID"),
     db = Depends(get_db),
     user_id: str = Depends(get_current_user_id)
 ):
@@ -287,7 +321,12 @@ async def check_existing_workflow(
     - current_step: Current step name (if exists)
     - current_module: Current module name (if exists)
     """
-    workflow = db.workflow_repo.get_workflow_by_project(user_id, project_name, workflow_template_name)
+    workflow = db.workflow_repo.get_workflow_by_project(
+        user_id,
+        project_name,
+        workflow_template_name,
+        workflow_template_id=workflow_template_id,
+    )
     if workflow:
         return {
             "exists": True,

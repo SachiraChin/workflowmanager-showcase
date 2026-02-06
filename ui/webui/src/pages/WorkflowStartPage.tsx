@@ -20,12 +20,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Play, Upload, FileJson, History } from "lucide-react";
+import { Loader2, Play, Upload, FileJson, History, ShieldCheck } from "lucide-react";
 import {
   WorkflowUploader,
   type UploadedWorkflow,
 } from "@/features/workflow-start/WorkflowUploader";
 import { TemplateSelector } from "@/features/workflow-start/TemplateSelector";
+import type { WorkflowTemplate } from "@/core/types";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   WorkflowRunsList,
   type WorkflowRun,
@@ -38,18 +46,19 @@ import { api } from "@/core/api";
 // Types
 // =============================================================================
 
-type WorkflowSource = "upload" | "template" | "runs";
+type WorkflowSource = "upload" | "template" | "runs" | "admin";
 
 interface WorkflowStartPageProps {
   /** Called when a workflow has been started */
   onWorkflowStarted?: (workflowRunId: string) => void;
+  user?: { role?: string | null } | null;
 }
 
 // =============================================================================
 // Component
 // =============================================================================
 
-export function WorkflowStartPage({ onWorkflowStarted }: WorkflowStartPageProps) {
+export function WorkflowStartPage({ onWorkflowStarted, user }: WorkflowStartPageProps) {
   // Form state
   const [projectName, setProjectName] = useState("");
   const [workflowSource, setWorkflowSource] = useState<WorkflowSource>("template");
@@ -59,6 +68,14 @@ export function WorkflowStartPage({ onWorkflowStarted }: WorkflowStartPageProps)
 
   // Template state - stores the selected workflow_version_id
   const [selectedVersionId, setSelectedVersionId] = useState("");
+
+  // Admin publish state
+  const [adminTemplates, setAdminTemplates] = useState<WorkflowTemplate[]>([]);
+  const [selectedAdminTemplateId, setSelectedAdminTemplateId] = useState("");
+  const [selectedAdminVersionId, setSelectedAdminVersionId] = useState("");
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
+  const [publishResult, setPublishResult] = useState<string | null>(null);
 
   // UI state
   const [isStarting, setIsStarting] = useState(false);
@@ -80,6 +97,31 @@ export function WorkflowStartPage({ onWorkflowStarted }: WorkflowStartPageProps)
     };
     fetchLastProjectName();
   }, []);
+
+  useEffect(() => {
+    if (user?.role !== "admin") return;
+
+    const fetchAdminTemplates = async () => {
+      try {
+        const response = await api.listWorkflowTemplates();
+        const filtered = response.templates.filter(
+          (template) => template.scope !== "global" && template.visibility !== "hidden"
+        );
+        setAdminTemplates(filtered);
+        if (filtered.length > 0) {
+          const first = filtered[0];
+          setSelectedAdminTemplateId(first.template_id);
+          if (first.versions.length > 0) {
+            setSelectedAdminVersionId(first.versions[0].workflow_version_id);
+          }
+        }
+      } catch (e) {
+        setPublishError((e as Error).message);
+      }
+    };
+
+    fetchAdminTemplates();
+  }, [user?.role]);
 
   // Workflow execution hook
   const {
@@ -234,6 +276,23 @@ export function WorkflowStartPage({ onWorkflowStarted }: WorkflowStartPageProps)
     }
   }, [confirmVersionAndResume, onWorkflowStarted]);
 
+  const handlePublishGlobal = useCallback(async () => {
+    if (!selectedAdminVersionId) return;
+    setIsPublishing(true);
+    setPublishError(null);
+    setPublishResult(null);
+    try {
+      const result = await api.publishGlobalTemplate(selectedAdminVersionId);
+      setPublishResult(
+        `Published. Added ${result.inserted}, already had ${result.existing}.`
+      );
+    } catch (e) {
+      setPublishError((e as Error).message);
+    } finally {
+      setIsPublishing(false);
+    }
+  }, [selectedAdminVersionId]);
+
   // Check if start button should be disabled
   const isStartDisabled = (() => {
     if (isStarting) return true;
@@ -264,7 +323,9 @@ export function WorkflowStartPage({ onWorkflowStarted }: WorkflowStartPageProps)
             value={workflowSource}
             onValueChange={(v) => setWorkflowSource(v as WorkflowSource)}
           >
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList
+              className={`grid w-full ${user?.role === "admin" ? "grid-cols-4" : "grid-cols-3"}`}
+            >
               <TabsTrigger value="template" className="flex items-center gap-2">
                 <FileJson className="h-4 w-4" />
                 Template
@@ -277,6 +338,12 @@ export function WorkflowStartPage({ onWorkflowStarted }: WorkflowStartPageProps)
                 <History className="h-4 w-4" />
                 History
               </TabsTrigger>
+              {user?.role === "admin" && (
+                <TabsTrigger value="admin" className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4" />
+                  Global
+                </TabsTrigger>
+              )}
             </TabsList>
 
             {/* Template Tab */}
@@ -306,10 +373,119 @@ export function WorkflowStartPage({ onWorkflowStarted }: WorkflowStartPageProps)
                 disabled={isStarting}
               />
             </TabsContent>
+
+            {/* Admin Global Tab */}
+            {user?.role === "admin" && (
+              <TabsContent value="admin" className="space-y-4 mt-4">
+                <div className="space-y-4 rounded-lg border p-4">
+                  <div>
+                    <p className="text-sm font-medium">Publish Global Workflow</p>
+                    <p className="text-xs text-muted-foreground">
+                      Select a template version to publish globally
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="admin-template">Template</Label>
+                    <Select
+                      value={selectedAdminTemplateId}
+                      onValueChange={(value) => {
+                        setSelectedAdminTemplateId(value);
+                        const template = adminTemplates.find(
+                          (t) => t.template_id === value
+                        );
+                        if (template?.versions.length) {
+                          setSelectedAdminVersionId(
+                            template.versions[0].workflow_version_id
+                          );
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a template" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {adminTemplates.map((template) => (
+                          <SelectItem
+                            key={template.template_id}
+                            value={template.template_id}
+                          >
+                            {template.name || template.template_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {selectedAdminTemplateId && (
+                    <div className="space-y-2">
+                      <Label htmlFor="admin-version">Version</Label>
+                      <Select
+                        value={selectedAdminVersionId}
+                        onValueChange={setSelectedAdminVersionId}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a version" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {adminTemplates
+                            .find((t) => t.template_id === selectedAdminTemplateId)
+                            ?.versions.map((version, index) => (
+                              <SelectItem
+                                key={version.workflow_version_id}
+                                value={version.workflow_version_id}
+                              >
+                                {index === 0 ? "(Latest) " : ""}
+                                {new Date(version.created_at).toLocaleString("en-US", {
+                                  year: "numeric",
+                                  month: "2-digit",
+                                  day: "2-digit",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  second: "2-digit",
+                                  hour12: true,
+                                })}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {publishError && (
+                    <Alert variant="destructive">
+                      <AlertDescription>{publishError}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  {publishResult && (
+                    <Alert>
+                      <AlertDescription>{publishResult}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={handlePublishGlobal}
+                      disabled={!selectedAdminVersionId || isPublishing}
+                    >
+                      {isPublishing ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Publishing...
+                        </>
+                      ) : (
+                        "Publish Global"
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
+            )}
           </Tabs>
 
           {/* Project name and start button - only for upload/template tabs */}
-          {workflowSource !== "runs" && (
+          {workflowSource !== "runs" && workflowSource !== "admin" && (
             <>
               <div className="space-y-2 pt-2 border-t">
                 <Label htmlFor="project-name">Project Name</Label>

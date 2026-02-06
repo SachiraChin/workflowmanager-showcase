@@ -138,6 +138,34 @@ async def get_current_user_id(
     )
 
 
+async def get_current_user(
+    user_id: str = Depends(get_current_user_id),
+) -> Dict[str, Any]:
+    """
+    Get current user document after authentication.
+
+    Returns:
+        User document
+
+    Raises:
+        HTTPException 401: User not found or inactive
+    """
+    db = get_db()
+    user = db.user_repo.get_user(user_id)
+    if not user or not user.get("is_active", True):
+        raise HTTPException(status_code=401, detail="User not found or disabled")
+    return user
+
+
+async def require_admin_user(
+    user: Dict[str, Any] = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """Require admin role for access."""
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return user
+
+
 async def get_verified_workflow(
     workflow_run_id: str = Path(..., description="Workflow run ID"),
     user_id: str = Depends(get_current_user_id),

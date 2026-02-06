@@ -72,6 +72,13 @@ export function TemplateSelector({
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
 
+  const sortedTemplates = [...templates].sort((a, b) => {
+    const aScope = a.scope === "global" ? 0 : 1;
+    const bScope = b.scope === "global" ? 0 : 1;
+    if (aScope !== bScope) return aScope - bScope;
+    return (a.template_name || "").localeCompare(b.template_name || "");
+  });
+
   // Get currently selected template
   const selectedTemplate = templates.find(
     (t) => t.template_id === selectedTemplateId
@@ -150,9 +157,10 @@ export function TemplateSelector({
             <SelectValue placeholder="Select a workflow template" />
           </SelectTrigger>
           <SelectContent>
-            {templates.map((template) => (
+            {sortedTemplates.map((template) => (
               <SelectItem key={template.template_id} value={template.template_id}>
                 {template.name || template.template_name}
+                {template.scope === "global" ? " (Global)" : ""}
               </SelectItem>
             ))}
           </SelectContent>
