@@ -165,21 +165,33 @@ class LLMCallModule(ExecutableModule):
     def execute(self, inputs: Dict[str, Any], context) -> Dict[str, Any]:
         """Execute LLM API call via selected provider."""
         try:
-            # Build configuration from ai_config + explicit inputs
+            # Build configuration from ai_config (runtime override takes precedence)
             global_ai_config = context.services.get('ai_config', {})
             module_ai_config = self.get_input_value(inputs, 'ai_config') or {}
-            merged_config = {**global_ai_config, **module_ai_config}
-
-            # Get provider (explicit input > ai_config > default)
-            provider_id = self.get_input_value(inputs, 'provider')
-            if not provider_id:
-                provider_id = merged_config.get('provider', 'openai')
+            # Merged config for other parameters (temperature, max_tokens, etc.)
+            merged_config = {**module_ai_config, **global_ai_config}
+            
+            # Priority for provider/model: runtime ai_config > module ai_config > module input > default
+            # Runtime ai_config is set by user in UI, should override everything
+            
+            # Get provider: runtime ai_config > module ai_config > module input > default
+            provider_id = (
+                global_ai_config.get('provider') or  # Runtime override (highest priority)
+                module_ai_config.get('provider') or  # Module-level ai_config
+                inputs.get('provider') or            # Explicit module input
+                'openai'                             # Default
+            )
             provider = ProviderRegistry.get(provider_id)
 
-            # Get model (explicit input > ai_config > default)
-            model = self.get_input_value(inputs, 'model')
-            if not model:
-                model = merged_config.get('model', 'gpt-5.2')
+            # Get model: runtime ai_config > module ai_config > module input > default
+            model = (
+                global_ai_config.get('model') or     # Runtime override (highest priority)
+                module_ai_config.get('model') or     # Module-level ai_config
+                inputs.get('model') or               # Explicit module input
+                'gpt-5.2'                            # Default
+            )
+            
+            context.logger.info(f"[LLM_CALL] provider={provider_id}, model={model} (runtime_ai_config={global_ai_config})")
 
             # Build messages from input
             messages = self._build_messages(inputs, context)

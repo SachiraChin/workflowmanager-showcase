@@ -5,8 +5,119 @@
       "temperature": { "min": 0, "max": 1, "default": 1 },
       "max_tokens": { "max": 8192, "required": true },
       "vision": true,
-      "structured_output": false,
-      "reasoning_effort": false,
+      "structured_output": true,
+      "extended_thinking": false,
+      "cache_control": true
+    }
+  },
+  "claude-opus-4-6": {
+    "api_endpoint": "messages",
+    "supports": {
+      "temperature": { "min": 0, "max": 1, "default": 1 },
+      "max_tokens": { "max": 128000, "required": true },
+      "vision": true,
+      "structured_output": true,
+      "extended_thinking": true,
+      "adaptive_thinking": true,
+      "cache_control": true
+    }
+  },
+  "claude-sonnet-4-5": {
+    "api_endpoint": "messages",
+    "supports": {
+      "temperature": { "min": 0, "max": 1, "default": 1 },
+      "max_tokens": { "max": 64000, "required": true },
+      "vision": true,
+      "structured_output": true,
+      "extended_thinking": true,
+      "cache_control": true
+    }
+  },
+  "claude-sonnet-4-5-20250929": {
+    "api_endpoint": "messages",
+    "supports": {
+      "temperature": { "min": 0, "max": 1, "default": 1 },
+      "max_tokens": { "max": 64000, "required": true },
+      "vision": true,
+      "structured_output": true,
+      "extended_thinking": true,
+      "cache_control": true
+    }
+  },
+  "claude-haiku-4-5": {
+    "api_endpoint": "messages",
+    "supports": {
+      "temperature": { "min": 0, "max": 1, "default": 1 },
+      "max_tokens": { "max": 64000, "required": true },
+      "vision": true,
+      "structured_output": true,
+      "extended_thinking": true,
+      "cache_control": true
+    }
+  },
+  "claude-haiku-4-5-20251001": {
+    "api_endpoint": "messages",
+    "supports": {
+      "temperature": { "min": 0, "max": 1, "default": 1 },
+      "max_tokens": { "max": 64000, "required": true },
+      "vision": true,
+      "structured_output": true,
+      "extended_thinking": true,
+      "cache_control": true
+    }
+  },
+  "claude-opus-4-5": {
+    "api_endpoint": "messages",
+    "supports": {
+      "temperature": { "min": 0, "max": 1, "default": 1 },
+      "max_tokens": { "max": 64000, "required": true },
+      "vision": true,
+      "structured_output": true,
+      "extended_thinking": true,
+      "cache_control": true
+    }
+  },
+  "claude-opus-4-5-20251101": {
+    "api_endpoint": "messages",
+    "supports": {
+      "temperature": { "min": 0, "max": 1, "default": 1 },
+      "max_tokens": { "max": 64000, "required": true },
+      "vision": true,
+      "structured_output": true,
+      "extended_thinking": true,
+      "cache_control": true
+    }
+  },
+  "claude-opus-4-1": {
+    "api_endpoint": "messages",
+    "supports": {
+      "temperature": { "min": 0, "max": 1, "default": 1 },
+      "max_tokens": { "max": 32000, "required": true },
+      "vision": true,
+      "structured_output": true,
+      "extended_thinking": true,
+      "cache_control": true
+    }
+  },
+  "claude-opus-4-1-20250805": {
+    "api_endpoint": "messages",
+    "supports": {
+      "temperature": { "min": 0, "max": 1, "default": 1 },
+      "max_tokens": { "max": 32000, "required": true },
+      "vision": true,
+      "structured_output": true,
+      "extended_thinking": true,
+      "cache_control": true
+    }
+  },
+  "claude-sonnet-4-0": {
+    "api_endpoint": "messages",
+    "supports": {
+      "temperature": { "min": 0, "max": 1, "default": 1 },
+      "max_tokens": { "max": 64000, "required": true },
+      "vision": true,
+      "structured_output": true,
+      "extended_thinking": true,
       "cache_control": true
     }
   },
@@ -14,43 +125,54 @@
     "api_endpoint": "messages",
     "supports": {
       "temperature": { "min": 0, "max": 1, "default": 1 },
-      "max_tokens": { "max": 8192, "required": true },
+      "max_tokens": { "max": 64000, "required": true },
       "vision": true,
-      "structured_output": false,
-      "reasoning_effort": false,
+      "structured_output": true,
+      "extended_thinking": true,
       "cache_control": true
     }
   },
-  "claude-3-5-sonnet-20241022": {
+  "claude-opus-4-0": {
     "api_endpoint": "messages",
     "supports": {
       "temperature": { "min": 0, "max": 1, "default": 1 },
-      "max_tokens": { "max": 8192, "required": true },
+      "max_tokens": { "max": 32000, "required": true },
       "vision": true,
-      "structured_output": false,
-      "reasoning_effort": false,
+      "structured_output": true,
+      "extended_thinking": true,
       "cache_control": true
     }
   },
-  "claude-3-5-sonnet-20240620": {
+  "claude-opus-4-20250514": {
     "api_endpoint": "messages",
     "supports": {
       "temperature": { "min": 0, "max": 1, "default": 1 },
-      "max_tokens": { "max": 8192, "required": true },
+      "max_tokens": { "max": 32000, "required": true },
       "vision": true,
-      "structured_output": false,
-      "reasoning_effort": false,
+      "structured_output": true,
+      "extended_thinking": true,
       "cache_control": true
     }
   },
-  "claude-3-opus-20240229": {
+  "claude-3-7-sonnet-20250219": {
     "api_endpoint": "messages",
     "supports": {
       "temperature": { "min": 0, "max": 1, "default": 1 },
-      "max_tokens": { "max": 4096, "required": true },
+      "max_tokens": { "max": 64000, "required": true },
       "vision": true,
-      "structured_output": false,
-      "reasoning_effort": false,
+      "structured_output": true,
+      "extended_thinking": true,
+      "cache_control": true
+    }
+  },
+  "claude-3-7-sonnet-latest": {
+    "api_endpoint": "messages",
+    "supports": {
+      "temperature": { "min": 0, "max": 1, "default": 1 },
+      "max_tokens": { "max": 64000, "required": true },
+      "vision": true,
+      "structured_output": true,
+      "extended_thinking": true,
       "cache_control": true
     }
   },
@@ -60,8 +182,8 @@
       "temperature": { "min": 0, "max": 1, "default": 1 },
       "max_tokens": { "max": 4096, "required": true },
       "vision": true,
-      "structured_output": false,
-      "reasoning_effort": false,
+      "structured_output": true,
+      "extended_thinking": false,
       "cache_control": true
     }
   }

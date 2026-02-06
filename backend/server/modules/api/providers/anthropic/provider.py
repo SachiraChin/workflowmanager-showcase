@@ -7,13 +7,16 @@ This provider handles all Anthropic-specific logic:
 - System message handling (separate parameter)
 - Token usage extraction
 - Cache control (Anthropic-specific)
+- Extended thinking for Claude models
 """
 
 import os
+import sys
 import json
-import base64
+import re
 import time
 import threading
+import base64
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -21,7 +24,7 @@ from typing import Any, Dict, List, Optional
 from ...base import LLMProviderBase, Message, MessageContent, ContentType
 from ...registry import register
 from ...call_logger import get_api_call_logger
-from engine.context_utils import require_step_id_from_metadata
+from engine.context_utils import require_step_id, require_module_name, require_step_id_from_metadata
 
 
 @register("anthropic")
@@ -34,9 +37,9 @@ class AnthropicProvider(LLMProviderBase):
     - Claude 3.5 Sonnet
     - Claude 4 Sonnet
     - Vision (images in messages)
+    - Structured output (JSON mode via tool use)
     - Cache control (for supported models)
-
-    Note: Anthropic requires max_tokens to be explicitly set.
+    - Extended thinking (for supported models)
     """
 
     def __init__(self):
@@ -57,7 +60,10 @@ class AnthropicProvider(LLMProviderBase):
                     "supports": {
                         "temperature": {"min": 0, "max": 1, "default": 1},
                         "max_tokens": {"max": 8192, "required": True},
-                        "vision": True
+                        "vision": True,
+                        "structured_output": True,
+                        "extended_thinking": False,
+                        "cache_control": True
                     }
                 }
             }
@@ -72,7 +78,7 @@ class AnthropicProvider(LLMProviderBase):
         if model in self._models:
             return self._models[model]
 
-        # Try prefix matching
+        # Try prefix matching (e.g., "claude-sonnet-4-20250514" matches "claude-sonnet-4")
         for model_key in self._models:
             if model.startswith(model_key):
                 return self._models[model_key]
@@ -89,7 +95,11 @@ class AnthropicProvider(LLMProviderBase):
         max_tokens: Optional[int] = None,
         output_schema: Optional[Dict] = None,
         metadata: Optional[Dict] = None,
-        api_key: Optional[str] = None
+        api_key: Optional[str] = None,
+        api_endpoint: Optional[str] = None,
+        cache_system_message: bool = False,
+        cache_user_prefix: bool = False,
+        reasoning_effort: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Make an API call to Anthropic Claude.
@@ -103,10 +113,17 @@ class AnthropicProvider(LLMProviderBase):
             output_schema: JSON schema for structured output
             metadata: Request metadata for logging
             api_key: Anthropic API key (defaults to ANTHROPIC_API_KEY env var)
+            api_endpoint: API endpoint override (not used for Anthropic, always "messages")
+            cache_system_message: Enable prompt caching for system message
+            cache_user_prefix: Enable prompt caching for first user message
+            reasoning_effort: Extended thinking budget ("low", "medium", "high")
 
         Returns:
             Dict with content, usage, and raw_response
         """
+        # Debug: log the model being requested
+        context.logger.info(f"[ANTHROPIC DEBUG] call() received model='{model}'")
+        
         try:
             from anthropic import Anthropic
         except ImportError:
@@ -120,10 +137,21 @@ class AnthropicProvider(LLMProviderBase):
             kwargs['temperature'] = temperature
         if max_tokens is not None:
             kwargs['max_tokens'] = max_tokens
+        if reasoning_effort is not None:
+            kwargs['reasoning_effort'] = reasoning_effort
 
         # Get capabilities and validate kwargs
         capabilities = self.get_model_capabilities(model)
         validated_kwargs = self.validate_kwargs(kwargs, capabilities, context)
+        supports = capabilities.get("supports", {})
+
+        # Check if messages contain images and validate vision support
+        has_images = self._messages_contain_images(messages)
+        if has_images and not supports.get("vision", False):
+            raise RuntimeError(
+                f"Model '{model}' does not support vision/image inputs. "
+                f"Use a vision-capable model like claude-sonnet-4, claude-3-5-sonnet, or claude-3-opus."
+            )
 
         # Get API key
         api_key = api_key or os.getenv('ANTHROPIC_API_KEY')
@@ -136,12 +164,14 @@ class AnthropicProvider(LLMProviderBase):
         client = Anthropic(api_key=api_key)
 
         # Separate system message from other messages (Anthropic uses separate param)
-        system_content, api_messages = self._convert_messages(messages, context)
+        system_content, api_messages = self._convert_messages(
+            messages, context, cache_system_message, cache_user_prefix
+        )
 
-        # Build request
-        supports = capabilities.get("supports", {})
+        # Build request parameters
         request_params = self._build_request(
-            model, system_content, api_messages, validated_kwargs, supports, context
+            model, system_content, api_messages, validated_kwargs, output_schema,
+            supports, cache_system_message, cache_user_prefix, context
         )
 
         # Log and save request
@@ -178,12 +208,25 @@ class AnthropicProvider(LLMProviderBase):
 
         elapsed = time.time() - start_time
 
-        # Extract response
-        content = self._extract_content(response)
+        # Extract response content
+        content = self._extract_content(response, context)
         usage = self._extract_usage(response)
+
+        # Strip markdown fences if present
+        content = self._strip_markdown_fences(content)
 
         # Save response
         logger.save_response(call_ctx, response, usage)
+
+        # Warn if usage is 0 (helps diagnose token extraction issues)
+        if usage.get("total_tokens", 0) == 0:
+            context.logger.warning(
+                f"[TOKEN_WARNING] API call completed but usage is 0! Model={model}. "
+                f"This may indicate the response did not include usage data."
+            )
+
+        # Store token usage to database
+        self._store_token_usage(model, usage, context)
 
         # Log response summary
         cached_tokens = usage.get("cached_tokens", 0)
@@ -199,9 +242,9 @@ class AnthropicProvider(LLMProviderBase):
 
         return {
             "content": parsed_content,
-            "content_text": content,
+            "content_text": content,  # Always keep original string
             "usage": usage,
-            "model": response.model,
+            "model": getattr(response, 'model', model),
             "raw_response": response
         }
 
@@ -216,7 +259,11 @@ class AnthropicProvider(LLMProviderBase):
         max_tokens: Optional[int] = None,
         output_schema: Optional[Dict] = None,
         metadata: Optional[Dict] = None,
-        api_key: Optional[str] = None
+        api_key: Optional[str] = None,
+        api_endpoint: Optional[str] = None,
+        cache_system_message: bool = False,
+        cache_user_prefix: bool = False,
+        reasoning_effort: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Make a streaming API call to Anthropic with cancellation support.
@@ -232,6 +279,10 @@ class AnthropicProvider(LLMProviderBase):
             output_schema: JSON schema for structured output
             metadata: Request metadata for logging
             api_key: Anthropic API key (defaults to ANTHROPIC_API_KEY env var)
+            api_endpoint: API endpoint override (not used for Anthropic)
+            cache_system_message: Enable prompt caching for system message
+            cache_user_prefix: Enable prompt caching for first user message
+            reasoning_effort: Extended thinking budget ("low", "medium", "high")
 
         Returns:
             Dict with content, usage, and raw_response
@@ -247,10 +298,18 @@ class AnthropicProvider(LLMProviderBase):
             kwargs['temperature'] = temperature
         if max_tokens is not None:
             kwargs['max_tokens'] = max_tokens
+        if reasoning_effort is not None:
+            kwargs['reasoning_effort'] = reasoning_effort
 
         # Get capabilities and validate kwargs
         capabilities = self.get_model_capabilities(model)
         validated_kwargs = self.validate_kwargs(kwargs, capabilities, context)
+        supports = capabilities.get("supports", {})
+
+        # Check vision support
+        has_images = self._messages_contain_images(messages)
+        if has_images and not supports.get("vision", False):
+            raise RuntimeError(f"Model '{model}' does not support vision/image inputs.")
 
         # Get API key
         api_key = api_key or os.getenv('ANTHROPIC_API_KEY')
@@ -261,16 +320,19 @@ class AnthropicProvider(LLMProviderBase):
         client = Anthropic(api_key=api_key)
 
         # Separate system message from other messages
-        system_content, api_messages = self._convert_messages(messages, context)
+        system_content, api_messages = self._convert_messages(
+            messages, context, cache_system_message, cache_user_prefix
+        )
 
-        # Build request
-        supports = capabilities.get("supports", {})
+        # Build request parameters
         request_params = self._build_request(
-            model, system_content, api_messages, validated_kwargs, supports, context
+            model, system_content, api_messages, validated_kwargs, output_schema,
+            supports, cache_system_message, cache_user_prefix, context
         )
 
         # Log request
         logger = get_api_call_logger()
+        sanitized_params = logger._sanitize_for_logging(request_params)
         context.logger.info(f"[AI REQUEST STREAMING] Anthropic messages - model={model}")
 
         step_id = require_step_id_from_metadata(metadata)
@@ -279,7 +341,7 @@ class AnthropicProvider(LLMProviderBase):
         start_time = time.time()
 
         # Track usage across the streaming session
-        usage_tracker = {"prompt_tokens": 0, "completion_tokens": 0}
+        usage_tracker = {"prompt_tokens": 0, "completion_tokens": 0, "cached_tokens": 0}
 
         # Make streaming API call
         with client.messages.stream(**request_params) as stream:
@@ -289,7 +351,7 @@ class AnthropicProvider(LLMProviderBase):
                 cancel_event=cancel_event,
                 context=context,
                 extract_content=lambda event: self._extract_stream_event_content(event),
-                extract_usage=lambda event: self._extract_stream_event_usage(event, usage_tracker),
+                extract_usage=lambda event: self._extract_stream_event_usage(event, usage_tracker, context),
                 progress_callback=progress_callback,
                 close_stream=None,  # Context manager handles cleanup
                 provider_name="Anthropic"
@@ -297,6 +359,7 @@ class AnthropicProvider(LLMProviderBase):
 
         if was_cancelled:
             usage["total_tokens"] = usage["prompt_tokens"] + usage["completion_tokens"]
+            self._store_token_usage(model, usage, context)
             raise InterruptedError("Request cancelled by user")
 
         elapsed = time.time() - start_time
@@ -304,10 +367,13 @@ class AnthropicProvider(LLMProviderBase):
         # Assemble complete content
         content = "".join(content_chunks)
 
+        # Strip markdown fences if present
+        content = self._strip_markdown_fences(content)
+
         # Calculate total tokens
         usage["total_tokens"] = usage["prompt_tokens"] + usage["completion_tokens"]
 
-        # Save response to file (streaming assembles response dict since no single response object)
+        # Save response to file
         response_data = {
             "model": model,
             "streaming": True,
@@ -320,6 +386,17 @@ class AnthropicProvider(LLMProviderBase):
             ]
         }
         logger.save_response(call_ctx, response_data, usage)
+
+        # Warn if usage is 0 after streaming
+        if usage.get("total_tokens", 0) == 0:
+            context.logger.warning(
+                f"[TOKEN_WARNING] Streaming completed but usage is 0! "
+                f"Model={model}, was_cancelled={was_cancelled}. "
+                f"This may indicate the message_start/message_delta events were not received correctly."
+            )
+
+        # Store token usage
+        self._store_token_usage(model, usage, context)
 
         # Log response summary
         cached_tokens = usage.get("cached_tokens", 0)
@@ -338,7 +415,7 @@ class AnthropicProvider(LLMProviderBase):
             "content_text": content,
             "usage": usage,
             "model": model,
-            "raw_response": None
+            "raw_response": None  # No single response object for streaming
         }
 
     def _extract_stream_event_content(self, event) -> Optional[str]:
@@ -347,9 +424,14 @@ class AnthropicProvider(LLMProviderBase):
             if event.type == 'content_block_delta':
                 if hasattr(event, 'delta') and hasattr(event.delta, 'text'):
                     return event.delta.text
+            # Handle thinking block deltas for extended thinking
+            elif event.type == 'content_block_delta':
+                if hasattr(event, 'delta') and hasattr(event.delta, 'thinking'):
+                    # We could optionally capture thinking, but typically we want just the response
+                    pass
         return None
 
-    def _extract_stream_event_usage(self, event, usage_tracker: Dict) -> Optional[Dict]:
+    def _extract_stream_event_usage(self, event, usage_tracker: Dict, context=None) -> Optional[Dict]:
         """
         Extract usage info from a streaming event.
 
@@ -365,25 +447,38 @@ class AnthropicProvider(LLMProviderBase):
         if event.type == 'message_start':
             if hasattr(event, 'message') and hasattr(event.message, 'usage'):
                 usage_tracker["prompt_tokens"] = getattr(event.message.usage, 'input_tokens', 0)
+                # Check for cache usage
+                if hasattr(event.message.usage, 'cache_read_input_tokens'):
+                    usage_tracker["cached_tokens"] = getattr(event.message.usage, 'cache_read_input_tokens', 0)
+                if context and hasattr(context, 'logger'):
+                    context.logger.debug(f"[STREAM_DEBUG] message_start usage: prompt_tokens={usage_tracker['prompt_tokens']}, cached={usage_tracker['cached_tokens']}")
                 return {
                     "prompt_tokens": usage_tracker["prompt_tokens"],
                     "completion_tokens": usage_tracker["completion_tokens"],
                     "total_tokens": usage_tracker["prompt_tokens"] + usage_tracker["completion_tokens"],
-                    "cached_tokens": 0
+                    "cached_tokens": usage_tracker["cached_tokens"]
                 }
         elif event.type == 'message_delta':
             if hasattr(event, 'usage'):
                 usage_tracker["completion_tokens"] = getattr(event.usage, 'output_tokens', 0)
+                if context and hasattr(context, 'logger'):
+                    context.logger.debug(f"[STREAM_DEBUG] message_delta usage: completion_tokens={usage_tracker['completion_tokens']}")
                 return {
                     "prompt_tokens": usage_tracker["prompt_tokens"],
                     "completion_tokens": usage_tracker["completion_tokens"],
                     "total_tokens": usage_tracker["prompt_tokens"] + usage_tracker["completion_tokens"],
-                    "cached_tokens": 0
+                    "cached_tokens": usage_tracker["cached_tokens"]
                 }
 
         return None
 
-    def _convert_messages(self, messages: List[Message], context) -> tuple:
+    def _convert_messages(
+        self,
+        messages: List[Message],
+        context,
+        cache_system_message: bool = False,
+        cache_user_prefix: bool = False
+    ) -> tuple:
         """
         Convert Message objects to Anthropic format.
 
@@ -394,33 +489,67 @@ class AnthropicProvider(LLMProviderBase):
         """
         system_content = None
         api_messages = []
+        first_user_message = True
 
         for msg in messages:
             if msg.role == "system":
                 # Extract system message content
-                system_parts = []
-                for part in msg.content:
-                    if part.type == ContentType.TEXT:
-                        system_parts.append(part.value)
-                system_content = "\n".join(system_parts) if system_parts else None
+                if cache_system_message:
+                    # Use cache_control for system message
+                    system_parts = []
+                    for part in msg.content:
+                        if part.type == ContentType.TEXT:
+                            system_parts.append({
+                                "type": "text",
+                                "text": part.value,
+                                "cache_control": {"type": "ephemeral"}
+                            })
+                    system_content = system_parts if system_parts else None
+                else:
+                    # Simple string system message
+                    system_parts = []
+                    for part in msg.content:
+                        if part.type == ContentType.TEXT:
+                            system_parts.append(part.value)
+                    system_content = "\n".join(system_parts) if system_parts else None
                 continue
 
             # Convert non-system messages
             if len(msg.content) == 1 and msg.content[0].type == ContentType.TEXT:
                 # Simple text message
-                api_messages.append({
-                    "role": msg.role,
-                    "content": msg.content[0].value
-                })
+                content = msg.content[0].value
+
+                # Apply cache control to first user message if requested
+                if cache_user_prefix and msg.role == "user" and first_user_message:
+                    api_messages.append({
+                        "role": msg.role,
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": content,
+                                "cache_control": {"type": "ephemeral"}
+                            }
+                        ]
+                    })
+                    first_user_message = False
+                else:
+                    api_messages.append({
+                        "role": msg.role,
+                        "content": content
+                    })
             else:
                 # Multimodal message
                 content_parts = []
                 for part in msg.content:
                     if part.type == ContentType.TEXT:
-                        content_parts.append({
+                        text_block = {
                             "type": "text",
                             "text": part.value
-                        })
+                        }
+                        # Apply cache control to first user message text
+                        if cache_user_prefix and msg.role == "user" and first_user_message:
+                            text_block["cache_control"] = {"type": "ephemeral"}
+                        content_parts.append(text_block)
                     elif part.type == ContentType.IMAGE_PATH:
                         # Encode local image
                         image_data, media_type = self._encode_image(part.value, context)
@@ -456,15 +585,21 @@ class AnthropicProvider(LLMProviderBase):
                     "content": content_parts
                 })
 
+                if msg.role == "user":
+                    first_user_message = False
+
         return system_content, api_messages
 
     def _build_request(
         self,
         model: str,
-        system_content: Optional[str],
+        system_content: Any,  # Can be string or list with cache_control
         messages: List[Dict],
         kwargs: Dict,
+        output_schema: Optional[Dict],
         supports: Dict,
+        cache_system_message: bool,
+        cache_user_prefix: bool,
         context
     ) -> Dict:
         """Build Anthropic API request."""
@@ -486,18 +621,61 @@ class AnthropicProvider(LLMProviderBase):
             max_config = supports.get("max_tokens", {})
             request["max_tokens"] = max_config.get("max", 4096)
 
-        # Add temperature if supported
+        # Add temperature if supported (not allowed with extended thinking)
+        reasoning_effort = kwargs.get("reasoning_effort")
         if "temperature" in kwargs and supports.get("temperature") is not False:
-            request["temperature"] = kwargs["temperature"]
+            # Extended thinking requires temperature to not be set (or set to 1)
+            if reasoning_effort and supports.get("extended_thinking"):
+                context.logger.debug("Skipping temperature for extended thinking mode")
+            else:
+                request["temperature"] = kwargs["temperature"]
+
+        # Handle extended thinking (similar to OpenAI's reasoning_effort)
+        if reasoning_effort and supports.get("extended_thinking"):
+            # Map reasoning effort to budget tokens
+            budget_map = {
+                "low": 5000,
+                "medium": 10000,
+                "high": 20000
+            }
+            budget_tokens = budget_map.get(reasoning_effort, 10000)
+            request["thinking"] = {
+                "type": "enabled",
+                "budget_tokens": budget_tokens
+            }
+            context.logger.debug(f"Extended thinking enabled with budget: {budget_tokens}")
+
+        # Handle structured output via JSON mode
+        if output_schema:
+            # Anthropic doesn't have native JSON schema enforcement like OpenAI
+            # We add the schema to the prompt and set response_format if available
+            # For now, append schema instruction to last user message
+            for i in range(len(messages) - 1, -1, -1):
+                if messages[i].get("role") == "user":
+                    schema_text = f"\n\nPlease respond with JSON matching this schema:\n```json\n{json.dumps(output_schema, indent=2)}\n```\n\nRespond ONLY with valid JSON, no other text."
+                    content = messages[i]["content"]
+                    if isinstance(content, str):
+                        messages[i]["content"] = content + schema_text
+                    elif isinstance(content, list):
+                        # Find last text block and append
+                        for item in reversed(content):
+                            if item.get("type") == "text":
+                                item["text"] = item["text"] + schema_text
+                                break
+                    break
+            context.logger.debug("Added JSON schema instruction to prompt for structured output")
 
         return request
 
-    def _extract_content(self, response) -> str:
+    def _extract_content(self, response, context) -> str:
         """Extract text content from Anthropic response."""
         if hasattr(response, 'content') and response.content:
             # content is a list of content blocks
             text_parts = []
             for block in response.content:
+                # Skip thinking blocks (from extended thinking)
+                if hasattr(block, 'type') and block.type == 'thinking':
+                    continue
                 if hasattr(block, 'text'):
                     text_parts.append(block.text)
             return "\n".join(text_parts)
@@ -557,3 +735,47 @@ class AnthropicProvider(LLMProviderBase):
         except Exception as e:
             raise RuntimeError(f"Failed to encode image: {str(e)}")
 
+    def _messages_contain_images(self, messages: List[Message]) -> bool:
+        """Check if any message contains image content."""
+        for msg in messages:
+            for content in msg.content:
+                if content.type in (ContentType.IMAGE_PATH, ContentType.IMAGE_URL, ContentType.IMAGE_BASE64):
+                    return True
+        return False
+
+    def _strip_markdown_fences(self, text: str) -> str:
+        """Strip markdown code fences from response."""
+        pattern = r'```(?:json)?\s*\n([\s\S]*?)\n```'
+        match = re.search(pattern, text, re.DOTALL)
+        if match:
+            return match.group(1).strip()
+        return text
+
+    def _store_token_usage(self, model: str, usage: Dict, context):
+        """Store token usage to database."""
+        try:
+            # Get step info from context (required)
+            step_id = require_step_id(context)
+            step_config = context.state.get_step_config() if hasattr(context, 'state') else {}
+            step_name = step_config.get('name', step_id)
+            module_name = require_module_name(context)
+            module_index = getattr(context, 'current_module_index', 0)
+
+            # Store to database
+            has_db = hasattr(context, 'db') and context.db is not None
+            context.logger.info(f"[TOKEN] Storing token usage: has_db={has_db}, workflow_run_id={getattr(context, 'workflow_run_id', None)}")
+            if has_db:
+                context.db.token_repo.store_token_usage(
+                    workflow_run_id=context.workflow_run_id,
+                    step_id=step_id,
+                    step_name=step_name,
+                    module_name=module_name,
+                    module_index=module_index,
+                    model=model,
+                    prompt_tokens=usage.get("prompt_tokens", 0),
+                    completion_tokens=usage.get("completion_tokens", 0),
+                    cached_tokens=usage.get("cached_tokens", 0),
+                    total_tokens=usage.get("total_tokens", 0)
+                )
+        except Exception as e:
+            context.logger.warning(f"Failed to store token usage: {e}")
