@@ -399,6 +399,7 @@ async def register(
         "created_at": now,
         "updated_at": now,
         "auth_providers": [],
+        "invitation_code": invitation_code,
     }
     if email:
         user_doc["email"] = email
