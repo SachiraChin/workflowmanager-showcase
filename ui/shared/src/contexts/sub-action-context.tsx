@@ -7,9 +7,8 @@
  * - Sub-action definitions from display_data
  *
  * Architecture:
- * - Uses injectable SubActionExecutor to decouple from webui's API/store
- * - webui provides real executor that calls API
- * - editor can provide mock executor for previews
+ * - Uses the shared API directly for sub-action execution
+ * - Falls back to injectable executor for editor/mock scenarios
  *
  * Used by:
  * - InteractionFooterInner - renders sub-action buttons in footer
@@ -24,7 +23,9 @@ import {
   useMemo,
   type ReactNode,
 } from "react";
-import type { SubActionDef } from "../types/index";
+import type { SubActionDef, SSEEventType } from "../types/index";
+import { api } from "../core/api";
+import { useWorkflowStore } from "../state/workflow-store";
 
 // =============================================================================
 // Types
@@ -117,7 +118,9 @@ export function useSubActionOptional(): SubActionContextValue | null {
 interface SubActionProviderProps {
   /** Sub-action definitions from display_data */
   subActions: SubActionDef[];
-  /** Injectable executor (webui provides real, editor provides mock) */
+  /** Interaction ID for API calls */
+  interactionId: string;
+  /** Injectable executor for mock scenarios (editor) - if not provided, uses real API */
   executor?: SubActionExecutor;
   /** Called when a sub-action completes successfully */
   onComplete?: () => void;
@@ -126,10 +129,16 @@ interface SubActionProviderProps {
 
 export function SubActionProvider({
   subActions,
+  interactionId,
   executor,
   onComplete,
   children,
 }: SubActionProviderProps) {
+  // Get workflow state
+  const workflowRunId = useWorkflowStore((s) => s.workflowRunId);
+  const selectedProvider = useWorkflowStore((s) => s.selectedProvider);
+  const selectedModel = useWorkflowStore((s) => s.selectedModel);
+
   // Execution state
   const [runningId, setRunningId] = useState<string | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
@@ -149,12 +158,6 @@ export function SubActionProvider({
   // Trigger sub-action execution
   const trigger = useCallback(
     (subActionId: string, params: Record<string, unknown> = {}) => {
-      if (!executor) {
-        console.error("[SubActionProvider] No executor configured");
-        setError("No sub-action executor configured");
-        return;
-      }
-
       // Find sub-action definition
       const subAction = subActions.find((sa) => sa.id === subActionId);
       if (!subAction) {
@@ -168,24 +171,82 @@ export function SubActionProvider({
       setProgress(subAction.loading_label || "Processing...");
       setError(null);
 
-      // Execute via injected executor
-      executor.execute(subActionId, params, {
-        onProgress: (message) => {
-          setProgress(message || "Processing...");
-        },
-        onComplete: () => {
-          setRunningId(null);
-          setProgress(null);
-          onComplete?.();
-        },
-        onError: (err) => {
-          setRunningId(null);
-          setProgress(null);
-          setError(err || "Sub-action failed");
-        },
-      });
+      // If executor is provided (editor/mock), use it
+      if (executor) {
+        executor.execute(subActionId, params, {
+          onProgress: (message) => {
+            setProgress(message || "Processing...");
+          },
+          onComplete: () => {
+            setRunningId(null);
+            setProgress(null);
+            onComplete?.();
+          },
+          onError: (err) => {
+            setRunningId(null);
+            setProgress(null);
+            setError(err || "Sub-action failed");
+          },
+        });
+        return;
+      }
+
+      // Otherwise, use the shared API directly
+      if (!workflowRunId) {
+        console.error("[SubActionProvider] No workflow run ID");
+        setError("No workflow run ID");
+        setRunningId(null);
+        return;
+      }
+
+      // Build request
+      const request = {
+        interaction_id: interactionId,
+        sub_action_id: subActionId,
+        params,
+        ...(selectedModel && {
+          ai_config: {
+            provider: selectedProvider || undefined,
+            model: selectedModel,
+          },
+        }),
+      };
+
+      // Handle SSE events
+      const handleEvent = (eventType: SSEEventType, data: Record<string, unknown>) => {
+        switch (eventType) {
+          case "progress":
+            setProgress((data.message as string) || "Processing...");
+            break;
+          case "complete":
+            setRunningId(null);
+            setProgress(null);
+            onComplete?.();
+            break;
+          case "error":
+            setRunningId(null);
+            setProgress(null);
+            setError((data.message as string) || "Sub-action failed");
+            break;
+        }
+      };
+
+      const handleError = (err: Error) => {
+        console.error("[SubActionProvider] Connection error:", err);
+        setRunningId(null);
+        setProgress(null);
+        setError(err.message);
+      };
+
+      // Start streaming - fire and forget, let it complete naturally
+      api.streamSubAction(
+        workflowRunId,
+        request,
+        handleEvent,
+        handleError
+      );
     },
-    [executor, subActions, onComplete]
+    [executor, subActions, onComplete, workflowRunId, interactionId, selectedProvider, selectedModel]
   );
 
   // Build context value

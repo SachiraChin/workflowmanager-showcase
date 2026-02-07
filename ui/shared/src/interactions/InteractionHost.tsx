@@ -169,6 +169,7 @@ export function InteractionHost({
     >
       <SubActionProvider
         subActions={subActions}
+        interactionId={request.interaction_id}
         executor={subActionExecutor}
         onComplete={onSubActionComplete}
       >

@@ -11,6 +11,7 @@ import type {
   CompletedInteraction,
   ModelsResponse,
 } from "../types/index";
+import type { ProgressState } from "../interactions/types/media-generation/types";
 
 // =============================================================================
 // Types
@@ -18,6 +19,26 @@ import type {
 
 /** View mode for workflow steps */
 export type ViewMode = "scroll" | "single";
+
+/** Active generation task in a media queue */
+export interface MediaQueueTask {
+  /** Unique ID for this task */
+  id: string;
+  /** Timestamp for sorting (oldest first) */
+  createdAt: number;
+  /** Current progress state */
+  progress: ProgressState | null;
+}
+
+/** State for a single media generation queue */
+export interface MediaQueueState {
+  /** All active tasks (running + queued) */
+  activeTasks: MediaQueueTask[];
+  /** Last error message */
+  error: string | null;
+  /** Brief disable state during request start */
+  isStarting: boolean;
+}
 
 export interface WorkflowExecutionState {
   // Workflow identity
@@ -60,6 +81,9 @@ export interface WorkflowExecutionState {
 
   // Access denied state (403 errors)
   accessDenied: boolean;
+
+  // Media generation queues (keyed by promptKey)
+  mediaGenerationQueues: Record<string, MediaQueueState>;
 }
 
 export interface WorkflowEvent {
@@ -111,6 +135,15 @@ export interface WorkflowActions {
 
   // Access denied
   setAccessDenied: (denied: boolean) => void;
+
+  // Media generation queues
+  initMediaQueue: (promptKey: string) => void;
+  addMediaQueueTask: (promptKey: string, task: MediaQueueTask) => void;
+  updateMediaQueueTask: (promptKey: string, taskId: string, progress: ProgressState) => void;
+  removeMediaQueueTask: (promptKey: string, taskId: string) => void;
+  setMediaQueueError: (promptKey: string, error: string | null) => void;
+  setMediaQueueStarting: (promptKey: string, isStarting: boolean) => void;
+  clearMediaQueue: (promptKey: string) => void;
 }
 
 // =============================================================================
@@ -165,6 +198,7 @@ const initialState: WorkflowExecutionState = {
   selectedProvider: null,
   selectedModel: null,
   accessDenied: false,
+  mediaGenerationQueues: {},
 };
 
 // =============================================================================
@@ -293,6 +327,104 @@ export const useWorkflowStore = create<WorkflowExecutionState & WorkflowActions>
 
     // Access denied
     setAccessDenied: (denied) => set({ accessDenied: denied }),
+
+    // Media generation queues
+    initMediaQueue: (promptKey) => set((state) => {
+      if (state.mediaGenerationQueues[promptKey]) return state;
+      return {
+        mediaGenerationQueues: {
+          ...state.mediaGenerationQueues,
+          [promptKey]: { activeTasks: [], error: null, isStarting: false },
+        },
+      };
+    }),
+
+    addMediaQueueTask: (promptKey, task) => set((state) => {
+      const queue = state.mediaGenerationQueues[promptKey] || {
+        activeTasks: [],
+        error: null,
+        isStarting: false,
+      };
+      return {
+        mediaGenerationQueues: {
+          ...state.mediaGenerationQueues,
+          [promptKey]: {
+            ...queue,
+            activeTasks: [...queue.activeTasks, task],
+            isStarting: true,
+            error: null,
+          },
+        },
+      };
+    }),
+
+    updateMediaQueueTask: (promptKey, taskId, progress) => set((state) => {
+      const queue = state.mediaGenerationQueues[promptKey];
+      if (!queue) return state;
+      return {
+        mediaGenerationQueues: {
+          ...state.mediaGenerationQueues,
+          [promptKey]: {
+            ...queue,
+            activeTasks: queue.activeTasks.map((t) =>
+              t.id === taskId ? { ...t, progress } : t
+            ),
+          },
+        },
+      };
+    }),
+
+    removeMediaQueueTask: (promptKey, taskId) => set((state) => {
+      const queue = state.mediaGenerationQueues[promptKey];
+      if (!queue) return state;
+      return {
+        mediaGenerationQueues: {
+          ...state.mediaGenerationQueues,
+          [promptKey]: {
+            ...queue,
+            activeTasks: queue.activeTasks.filter((t) => t.id !== taskId),
+          },
+        },
+      };
+    }),
+
+    setMediaQueueError: (promptKey, error) => set((state) => {
+      const queue = state.mediaGenerationQueues[promptKey] || {
+        activeTasks: [],
+        error: null,
+        isStarting: false,
+      };
+      return {
+        mediaGenerationQueues: {
+          ...state.mediaGenerationQueues,
+          [promptKey]: {
+            ...queue,
+            error,
+            isStarting: false,
+          },
+        },
+      };
+    }),
+
+    setMediaQueueStarting: (promptKey, isStarting) => set((state) => {
+      const queue = state.mediaGenerationQueues[promptKey];
+      if (!queue) return state;
+      return {
+        mediaGenerationQueues: {
+          ...state.mediaGenerationQueues,
+          [promptKey]: {
+            ...queue,
+            isStarting,
+          },
+        },
+      };
+    }),
+
+    clearMediaQueue: (promptKey) => set((state) => {
+      const { [promptKey]: _, ...rest } = state.mediaGenerationQueues;
+      void _;
+      return { mediaGenerationQueues: rest };
+    }),
   })
 );
 
@@ -314,3 +446,6 @@ export const selectModelsConfig = (state: WorkflowExecutionState) => state.model
 export const selectSelectedProvider = (state: WorkflowExecutionState) => state.selectedProvider;
 export const selectSelectedModel = (state: WorkflowExecutionState) => state.selectedModel;
 export const selectAccessDenied = (state: WorkflowExecutionState) => state.accessDenied;
+export const selectMediaGenerationQueues = (state: WorkflowExecutionState) => state.mediaGenerationQueues;
+export const selectMediaQueue = (promptKey: string) => (state: WorkflowExecutionState) => 
+  state.mediaGenerationQueues[promptKey];

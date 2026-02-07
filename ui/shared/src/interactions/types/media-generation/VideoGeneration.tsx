@@ -15,7 +15,6 @@ import { useState, useEffect, useCallback } from "react";
 import { Button } from "../../../components/ui/button";
 import { Loader2, Crop, X } from "lucide-react";
 import { useInteraction } from "../../../contexts/interaction-context";
-import { useMediaAdapter } from "../../../contexts/MediaAdapterContext";
 import {
   useInputSchemaActionsOptional,
   useInputSchemaStateOptional,
@@ -25,6 +24,9 @@ import { useMediaGeneration } from "./MediaGenerationContext";
 import { useGenerationQueue } from "./useGenerationQueue";
 import { MediaGrid } from "./MediaGrid";
 import { CropSelectionModal } from "./CropSelectionModal";
+import { api } from "../../../core/api";
+import { toMediaUrl } from "../../../core/config";
+import { useWorkflowStore } from "../../../state/workflow-store";
 import type { SchemaProperty, UxConfig } from "../../../types/schema";
 import type {
   GenerationResult,
@@ -75,10 +77,11 @@ export function VideoGeneration({
   const inputActions = useInputSchemaActionsOptional();
   const inputState = useInputSchemaStateOptional();
   const { request } = useInteraction();
-  const adapter = useMediaAdapter();
-  const workflowRunId = adapter.getWorkflowRunId();
-  const selectedProvider = adapter.getSelectedProvider();
-  const selectedModel = adapter.getSelectedModel();
+  
+  // Get workflow state directly from store
+  const workflowRunId = useWorkflowStore((s) => s.workflowRunId);
+  const selectedProvider = useWorkflowStore((s) => s.selectedProvider);
+  const selectedModel = useWorkflowStore((s) => s.selectedModel);
 
   // Extract from context (must be before hooks that use these values)
   const subActions = mediaContext?.subActions ?? [];
@@ -89,13 +92,18 @@ export function VideoGeneration({
   const readonly = mediaContext?.readonly ?? false;
   const disabled = mediaContext?.disabled ?? false;
 
+  // Extract config from ux (must be before hooks that use these values)
+  const provider = ux.provider;
+  const promptId = ux.prompt_id || "default";
+  const promptKey = pathToKey(path);
+
   // LOCAL state
   const [generations, setGenerations] = useState<GenerationResult[]>([]);
   const [preview, setPreview] = useState<PreviewInfo | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
 
-  // Queue management for concurrent generation tasks
-  const queue = useGenerationQueue(generations.length, disabled);
+  // Queue management for concurrent generation tasks (persisted in Zustand)
+  const queue = useGenerationQueue(promptKey, generations.length, disabled);
 
   // Video-specific: crop state
   const [savedCrop, setSavedCrop] = useState<CropState | null>(null);
@@ -106,11 +114,6 @@ export function VideoGeneration({
   // Source image for crop modal
   const [sourceImageUrl, setSourceImageUrl] = useState<string | null>(null);
 
-  // Extract config from ux
-  const provider = ux.provider;
-  const promptId = ux.prompt_id || "default";
-  const promptKey = pathToKey(path);
-
   // Get source image from root data (for img2vid)
   const sourceImageData = rootData._source_image as {
     url?: string;
@@ -120,7 +123,7 @@ export function VideoGeneration({
   // Update source image URL when source image changes
   useEffect(() => {
     if (sourceImageData?.url) {
-      setSourceImageUrl(adapter.toMediaUrl(sourceImageData.url));
+      setSourceImageUrl(toMediaUrl(sourceImageData.url));
     }
   }, [sourceImageData?.url]);
 
@@ -132,13 +135,14 @@ export function VideoGeneration({
 
     const loadGenerations = async () => {
       try {
-        const response = await adapter.getInteractionGenerations(
+        const response = await api.getInteractionGenerations(
+          workflowRunId,
           request.interaction_id,
           "video"
         );
 
         const myGenerations = response.generations.filter(
-          (g) => g.provider === provider && g.prompt_id === promptId
+          (g: { provider: string; prompt_id: string }) => g.provider === provider && g.prompt_id === promptId
         );
 
         if (myGenerations.length > 0) {
@@ -152,8 +156,8 @@ export function VideoGeneration({
             }
           }
 
-          const loadedGenerations = myGenerations.map((g) => ({
-            urls: g.urls.map((url) => adapter.toMediaUrl(url)),
+          const loadedGenerations = myGenerations.map((g: { urls: string[]; metadata_id: string; content_ids: string[] }) => ({
+            urls: g.urls.map((url: string) => toMediaUrl(url)),
             metadata_id: g.metadata_id,
             content_ids: g.content_ids,
           }));
@@ -188,7 +192,7 @@ export function VideoGeneration({
 
     const timeoutId = setTimeout(async () => {
       try {
-        const previewResult = await adapter.getMediaPreview( {
+        const previewResult = await api.getMediaPreview(workflowRunId, {
           provider,
           action_type: "img2vid",
           params,
@@ -203,7 +207,9 @@ export function VideoGeneration({
 
     return () => clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally exclude mediaContext to avoid re-fetch on selection change
-  }, [inputState?.values, readonly, workflowRunId, provider, promptId, inputActions, adapter]);
+  }, [inputState?.values, readonly, workflowRunId, provider, promptId, inputActions]);
+
+
 
   // Execute generation with crop
   const executeWithCrop = useCallback(
@@ -276,7 +282,7 @@ export function VideoGeneration({
             const subActionResult = eventData.sub_action_result as Record<string, unknown> | undefined;
             if (subActionResult) {
               const result: GenerationResult = {
-                urls: (subActionResult.urls as string[]).map((url) => adapter.toMediaUrl(url)),
+                urls: (subActionResult.urls as string[]).map((url) => toMediaUrl(url)),
                 metadata_id: subActionResult.metadata_id as string,
                 content_ids: subActionResult.content_ids as string[],
               };
@@ -299,7 +305,13 @@ export function VideoGeneration({
         setSavedCrop(null);
       };
 
-      adapter.streamSubAction( subActionRequest, handleEvent, handleError);
+      // Start streaming - fire and forget, let it complete naturally
+      api.streamSubAction(
+        workflowRunId,
+        subActionRequest,
+        handleEvent,
+        handleError
+      );
     },
     [
       mediaContext,

@@ -16,7 +16,6 @@ import { Button } from "../../../components/ui/button";
 import { Loader2, Play, Pause, Volume2, Download } from "lucide-react";
 import WaveSurfer from "wavesurfer.js";
 import { useInteraction } from "../../../contexts/interaction-context";
-import { useMediaAdapter } from "../../../contexts/MediaAdapterContext";
 import {
   useInputSchemaActionsOptional,
   useInputSchemaStateOptional,
@@ -24,6 +23,9 @@ import {
 } from "../../../schema/input/InputSchemaContext";
 import { useMediaGeneration } from "./MediaGenerationContext";
 import { useGenerationQueue } from "./useGenerationQueue";
+import { api } from "../../../core/api";
+import { toMediaUrl } from "../../../core/config";
+import { useWorkflowStore } from "../../../state/workflow-store";
 import type { SchemaProperty, UxConfig } from "../../../types/schema";
 import type {
   GenerationResult,
@@ -258,10 +260,11 @@ export function AudioGeneration({
   const inputActions = useInputSchemaActionsOptional();
   const inputState = useInputSchemaStateOptional();
   const { request } = useInteraction();
-  const adapter = useMediaAdapter();
-  const workflowRunId = adapter.getWorkflowRunId();
-  const selectedProvider = adapter.getSelectedProvider();
-  const selectedModel = adapter.getSelectedModel();
+  
+  // Get workflow state directly from store
+  const workflowRunId = useWorkflowStore((s) => s.workflowRunId);
+  const selectedProvider = useWorkflowStore((s) => s.selectedProvider);
+  const selectedModel = useWorkflowStore((s) => s.selectedModel);
 
   // Context values (must be before hooks that use these values)
   const subActions = mediaContext?.subActions ?? [];
@@ -271,21 +274,21 @@ export function AudioGeneration({
   const readonly = mediaContext?.readonly ?? false;
   const disabled = mediaContext?.disabled ?? false;
 
+  // Extract config (must be before hooks that use these values)
+  const provider = ux.provider;
+  const promptId = ux.prompt_id || "default";
+  const promptKey = pathToKey(path);
+
   // LOCAL state
   const [generations, setGenerations] = useState<GenerationResult[]>([]);
   const [preview, setPreview] = useState<PreviewInfo | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
 
-  // Queue management for concurrent generation tasks
-  const queue = useGenerationQueue(generations.length, disabled);
+  // Queue management for concurrent generation tasks (persisted in Zustand)
+  const queue = useGenerationQueue(promptKey, generations.length, disabled);
 
   // Audio-specific state
   const [playingId, setPlayingId] = useState<string | null>(null);
-
-  // Extract config
-  const provider = ux.provider;
-  const promptId = ux.prompt_id || "default";
-  const promptKey = pathToKey(path);
 
   // Load existing generations on mount
   useEffect(() => {
@@ -295,13 +298,14 @@ export function AudioGeneration({
 
     const loadGenerations = async () => {
       try {
-        const response = await adapter.getInteractionGenerations(
+        const response = await api.getInteractionGenerations(
+          workflowRunId,
           request.interaction_id,
           "audio"
         );
 
         const myGenerations = response.generations.filter(
-          (g) => g.provider === provider && g.prompt_id === promptId
+          (g: { provider: string; prompt_id: string }) => g.provider === provider && g.prompt_id === promptId
         );
 
         if (myGenerations.length > 0) {
@@ -314,8 +318,8 @@ export function AudioGeneration({
             }
           }
 
-          const loadedGenerations = myGenerations.map((g) => ({
-            urls: g.urls.map((url) => adapter.toMediaUrl(url)),
+          const loadedGenerations = myGenerations.map((g: { urls: string[]; metadata_id: string; content_ids: string[] }) => ({
+            urls: g.urls.map((url: string) => toMediaUrl(url)),
             metadata_id: g.metadata_id,
             content_ids: g.content_ids,
           }));
@@ -350,7 +354,7 @@ export function AudioGeneration({
 
     const timeoutId = setTimeout(async () => {
       try {
-        const previewResult = await adapter.getMediaPreview( {
+        const previewResult = await api.getMediaPreview(workflowRunId, {
           provider,
           action_type: "txt2audio",
           params,
@@ -365,7 +369,9 @@ export function AudioGeneration({
 
     return () => clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally exclude mediaContext to avoid re-fetch on selection change
-  }, [inputState?.values, readonly, workflowRunId, provider, promptId, inputActions, adapter]);
+  }, [inputState?.values, readonly, workflowRunId, provider, promptId, inputActions]);
+
+
 
   // Execute generation via SSE
   const handleGenerate = useCallback(
@@ -452,7 +458,7 @@ export function AudioGeneration({
             const subActionResult = eventData.sub_action_result as Record<string, unknown> | undefined;
             if (subActionResult) {
               const result: GenerationResult = {
-                urls: (subActionResult.urls as string[]).map((url) => adapter.toMediaUrl(url)),
+                urls: (subActionResult.urls as string[]).map((url) => toMediaUrl(url)),
                 metadata_id: subActionResult.metadata_id as string,
                 content_ids: subActionResult.content_ids as string[],
               };
@@ -472,7 +478,13 @@ export function AudioGeneration({
         queue.actions.failTask(taskId, err.message);
       };
 
-      adapter.streamSubAction( subActionRequest, handleEvent, handleError);
+      // Start streaming - fire and forget, let it complete naturally
+      api.streamSubAction(
+        workflowRunId,
+        subActionRequest,
+        handleEvent,
+        handleError
+      );
     },
     [
       mediaContext,
@@ -489,7 +501,6 @@ export function AudioGeneration({
       queue.actions,
       selectedProvider,
       selectedModel,
-      adapter,
     ]
   );
 

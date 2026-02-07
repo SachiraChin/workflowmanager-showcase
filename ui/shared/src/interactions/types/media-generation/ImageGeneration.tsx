@@ -16,7 +16,6 @@ import { useState, useEffect, useCallback } from "react";
 import { Button } from "../../../components/ui/button";
 import { Loader2 } from "lucide-react";
 import { useInteraction } from "../../../contexts/interaction-context";
-import { useMediaAdapter } from "../../../contexts/MediaAdapterContext";
 import {
   useInputSchemaActionsOptional,
   useInputSchemaStateOptional,
@@ -25,6 +24,9 @@ import {
 import { useMediaGeneration } from "./MediaGenerationContext";
 import { useGenerationQueue } from "./useGenerationQueue";
 import { MediaGrid } from "./MediaGrid";
+import { api } from "../../../core/api";
+import { toMediaUrl } from "../../../core/config";
+import { useWorkflowStore } from "../../../state/workflow-store";
 import type { SchemaProperty, UxConfig } from "../../../types/schema";
 import type {
   GenerationResult,
@@ -73,10 +75,11 @@ export function ImageGeneration({
   const inputActions = useInputSchemaActionsOptional();
   const inputState = useInputSchemaStateOptional();
   const { request } = useInteraction();
-  const adapter = useMediaAdapter();
-  const workflowRunId = adapter.getWorkflowRunId();
-  const selectedProvider = adapter.getSelectedProvider();
-  const selectedModel = adapter.getSelectedModel();
+  
+  // Get workflow state directly from store
+  const workflowRunId = useWorkflowStore((s) => s.workflowRunId);
+  const selectedProvider = useWorkflowStore((s) => s.selectedProvider);
+  const selectedModel = useWorkflowStore((s) => s.selectedModel);
 
   // Extract values from context (with defaults if context is null)
   // NOTE: These must be extracted before using in hooks
@@ -87,18 +90,18 @@ export function ImageGeneration({
   const readonly = mediaContext?.readonly ?? false;
   const disabled = mediaContext?.disabled ?? false;
 
+  // Extract config from ux (must be before hooks that use these values)
+  const provider = ux.provider;
+  const promptId = ux.prompt_id || "default";
+  const promptKey = pathToKey(path);
+
   // LOCAL state - each instance manages its own
   const [generations, setGenerations] = useState<GenerationResult[]>([]);
   const [preview, setPreview] = useState<PreviewInfo | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
 
-  // Queue management for concurrent generation tasks
-  const queue = useGenerationQueue(generations.length, disabled);
-
-  // Extract config from ux
-  const provider = ux.provider;
-  const promptId = ux.prompt_id || "default";
-  const promptKey = pathToKey(path);
+  // Queue management for concurrent generation tasks (persisted in Zustand)
+  const queue = useGenerationQueue(promptKey, generations.length, disabled);
 
   // Load existing generations on mount (also in readonly mode to show history)
   // Uses inputActions (stable) instead of full inputContext to avoid re-triggering
@@ -112,8 +115,10 @@ export function ImageGeneration({
 
     const loadGenerations = async () => {
       try {
-        const response = await adapter.getInteractionGenerations(
-          request.interaction_id
+        const response = await api.getInteractionGenerations(
+          workflowRunId,
+          request.interaction_id,
+          "image"
         );
 
         // Filter for this provider/promptId
@@ -133,7 +138,7 @@ export function ImageGeneration({
           }
 
           const loadedGenerations = myGenerations.map((g: Record<string, unknown>) => ({
-            urls: (g.urls as string[]).map((url) => adapter.toMediaUrl(url)),
+            urls: (g.urls as string[]).map((url) => toMediaUrl(url)),
             metadata_id: g.metadata_id as string,
             content_ids: g.content_ids as string[],
           }));
@@ -152,7 +157,7 @@ export function ImageGeneration({
 
     loadGenerations();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only run on mount, not on selection change
-  }, [workflowRunId, request.interaction_id, provider, promptId, adapter, promptKey, inputActions]);
+  }, [workflowRunId, request.interaction_id, provider, promptId, promptKey, inputActions]);
 
   // Fetch preview when input values change (debounced)
   // Uses inputState?.values to trigger re-fetch when values change
@@ -169,7 +174,7 @@ export function ImageGeneration({
 
     const timeoutId = setTimeout(async () => {
       try {
-        const previewResult = await adapter.getMediaPreview({
+        const previewResult = await api.getMediaPreview(workflowRunId, {
           provider,
           action_type: "txt2img",
           params,
@@ -184,7 +189,9 @@ export function ImageGeneration({
 
     return () => clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally exclude mediaContext to avoid re-fetch on selection change
-  }, [inputState?.values, readonly, workflowRunId, provider, promptId, adapter, inputActions]);
+  }, [inputState?.values, readonly, workflowRunId, provider, promptId, inputActions]);
+
+
 
   // Execute generation via SSE
   const handleGenerate = useCallback(
@@ -271,7 +278,7 @@ export function ImageGeneration({
             const subActionResult = eventData.sub_action_result as Record<string, unknown> | undefined;
             if (subActionResult) {
               const result: GenerationResult = {
-                urls: (subActionResult.urls as string[]).map((url) => adapter.toMediaUrl(url)),
+                urls: (subActionResult.urls as string[]).map((url) => toMediaUrl(url)),
                 metadata_id: subActionResult.metadata_id as string,
                 content_ids: subActionResult.content_ids as string[],
               };
@@ -291,7 +298,13 @@ export function ImageGeneration({
         queue.actions.failTask(taskId, err.message);
       };
 
-      adapter.streamSubAction(subActionRequest, handleEvent, handleError);
+      // Start streaming - fire and forget, let it complete naturally
+      api.streamSubAction(
+        workflowRunId,
+        subActionRequest,
+        handleEvent,
+        handleError
+      );
     },
     [
       mediaContext,
@@ -308,7 +321,6 @@ export function ImageGeneration({
       queue.actions,
       selectedProvider,
       selectedModel,
-      adapter,
     ]
   );
 

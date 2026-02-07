@@ -1,6 +1,9 @@
 /**
  * useGenerationQueue - Hook for managing queued generation tasks.
  *
+ * Stores queue state in Zustand to survive component unmount/remount
+ * (e.g., when switching tabs in TabLayout).
+ *
  * Tracks multiple concurrent generation tasks, providing:
  * - Active task management (add, update, complete, error)
  * - Progress display for oldest task with queue count
@@ -8,7 +11,7 @@
  * - Brief disable state during request start
  *
  * Usage:
- *   const queue = useGenerationQueue(generations.length, disabled);
+ *   const queue = useGenerationQueue(promptKey, generations.length, disabled);
  *
  *   // In handleGenerate:
  *   const taskId = queue.actions.startTask();
@@ -28,21 +31,16 @@
  *   {queue.state.error && <span>{queue.state.error}</span>}
  */
 
-import { useState, useMemo, useCallback } from "react";
+import { useMemo, useCallback } from "react";
+import { useWorkflowStore, type MediaQueueTask } from "../../../state/workflow-store";
 import type { ProgressState } from "./types";
 
 // =============================================================================
 // Types
 // =============================================================================
 
-export interface ActiveTask {
-  /** Unique ID for this task */
-  id: string;
-  /** Timestamp for sorting (oldest first) */
-  createdAt: number;
-  /** Current progress state */
-  progress: ProgressState | null;
-}
+// Re-export MediaQueueTask as ActiveTask for backwards compatibility
+export type ActiveTask = MediaQueueTask;
 
 export interface GenerationQueueState {
   /** All active tasks (running + queued) */
@@ -93,19 +91,34 @@ export interface UseGenerationQueueResult {
 
 /**
  * Hook for managing queued generation tasks.
+ * State is persisted in Zustand to survive tab switches.
  *
+ * @param promptKey - Unique key for this queue (from pathToKey)
  * @param generationsCount - Number of completed generations (for button label)
  * @param externalDisabled - External disabled state (e.g., from context)
  * @returns Queue state, actions, and derived values
  */
 export function useGenerationQueue(
+  promptKey: string,
   generationsCount: number,
   externalDisabled: boolean = false
 ): UseGenerationQueueResult {
-  // State
-  const [activeTasks, setActiveTasks] = useState<ActiveTask[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [isStarting, setIsStarting] = useState(false);
+  // Get queue state from Zustand store
+  const queueState = useWorkflowStore(
+    (s) => s.mediaGenerationQueues[promptKey]
+  );
+
+  // Get store actions
+  const addMediaQueueTask = useWorkflowStore((s) => s.addMediaQueueTask);
+  const updateMediaQueueTask = useWorkflowStore((s) => s.updateMediaQueueTask);
+  const removeMediaQueueTask = useWorkflowStore((s) => s.removeMediaQueueTask);
+  const setMediaQueueError = useWorkflowStore((s) => s.setMediaQueueError);
+  const setMediaQueueStarting = useWorkflowStore((s) => s.setMediaQueueStarting);
+
+  // Extract state values (with defaults if queue not initialized)
+  const activeTasks = queueState?.activeTasks ?? [];
+  const error = queueState?.error ?? null;
+  const isStarting = queueState?.isStarting ?? false;
 
   // Sorted tasks (oldest first)
   const sortedTasks = useMemo(
@@ -135,7 +148,7 @@ export function useGenerationQueue(
 
   const buttonDisabled = isStarting || externalDisabled;
 
-  // Actions
+  // Actions - use useCallback to maintain stable references
   const startTask = useCallback((): string => {
     const taskId = `task_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const task: ActiveTask = {
@@ -143,38 +156,39 @@ export function useGenerationQueue(
       createdAt: Date.now(),
       progress: { elapsed_ms: 0, message: "Starting..." },
     };
-    setActiveTasks((prev) => [...prev, task]);
-    setIsStarting(true);
-    setError(null);
+    addMediaQueueTask(promptKey, task);
     return taskId;
-  }, []);
+  }, [promptKey, addMediaQueueTask]);
 
   const updateProgress = useCallback(
     (taskId: string, progress: ProgressState) => {
-      setActiveTasks((prev) =>
-        prev.map((t) => (t.id === taskId ? { ...t, progress } : t))
-      );
+      updateMediaQueueTask(promptKey, taskId, progress);
     },
-    []
+    [promptKey, updateMediaQueueTask]
   );
 
-  const completeTask = useCallback((taskId: string) => {
-    setActiveTasks((prev) => prev.filter((t) => t.id !== taskId));
-  }, []);
+  const completeTask = useCallback(
+    (taskId: string) => {
+      removeMediaQueueTask(promptKey, taskId);
+    },
+    [promptKey, removeMediaQueueTask]
+  );
 
-  const failTask = useCallback((taskId: string, errorMessage: string) => {
-    setActiveTasks((prev) => prev.filter((t) => t.id !== taskId));
-    setError(errorMessage);
-    setIsStarting(false);
-  }, []);
+  const failTask = useCallback(
+    (taskId: string, errorMessage: string) => {
+      removeMediaQueueTask(promptKey, taskId);
+      setMediaQueueError(promptKey, errorMessage);
+    },
+    [promptKey, removeMediaQueueTask, setMediaQueueError]
+  );
 
   const clearError = useCallback(() => {
-    setError(null);
-  }, []);
+    setMediaQueueError(promptKey, null);
+  }, [promptKey, setMediaQueueError]);
 
   const onStreamStarted = useCallback(() => {
-    setIsStarting(false);
-  }, []);
+    setMediaQueueStarting(promptKey, false);
+  }, [promptKey, setMediaQueueStarting]);
 
   // Build result object
   const state = useMemo<GenerationQueueState>(

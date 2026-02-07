@@ -70,7 +70,6 @@ export * from "./types/interaction-state";
 // Contexts
 export * from "./contexts/RenderContext";
 export * from "./contexts/WorkflowStateContext";
-export * from "./contexts/MediaAdapterContext";
 export {
   SubActionProvider,
   useSubAction,

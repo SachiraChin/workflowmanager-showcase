@@ -852,7 +852,6 @@ class ApiClient {
     })();
 
     return () => {
-      console.log("[API] SSE stream cleanup called - aborting");
       controller.abort();
     };
   }

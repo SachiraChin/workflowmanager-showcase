@@ -14,7 +14,7 @@ import { InteractionHost } from "@wfm/shared";
 import { useWorkflowStore } from "@/state/workflow-store";
 import { api } from "@/core/api";
 import type { CompletedInteraction, InteractionRequest } from "@/core/types";
-import { WebUIRenderProvider, WebUIMediaAdapterProvider } from "@/adapters";
+import { WebUIRenderProvider } from "@/adapters";
 
 interface CompletedInteractionCardProps {
   interaction: CompletedInteraction;
@@ -93,15 +93,13 @@ export function CompletedInteractionCard({
     <Card className="h-full flex flex-col">
       <CardContent className="pt-6 pb-6 flex-1 min-h-0">
         <WebUIRenderProvider>
-          <WebUIMediaAdapterProvider>
-            <InteractionHost
-              request={request}
-              mode={{ type: "readonly", response: interaction.response }}
-              onSubmit={() => Promise.resolve()}
-              disabled={true}
-              timestamp={timestamp}
-            />
-          </WebUIMediaAdapterProvider>
+          <InteractionHost
+            request={request}
+            mode={{ type: "readonly", response: interaction.response }}
+            onSubmit={() => Promise.resolve()}
+            disabled={true}
+            timestamp={timestamp}
+          />
         </WebUIRenderProvider>
       </CardContent>
     </Card>
