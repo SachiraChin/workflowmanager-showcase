@@ -218,3 +218,46 @@
 .dark .scrollbar-modern:hover::-webkit-scrollbar-thumb {
   background: oklch(0.5 0 0 / 50%);
 }
+
+/* ============================================
+   Code block scrollbar - for pre/code elements
+   Always visible, theme-aware
+   ============================================ */
+.code-block {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0.8 0 0 / 60%) transparent;
+}
+
+.dark .code-block {
+  scrollbar-color: oklch(0.4 0 0 / 60%) transparent;
+}
+
+.code-block::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.code-block::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.code-block::-webkit-scrollbar-thumb {
+  background: oklch(0.8 0 0 / 60%);
+  border-radius: 3px;
+}
+
+.code-block::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.7 0 0 / 80%);
+}
+
+.dark .code-block::-webkit-scrollbar-thumb {
+  background: oklch(0.4 0 0 / 60%);
+}
+
+.dark .code-block::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.5 0 0 / 80%);
+}
+
+.code-block::-webkit-scrollbar-corner {
+  background: transparent;
+}

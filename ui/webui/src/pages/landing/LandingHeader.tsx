@@ -19,7 +19,7 @@ export function LandingHeader() {
         <div className="flex items-center gap-2">
           <div className="h-6 w-6 rounded-md bg-foreground" />
           <span className="font-landing-display text-sm font-semibold tracking-tight">
-            Workflow Manager
+            Workflow Nexus
           </span>
         </div>
 

@@ -21,7 +21,7 @@ export function LandingPage() {
             AI-Powered Content Generation Platform
           </p>
           <h1 className="mt-4 max-w-2xl font-landing-display text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
-            Workflow Manager
+            Workflow Nexus
           </h1>
           <p className="mt-4 max-w-xl text-muted-foreground">
             A modular, event-sourced workflow execution platform for orchestrating
@@ -75,53 +75,30 @@ export function LandingPage() {
           </div>
         </section>
 
-        {/* Architecture Details + Execution Flow */}
-        <section className="mt-4 grid gap-4 lg:grid-cols-[1fr_280px]">
-          <div className="rounded-xl border border-border bg-card p-6">
-            <h2 className="font-landing-display text-xl font-semibold">
-              Architecture & Backend
-            </h2>
-            <p className="mt-1 text-xs text-muted-foreground">Python / FastAPI</p>
-            <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
-              <li>
-                Event-sourced state management with MongoDB — all state changes
-                persisted as immutable events for replay, recovery, and audit trails.
-              </li>
-              <li>
-                Jinja2-based template resolution for dynamic step configuration
-                with full workflow state access during runtime.
-              </li>
-              <li>
-                Server-Sent Events (SSE) for real-time bidirectional communication
-                between server and clients during execution.
-              </li>
-              <li>
-                Actor-based background worker with MongoDB-backed task queue,
-                per-actor concurrency limits, heartbeat monitoring, and stale task recovery.
-              </li>
-            </ul>
-          </div>
-          <div className="rounded-xl border border-border bg-card p-5">
-            <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-              Execution Flow
-            </p>
-            <div className="mt-4 space-y-2 text-sm">
-              {[
-                "Resolve templates",
-                "Execute module",
-                "Stream events",
-                "Capture feedback",
-                "Persist state",
-              ].map((step, i) => (
-                <div key={step} className="flex items-center gap-3">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-medium">
-                    {i + 1}
-                  </span>
-                  <span>{step}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+        {/* Architecture Details */}
+        <section className="mt-4 rounded-xl border border-border bg-card p-6">
+          <h2 className="font-landing-display text-xl font-semibold">
+            Architecture & Backend
+          </h2>
+          <p className="mt-1 text-xs text-muted-foreground">Python / FastAPI</p>
+          <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
+            <li>
+              Event-sourced state management with MongoDB — all state changes
+              persisted as immutable events for replay, recovery, and audit trails.
+            </li>
+            <li>
+              Jinja2-based template resolution for dynamic step configuration
+              with full workflow state access during runtime.
+            </li>
+            <li>
+              Server-Sent Events (SSE) for real-time bidirectional communication
+              between server and clients during execution.
+            </li>
+            <li>
+              Actor-based background worker with MongoDB-backed task queue,
+              per-actor concurrency limits, heartbeat monitoring, and stale task recovery.
+            </li>
+          </ul>
         </section>
 
         {/* Frontend Card */}
@@ -224,6 +201,132 @@ export function LandingPage() {
           </div>
         </section>
 
+        {/* Schema-Driven UI Example */}
+        <section className="mt-4 rounded-xl border border-border bg-card p-6">
+          <h2 className="font-landing-display text-xl font-semibold">
+            Schema-Driven UI Flow
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Server defines UI layouts via JSON Schema — clients render dynamically without code changes.
+          </p>
+          
+          <div className="mt-5 grid gap-4 lg:grid-cols-3">
+            {/* Module Config */}
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                1. Module Config
+              </p>
+              <pre className="code-block flex-1 overflow-x-auto rounded-lg bg-muted p-3 text-xs leading-relaxed">
+{`{
+  "module": "user.select",
+  "inputs": {
+    "prompt": "Choose pet type",
+    "data": [
+      {
+        "id": "cat",
+        "label": "Cat",
+        "description": "Feline..."
+      },
+      {
+        "id": "dog",
+        "label": "Dog",
+        "description": "Canine..."
+      }
+    ],
+    "schema": { "$ref": "..." },
+    "multi_select": false
+  },
+  "outputs_to_state": {
+    "selected_data": "pet_type"
+  }
+}`}
+              </pre>
+            </div>
+
+            {/* Display Schema */}
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                2. Display Schema
+              </p>
+              <pre className="code-block flex-1 overflow-x-auto rounded-lg bg-muted p-3 text-xs leading-relaxed">
+{`{
+  "type": "array",
+  "_ux.render_as": "card-stack",
+  "items": {
+    "type": "object",
+    "_ux": {
+      "render_as": "card",
+      "selectable": true
+    },
+    "properties": {
+      "label": {
+        "type": "string",
+        "_ux.render_as": "card-title"
+      },
+      "description": {
+        "type": "string",
+        "_ux.render_as": "card-subtitle"
+      }
+    }
+  }
+}`}
+              </pre>
+            </div>
+
+            {/* UI Response */}
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                3. Client Response
+              </p>
+              <pre className="code-block flex-1 overflow-x-auto rounded-lg bg-muted p-3 text-xs leading-relaxed">
+{`// Request (Server → UI)
+{
+  "type": "STRUCTURED_SELECT",
+  "payload": {
+    "data": [...],
+    "schema": {...},
+    "multi_select": false
+  }
+}
+
+// Response (UI → Server)
+{
+  "workflow_run_id": "abc123",
+  "response": {
+    "selected_indices": [0],
+    "selected_data": [
+      { "id": "cat", ... }
+    ]
+  }
+}`}
+              </pre>
+            </div>
+          </div>
+
+          {/* Rendered UI Screenshot */}
+          <div className="mt-5 space-y-2">
+            <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+              Rendered UI Result
+            </p>
+            <div className="overflow-hidden rounded-lg border border-border">
+              <img 
+                src="/screenshot-simple-module-dark.png" 
+                alt="Schema-driven UI rendered as selectable cards"
+                className="hidden w-full dark:block"
+              />
+              <img 
+                src="/screenshot-simple-module-light.png" 
+                alt="Schema-driven UI rendered as selectable cards"
+                className="block w-full dark:hidden"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              The <code className="rounded bg-muted px-1 py-0.5">_ux.*</code> hints control rendering: 
+              card layouts, grids, titles, highlights, and custom formatters — all without frontend changes.
+            </p>
+          </div>
+        </section>
+
         {/* Technical Stack Card */}
         <section className="mt-4 rounded-xl border border-border bg-card p-6">
           <h2 className="font-landing-display text-xl font-semibold">
@@ -252,12 +355,26 @@ export function LandingPage() {
               </span>
             ))}
           </div>
+          <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+            </svg>
+            <span>Read more:</span>
+            <a 
+              href="https://github.com/SachiraChin/workflowmanager-showcase" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-foreground underline underline-offset-2 hover:text-muted-foreground"
+            >
+              github.com/SachiraChin/workflowmanager-showcase
+            </a>
+          </div>
         </section>
 
         {/* Footer */}
         <footer className="mt-10 flex flex-col gap-4 border-t border-border pt-8 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">
-            Workflow Manager — Event-sourced workflow execution for AI content generation.
+            Workflow Nexus — Event-sourced workflow execution for AI content generation.
           </p>
           <Link
             to="/workflows"
