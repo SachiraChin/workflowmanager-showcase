@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, type ReactNode } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -6,6 +6,7 @@ import {
   Navigate,
   useNavigate,
   useParams,
+  Outlet,
 } from "react-router-dom";
 import { Header } from "@/components/layout/header";
 import { Loader2 } from "lucide-react";
@@ -13,6 +14,7 @@ import { WorkflowStartPage } from "@/pages/WorkflowStartPage";
 import { WorkflowRunnerPage } from "@/pages/WorkflowRunnerPage";
 import { LoginPage } from "@/pages/LoginPage";
 import { InvitationSignupPage } from "@/pages/InvitationSignupPage";
+import { LandingPage } from "@/pages/landing/LandingPage";
 import { api, setAccessDeniedHandler } from "@/core/api";
 import { useWorkflowExecution, setCapabilities } from "@/state/hooks/useWorkflowExecution";
 import { useWorkflowStore } from "@/state/workflow-store";
@@ -60,21 +62,21 @@ function RunnerPageRoute() {
 
   // If no runId in URL, redirect to start
   if (!runId) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/workflows" replace />;
   }
 
   const handleRestart = useCallback(() => {
-    navigate("/");
+    navigate("/workflows");
   }, [navigate]);
 
   return <WorkflowRunnerPage onRestart={handleRestart} />;
 }
 
 // =============================================================================
-// Main App Component
+// Layouts
 // =============================================================================
 
-function AppContent({ user, onLogout }: { user: User; onLogout: () => void }) {
+function AuthenticatedLayout({ user, onLogout }: { user: User; onLogout: () => void }) {
   // Key to force re-render when debug mode changes
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -87,29 +89,36 @@ function AppContent({ user, onLogout }: { user: User; onLogout: () => void }) {
     <div className="h-screen flex flex-col bg-background overflow-hidden">
       <Header user={user} onLogout={onLogout} onDebugModeChange={handleDebugModeChange} />
       <main key={refreshKey} className="flex-1 min-h-0 overflow-hidden">
-        <Routes>
-          <Route path="/" element={<StartPageRoute user={user} />} />
-          <Route path="/run/:runId" element={<RunnerPageRoute />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <Outlet />
       </main>
     </div>
   );
 }
 
-function PublicAppContent({ onLoginSuccess }: { onLoginSuccess: (user: User) => void }) {
-  return (
-    <Routes>
-      <Route path="/login" element={<LoginPage onLoginSuccess={onLoginSuccess} />} />
-      <Route path="/invite" element={<InvitationSignupPage onLoginSuccess={onLoginSuccess} />} />
-      <Route path="/invite/:invitationCode" element={<InvitationSignupPage onLoginSuccess={onLoginSuccess} />} />
-      <Route path="/invite/*" element={<InvitationSignupPage onLoginSuccess={onLoginSuccess} />} />
-      <Route path="*" element={<Navigate to="/login" replace />} />
-    </Routes>
-  );
+function RequireAuth({
+  user,
+  isCheckingAuth,
+  children,
+}: {
+  user: User | null;
+  isCheckingAuth: boolean;
+  children: ReactNode;
+}) {
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  return <>{children}</>;
 }
 
-function App() {
+function AppRoutes() {
+  const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
@@ -145,9 +154,13 @@ function App() {
     checkAuth();
   }, []);
 
-  const handleLoginSuccess = useCallback((loggedInUser: User) => {
-    setUser(loggedInUser);
-  }, []);
+  const handleLoginSuccess = useCallback(
+    (loggedInUser: User) => {
+      setUser(loggedInUser);
+      navigate("/workflows");
+    },
+    [navigate]
+  );
 
   const handleLogout = useCallback(async () => {
     try {
@@ -159,16 +172,34 @@ function App() {
   }, []);
 
   return (
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route
+        path="/login"
+        element={user ? <Navigate to="/workflows" replace /> : <LoginPage onLoginSuccess={handleLoginSuccess} />}
+      />
+      <Route path="/invite" element={<InvitationSignupPage onLoginSuccess={handleLoginSuccess} />} />
+      <Route path="/invite/:invitationCode" element={<InvitationSignupPage onLoginSuccess={handleLoginSuccess} />} />
+      <Route path="/invite/*" element={<InvitationSignupPage onLoginSuccess={handleLoginSuccess} />} />
+      <Route
+        element={(
+          <RequireAuth user={user} isCheckingAuth={isCheckingAuth}>
+            <AuthenticatedLayout user={user as User} onLogout={handleLogout} />
+          </RequireAuth>
+        )}
+      >
+        <Route path="/workflows" element={<StartPageRoute user={user as User} />} />
+        <Route path="/run/:runId" element={<RunnerPageRoute />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
+function App() {
+  return (
     <BrowserRouter>
-      {isCheckingAuth ? (
-        <div className="min-h-screen bg-background flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      ) : user ? (
-        <AppContent user={user} onLogout={handleLogout} />
-      ) : (
-        <PublicAppContent onLoginSuccess={handleLoginSuccess} />
-      )}
+      <AppRoutes />
     </BrowserRouter>
   );
 }
