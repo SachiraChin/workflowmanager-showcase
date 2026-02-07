@@ -17,7 +17,7 @@
           "properties": {
             "prompt": {
               "type": "string",
-              "description": "Complete Midjourney prompt including parameters"
+              "description": "Midjourney prompt text only (no inline parameters or metadata fields)"
             },
             "style_notes": {
               "type": "string",

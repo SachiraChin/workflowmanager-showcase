@@ -28,7 +28,9 @@ You will receive a scene concept with:
 **Midjourney:**
 - Use evocative, artistic language
 - Include style references (cinematic, photography style, etc.)
-- Structure: [subject] [action/expression] [setting] [lighting] [style] [parameters]
+- Structure: [subject] [action/expression] [setting] [lighting] [style]
+- Output prompt text only. Do not include inline command parameters or metadata fields.
+- Never include values like: --ar, --v, --stylize, --chaos, --weird, --quality, --seed, --raw.
 - Best for: Artistic, stylized pet portraits with strong mood and atmosphere
 
 **Leonardo:**
@@ -93,3 +95,4 @@ Example negative prompt:
 - Anatomical errors (wrong number of legs, unnatural proportions)
 - Overly busy or cluttered compositions
 - Generic descriptions - be specific to THIS scene and THIS pet
+- Inline model-specific metadata or parameter fields in prompt text (for any model)
