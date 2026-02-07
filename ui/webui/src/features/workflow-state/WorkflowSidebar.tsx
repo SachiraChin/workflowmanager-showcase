@@ -160,12 +160,18 @@ export function WorkflowSidebar({
       {/* Action buttons */}
       <div className="flex gap-2 flex-wrap">
         {/* Exit button - always available */}
-        <Button variant="outline" onClick={onCancel} size="sm">
+        <Button
+          data-guidance="exit-button"
+          variant="outline"
+          onClick={onCancel}
+          size="sm"
+        >
           <LogOut className="mr-2 h-4 w-4" />
           Exit
         </Button>
         {/* View mode toggle */}
         <Button
+          data-guidance="view-mode-toggle"
           variant="outline"
           onClick={toggleViewMode}
           size="sm"
@@ -188,7 +194,7 @@ export function WorkflowSidebar({
       </div>
 
       {/* Model selector */}
-      <div className="space-y-1">
+      <div data-guidance="model-selector" className="space-y-1">
         <label className="text-sm text-muted-foreground">Model</label>
         <Select value={getSelectValue()} onValueChange={handleModelChange}>
           <SelectTrigger className="w-full">

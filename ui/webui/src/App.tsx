@@ -6,6 +6,7 @@ import {
   Navigate,
   useNavigate,
   useParams,
+  useLocation,
   Outlet,
 } from "react-router-dom";
 import { Header } from "@/components/layout/header";
@@ -15,6 +16,7 @@ import { WorkflowRunnerPage } from "@/pages/WorkflowRunnerPage";
 import { LoginPage } from "@/pages/LoginPage";
 import { InvitationSignupPage } from "@/pages/InvitationSignupPage";
 import { LandingPage } from "@/pages/landing/LandingPage";
+import { RunnerGuideButton } from "@/features/workflow-guidance";
 import { api, setAccessDeniedHandler } from "@/core/api";
 import { useWorkflowExecution, setCapabilities } from "@/state/hooks/useWorkflowExecution";
 import { useWorkflowStore } from "@/state/workflow-store";
@@ -77,6 +79,7 @@ function RunnerPageRoute() {
 // =============================================================================
 
 function AuthenticatedLayout({ user, onLogout }: { user: User; onLogout: () => void }) {
+  const location = useLocation();
   // Key to force re-render when debug mode changes
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -85,9 +88,18 @@ function AuthenticatedLayout({ user, onLogout }: { user: User; onLogout: () => v
     setRefreshKey((prev) => prev + 1);
   }, []);
 
+  // Show guide button only on runner page (/run/*)
+  const isRunnerPage = location.pathname.startsWith("/run/");
+
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
-      <Header user={user} onLogout={onLogout} onDebugModeChange={handleDebugModeChange} />
+      <Header
+        user={user}
+        onLogout={onLogout}
+        onDebugModeChange={handleDebugModeChange}
+        showGuideButton={isRunnerPage}
+        guideButton={<RunnerGuideButton />}
+      />
       <main key={refreshKey} className="flex-1 min-h-0 overflow-hidden">
         <Outlet />
       </main>

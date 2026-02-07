@@ -21,10 +21,10 @@ import { WorkflowSidebar, StateTreeView, FilesTreeView } from "@/features/workfl
 import { InteractionPanel, WorkflowCompletion } from "@/features/workflow-runner";
 import { CompletedInteractionCard } from "@/features/workflow-history";
 import { AccessDeniedView } from "@/components/AccessDeniedView";
+import { RunnerGuidanceOverlay } from "@/features/workflow-guidance";
 import { useWorkflowExecution } from "@/state/hooks/useWorkflowExecution";
 import { useWorkflowStore } from "@/state/workflow-store";
 import { WorkflowStateProvider } from "@wfm/shared";
-// import { api } from "@/core/api";  // TEMPORARILY DISABLED - status display polling
 import type { CompletedInteraction, InteractionResponseData } from "@/core/types";
 
 /** Interaction with step context for rendering */
@@ -251,14 +251,28 @@ export function WorkflowRunnerPage({ onRestart }: WorkflowRunnerPageProps) {
               />
             </div>
 
+            {/* Runner guidance overlay (portal to body) */}
+            <RunnerGuidanceOverlay />
+
             {/* State/Files tabs - fills remaining space */}
-            <Tabs defaultValue="state" className="flex-1 min-h-0 overflow-hidden">
+            <Tabs
+              defaultValue="state"
+              className="flex-1 min-h-0 overflow-hidden"
+            >
               <TabsList className="w-full shrink-0">
-                <TabsTrigger value="state" className="flex-1 gap-1.5">
+                <TabsTrigger
+                  data-guidance="state-tab"
+                  value="state"
+                  className="flex-1 gap-1.5"
+                >
                   <Database className="h-4 w-4" />
                   State
                 </TabsTrigger>
-                <TabsTrigger value="files" className="flex-1 gap-1.5">
+                <TabsTrigger
+                  data-guidance="files-tab"
+                  value="files"
+                  className="flex-1 gap-1.5"
+                >
                   <FolderTree className="h-4 w-4" />
                   Files
                 </TabsTrigger>
@@ -273,7 +287,7 @@ export function WorkflowRunnerPage({ onRestart }: WorkflowRunnerPageProps) {
           </div>
 
           {/* Main content - Scroll or Single view mode */}
-          <div className="lg:col-span-2">
+          <div data-guidance="interaction-panel" className="lg:col-span-2">
             {viewMode === "scroll" ? (
               /* Scroll mode - Magnetic scroll-snap interaction cards */
               <MagneticScrollContainer

@@ -11,9 +11,13 @@ interface HeaderProps {
   onLogout?: () => void;
   /** Callback when debug mode is toggled (to trigger view refresh) */
   onDebugModeChange?: (enabled: boolean) => void;
+  /** Whether to show the runner guide button */
+  showGuideButton?: boolean;
+  /** Render prop for guide button */
+  guideButton?: React.ReactNode;
 }
 
-export function Header({ showBackButton, onBack, user, onLogout, onDebugModeChange }: HeaderProps) {
+export function Header({ showBackButton, onBack, user, onLogout, onDebugModeChange, showGuideButton, guideButton }: HeaderProps) {
   const { isDebugMode, toggleDebugMode } = useDebugMode();
 
   const handleDebugToggle = () => {
@@ -43,6 +47,7 @@ export function Header({ showBackButton, onBack, user, onLogout, onDebugModeChan
               </div>
               {/* Debug Mode Toggle */}
               <Button
+                data-guidance="debug-toggle"
                 variant="ghost"
                 size="sm"
                 onClick={handleDebugToggle}
@@ -53,8 +58,12 @@ export function Header({ showBackButton, onBack, user, onLogout, onDebugModeChan
                 title={isDebugMode ? "Debug mode ON - click to disable" : "Enable debug mode"}
               >
                 <Bug className="h-4 w-4" />
-                {isDebugMode && <span className="text-xs">Debug</span>}
+                <span className="text-xs">Debug</span>
               </Button>
+              {/* Guide Button (runner page only) */}
+              {showGuideButton && (
+                <span data-guidance="guide-button">{guideButton}</span>
+              )}
               {onLogout && (
                 <Button variant="ghost" size="sm" onClick={onLogout}>
                   <LogOut className="h-4 w-4 mr-1" />
