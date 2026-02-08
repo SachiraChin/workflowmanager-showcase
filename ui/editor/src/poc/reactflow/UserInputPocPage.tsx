@@ -1,302 +1,254 @@
+import { useMemo, useState } from "react";
 import {
   Background,
   Controls,
-  MarkerType,
+  Handle,
   MiniMap,
+  Position,
   ReactFlow,
   type Edge,
   type Node,
+  type NodeProps,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import {
+  InteractionHost,
+  RenderProvider,
+  type InteractionResponseData,
+} from "@wfm/shared";
+import { UserSelectModuleCard } from "@/modules/user-select/UserSelectModuleCard";
+import {
+  type UserSelectModule,
+  validateUserSelectModule,
+} from "@/modules/user-select/types";
+import { UserSelectModuleEditor } from "@/modules/user-select/UserSelectModuleEditor";
+import { useVirtualUserSelectRuntime } from "@/runtime/useVirtualUserSelectRuntime";
 
-type JsonValue =
-  | string
-  | number
-  | boolean
-  | null
-  | JsonValue[]
-  | { [key: string]: JsonValue };
-
-type ModuleSpec = {
-  module_id: string;
-  name: string;
-  inputs: JsonValue;
-  outputs_to_state: JsonValue;
+type UserSelectNodeData = {
+  module: UserSelectModule;
+  active: boolean;
+  status: string;
+  previewOpen: boolean;
+  onTogglePreview: () => void;
+  previewRequest: any;
+  busy: boolean;
+  onSubmitPreview: (response: InteractionResponseData) => void;
 };
 
-const STEP_SPEC: {
-  step_id: string;
-  name: string;
-  description: string;
-  modules: ModuleSpec[];
-} = {
-  step_id: "user_input",
-  name: "Step {step_number}: Choose Your Pet Story",
-  description: "Select pet type and story aesthetic",
-  modules: [
-    {
-      module_id: "user.select",
-      name: "select_pet_type",
-      inputs: {
-        resolver_schema: {
-          type: "object",
-          properties: {
-            data: { resolver: "server" },
-          },
-        },
-        prompt: "What type of pet is this video for?",
-        data: [
-          {
-            id: "cat",
-            label: "Cat",
-            description:
-              "Feline friends - independent, curious, and endlessly entertaining",
-          },
-          {
-            id: "dog",
-            label: "Dog",
-            description:
-              "Canine companions - loyal, playful, and always happy to see you",
-          },
-          {
-            id: "both",
-            label: "Cat & Dog",
-            description:
-              "Multi-pet household - the chaos and love of furry siblings",
-          },
-        ],
-        schema: {
-          $ref: "schemas/pet_type_display_schema.json",
-          type: "json",
-        },
-        multi_select: false,
-        mode: "select",
-      },
-      outputs_to_state: {
-        selected_indices: "pet_type_indices",
-        selected_data: "pet_type_selection",
-      },
-    },
-    {
-      module_id: "user.select",
-      name: "select_aesthetic",
-      inputs: {
-        resolver_schema: {
-          type: "object",
-          properties: {
-            data: { resolver: "server" },
-          },
-        },
-        prompt: "Choose the story aesthetic for your video",
-        data: {
-          $ref: "core_aesthetics.json",
-          type: "json",
-        },
-        schema: {
-          $ref: "schemas/cc_aesthetic_display_schema.json",
-          type: "json",
-        },
-        multi_select: false,
-        mode: "select",
-      },
-      outputs_to_state: {
-        selected_indices: "aesthetic_indices",
-        selected_data: "aesthetic_selection",
-      },
-    },
-  ],
+type UserSelectNode = Node<UserSelectNodeData, "userSelect">;
+
+function UserSelectNodeView({ data }: NodeProps<UserSelectNode>) {
+  return (
+    <div className="space-y-1">
+      <Handle id="in" position={Position.Left} type="target" />
+      <UserSelectModuleCard
+        active={data.active}
+        module={data.module}
+        onTogglePreview={data.onTogglePreview}
+        previewContent={
+          data.previewRequest ? (
+            <RenderProvider value={{ debugMode: false, readonly: false }}>
+              <InteractionHost
+                disabled={data.busy}
+                onSubmit={data.onSubmitPreview}
+                request={data.previewRequest}
+              />
+            </RenderProvider>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Click Preview to load real server interaction.
+            </p>
+          )
+        }
+        previewOpen={data.previewOpen}
+      />
+      <Handle id="out" position={Position.Right} type="source" />
+      <p className="text-center text-[11px] text-muted-foreground">state: {data.status}</p>
+    </div>
+  );
+}
+
+const nodeTypes = {
+  userSelect: UserSelectNodeView,
 };
-
-function formatValue(value: JsonValue): string {
-  if (Array.isArray(value)) return `[${value.length}]`;
-  if (value && typeof value === "object") return "{...}";
-  if (typeof value === "string") return value;
-  return String(value);
-}
-
-function buildGraphFromStep(): { nodes: Node[]; edges: Edge[] } {
-  const nodes: Node[] = [];
-  const edges: Edge[] = [];
-  let index = 0;
-
-  const nextId = (prefix: string) => `${prefix}-${index++}`;
-
-  const stepGroupId = "step-user-input";
-  nodes.push({
-    id: stepGroupId,
-    type: "group",
-    position: { x: 40, y: 40 },
-    style: {
-      width: 1400,
-      height: 1200,
-      border: "1px solid var(--border)",
-      background: "var(--card)",
-    },
-    data: {},
-    draggable: false,
-    selectable: false,
-  });
-
-  const stepInfoId = nextId("step-info");
-  nodes.push({
-    id: stepInfoId,
-    parentId: stepGroupId,
-    extent: "parent",
-    position: { x: 20, y: 20 },
-    data: {
-      label: `step_id: ${STEP_SPEC.step_id}`,
-    },
-    style: { width: 320, fontWeight: 600 },
-  });
-
-  const stepNameId = nextId("step-name");
-  nodes.push({
-    id: stepNameId,
-    parentId: stepGroupId,
-    extent: "parent",
-    position: { x: 20, y: 92 },
-    data: { label: `name: ${STEP_SPEC.name}` },
-    style: { width: 660 },
-  });
-
-  const stepDescriptionId = nextId("step-description");
-  nodes.push({
-    id: stepDescriptionId,
-    parentId: stepGroupId,
-    extent: "parent",
-    position: { x: 20, y: 154 },
-    data: { label: `description: ${STEP_SPEC.description}` },
-    style: { width: 660 },
-  });
-
-  const addValueTree = (
-    value: JsonValue,
-    key: string,
-    parentNodeId: string,
-    moduleGroupId: string,
-    depth: number,
-    rowRef: { value: number }
-  ) => {
-    const id = nextId("field");
-    nodes.push({
-      id,
-      parentId: moduleGroupId,
-      extent: "parent",
-      position: { x: 16 + depth * 180, y: rowRef.value },
-      data: { label: `${key}: ${formatValue(value)}` },
-      style: { width: 170 },
-    });
-    edges.push({
-      id: nextId("edge"),
-      source: parentNodeId,
-      target: id,
-      type: "smoothstep",
-      markerEnd: { type: MarkerType.ArrowClosed },
-      style: { strokeWidth: 1.2 },
-    });
-    rowRef.value += 56;
-
-    if (Array.isArray(value)) {
-      value.forEach((item, idx) => {
-        addValueTree(item, `[${idx}]`, id, moduleGroupId, depth + 1, rowRef);
-      });
-      return;
-    }
-
-    if (value && typeof value === "object") {
-      Object.entries(value).forEach(([childKey, childValue]) => {
-        addValueTree(childValue, childKey, id, moduleGroupId, depth + 1, rowRef);
-      });
-    }
-  };
-
-  STEP_SPEC.modules.forEach((moduleSpec, moduleIndex) => {
-    const moduleGroupId = `module-group-${moduleIndex}`;
-    const moduleX = 20 + moduleIndex * 680;
-
-    nodes.push({
-      id: moduleGroupId,
-      type: "group",
-      parentId: stepGroupId,
-      extent: "parent",
-      position: { x: moduleX, y: 240 },
-      style: {
-        width: 640,
-        height: 920,
-        border: "1px dashed var(--border)",
-        background: "var(--muted)",
-      },
-      data: {},
-      draggable: false,
-    });
-
-    const moduleRootId = `module-root-${moduleIndex}`;
-    nodes.push({
-      id: moduleRootId,
-      parentId: moduleGroupId,
-      extent: "parent",
-      position: { x: 16, y: 16 },
-      data: {
-        label: `${moduleSpec.name} (${moduleSpec.module_id})`,
-      },
-      style: { width: 420, fontWeight: 600 },
-    });
-
-    const rowRef = { value: 82 };
-    addValueTree(
-      moduleSpec.inputs,
-      "inputs",
-      moduleRootId,
-      moduleGroupId,
-      0,
-      rowRef
-    );
-    addValueTree(
-      moduleSpec.outputs_to_state,
-      "outputs_to_state",
-      moduleRootId,
-      moduleGroupId,
-      0,
-      rowRef
-    );
-
-    if (moduleIndex > 0) {
-      edges.push({
-        id: `module-sequence-${moduleIndex}`,
-        source: `module-root-${moduleIndex - 1}`,
-        target: moduleRootId,
-        type: "smoothstep",
-        label: "step flow",
-        markerEnd: { type: MarkerType.ArrowClosed },
-      });
-    }
-  });
-
-  return { nodes, edges };
-}
-
-const graph = buildGraphFromStep();
 
 export function ReactFlowUserInputPocPage() {
+  const runtime = useVirtualUserSelectRuntime();
+  const modules = runtime.modules;
+  const [selectedModuleName, setSelectedModuleName] = useState<string>(
+    modules[0]?.name ?? ""
+  );
+  const [previewModuleName, setPreviewModuleName] = useState<string | null>(null);
+
+  const selectedModule = modules.find((module) => module.name === selectedModuleName);
+  const selectedIssues = selectedModule ? validateUserSelectModule(selectedModule) : [];
+
+  const edges = useMemo<Edge[]>(() => {
+    const result: Edge[] = [];
+    for (let i = 1; i < modules.length; i += 1) {
+      result.push({
+        id: `module-sequence-${i}`,
+        source: modules[i - 1].name,
+        target: modules[i].name,
+        label: "step flow",
+      });
+    }
+    return result;
+  }, [modules]);
+
+  const nodes = useMemo<UserSelectNode[]>(() => {
+    return modules.map((module, index) => ({
+      id: module.name,
+      type: "userSelect",
+      position: { x: 80 + index * 420, y: 160 },
+      data: {
+        module,
+        active: module.name === selectedModuleName,
+        status: runtime.runStateByModule[module.name] || "idle",
+        previewOpen: previewModuleName === module.name,
+        onTogglePreview: () => {
+          if (previewModuleName === module.name) {
+            setPreviewModuleName(null);
+            return;
+          }
+          setPreviewModuleName(module.name);
+          setSelectedModuleName(module.name);
+          void runtime.runSelectedModule(module.name);
+        },
+        previewRequest:
+          runtime.interactionRequest &&
+          (runtime.pendingModuleName || selectedModuleName) === module.name
+            ? runtime.interactionRequest
+            : null,
+        busy: runtime.busy,
+        onSubmitPreview: (response: InteractionResponseData) =>
+          void runtime.submitInteraction(response, module.name),
+      },
+    }));
+  }, [
+    modules,
+    previewModuleName,
+    runtime.busy,
+    runtime.interactionRequest,
+    runtime.pendingModuleName,
+    runtime.runStateByModule,
+    selectedModuleName,
+  ]);
+
   return (
-    <div className="h-screen bg-background text-foreground">
+    <div className="h-full min-h-0 flex flex-col bg-background text-foreground">
       <header className="flex items-center justify-between border-b p-3">
         <div>
           <h1 className="text-lg font-semibold">React Flow User Input PoC</h1>
           <p className="text-xs text-muted-foreground">
-            Based on `workflows/cc/steps/1_user_input` (two-module rendering).
+            `user.select` nodes use shared cards and a shared InteractionHost runtime panel.
           </p>
         </div>
-        <a className="text-sm underline" href="/">
-          Back
-        </a>
       </header>
-      <div className="h-[calc(100vh-53px)]">
-        <ReactFlow fitView nodes={graph.nodes} edges={graph.edges}>
-          <Background gap={20} />
-          <Controls />
-          <MiniMap />
-        </ReactFlow>
+
+      <div className="grid flex-1 min-h-0 grid-cols-[1fr_420px] grid-rows-[minmax(0,1fr)]">
+        <div className="min-h-0 overflow-hidden border-r">
+          <ReactFlow
+            fitView
+            edges={edges}
+            nodeTypes={nodeTypes}
+            nodes={nodes}
+            onNodeClick={(_, node) => setSelectedModuleName(node.id)}
+          >
+            <Background gap={20} />
+            <Controls />
+            <MiniMap />
+          </ReactFlow>
+        </div>
+        <aside className="min-h-0 overflow-auto p-3">
+          {selectedModule ? (
+            <>
+              <h2 className="mb-3 text-sm font-semibold">Module Parameters</h2>
+              <div className="rounded border bg-card p-3">
+                <UserSelectModuleEditor
+                  onChange={(nextModule) => {
+                    runtime.updateModule(selectedModule.name, nextModule);
+                    if (nextModule.name !== selectedModule.name) {
+                      setSelectedModuleName(nextModule.name);
+                    }
+                  }}
+                  value={selectedModule}
+                />
+
+                <div className="mb-3 space-y-2">
+                  <label className="flex items-center gap-2 rounded border bg-background px-2 py-1 text-xs">
+                    <input
+                      checked={runtime.autoResolveEnabled}
+                      onChange={(event) =>
+                        runtime.setAutoResolveEnabled(event.target.checked)
+                      }
+                      type="checkbox"
+                    />
+                    auto-resolve prerequisite selections
+                  </label>
+                  <button
+                    className="w-full rounded border bg-background px-3 py-2 text-sm"
+                    disabled={runtime.busy}
+                    onClick={() => void runtime.runSelectedModule(selectedModule.name)}
+                    type="button"
+                  >
+                    {runtime.busy ? "Running..." : "Run Selected Module"}
+                  </button>
+                  <button
+                    className="w-full rounded border bg-background px-3 py-2 text-sm"
+                    onClick={runtime.resetSession}
+                    type="button"
+                  >
+                    Reset Virtual Session
+                  </button>
+                </div>
+
+                <div className="mb-3 rounded border bg-background p-2 text-xs">
+                  selected: <span className="font-medium">{selectedModule.name}</span>
+                  <br />
+                  state: <span>{runtime.runStateByModule[selectedModule.name] || "idle"}</span>
+                </div>
+
+                {runtime.error ? (
+                  <div className="mb-3 rounded border border-destructive/50 bg-destructive/10 p-2 text-xs text-destructive">
+                    {runtime.error}
+                  </div>
+                ) : null}
+
+                <div className="space-y-2 text-xs">
+                  <p className="font-semibold">Validation</p>
+                  {selectedIssues.length ? (
+                    <ul className="space-y-1 text-destructive">
+                      {selectedIssues.map((issue) => (
+                        <li key={issue}>- {issue}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-emerald-600">No validation issues.</p>
+                  )}
+                </div>
+
+                <div className="mt-3">
+                  <button
+                    className="w-full rounded border bg-background px-3 py-2 text-sm"
+                    onClick={() =>
+                      setPreviewModuleName((current) =>
+                        current === selectedModule.name ? null : selectedModule.name
+                      )
+                    }
+                    type="button"
+                  >
+                    {previewModuleName === selectedModule.name
+                      ? "Hide Card Preview"
+                      : "Open Card Preview"}
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">Select a module node to edit.</p>
+          )}
+        </aside>
       </div>
     </div>
   );

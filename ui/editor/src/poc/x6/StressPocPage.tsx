@@ -140,7 +140,7 @@ export function X6StressPocPage() {
   }, [levels, nodesPerLevel]);
 
   return (
-    <div className="h-screen bg-background text-foreground">
+    <div className="h-full min-h-0 flex flex-col bg-background text-foreground">
       <header className="flex items-center justify-between border-b p-3">
         <div>
           <h1 className="text-lg font-semibold">X6 Stress PoC</h1>
@@ -178,7 +178,7 @@ export function X6StressPocPage() {
           Total nodes: {summary.totalNodes} | Total edges: {summary.totalEdges}
         </span>
       </section>
-      <div className="h-[calc(100vh-106px)] p-2">
+      <div className="flex-1 min-h-0 p-2">
         <div className="x6-canvas h-full w-full rounded-md border" ref={containerRef} />
       </div>
     </div>

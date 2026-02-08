@@ -1,126 +1,93 @@
-import { useEffect, useRef, useState } from "react";
-import { Graph, type Node } from "@antv/x6";
+import { useEffect, useState } from "react";
+import {
+  addFlowNode,
+  connectNodes,
+  createReteInstance,
+  zoomToNodes,
+} from "@/poc/rete/rete-helpers";
 import { userSelectNodeLabel } from "@/modules/user-select/presentation";
 import { UserSelectModuleEditor } from "@/modules/user-select/UserSelectModuleEditor";
 import { validateUserSelectModule } from "@/modules/user-select/types";
 import { UserSelectRuntimePanel } from "@/runtime/UserSelectRuntimePanel";
 import { useVirtualUserSelectRuntime } from "@/runtime/useVirtualUserSelectRuntime";
 
-export function X6UserInputPocPage() {
+export function ReteUserInputPocPage() {
   const runtime = useVirtualUserSelectRuntime();
   const modules = runtime.modules;
-  const containerRef = useRef<HTMLDivElement>(null);
   const [selectedModuleName, setSelectedModuleName] = useState<string>(modules[0]?.name);
   const [previewOpen, setPreviewOpen] = useState(false);
   const selectedModule = modules.find((module) => module.name === selectedModuleName);
   const selectedIssues = selectedModule ? validateUserSelectModule(selectedModule) : [];
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    const container = document.getElementById("rete-user-input-canvas") as HTMLDivElement | null;
+    if (!container) return;
+    let active = true;
 
-    const graph = new Graph({
-      container: containerRef.current,
-      background: { color: "transparent" },
-      grid: { visible: true, size: 20 },
-      panning: true,
-      mousewheel: { enabled: true, modifiers: ["ctrl", "meta"] },
-    });
+    const start = async () => {
+      const rete = await createReteInstance(container);
+      const nodeToModule = new Map<string, string>();
 
-    const stepGroup = graph.addNode({
-      id: "x6-step-group",
-      shape: "rect",
-      x: 32,
-      y: 32,
-      width: 1040,
-      height: 640,
-      label: "user_input | Step 1",
-      attrs: {
-        body: {
-          stroke: "var(--border)",
-          fill: "var(--card)",
-          rx: 12,
-          ry: 12,
-        },
-        label: {
-          fill: "var(--foreground)",
-          textAnchor: "start",
-          textVerticalAnchor: "top",
-          refX: 12,
-          refY: 10,
-        },
-      },
-    });
-
-    const rootNodes: Node[] = [];
-
-    modules.forEach((module, moduleIndex) => {
-      const moduleRoot = graph.addNode({
-        id: `x6-module-root-${moduleIndex}`,
-        shape: "rect",
-        x: 52 + moduleIndex * 480,
-        y: 88,
-        width: 430,
-        height: 200,
-        label: `${userSelectNodeLabel(module)}\nstate: ${runtime.runStateByModule[module.name] || "idle"}`,
-        attrs: {
-          body: {
-            stroke:
-              module.name === selectedModuleName ? "var(--ring)" : "var(--border)",
-            strokeWidth: module.name === selectedModuleName ? 2 : 1,
-            fill: "var(--muted)",
-            rx: 10,
-            ry: 10,
-          },
-          label: {
-            fill: "var(--foreground)",
-            fontSize: 12,
-            textAnchor: "start",
-            textVerticalAnchor: "top",
-            refX: 12,
-            refY: 12,
-          },
-        },
+      (rete.area as any).addPipe((context: any) => {
+        if (context?.type === "nodepicked") {
+          const moduleName = nodeToModule.get(context.data?.id);
+          if (moduleName) {
+            setSelectedModuleName(moduleName);
+          }
+        }
+        return context;
       });
 
-      moduleRoot.setData({ moduleName: module.name });
-      stepGroup.addChild(moduleRoot);
-      rootNodes.push(moduleRoot);
+      const stepRoot = await addFlowNode(
+        rete.editor,
+        rete.area,
+        "user_input | Step 1",
+        80,
+        80
+      );
 
-      if (moduleIndex > 0) {
-        graph.addEdge({
-          source: { cell: `x6-module-root-${moduleIndex - 1}` },
-          target: { cell: `x6-module-root-${moduleIndex}` },
-          attrs: {
-            line: {
-              stroke: "var(--foreground)",
-              strokeWidth: 1.2,
-              targetMarker: { name: "classic", size: 7 },
-            },
-          },
-          labels: [{ attrs: { label: { text: "step flow", fill: "var(--foreground)" } } }],
-        });
+      let previousNode: Awaited<ReturnType<typeof addFlowNode>> | null = null;
+
+      for (let i = 0; i < modules.length && active; i += 1) {
+        const module = modules[i];
+        const node = await addFlowNode(
+          rete.editor,
+          rete.area,
+          `${userSelectNodeLabel(module)}\nstate: ${runtime.runStateByModule[module.name] || "idle"}`,
+          180 + i * 620,
+          260
+        );
+        nodeToModule.set(node.id, module.name);
+
+        await connectNodes(rete.editor, stepRoot, node);
+        if (previousNode) {
+          await connectNodes(rete.editor, previousNode, node);
+        }
+        previousNode = node;
       }
-    });
 
-    graph.on("node:click", ({ node }) => {
-      const moduleName = node.getData<{ moduleName?: string }>()?.moduleName;
-      if (moduleName) {
-        setSelectedModuleName(moduleName);
+      if (active) {
+        await zoomToNodes(rete.area, rete.editor);
       }
-    });
 
-    graph.centerContent();
+      return rete;
+    };
 
-    return () => graph.dispose();
-  }, [modules, selectedModuleName, runtime.runStateByModule]);
+    const instancePromise = start();
+
+    return () => {
+      active = false;
+      instancePromise.then((instance) => instance.destroy()).catch(() => undefined);
+    };
+  }, [modules, runtime.runStateByModule]);
 
   return (
     <div className="h-full min-h-0 flex flex-col bg-background text-foreground">
       <header className="flex items-center justify-between border-b p-3">
         <div>
-          <h1 className="text-lg font-semibold">X6 User Input PoC</h1>
+          <h1 className="text-lg font-semibold">Rete User Input PoC</h1>
           <p className="text-xs text-muted-foreground">
-            `user.select` nodes show module summaries and shared runtime panel.
+            `user.select` nodes show module summary and shared runtime panel.
           </p>
         </div>
         <button
@@ -134,7 +101,7 @@ export function X6UserInputPocPage() {
 
       <div className="grid flex-1 min-h-0 grid-cols-[1fr_420px] grid-rows-[minmax(0,1fr)]">
         <div className="min-h-0 overflow-hidden border-r p-2">
-          <div className="x6-canvas h-full w-full rounded-md border" ref={containerRef} />
+          <div className="rete-canvas h-full w-full rounded-md border" id="rete-user-input-canvas" />
         </div>
         <aside className="min-h-0 overflow-auto p-3">
           {selectedModule ? (
@@ -174,7 +141,7 @@ export function X6UserInputPocPage() {
         <div className="fixed inset-0 z-50 bg-black/40 p-6">
           <div className="mx-auto flex h-full max-w-4xl min-h-0 flex-col rounded-lg border bg-background">
             <div className="flex items-center justify-between border-b p-3">
-              <h2 className="text-sm font-semibold">X6 Runtime Preview</h2>
+              <h2 className="text-sm font-semibold">Rete Runtime Preview</h2>
               <button
                 className="rounded border bg-card px-2 py-1 text-xs"
                 onClick={() => setPreviewOpen(false)}

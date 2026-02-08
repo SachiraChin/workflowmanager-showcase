@@ -93,7 +93,7 @@ export function ReactFlowStressPocPage() {
   );
 
   return (
-    <div className="h-screen bg-background text-foreground">
+    <div className="h-full min-h-0 flex flex-col bg-background text-foreground">
       <header className="flex items-center justify-between border-b p-3">
         <div>
           <h1 className="text-lg font-semibold">React Flow Stress PoC</h1>
@@ -132,7 +132,7 @@ export function ReactFlowStressPocPage() {
           Total nodes: {graph.nodes.length}
         </span>
       </section>
-      <div className="h-[calc(100vh-106px)]">
+      <div className="flex-1 min-h-0">
         <ReactFlow fitView nodes={graph.nodes} edges={graph.edges}>
           <MiniMap />
           <Controls />

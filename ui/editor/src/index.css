@@ -110,9 +110,20 @@
     var(--background);
 }
 
-.joint-canvas {
+.gojs-canvas {
+  position: relative;
+  overflow: hidden;
   background:
     radial-gradient(circle at 25% 25%, color-mix(in oklch, var(--muted) 58%, transparent), transparent 48%),
     radial-gradient(circle at 75% 75%, color-mix(in oklch, var(--muted) 42%, transparent), transparent 52%),
+    var(--background);
+}
+
+.rete-canvas {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 30% 20%, color-mix(in oklch, var(--muted) 52%, transparent), transparent 45%),
+    radial-gradient(circle at 70% 80%, color-mix(in oklch, var(--muted) 46%, transparent), transparent 48%),
     var(--background);
 }
