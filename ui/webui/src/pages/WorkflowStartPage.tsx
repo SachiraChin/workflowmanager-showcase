@@ -7,7 +7,7 @@
  * 3. History - Resume from previous runs
  */
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -27,6 +27,7 @@ import {
 } from "@/features/workflow-start/WorkflowUploader";
 import { TemplateSelector } from "@/features/workflow-start/TemplateSelector";
 import type { WorkflowTemplate } from "@/core/types";
+import { GuidanceTips, getGuidanceTips, type GuidanceContext } from "@/features/workflow-guidance";
 import {
   Select,
   SelectContent,
@@ -309,6 +310,18 @@ export function WorkflowStartPage({ onWorkflowStarted, user }: WorkflowStartPage
     return false;
   })();
 
+  const guidanceContext = useMemo<GuidanceContext>(() => {
+    if (workflowSource === "template") return "start-template";
+    if (workflowSource === "upload") return "start-upload";
+    if (workflowSource === "runs") return "start-runs";
+    if (workflowSource === "admin") return "start-admin";
+    return "start-template";
+  }, [workflowSource]);
+
+  const guidanceTips = useMemo(() => getGuidanceTips(guidanceContext), [guidanceContext]);
+
+  const guidanceTitle = workflowSource === "admin" ? "Global Guidance" : "Workflow Guidance";
+
   return (
     <div className="container mx-auto p-4 max-w-2xl">
       <Card>
@@ -319,6 +332,8 @@ export function WorkflowStartPage({ onWorkflowStarted, user }: WorkflowStartPage
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <GuidanceTips tips={guidanceTips} title={guidanceTitle} />
+
           <Tabs
             value={workflowSource}
             onValueChange={(v) => setWorkflowSource(v as WorkflowSource)}

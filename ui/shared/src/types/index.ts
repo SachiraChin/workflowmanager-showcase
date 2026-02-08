@@ -172,6 +172,7 @@ export interface WorkflowTemplate {
   scope?: "global" | "user";
   visibility?: "public" | "visible" | "hidden";
   derived_from?: string;
+  download_url?: string;
   versions: WorkflowVersion[];
 }
 

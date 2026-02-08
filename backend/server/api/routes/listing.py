@@ -37,6 +37,7 @@ async def list_workflow_templates(
         templates: List of templates, each with:
             - template_name: Workflow template name
             - template_id: Template ID
+            - download_url: Optional template download URL
             - versions: List of source versions (newest first)
                 - workflow_version_id: Version ID to use when starting
                 - created_at: When this version was created
@@ -62,6 +63,7 @@ async def list_workflow_templates(
             "scope": 1,
             "visibility": 1,
             "derived_from": 1,
+            "download_url": 1,
         }
     ))
     global_templates = list(db.workflow_templates.find(
@@ -77,6 +79,7 @@ async def list_workflow_templates(
             "scope": 1,
             "visibility": 1,
             "derived_from": 1,
+            "download_url": 1,
         }
     ))
     templates = user_templates + global_templates
@@ -105,6 +108,7 @@ async def list_workflow_templates(
                 "scope": template.get("scope", "user"),
                 "visibility": template.get("visibility", "visible"),
                 "derived_from": template.get("derived_from"),
+                "download_url": template.get("download_url"),
             })
     result.sort(
         key=lambda t: (

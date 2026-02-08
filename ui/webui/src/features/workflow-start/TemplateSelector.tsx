@@ -9,9 +9,10 @@
  */
 
 import { useState, useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -71,6 +72,7 @@ export function TemplateSelector({
   const [templates, setTemplates] = useState<WorkflowTemplate[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
+  const [isGuideExpanded, setIsGuideExpanded] = useState(false);
 
   const sortedTemplates = [...templates].sort((a, b) => {
     const aScope = a.scope === "global" ? 0 : 1;
@@ -92,8 +94,18 @@ export function TemplateSelector({
           await api.listWorkflowTemplates();
         setTemplates(response.templates);
 
+        if (value) {
+          const matchedTemplate = response.templates.find((template) =>
+            template.versions.some((version) => version.workflow_version_id === value)
+          );
+          if (matchedTemplate) {
+            setSelectedTemplateId(matchedTemplate.template_id);
+            return;
+          }
+        }
+
         // Auto-select first template and its first version if none selected
-        if (response.templates.length > 0 && !value) {
+        if (!value) {
           const firstTemplate = response.templates[0];
           setSelectedTemplateId(firstTemplate.template_id);
           if (firstTemplate.versions.length > 0) {
@@ -107,7 +119,11 @@ export function TemplateSelector({
       }
     };
     fetchTemplates();
-  }, []);
+  }, [onChange, value]);
+
+  useEffect(() => {
+    setIsGuideExpanded(false);
+  }, [selectedTemplateId]);
 
   // When template changes, select its first version
   const handleTemplateChange = (templateId: string) => {
@@ -165,7 +181,71 @@ export function TemplateSelector({
             ))}
           </SelectContent>
         </Select>
+
+        {selectedTemplate?.download_url && (
+          <div className="pt-1">
+            <Button asChild variant="outline" size="sm" disabled={disabled}>
+              <a
+                href={selectedTemplate.download_url}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Download Workflow ZIP
+              </a>
+            </Button>
+          </div>
+        )}
       </div>
+
+      {selectedTemplate?.download_url && (
+        <div className="space-y-3 rounded-lg border bg-muted/30 p-4 text-sm">
+          <p className="font-medium">How to edit this workflow</p>
+          <div
+            className={`relative space-y-3 text-sm leading-6 text-muted-foreground ${
+              isGuideExpanded ? "" : "max-h-[4.5rem] overflow-hidden"
+            }`}
+          >
+            <p>
+              Download the ZIP file, extract it, and open the extracted files in your
+              preferred editor.
+            </p>
+            <p>
+              Take time to review each step, module, and module type to understand
+              behavior. Navigate through the workflow configuration in your editor
+              while navigating through the workflow in the UI.
+            </p>
+            <p>
+              Use the state panel in the runner to inspect data from each step and
+              module, and to verify how values are written to workflow state.
+            </p>
+            <p>
+              Once you understand the flow, either update the workflow manually or
+              use an AI tool to update steps (one by one or all at once).
+            </p>
+            <p>
+              After editing, go to the Upload tab on Start Workflow, upload your
+              updated workflow, and run it. If something fails, use Debug Mode in
+              Workflow Runner to inspect what went wrong or what is missing.
+            </p>
+            <p>Rinse and repeat until your ideal workflow comes to fruition.</p>
+
+            {!isGuideExpanded && (
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-muted/30 to-transparent" />
+            )}
+          </div>
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-auto cursor-pointer px-0 text-xs"
+            onClick={() => setIsGuideExpanded((prev) => !prev)}
+          >
+            {isGuideExpanded ? "Show less" : "Read full guide"}
+          </Button>
+        </div>
+      )}
 
       {/* Version Selection */}
       {selectedTemplate && selectedTemplate.versions.length > 0 && (
