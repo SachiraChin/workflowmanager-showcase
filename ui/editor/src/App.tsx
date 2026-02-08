@@ -1,39 +1,73 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import {
+  BrowserRouter,
+  Link,
+  Navigate,
+  Outlet,
+  Route,
+  Routes,
+} from "react-router-dom";
 import { ReactFlowStressPocPage } from "@/poc/reactflow/StressPocPage";
 import { ReactFlowUserInputPocPage } from "@/poc/reactflow/UserInputPocPage";
 
 function HomePage() {
   return (
+    <main className="mx-auto max-w-7xl p-6">
+      <header className="mb-6 space-y-2">
+        <h1 className="text-2xl font-semibold">Workflow Editor PoCs</h1>
+        <p className="text-sm text-muted-foreground">
+          React Flow is the first candidate. Use the header menu to jump
+          between PoCs.
+        </p>
+      </header>
+      <section className="rounded-lg border bg-card p-5">
+        <h2 className="text-lg font-medium">Current candidate: React Flow</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Open the "React Flow" dropdown in the header for Stress PoC and User
+          Input PoC pages.
+        </p>
+      </section>
+    </main>
+  );
+}
+
+function HeaderNav() {
+  return (
+    <header className="border-b bg-card">
+      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
+        <Link className="text-sm font-semibold" to="/">
+          Workflow Editor
+        </Link>
+        <nav className="flex items-center gap-2 text-sm">
+          <details className="group relative">
+            <summary className="cursor-pointer list-none rounded-md border px-3 py-1.5 hover:bg-muted/40">
+              React Flow
+            </summary>
+            <div className="absolute right-0 z-10 mt-2 w-56 rounded-md border bg-popover p-1 shadow-md">
+              <Link
+                className="block rounded px-3 py-2 hover:bg-muted"
+                to="/poc/reactflow/stress"
+              >
+                Stress PoC
+              </Link>
+              <Link
+                className="block rounded px-3 py-2 hover:bg-muted"
+                to="/poc/reactflow/user-input"
+              >
+                User Input PoC
+              </Link>
+            </div>
+          </details>
+        </nav>
+      </div>
+    </header>
+  );
+}
+
+function AppShell() {
+  return (
     <div className="min-h-screen bg-background text-foreground">
-      <main className="mx-auto max-w-7xl p-6">
-        <header className="mb-6 space-y-2">
-          <h1 className="text-2xl font-semibold">Workflow Editor PoCs</h1>
-          <p className="text-sm text-muted-foreground">
-            React Flow is the first candidate. Use these pages to evaluate
-            nested performance and real workflow UX.
-          </p>
-        </header>
-        <section className="grid gap-4 md:grid-cols-2">
-          <a
-            className="rounded-lg border bg-card p-5 hover:bg-muted/40"
-            href="/poc/reactflow/stress"
-          >
-            <h2 className="text-lg font-medium">React Flow Stress PoC</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Deep nesting and scale behavior under synthetic load.
-            </p>
-          </a>
-          <a
-            className="rounded-lg border bg-card p-5 hover:bg-muted/40"
-            href="/poc/reactflow/user-input"
-          >
-            <h2 className="text-lg font-medium">React Flow User Input PoC</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Two-module rendering based on `workflows/cc/steps/1_user_input`.
-            </p>
-          </a>
-        </section>
-      </main>
+      <HeaderNav />
+      <Outlet />
     </div>
   );
 }
@@ -42,13 +76,18 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/poc/reactflow/stress" element={<ReactFlowStressPocPage />} />
-        <Route
-          path="/poc/reactflow/user-input"
-          element={<ReactFlowUserInputPocPage />}
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route element={<AppShell />}>
+          <Route path="/" element={<HomePage />} />
+          <Route
+            path="/poc/reactflow/stress"
+            element={<ReactFlowStressPocPage />}
+          />
+          <Route
+            path="/poc/reactflow/user-input"
+            element={<ReactFlowUserInputPocPage />}
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   );
