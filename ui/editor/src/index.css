@@ -102,28 +102,3 @@
   color: var(--foreground);
   border-radius: var(--radius-md);
 }
-
-.x6-canvas {
-  background:
-    radial-gradient(circle at 20% 20%, color-mix(in oklch, var(--muted) 55%, transparent), transparent 45%),
-    radial-gradient(circle at 80% 70%, color-mix(in oklch, var(--muted) 45%, transparent), transparent 50%),
-    var(--background);
-}
-
-.gojs-canvas {
-  position: relative;
-  overflow: hidden;
-  background:
-    radial-gradient(circle at 25% 25%, color-mix(in oklch, var(--muted) 58%, transparent), transparent 48%),
-    radial-gradient(circle at 75% 75%, color-mix(in oklch, var(--muted) 42%, transparent), transparent 52%),
-    var(--background);
-}
-
-.rete-canvas {
-  position: relative;
-  overflow: hidden;
-  background:
-    radial-gradient(circle at 30% 20%, color-mix(in oklch, var(--muted) 52%, transparent), transparent 45%),
-    radial-gradient(circle at 70% 80%, color-mix(in oklch, var(--muted) 46%, transparent), transparent 48%),
-    var(--background);
-}
