@@ -10,11 +10,24 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@xyflow/react": "^12.9.3",
+    "@atlaskit/pragmatic-drag-and-drop": "^1.7.7",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "@formkit/auto-animate": "^0.9.0",
+    "@monaco-editor/react": "^4.7.0",
+    "@tanstack/react-table": "^8.21.3",
     "@wfm/shared": "*",
+    "@xyflow/react": "^12.9.3",
+    "ag-grid-community": "^35.0.1",
+    "ag-grid-enterprise": "^35.0.1",
+    "ag-grid-react": "^35.0.1",
     "react": "^19.2.0",
+    "react-arborist": "^3.4.3",
+    "react-data-grid": "^7.0.0-beta.59",
     "react-dom": "^19.2.0",
-    "react-router-dom": "^7.11.0"
+    "react-router-dom": "^7.11.0",
+    "tabulator-tables": "^6.3.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
@@ -22,6 +35,7 @@
     "@types/node": "^24.10.4",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
+    "@types/tabulator-tables": "^6.3.1",
     "@vitejs/plugin-react": "^5.1.1",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",

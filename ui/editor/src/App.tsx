@@ -5,106 +5,138 @@ import {
   Outlet,
   Route,
   Routes,
+  useLocation,
+  useNavigate,
 } from "react-router-dom";
 import { useState } from "react";
+import { WorkflowStartPage } from "@/features/start/WorkflowStartPage";
+import { WorkflowEditorPage } from "@/features/editor/WorkflowEditorPage";
 import { ReactFlowStressPocPage } from "@/poc/reactflow/StressPocPage";
 import { ReactFlowUserInputPocPage } from "@/poc/reactflow/UserInputPocPage";
+import { SchemaBuilderMonacoPocPage } from "@/poc/monaco/SchemaBuilderMonacoPocPage";
+import { DndKitPocPage } from "@/poc/ux-schema-editor/DndKitPocPage";
+import { PragmaticDndPocPage } from "@/poc/ux-schema-editor/PragmaticDndPocPage";
+import { UxPalettePocPage } from "@/poc/ux-schema-editor/UxPalettePocPage";
 import { UserSelectVirtualRuntimePage } from "@/runtime/UserSelectVirtualRuntimePage";
 
-function HomePage() {
-  return (
-    <main className="mx-auto max-w-7xl p-6">
-      <header className="mb-6 space-y-2">
-        <h1 className="text-2xl font-semibold">Workflow Editor PoCs</h1>
-        <p className="text-sm text-muted-foreground">
-          Compare candidate libraries with matching stress and workflow-realism
-          PoCs from the header menu.
-        </p>
-      </header>
-      <section className="grid gap-4 md:grid-cols-2">
-        <article className="rounded-lg border bg-card p-5">
-          <h2 className="text-lg font-medium">React Flow</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Baseline candidate with nested group and step-structure PoCs.
-          </p>
-        </article>
-        <article className="rounded-lg border bg-card p-5">
-          <h2 className="text-lg font-medium">Runtime (Virtual API)</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Real InteractionHost payloads via virtual module execution endpoints.
-          </p>
-        </article>
-      </section>
-    </main>
-  );
-}
-
 function HeaderNav() {
-  const [openMenu, setOpenMenu] = useState<"reactflow" | "runtime" | null>(
-    null
-  );
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isEditorRoute = location.pathname.startsWith("/editor/");
+  const [openMenu, setOpenMenu] = useState<"poc" | "runtime" | null>(null);
 
   const closeMenus = () => setOpenMenu(null);
 
-  const toggleMenu = (menu: "reactflow" | "runtime") => {
+  const toggleMenu = (menu: "poc" | "runtime") => {
     setOpenMenu((current) => (current === menu ? null : menu));
   };
 
   return (
     <header className="relative z-50 border-b bg-card">
-      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
-        <Link className="text-sm font-semibold" to="/">
-          Workflow Editor
-        </Link>
-        <nav className="flex items-center gap-2 text-sm">
-          <div className="relative">
+      <div
+        className={[
+          "flex h-14 items-center px-4",
+          isEditorRoute ? "justify-end" : "mx-auto max-w-7xl justify-between",
+        ].join(" ")}
+      >
+        {isEditorRoute ? (
+          <div className="flex items-center gap-2 text-sm">
             <button
               className="cursor-pointer rounded-md border bg-card px-3 py-1.5 hover:bg-muted/40"
-              onClick={() => toggleMenu("reactflow")}
+              onClick={() => navigate(-1)}
               type="button"
             >
-              React Flow
+              Back
             </button>
-            {openMenu === "reactflow" ? (
-              <div className="absolute right-0 z-20 mt-2 w-56 rounded-md border bg-card p-1 shadow-md">
-                <Link
-                  className="block rounded px-3 py-2 hover:bg-muted"
-                  onClick={closeMenus}
-                  to="/poc/reactflow/stress"
-                >
-                  Stress PoC
-                </Link>
-                <Link
-                  className="block rounded px-3 py-2 hover:bg-muted"
-                  onClick={closeMenus}
-                  to="/poc/reactflow/user-input"
-                >
-                  User Input PoC
-                </Link>
-              </div>
-            ) : null}
+            <Link className="text-sm font-semibold" to="/">
+              Workflow Editor
+            </Link>
           </div>
-          <div className="relative">
-            <button
-              className="cursor-pointer rounded-md border bg-card px-3 py-1.5 hover:bg-muted/40"
-              onClick={() => toggleMenu("runtime")}
-              type="button"
-            >
-              Runtime
-            </button>
-            {openMenu === "runtime" ? (
-              <div className="absolute right-0 z-20 mt-2 w-72 rounded-md border bg-card p-1 shadow-md">
-                <Link
-                  className="block rounded px-3 py-2 hover:bg-muted"
-                  onClick={closeMenus}
-                  to="/runtime/user-select"
+        ) : (
+          <>
+            <Link className="text-sm font-semibold" to="/">
+              Workflow Editor
+            </Link>
+            <nav className="flex items-center gap-2 text-sm">
+              <div className="relative">
+                <button
+                  className="cursor-pointer rounded-md border bg-card px-3 py-1.5 hover:bg-muted/40"
+                  onClick={() => toggleMenu("poc")}
+                  type="button"
                 >
-                  user.select (first 2 modules)
-                </Link>
+                  PoCs
+                </button>
+                {openMenu === "poc" ? (
+                  <div className="absolute right-0 z-20 mt-2 w-56 rounded-md border bg-card p-1 shadow-md">
+                    <Link
+                      className="block rounded px-3 py-2 hover:bg-muted"
+                      onClick={closeMenus}
+                      to="/poc/reactflow/stress"
+                    >
+                      Stress PoC
+                    </Link>
+                    <Link
+                      className="block rounded px-3 py-2 hover:bg-muted"
+                      onClick={closeMenus}
+                      to="/poc/reactflow/user-input"
+                    >
+                      User Input PoC
+                    </Link>
+                    <Link
+                      className="block rounded px-3 py-2 hover:bg-muted"
+                      onClick={closeMenus}
+                      to="/poc/monaco/schema-builder"
+                    >
+                      Monaco Schema PoC
+                    </Link>
+                    <div className="my-1 border-t" />
+                    <Link
+                      className="block rounded px-3 py-2 hover:bg-muted"
+                      onClick={closeMenus}
+                      to="/poc/ux-schema/dnd-kit"
+                    >
+                      UX Schema Editor (dnd-kit)
+                    </Link>
+                    <Link
+                      className="block rounded px-3 py-2 hover:bg-muted"
+                      onClick={closeMenus}
+                      to="/poc/ux-schema/pragmatic"
+                    >
+                      UX Schema Editor (Pragmatic)
+                    </Link>
+                    <Link
+                      className="block rounded px-3 py-2 hover:bg-muted font-medium text-primary"
+                      onClick={closeMenus}
+                      to="/poc/ux-schema/palette"
+                    >
+                      UX Schema Editor (Palette) ★
+                    </Link>
+                  </div>
+                ) : null}
               </div>
-            ) : null}
-          </div>
-        </nav>
+              <div className="relative">
+                <button
+                  className="cursor-pointer rounded-md border bg-card px-3 py-1.5 hover:bg-muted/40"
+                  onClick={() => toggleMenu("runtime")}
+                  type="button"
+                >
+                  Runtime
+                </button>
+                {openMenu === "runtime" ? (
+                  <div className="absolute right-0 z-20 mt-2 w-72 rounded-md border bg-card p-1 shadow-md">
+                    <Link
+                      className="block rounded px-3 py-2 hover:bg-muted"
+                      onClick={closeMenus}
+                      to="/runtime/user-select"
+                    >
+                      user.select (first 2 modules)
+                    </Link>
+                  </div>
+                ) : null}
+              </div>
+            </nav>
+          </>
+        )}
       </div>
     </header>
   );
@@ -128,7 +160,12 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route element={<AppShell />}>
-          <Route path="/" element={<HomePage />} />
+          <Route path="/" element={<WorkflowStartPage />} />
+          <Route path="/editor/new" element={<WorkflowEditorPage />} />
+          <Route
+            path="/editor/:workflowTemplateId"
+            element={<WorkflowEditorPage />}
+          />
           <Route
             path="/poc/reactflow/stress"
             element={<ReactFlowStressPocPage />}
@@ -136,6 +173,22 @@ export default function App() {
           <Route
             path="/poc/reactflow/user-input"
             element={<ReactFlowUserInputPocPage />}
+          />
+          <Route
+            path="/poc/monaco/schema-builder"
+            element={<SchemaBuilderMonacoPocPage />}
+          />
+          <Route
+            path="/poc/ux-schema/dnd-kit"
+            element={<DndKitPocPage />}
+          />
+          <Route
+            path="/poc/ux-schema/pragmatic"
+            element={<PragmaticDndPocPage />}
+          />
+          <Route
+            path="/poc/ux-schema/palette"
+            element={<UxPalettePocPage />}
           />
           <Route
             path="/runtime/user-select"
