@@ -21,6 +21,7 @@ Usage:
 from .database import Database, DbEventType
 from .base import BaseRepository
 from .queue import TaskQueue, Task
+from .virtual import VirtualDatabase, VIRTUAL_USER_ID
 from .repos import (
     UserRepository,
     EventRepository,
@@ -38,6 +39,9 @@ __all__ = [
     "Database",
     "DbEventType",
     "BaseRepository",
+    # Virtual Database
+    "VirtualDatabase",
+    "VIRTUAL_USER_ID",
     # Task Queue
     "TaskQueue",
     "Task",
