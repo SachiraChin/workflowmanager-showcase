@@ -8,6 +8,8 @@ import {
 } from "react-router-dom";
 import { ReactFlowStressPocPage } from "@/poc/reactflow/StressPocPage";
 import { ReactFlowUserInputPocPage } from "@/poc/reactflow/UserInputPocPage";
+import { JointJsStressPocPage } from "@/poc/jointjs/StressPocPage";
+import { JointJsUserInputPocPage } from "@/poc/jointjs/UserInputPocPage";
 import { X6StressPocPage } from "@/poc/x6/StressPocPage";
 import { X6UserInputPocPage } from "@/poc/x6/UserInputPocPage";
 
@@ -21,7 +23,7 @@ function HomePage() {
           PoCs from the header menu.
         </p>
       </header>
-      <section className="grid gap-4 md:grid-cols-2">
+      <section className="grid gap-4 md:grid-cols-3">
         <article className="rounded-lg border bg-card p-5">
           <h2 className="text-lg font-medium">React Flow</h2>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -32,6 +34,12 @@ function HomePage() {
           <h2 className="text-lg font-medium">X6 (Community / MIT)</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             Second candidate using community edition components only.
+          </p>
+        </article>
+        <article className="rounded-lg border bg-card p-5">
+          <h2 className="text-lg font-medium">JointJS Core (MPL-2.0)</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Third candidate using OSS core components only.
           </p>
         </article>
       </section>
@@ -82,6 +90,25 @@ function HeaderNav() {
               </Link>
             </div>
           </details>
+          <details className="group relative">
+            <summary className="cursor-pointer list-none rounded-md border px-3 py-1.5 hover:bg-muted/40">
+              JointJS
+            </summary>
+            <div className="absolute right-0 z-10 mt-2 w-56 rounded-md border bg-popover p-1 shadow-md">
+              <Link
+                className="block rounded px-3 py-2 hover:bg-muted"
+                to="/poc/jointjs/stress"
+              >
+                Stress PoC
+              </Link>
+              <Link
+                className="block rounded px-3 py-2 hover:bg-muted"
+                to="/poc/jointjs/user-input"
+              >
+                User Input PoC
+              </Link>
+            </div>
+          </details>
         </nav>
       </div>
     </header>
@@ -113,6 +140,11 @@ export default function App() {
           />
           <Route path="/poc/x6/stress" element={<X6StressPocPage />} />
           <Route path="/poc/x6/user-input" element={<X6UserInputPocPage />} />
+          <Route path="/poc/jointjs/stress" element={<JointJsStressPocPage />} />
+          <Route
+            path="/poc/jointjs/user-input"
+            element={<JointJsUserInputPocPage />}
+          />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

@@ -109,3 +109,10 @@
     radial-gradient(circle at 80% 70%, color-mix(in oklch, var(--muted) 45%, transparent), transparent 50%),
     var(--background);
 }
+
+.joint-canvas {
+  background:
+    radial-gradient(circle at 25% 25%, color-mix(in oklch, var(--muted) 58%, transparent), transparent 48%),
+    radial-gradient(circle at 75% 75%, color-mix(in oklch, var(--muted) 42%, transparent), transparent 52%),
+    var(--background);
+}

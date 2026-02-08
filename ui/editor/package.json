@@ -13,6 +13,7 @@
     "@antv/x6": "^2.18.1",
     "@xyflow/react": "^12.9.3",
     "@wfm/shared": "*",
+    "@joint/core": "^4.2.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.11.0"
