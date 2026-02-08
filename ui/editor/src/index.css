@@ -102,3 +102,10 @@
   color: var(--foreground);
   border-radius: var(--radius-md);
 }
+
+.x6-canvas {
+  background:
+    radial-gradient(circle at 20% 20%, color-mix(in oklch, var(--muted) 55%, transparent), transparent 45%),
+    radial-gradient(circle at 80% 70%, color-mix(in oklch, var(--muted) 45%, transparent), transparent 50%),
+    var(--background);
+}
