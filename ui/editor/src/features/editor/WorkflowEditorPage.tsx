@@ -21,13 +21,27 @@ import {
   CardHeader,
   CardTitle,
   api,
+  type StepDefinition,
   type WorkflowTemplate,
   type WorkflowTemplatesResponse,
 } from "@wfm/shared";
 import {
   UserSelectNode,
   type UserSelectNodeData,
+  MODULE_HEIGHT_COLLAPSED,
+  MODULE_HEIGHT_EXPANDED,
+  MODULE_WIDTH_COLLAPSED,
+  MODULE_WIDTH_EXPANDED,
 } from "@/components/nodes/UserSelectNode";
+import {
+  StepNode,
+  type StepNodeData,
+} from "@/components/nodes/StepNode";
+import {
+  WorkflowNode,
+  type WorkflowNodeData,
+  type WorkflowInfo,
+} from "@/components/nodes/WorkflowNode";
 import { type UserSelectModule } from "@/modules/user-select/types";
 
 // =============================================================================
@@ -45,6 +59,8 @@ type EditorLocationState = {
 // =============================================================================
 
 const nodeTypes = {
+  workflow: WorkflowNode,
+  step: StepNode,
   userSelect: UserSelectNode,
 };
 
@@ -85,148 +101,283 @@ export function WorkflowEditorPage() {
     requestedVersionId || null
   );
 
-  // Module state - in real app this would come from workflow definition
-  const [modules, setModules] = useState<Record<string, UserSelectModule>>({
-    select_pet_type: {
-      module_id: "user.select",
-      name: "select_pet_type",
-      inputs: {
-        prompt: "What type of pet is this video for?",
-        multi_select: false,
-        mode: "select",
-        data: [
-          {
-            id: "cat",
-            label: "Cat",
-            description: "Feline friends - independent, curious, and endlessly entertaining",
-          },
-          {
-            id: "dog",
-            label: "Dog",
-            description: "Canine companions - loyal, playful, and always happy to see you",
-          },
-          {
-            id: "both",
-            label: "Cat & Dog",
-            description: "Multi-pet household - the chaos and love of furry siblings",
-          },
-        ],
-        schema: {
-          type: "array",
-          _ux: {
-            display: "visible",
-            render_as: "card-stack",
-          },
-          items: {
-            type: "object",
-            _ux: {
-              display: "visible",
-              render_as: "card",
-              selectable: true,
-            },
-            properties: {
-              id: {
-                type: "string",
-                _ux: { display: "hidden" },
-              },
-              label: {
-                type: "string",
-                _ux: { display: "visible", render_as: "card-title" },
-              },
-              description: {
-                type: "string",
-                _ux: { display: "visible", render_as: "card-subtitle" },
-              },
-            },
-          },
-        },
-      },
-      outputs_to_state: {
-        selected_indices: "pet_type_indices",
-        selected_data: "pet_type_selection",
-      },
-    },
+  // =============================================================================
+  // Workflow State
+  // =============================================================================
+
+  const [workflowInfo, setWorkflowInfo] = useState<WorkflowInfo>({
+    workflow_id: state.workflowId || "new_workflow",
+    name: state.workflowName || "Untitled Workflow",
+    description: undefined,
   });
 
-  // Handler to update a module
-  const handleModuleChange = useCallback((moduleName: string, module: UserSelectModule) => {
-    setModules((prev) => ({
-      ...prev,
-      [moduleName]: module,
-    }));
+  // Track which modules are expanded (key = moduleNodeId, value = expanded state)
+  const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({});
+
+  const [steps, setSteps] = useState<StepDefinition[]>([
+    {
+      step_id: "1_user_input",
+      name: "User Input",
+      description: "Collect user preferences",
+      modules: [
+        {
+          module_id: "user.select",
+          name: "select_pet_type",
+          inputs: {
+            prompt: "What type of pet is this video for?",
+            multi_select: false,
+            mode: "select",
+            data: [
+              {
+                id: "cat",
+                label: "Cat",
+                description: "Feline friends - independent, curious, and endlessly entertaining",
+              },
+              {
+                id: "dog",
+                label: "Dog",
+                description: "Canine companions - loyal, playful, and always happy to see you",
+              },
+              {
+                id: "both",
+                label: "Cat & Dog",
+                description: "Multi-pet household - the chaos and love of furry siblings",
+              },
+            ],
+            schema: {
+              type: "array",
+              _ux: {
+                display: "visible",
+                render_as: "card-stack",
+              },
+              items: {
+                type: "object",
+                _ux: {
+                  display: "visible",
+                  render_as: "card",
+                  selectable: true,
+                },
+                properties: {
+                  id: {
+                    type: "string",
+                    _ux: { display: "hidden" },
+                  },
+                  label: {
+                    type: "string",
+                    _ux: { display: "visible", render_as: "card-title" },
+                  },
+                  description: {
+                    type: "string",
+                    _ux: { display: "visible", render_as: "card-subtitle" },
+                  },
+                },
+              },
+            },
+          },
+          outputs_to_state: {
+            selected_indices: "pet_type_indices",
+            selected_data: "pet_type_selection",
+          },
+        },
+      ],
+    },
+  ]);
+
+  // =============================================================================
+  // Handlers
+  // =============================================================================
+
+  const handleWorkflowChange = useCallback((workflow: WorkflowInfo) => {
+    setWorkflowInfo(workflow);
   }, []);
 
-  // Build nodes from modules
-  const initialNodes = useMemo<Node[]>(() => {
-    const workflowLabel = isCreateMode
-      ? state.workflowName || "Untitled Workflow"
-      : resolvedTemplate?.name || resolvedTemplate?.template_name || workflowTemplateId || "Workflow";
+  const handleStepChange = useCallback((stepId: string, updatedStep: StepDefinition) => {
+    setSteps((prev) =>
+      prev.map((step) => (step.step_id === stepId ? updatedStep : step))
+    );
+  }, []);
 
-    const moduleNodes: Node[] = Object.entries(modules).map(([name, module], index) => ({
-      id: name,
-      type: "userSelect",
-      position: { x: 100, y: 180 + index * 300 },
-      data: {
-        module,
-        onModuleChange: (updated: UserSelectModule) => handleModuleChange(name, updated),
-      } satisfies UserSelectNodeData,
-    }));
+  const handleModuleChange = useCallback(
+    (stepId: string, moduleName: string, updatedModule: UserSelectModule) => {
+      setSteps((prev) =>
+        prev.map((step) => {
+          if (step.step_id !== stepId) return step;
+          return {
+            ...step,
+            modules: step.modules.map((mod) =>
+              mod.name === moduleName ? updatedModule : mod
+            ),
+          };
+        })
+      );
+    },
+    []
+  );
 
-    return [
-      {
-        id: "workflow",
-        type: "default",
-        position: { x: 100, y: 40 },
-        data: { label: workflowLabel },
-        style: {
-          background: "hsl(var(--card))",
-          border: "1px solid hsl(var(--border))",
-          borderRadius: "8px",
-          padding: "12px 20px",
-          fontSize: "14px",
-          fontWeight: 600,
-        },
-      },
-      ...moduleNodes,
-    ];
-  }, [isCreateMode, resolvedTemplate, state.workflowName, workflowTemplateId, modules, handleModuleChange]);
+  const handleModuleExpandedChange = useCallback(
+    (moduleId: string, expanded: boolean) => {
+      setExpandedModules((prev) => ({
+        ...prev,
+        [moduleId]: expanded,
+      }));
+    },
+    []
+  );
 
-  const initialEdges = useMemo<Edge[]>(() => {
-    const moduleNames = Object.keys(modules);
+  // =============================================================================
+  // Build Nodes and Edges
+  // =============================================================================
+
+  const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
+    const nodes: Node[] = [];
     const edges: Edge[] = [];
 
-    // Connect workflow to first module
-    if (moduleNames.length > 0) {
-      edges.push({
-        id: "workflow_to_first",
-        source: "workflow",
-        target: moduleNames[0],
-        style: { stroke: "hsl(var(--muted-foreground))" },
-      });
-    }
+    // Workflow node
+    nodes.push({
+      id: "workflow",
+      type: "workflow",
+      position: { x: 250, y: 20 },
+      data: {
+        workflow: workflowInfo,
+        onWorkflowChange: handleWorkflowChange,
+      } satisfies WorkflowNodeData,
+    });
 
-    // Connect modules in sequence
-    for (let i = 1; i < moduleNames.length; i++) {
-      edges.push({
-        id: `module_${i - 1}_to_${i}`,
-        source: moduleNames[i - 1],
-        target: moduleNames[i],
-        style: { stroke: "hsl(var(--muted-foreground))" },
-      });
-    }
+    // Layout constants
+    const stepStartY = 120;
+    const stepSpacing = 60;
+    const stepPadding = 40; // Padding inside step container (space around modules)
+    const stepHeaderHeight = 32; // Height of step header bar
+    const moduleSpacingY = 20; // Vertical spacing between modules
+    // Step width sized for expanded modules so padding stays ~40px on expand
+    const stepWidth = MODULE_WIDTH_EXPANDED + stepPadding * 2;
 
-    return edges;
-  }, [modules]);
+    // Helper to get module height based on expanded state
+    const getModuleHeight = (moduleId: string) =>
+      expandedModules[moduleId] ? MODULE_HEIGHT_EXPANDED : MODULE_HEIGHT_COLLAPSED;
+
+    let currentStepY = stepStartY;
+
+    // Build step and module nodes
+    // IMPORTANT: Step nodes must come before their child module nodes
+    steps.forEach((step, stepIndex) => {
+      const stepNodeId = `step_${step.step_id}`;
+
+      // Calculate step height to contain all modules with padding
+      // Sum up actual module heights (accounting for which are expanded)
+      const modulesHeight = step.modules.length > 0
+        ? step.modules.reduce((sum, mod) => {
+            const moduleId = `module_${step.step_id}_${mod.name}`;
+            return sum + getModuleHeight(moduleId);
+          }, 0) + (step.modules.length - 1) * moduleSpacingY
+        : 60; // Minimum height when empty
+      const stepHeight = stepHeaderHeight + stepPadding + modulesHeight + stepPadding;
+
+      // Step node (parent container)
+      nodes.push({
+        id: stepNodeId,
+        type: "step",
+        position: { x: 150, y: currentStepY },
+        data: {
+          step,
+          onStepChange: (updated: StepDefinition) => handleStepChange(step.step_id, updated),
+          width: stepWidth,
+          height: stepHeight,
+        } satisfies StepNodeData,
+        // Mark as a group/parent node
+        style: { width: stepWidth, height: stepHeight },
+      });
+
+      // Module nodes within this step - positioned relative to step
+      let currentModuleY = stepHeaderHeight + stepPadding;
+      step.modules.forEach((module, moduleIndex) => {
+        const moduleNodeId = `module_${step.step_id}_${module.name}`;
+        const isExpanded = expandedModules[moduleNodeId] ?? false;
+        const moduleHeight = getModuleHeight(moduleNodeId);
+        
+        // Position relative to parent step node (centered horizontally with padding)
+        const moduleX = stepPadding;
+        const moduleY = currentModuleY;
+
+        nodes.push({
+          id: moduleNodeId,
+          type: "userSelect",
+          position: { x: moduleX, y: moduleY },
+          // Parent-child relationship
+          parentId: stepNodeId,
+          // Constrain to parent bounds
+          extent: "parent",
+          // Allow parent to expand when this node grows
+          expandParent: true,
+          draggable: true,
+          data: {
+            module: module as UserSelectModule,
+            onModuleChange: (updated: UserSelectModule) =>
+              handleModuleChange(step.step_id, module.name!, updated),
+            expanded: isExpanded,
+            onExpandedChange: (exp: boolean) => handleModuleExpandedChange(moduleNodeId, exp),
+          } satisfies UserSelectNodeData,
+        });
+
+        // Update Y position for next module
+        currentModuleY += moduleHeight + moduleSpacingY;
+
+        // Connect modules within the step
+        if (moduleIndex > 0) {
+          const prevModuleId = `module_${step.step_id}_${step.modules[moduleIndex - 1].name}`;
+          edges.push({
+            id: `${prevModuleId}_to_${moduleNodeId}`,
+            source: prevModuleId,
+            target: moduleNodeId,
+            style: { stroke: "hsl(var(--muted-foreground))", strokeDasharray: "4 2" },
+          });
+        }
+      });
+
+      // Connect workflow to first step
+      if (stepIndex === 0) {
+        edges.push({
+          id: "workflow_to_first_step",
+          source: "workflow",
+          sourceHandle: "workflow-out",
+          target: stepNodeId,
+          targetHandle: "step-in",
+          style: { stroke: "hsl(var(--primary))", strokeWidth: 2 },
+        });
+      }
+
+      // Connect steps to each other
+      if (stepIndex > 0) {
+        const prevStepId = `step_${steps[stepIndex - 1].step_id}`;
+        edges.push({
+          id: `${prevStepId}_to_${stepNodeId}`,
+          source: prevStepId,
+          sourceHandle: "step-out",
+          target: stepNodeId,
+          targetHandle: "step-in",
+          style: { stroke: "hsl(var(--muted-foreground))", strokeWidth: 2 },
+        });
+      }
+
+      currentStepY += stepHeight + stepSpacing;
+    });
+
+    return { nodes, edges };
+  }, [workflowInfo, steps, expandedModules, handleWorkflowChange, handleStepChange, handleModuleChange, handleModuleExpandedChange]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, , onEdgesChange] = useEdgesState(initialEdges);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-  // Sync nodes when modules change
+  // Sync nodes when state changes
   useEffect(() => {
     setNodes(initialNodes);
-  }, [initialNodes, setNodes]);
+    setEdges(initialEdges);
+  }, [initialNodes, initialEdges, setNodes, setEdges]);
 
-  // Load template
+  // =============================================================================
+  // Load Template
+  // =============================================================================
+
   useEffect(() => {
     if (isCreateMode) {
       setTemplateLoading(false);
@@ -270,6 +421,10 @@ export function WorkflowEditorPage() {
     };
   }, [isCreateMode, requestedVersionId, workflowTemplateId]);
 
+  // =============================================================================
+  // Render
+  // =============================================================================
+
   return (
     <div className="relative h-full min-h-0 bg-background text-foreground">
       <ReactFlow
@@ -279,7 +434,7 @@ export function WorkflowEditorPage() {
         nodeTypes={nodeTypes}
         onEdgesChange={onEdgesChange}
         onNodesChange={onNodesChange}
-        fitViewOptions={{ padding: 0.2 }}
+        fitViewOptions={{ padding: 0.3 }}
       >
         <Background gap={20} />
         <Controls />
@@ -332,7 +487,8 @@ export function WorkflowEditorPage() {
                 </CardHeader>
                 <CardContent className="space-y-1 text-[11px] text-muted-foreground">
                   <p>Mode: {isCreateMode ? "create" : "edit"}</p>
-                  <p>Workflow: {state.workflowName || "Untitled"}</p>
+                  <p>Workflow: {workflowInfo.name || "Untitled"}</p>
+                  <p>Steps: {steps.length}</p>
                   {!isCreateMode && (
                     <p>Version: {resolvedVersionId || "latest"}</p>
                   )}

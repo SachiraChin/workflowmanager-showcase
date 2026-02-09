@@ -7,8 +7,8 @@
  * - Integrates UxSchemaEditor for display schema editing
  */
 
-import { useState, useMemo, memo } from "react";
-import { Handle, Position, type NodeProps } from "@xyflow/react";
+import { useState, useMemo, memo, useEffect } from "react";
+import { Handle, Position, useUpdateNodeInternals, type NodeProps } from "@xyflow/react";
 import {
   Button,
   Card,
@@ -45,7 +45,24 @@ import {
 export type UserSelectNodeData = {
   module: UserSelectModule;
   onModuleChange: (module: UserSelectModule) => void;
+  /** Whether this module is expanded */
+  expanded: boolean;
+  /** Callback when expanded state changes */
+  onExpandedChange: (expanded: boolean) => void;
 };
+
+// =============================================================================
+// Constants
+// =============================================================================
+
+/** Height of module when collapsed */
+export const MODULE_HEIGHT_COLLAPSED = 120;
+/** Height of module when expanded */
+export const MODULE_HEIGHT_EXPANDED = 520;
+/** Width of module when collapsed */
+export const MODULE_WIDTH_COLLAPSED = 280;
+/** Width of module when expanded */
+export const MODULE_WIDTH_EXPANDED = 360;
 
 // =============================================================================
 // Helpers
@@ -492,9 +509,18 @@ function ExpandedView({
 // Main Node Component
 // =============================================================================
 
-function UserSelectNodeComponent({ data }: NodeProps) {
-  const [expanded, setExpanded] = useState(false);
-  const { module, onModuleChange } = data as unknown as UserSelectNodeData;
+function UserSelectNodeComponent({ id, data }: NodeProps) {
+  const { module, onModuleChange, expanded, onExpandedChange } = data as unknown as UserSelectNodeData;
+  const updateNodeInternals = useUpdateNodeInternals();
+
+  // Notify ReactFlow when node size changes (expand/collapse)
+  useEffect(() => {
+    // Small delay to allow DOM to update before measuring
+    const timer = setTimeout(() => {
+      updateNodeInternals(id);
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [expanded, id, updateNodeInternals]);
 
   return (
     <div className="relative">
@@ -504,12 +530,12 @@ function UserSelectNodeComponent({ data }: NodeProps) {
         <ExpandedView
           module={module}
           onChange={onModuleChange}
-          onCollapse={() => setExpanded(false)}
+          onCollapse={() => onExpandedChange(false)}
         />
       ) : (
         <CollapsedView
           module={module}
-          onExpand={() => setExpanded(true)}
+          onExpand={() => onExpandedChange(true)}
         />
       )}
 
