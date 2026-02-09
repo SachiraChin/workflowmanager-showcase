@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Background,
   Controls,
@@ -25,15 +25,32 @@ import {
   type WorkflowTemplatesResponse,
 } from "@wfm/shared";
 import {
-  UserSelectCardEditor,
-  type UserSelectCardConfig,
-} from "@/components/UserSelectCardEditor";
+  UserSelectNode,
+  type UserSelectNodeData,
+} from "@/components/nodes/UserSelectNode";
+import { type UserSelectModule } from "@/modules/user-select/types";
+
+// =============================================================================
+// Types
+// =============================================================================
 
 type EditorLocationState = {
   workflowVersionId?: string;
   workflowName?: string;
   workflowId?: string;
 };
+
+// =============================================================================
+// Node Types Registration
+// =============================================================================
+
+const nodeTypes = {
+  userSelect: UserSelectNode,
+};
+
+// =============================================================================
+// Module Library
+// =============================================================================
 
 const MODULE_LIBRARY = [
   {
@@ -44,12 +61,15 @@ const MODULE_LIBRARY = [
   },
 ] as const;
 
+// =============================================================================
+// Main Component
+// =============================================================================
+
 export function WorkflowEditorPage() {
   const { workflowTemplateId } = useParams<{ workflowTemplateId: string }>();
   const location = useLocation();
   const state = (location.state ?? {}) as EditorLocationState;
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
-  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
 
   const isCreateMode = !workflowTemplateId;
   const requestedVersionFromQuery = useMemo(() => {
@@ -64,61 +84,149 @@ export function WorkflowEditorPage() {
   const [resolvedVersionId, setResolvedVersionId] = useState<string | null>(
     requestedVersionId || null
   );
-  const [userSelectConfig, setUserSelectConfig] = useState<UserSelectCardConfig>({
-    prompt: "What type of pet is this video for?",
-    multiSelect: false,
-    fields: [
-      { id: "field_id", key: "id", label: "ID", type: "string" },
-      { id: "field_label", key: "label", label: "Label", type: "string" },
-      {
-        id: "field_description",
-        key: "description",
-        label: "Description",
-        type: "string",
+
+  // Module state - in real app this would come from workflow definition
+  const [modules, setModules] = useState<Record<string, UserSelectModule>>({
+    select_pet_type: {
+      module_id: "user.select",
+      name: "select_pet_type",
+      inputs: {
+        prompt: "What type of pet is this video for?",
+        multi_select: false,
+        mode: "select",
+        data: [
+          {
+            id: "cat",
+            label: "Cat",
+            description: "Feline friends - independent, curious, and endlessly entertaining",
+          },
+          {
+            id: "dog",
+            label: "Dog",
+            description: "Canine companions - loyal, playful, and always happy to see you",
+          },
+          {
+            id: "both",
+            label: "Cat & Dog",
+            description: "Multi-pet household - the chaos and love of furry siblings",
+          },
+        ],
+        schema: {
+          type: "array",
+          _ux: {
+            display: "visible",
+            render_as: "card-stack",
+          },
+          items: {
+            type: "object",
+            _ux: {
+              display: "visible",
+              render_as: "card",
+              selectable: true,
+            },
+            properties: {
+              id: {
+                type: "string",
+                _ux: { display: "hidden" },
+              },
+              label: {
+                type: "string",
+                _ux: { display: "visible", render_as: "card-title" },
+              },
+              description: {
+                type: "string",
+                _ux: { display: "visible", render_as: "card-subtitle" },
+              },
+            },
+          },
+        },
       },
-    ],
+      outputs_to_state: {
+        selected_indices: "pet_type_indices",
+        selected_data: "pet_type_selection",
+      },
+    },
   });
 
+  // Handler to update a module
+  const handleModuleChange = useCallback((moduleName: string, module: UserSelectModule) => {
+    setModules((prev) => ({
+      ...prev,
+      [moduleName]: module,
+    }));
+  }, []);
+
+  // Build nodes from modules
   const initialNodes = useMemo<Node[]>(() => {
     const workflowLabel = isCreateMode
       ? state.workflowName || "Untitled Workflow"
       : resolvedTemplate?.name || resolvedTemplate?.template_name || workflowTemplateId || "Workflow";
 
+    const moduleNodes: Node[] = Object.entries(modules).map(([name, module], index) => ({
+      id: name,
+      type: "userSelect",
+      position: { x: 100, y: 180 + index * 300 },
+      data: {
+        module,
+        onModuleChange: (updated: UserSelectModule) => handleModuleChange(name, updated),
+      } satisfies UserSelectNodeData,
+    }));
+
     return [
       {
         id: "workflow",
         type: "default",
-        position: { x: 250, y: 80 },
+        position: { x: 100, y: 40 },
         data: { label: workflowLabel },
+        style: {
+          background: "hsl(var(--card))",
+          border: "1px solid hsl(var(--border))",
+          borderRadius: "8px",
+          padding: "12px 20px",
+          fontSize: "14px",
+          fontWeight: 600,
+        },
       },
-      {
-        id: "user_select",
-        type: "default",
-        position: { x: 250, y: 200 },
-        data: { label: "user.select" },
-      },
+      ...moduleNodes,
     ];
-  }, [isCreateMode, resolvedTemplate, state.workflowName, workflowTemplateId]);
+  }, [isCreateMode, resolvedTemplate, state.workflowName, workflowTemplateId, modules, handleModuleChange]);
 
-  const initialEdges = useMemo<Edge[]>(
-    () => [
-      {
-        id: "workflow_to_user_select",
+  const initialEdges = useMemo<Edge[]>(() => {
+    const moduleNames = Object.keys(modules);
+    const edges: Edge[] = [];
+
+    // Connect workflow to first module
+    if (moduleNames.length > 0) {
+      edges.push({
+        id: "workflow_to_first",
         source: "workflow",
-        target: "user_select",
-        label: "step flow",
-      },
-    ],
-    []
-  );
+        target: moduleNames[0],
+        style: { stroke: "hsl(var(--muted-foreground))" },
+      });
+    }
+
+    // Connect modules in sequence
+    for (let i = 1; i < moduleNames.length; i++) {
+      edges.push({
+        id: `module_${i - 1}_to_${i}`,
+        source: moduleNames[i - 1],
+        target: moduleNames[i],
+        style: { stroke: "hsl(var(--muted-foreground))" },
+      });
+    }
+
+    return edges;
+  }, [modules]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, , onEdgesChange] = useEdgesState(initialEdges);
 
+  // Sync nodes when modules change
   useEffect(() => {
     setNodes(initialNodes);
   }, [initialNodes, setNodes]);
 
+  // Load template
   useEffect(() => {
     if (isCreateMode) {
       setTemplateLoading(false);
@@ -168,31 +276,36 @@ export function WorkflowEditorPage() {
         fitView
         edges={edges}
         nodes={nodes}
+        nodeTypes={nodeTypes}
         onEdgesChange={onEdgesChange}
         onNodesChange={onNodesChange}
+        fitViewOptions={{ padding: 0.2 }}
       >
         <Background gap={20} />
         <Controls />
         <MiniMap />
       </ReactFlow>
 
+      {/* Left Panel - Module Library */}
       <div className="pointer-events-none absolute inset-y-4 left-4 z-20 flex">
         {!leftPanelCollapsed ? (
-          <aside className="pointer-events-auto h-full w-80 overflow-auto rounded-xl border bg-card/95 p-4 shadow-lg backdrop-blur-sm">
+          <aside className="pointer-events-auto h-full w-72 overflow-auto rounded-xl border bg-card/95 p-4 shadow-lg backdrop-blur-sm">
             <div className="space-y-4">
               <section>
                 <h2 className="text-sm font-semibold">Module Library</h2>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Modules available to add to this workflow.
+                  Drag modules onto the canvas to add them.
                 </p>
               </section>
 
               {MODULE_LIBRARY.map((module) => (
-                <Card key={module.moduleId}>
+                <Card key={module.moduleId} className="cursor-grab active:cursor-grabbing">
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between gap-2">
                       <CardTitle className="text-sm">{module.title}</CardTitle>
-                      <Badge variant="secondary">{module.status}</Badge>
+                      <Badge variant="secondary" className="text-[10px]">
+                        {module.status}
+                      </Badge>
                     </div>
                     <CardDescription className="text-xs">{module.moduleId}</CardDescription>
                   </CardHeader>
@@ -201,31 +314,8 @@ export function WorkflowEditorPage() {
                   </CardContent>
                 </Card>
               ))}
-            </div>
-          </aside>
-        ) : null}
-        <button
-          className="pointer-events-auto ml-2 mt-3 h-8 rounded-md border bg-card px-2 text-xs shadow-sm"
-          onClick={() => setLeftPanelCollapsed((current) => !current)}
-          type="button"
-        >
-          {leftPanelCollapsed ? "Open" : "Close"}
-        </button>
-      </div>
 
-      <div className="pointer-events-none absolute inset-y-4 right-4 z-20 flex flex-row-reverse">
-        {!rightPanelCollapsed ? (
-          <aside className="pointer-events-auto h-full w-96 overflow-auto rounded-xl border bg-card/95 p-4 shadow-lg backdrop-blur-sm">
-            <div className="space-y-4">
-              <section>
-                <h2 className="text-sm font-semibold">Workflow Context</h2>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {isCreateMode
-                    ? "New workflow metadata and canvas state."
-                    : "Loaded template/version context for editing."}
-                </p>
-              </section>
-
+              {/* Workflow Info */}
               {templateError ? (
                 <Alert>
                   <AlertDescription>{templateError}</AlertDescription>
@@ -233,71 +323,30 @@ export function WorkflowEditorPage() {
               ) : null}
 
               {templateLoading ? (
-                <p className="text-sm text-muted-foreground">Loading editor context...</p>
+                <p className="text-sm text-muted-foreground">Loading...</p>
               ) : null}
 
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Current Session</CardTitle>
+                  <CardTitle className="text-xs">Session Info</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2 text-xs">
-                  <p>
-                    mode: <span className="font-medium">{isCreateMode ? "create" : "edit"}</span>
-                  </p>
-                  <p>
-                    workflow: <span className="font-medium">{state.workflowName || "Untitled Workflow"}</span>
-                  </p>
-                  <p>
-                    workflow id: <span className="font-medium">{state.workflowId || "(n/a)"}</span>
-                  </p>
-                  {!isCreateMode ? (
-                    <>
-                      <p>
-                        template id: <span className="font-medium">{workflowTemplateId}</span>
-                      </p>
-                      <p>
-                        version id: <span className="font-medium">{resolvedVersionId || "latest"}</span>
-                      </p>
-                      <p className="text-muted-foreground">
-                        {requestedVersionId
-                          ? "Loaded with explicit version id from start flow."
-                          : "No version id provided, using latest version."}
-                      </p>
-                    </>
-                  ) : null}
+                <CardContent className="space-y-1 text-[11px] text-muted-foreground">
+                  <p>Mode: {isCreateMode ? "create" : "edit"}</p>
+                  <p>Workflow: {state.workflowName || "Untitled"}</p>
+                  {!isCreateMode && (
+                    <p>Version: {resolvedVersionId || "latest"}</p>
+                  )}
                 </CardContent>
               </Card>
-
-              <UserSelectCardEditor
-                value={userSelectConfig}
-                onChange={setUserSelectConfig}
-              />
-
-              {!isCreateMode && resolvedTemplate ? (
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Selected Template</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-1 text-xs">
-                    <p>
-                      name: <span className="font-medium">{resolvedTemplate.name || resolvedTemplate.template_name}</span>
-                    </p>
-                    <p>
-                      versions: <span className="font-medium">{resolvedTemplate.versions.length}</span>
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : null}
             </div>
           </aside>
         ) : null}
-
         <button
-          className="pointer-events-auto mr-2 mt-3 h-8 rounded-md border bg-card px-2 text-xs shadow-sm"
-          onClick={() => setRightPanelCollapsed((current) => !current)}
+          className="pointer-events-auto ml-2 mt-3 h-8 rounded-md border bg-card px-2 text-xs shadow-sm hover:bg-muted/50"
+          onClick={() => setLeftPanelCollapsed((current) => !current)}
           type="button"
         >
-          {rightPanelCollapsed ? "Open" : "Close"}
+          {leftPanelCollapsed ? "Library" : "Hide"}
         </button>
       </div>
     </div>
