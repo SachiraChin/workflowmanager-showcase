@@ -45,8 +45,13 @@ import {
   PlaceholderNode,
   type PlaceholderNodeData,
 } from "@/components/nodes/PlaceholderNode";
+import {
+  LLMNode,
+  type LLMNodeData,
+} from "@/components/nodes/LLMNode";
 import { type UserSelectModule } from "@/modules/user-select/types";
 import { type WeightedKeywordsModule } from "@/modules/weighted-keywords/types";
+import { type LLMModule } from "@/modules/llm/types";
 import {
   useNodeHeights,
   NodeHeightsProvider,
@@ -71,6 +76,7 @@ const nodeTypes = {
   step: StepNode,
   userSelect: UserSelectNode,
   weightedKeywords: WeightedKeywordsNode,
+  llm: LLMNode,
   placeholder: PlaceholderNode,
 };
 
@@ -78,6 +84,7 @@ const nodeTypes = {
 const SUPPORTED_MODULES: Record<string, string> = {
   "user.select": "userSelect",
   "io.weighted_keywords": "weightedKeywords",
+  "api.llm": "llm",
 };
 
 /**
@@ -103,6 +110,12 @@ const MODULE_LIBRARY = [
     moduleId: "io.weighted_keywords",
     title: "Weighted Keywords",
     description: "Load or save weighted keywords for deduplication.",
+    status: "available",
+  },
+  {
+    moduleId: "api.llm",
+    title: "LLM Call",
+    description: "Call LLM APIs with structured input/output.",
     status: "available",
   },
 ] as const;
@@ -252,6 +265,23 @@ export function WorkflowEditorPage() {
     []
   );
 
+  const handleLLMModuleChange = useCallback(
+    (stepId: string, moduleName: string, updatedModule: LLMModule) => {
+      setSteps((prev) =>
+        prev.map((step) => {
+          if (step.step_id !== stepId) return step;
+          return {
+            ...step,
+            modules: step.modules.map((mod) =>
+              mod.name === moduleName ? updatedModule : mod
+            ),
+          };
+        })
+      );
+    },
+    []
+  );
+
   const handleModuleExpandedChange = useCallback(
     (moduleId: string, expanded: boolean, estimatedHeight: number) => {
       // Set estimated height synchronously with expanded state change
@@ -381,6 +411,23 @@ export function WorkflowEditorPage() {
               onExpandedChange: (exp: boolean, height: number) =>
                 handleModuleExpandedChange(moduleNodeId, exp, height),
             } satisfies WeightedKeywordsNodeData,
+          });
+        } else if (nodeType === "llm") {
+          nodes.push({
+            id: moduleNodeId,
+            type: "llm",
+            position: { x: moduleX, y: moduleY },
+            parentId: stepNodeId,
+            extent: "parent",
+            draggable: true,
+            data: {
+              module: module as LLMModule,
+              onModuleChange: (updated: LLMModule) =>
+                handleLLMModuleChange(step.step_id, module.name!, updated),
+              expanded: isExpanded,
+              onExpandedChange: (exp: boolean, height: number) =>
+                handleModuleExpandedChange(moduleNodeId, exp, height),
+            } satisfies LLMNodeData,
           });
         } else {
           // Placeholder for unsupported module types
