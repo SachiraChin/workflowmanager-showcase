@@ -31,6 +31,13 @@ import {
   MODULE_WIDTH_EXPANDED,
 } from "@/components/nodes/UserSelectNode";
 import {
+  WeightedKeywordsNode,
+  type WeightedKeywordsNodeData,
+  MODULE_HEIGHT_COLLAPSED as WK_MODULE_HEIGHT_COLLAPSED,
+  MODULE_HEIGHT_EXPANDED_LOAD,
+  MODULE_HEIGHT_EXPANDED_SAVE,
+} from "@/components/nodes/WeightedKeywordsNode";
+import {
   StepNode,
   type StepNodeData,
 } from "@/components/nodes/StepNode";
@@ -45,6 +52,7 @@ import {
   PLACEHOLDER_HEIGHT,
 } from "@/components/nodes/PlaceholderNode";
 import { type UserSelectModule } from "@/modules/user-select/types";
+import { type WeightedKeywordsModule } from "@/modules/weighted-keywords/types";
 
 // =============================================================================
 // Types
@@ -64,12 +72,14 @@ const nodeTypes = {
   workflow: WorkflowNode,
   step: StepNode,
   userSelect: UserSelectNode,
+  weightedKeywords: WeightedKeywordsNode,
   placeholder: PlaceholderNode,
 };
 
 // Supported module types with their node type mappings
 const SUPPORTED_MODULES: Record<string, string> = {
   "user.select": "userSelect",
+  "io.weighted_keywords": "weightedKeywords",
 };
 
 /**
@@ -89,6 +99,12 @@ const MODULE_LIBRARY = [
     moduleId: "user.select",
     title: "User Select",
     description: "Collects user choices from structured options.",
+    status: "available",
+  },
+  {
+    moduleId: "io.weighted_keywords",
+    title: "Weighted Keywords",
+    description: "Load or save weighted keywords for deduplication.",
     status: "available",
   },
 ] as const;
@@ -163,6 +179,23 @@ export function WorkflowEditorPage() {
     []
   );
 
+  const handleWeightedKeywordsModuleChange = useCallback(
+    (stepId: string, moduleName: string, updatedModule: WeightedKeywordsModule) => {
+      setSteps((prev) =>
+        prev.map((step) => {
+          if (step.step_id !== stepId) return step;
+          return {
+            ...step,
+            modules: step.modules.map((mod) =>
+              mod.name === moduleName ? updatedModule : mod
+            ),
+          };
+        })
+      );
+    },
+    []
+  );
+
   const handleModuleExpandedChange = useCallback(
     (moduleId: string, expanded: boolean) => {
       setExpandedModules((prev) => ({
@@ -205,13 +238,24 @@ export function WorkflowEditorPage() {
     const stepWidth = MODULE_WIDTH_EXPANDED + stepPadding * 2;
 
     // Helper to get module height based on module type and expanded state
-    const getModuleHeight = (moduleNodeId: string, moduleId: string) => {
+    const getModuleHeight = (
+      moduleNodeId: string,
+      moduleId: string,
+      moduleConfig?: { inputs?: { mode?: string } }
+    ) => {
       const nodeType = getNodeTypeForModule(moduleId);
       if (nodeType === "placeholder") {
         return PLACEHOLDER_HEIGHT;
       }
-      // For supported modules (userSelect), check expanded state
-      return expandedModules[moduleNodeId] ? MODULE_HEIGHT_EXPANDED : MODULE_HEIGHT_COLLAPSED;
+      const isExpanded = expandedModules[moduleNodeId] ?? false;
+      if (nodeType === "weightedKeywords") {
+        if (!isExpanded) return WK_MODULE_HEIGHT_COLLAPSED;
+        // Height depends on mode
+        const mode = moduleConfig?.inputs?.mode;
+        return mode === "save" ? MODULE_HEIGHT_EXPANDED_SAVE : MODULE_HEIGHT_EXPANDED_LOAD;
+      }
+      // For userSelect, use standard heights
+      return isExpanded ? MODULE_HEIGHT_EXPANDED : MODULE_HEIGHT_COLLAPSED;
     };
 
     let currentStepX = stepStartX;
@@ -226,7 +270,7 @@ export function WorkflowEditorPage() {
       const modulesHeight = step.modules.length > 0
         ? step.modules.reduce((sum, mod) => {
             const moduleNodeId = `module_${step.step_id}_${mod.name}`;
-            return sum + getModuleHeight(moduleNodeId, mod.module_id);
+            return sum + getModuleHeight(moduleNodeId, mod.module_id, mod);
           }, 0) + (step.modules.length - 1) * moduleSpacingY
         : 60; // Minimum height when empty
       const stepHeight = stepHeaderHeight + stepPadding + modulesHeight + stepPadding;
@@ -251,11 +295,15 @@ export function WorkflowEditorPage() {
         const moduleNodeId = `module_${step.step_id}_${module.name}`;
         const nodeType = getNodeTypeForModule(module.module_id);
         const isExpanded = expandedModules[moduleNodeId] ?? false;
-        const moduleHeight = getModuleHeight(moduleNodeId, module.module_id);
+        const moduleHeight = getModuleHeight(moduleNodeId, module.module_id, module);
         
         // Position relative to parent step node
         const moduleX = stepPadding;
         const moduleY = currentModuleY;
+
+        // Calculate zIndex: earlier modules (lower Y) should appear on top of later ones
+        // This ensures expanded modules don't get hidden behind modules below them
+        const moduleZIndex = 1000 - moduleIndex;
 
         // Build node data based on module type
         if (nodeType === "userSelect") {
@@ -266,6 +314,7 @@ export function WorkflowEditorPage() {
             parentId: stepNodeId,
             extent: "parent",
             draggable: true,
+            zIndex: moduleZIndex,
             data: {
               module: module as UserSelectModule,
               onModuleChange: (updated: UserSelectModule) =>
@@ -273,6 +322,23 @@ export function WorkflowEditorPage() {
               expanded: isExpanded,
               onExpandedChange: (exp: boolean) => handleModuleExpandedChange(moduleNodeId, exp),
             } satisfies UserSelectNodeData,
+          });
+        } else if (nodeType === "weightedKeywords") {
+          nodes.push({
+            id: moduleNodeId,
+            type: "weightedKeywords",
+            position: { x: moduleX, y: moduleY },
+            parentId: stepNodeId,
+            extent: "parent",
+            draggable: true,
+            zIndex: moduleZIndex,
+            data: {
+              module: module as WeightedKeywordsModule,
+              onModuleChange: (updated: WeightedKeywordsModule) =>
+                handleWeightedKeywordsModuleChange(step.step_id, module.name!, updated),
+              expanded: isExpanded,
+              onExpandedChange: (exp: boolean) => handleModuleExpandedChange(moduleNodeId, exp),
+            } satisfies WeightedKeywordsNodeData,
           });
         } else {
           // Placeholder for unsupported module types
@@ -283,6 +349,7 @@ export function WorkflowEditorPage() {
             parentId: stepNodeId,
             extent: "parent",
             draggable: true,
+            zIndex: moduleZIndex,
             data: {
               module,
             } satisfies PlaceholderNodeData,
@@ -338,7 +405,7 @@ export function WorkflowEditorPage() {
     });
 
     return { nodes, edges };
-  }, [workflowInfo, steps, expandedModules, handleWorkflowChange, handleStepChange, handleModuleChange, handleModuleExpandedChange]);
+  }, [workflowInfo, steps, expandedModules, handleWorkflowChange, handleStepChange, handleModuleChange, handleWeightedKeywordsModuleChange, handleModuleExpandedChange]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initialEdges);
