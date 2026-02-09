@@ -26,16 +26,11 @@ import { editorApi } from "@/api";
 import {
   UserSelectNode,
   type UserSelectNodeData,
-  MODULE_HEIGHT_COLLAPSED,
-  MODULE_HEIGHT_EXPANDED,
-  MODULE_WIDTH_EXPANDED,
+  MODULE_WIDTH,
 } from "@/components/nodes/UserSelectNode";
 import {
   WeightedKeywordsNode,
   type WeightedKeywordsNodeData,
-  MODULE_HEIGHT_COLLAPSED as WK_MODULE_HEIGHT_COLLAPSED,
-  MODULE_HEIGHT_EXPANDED_LOAD,
-  MODULE_HEIGHT_EXPANDED_SAVE,
 } from "@/components/nodes/WeightedKeywordsNode";
 import {
   StepNode,
@@ -49,10 +44,13 @@ import {
 import {
   PlaceholderNode,
   type PlaceholderNodeData,
-  PLACEHOLDER_HEIGHT,
 } from "@/components/nodes/PlaceholderNode";
 import { type UserSelectModule } from "@/modules/user-select/types";
 import { type WeightedKeywordsModule } from "@/modules/weighted-keywords/types";
+import {
+  useNodeHeights,
+  NodeHeightsProvider,
+} from "@/hooks/useNodeHeights";
 
 // =============================================================================
 // Types
@@ -118,6 +116,9 @@ export function WorkflowEditorPage() {
   const location = useLocation();
   const state = (location.state ?? {}) as EditorLocationState;
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
+
+  // Track measured heights of module nodes for dynamic layout
+  const nodeHeights = useNodeHeights();
 
   const isCreateMode = !workflowTemplateId;
   const requestedVersionFromQuery = useMemo(() => {
@@ -197,13 +198,16 @@ export function WorkflowEditorPage() {
   );
 
   const handleModuleExpandedChange = useCallback(
-    (moduleId: string, expanded: boolean) => {
+    (moduleId: string, expanded: boolean, estimatedHeight: number) => {
+      // Set estimated height synchronously with expanded state change
+      // This ensures the step container resizes in the same render cycle
+      nodeHeights.setEstimatedHeight(moduleId, estimatedHeight);
       setExpandedModules((prev) => ({
         ...prev,
         [moduleId]: expanded,
       }));
     },
-    []
+    [nodeHeights]
   );
 
   // =============================================================================
@@ -235,27 +239,14 @@ export function WorkflowEditorPage() {
     const stepHeaderHeight = 32; // Height of step header bar
     const moduleSpacingY = 20; // Vertical spacing between modules
     // Step width sized for expanded modules so padding stays ~40px on expand
-    const stepWidth = MODULE_WIDTH_EXPANDED + stepPadding * 2;
+    const stepWidth = MODULE_WIDTH + stepPadding * 2;
 
-    // Helper to get module height based on module type and expanded state
-    const getModuleHeight = (
-      moduleNodeId: string,
-      moduleId: string,
-      moduleConfig?: { inputs?: { mode?: string } }
-    ) => {
-      const nodeType = getNodeTypeForModule(moduleId);
-      if (nodeType === "placeholder") {
-        return PLACEHOLDER_HEIGHT;
-      }
-      const isExpanded = expandedModules[moduleNodeId] ?? false;
-      if (nodeType === "weightedKeywords") {
-        if (!isExpanded) return WK_MODULE_HEIGHT_COLLAPSED;
-        // Height depends on mode
-        const mode = moduleConfig?.inputs?.mode;
-        return mode === "save" ? MODULE_HEIGHT_EXPANDED_SAVE : MODULE_HEIGHT_EXPANDED_LOAD;
-      }
-      // For userSelect, use standard heights
-      return isExpanded ? MODULE_HEIGHT_EXPANDED : MODULE_HEIGHT_COLLAPSED;
+    // Default height used before actual measurement is available
+    const DEFAULT_MODULE_HEIGHT = 100;
+
+    // Helper to get module height - uses measured height if available, falls back to default
+    const getModuleHeight = (moduleNodeId: string) => {
+      return nodeHeights.heights[moduleNodeId] ?? DEFAULT_MODULE_HEIGHT;
     };
 
     let currentStepX = stepStartX;
@@ -266,11 +257,11 @@ export function WorkflowEditorPage() {
       const stepNodeId = `step_${step.step_id}`;
 
       // Calculate step height to contain all modules with padding
-      // Sum up actual module heights (accounting for which are expanded)
+      // Sum up actual module heights (using measured heights)
       const modulesHeight = step.modules.length > 0
         ? step.modules.reduce((sum, mod) => {
             const moduleNodeId = `module_${step.step_id}_${mod.name}`;
-            return sum + getModuleHeight(moduleNodeId, mod.module_id, mod);
+            return sum + getModuleHeight(moduleNodeId);
           }, 0) + (step.modules.length - 1) * moduleSpacingY
         : 60; // Minimum height when empty
       const stepHeight = stepHeaderHeight + stepPadding + modulesHeight + stepPadding;
@@ -295,15 +286,11 @@ export function WorkflowEditorPage() {
         const moduleNodeId = `module_${step.step_id}_${module.name}`;
         const nodeType = getNodeTypeForModule(module.module_id);
         const isExpanded = expandedModules[moduleNodeId] ?? false;
-        const moduleHeight = getModuleHeight(moduleNodeId, module.module_id, module);
+        const moduleHeight = getModuleHeight(moduleNodeId);
         
         // Position relative to parent step node
         const moduleX = stepPadding;
         const moduleY = currentModuleY;
-
-        // Calculate zIndex: earlier modules (lower Y) should appear on top of later ones
-        // This ensures expanded modules don't get hidden behind modules below them
-        const moduleZIndex = 1000 - moduleIndex;
 
         // Build node data based on module type
         if (nodeType === "userSelect") {
@@ -314,13 +301,13 @@ export function WorkflowEditorPage() {
             parentId: stepNodeId,
             extent: "parent",
             draggable: true,
-            zIndex: moduleZIndex,
             data: {
               module: module as UserSelectModule,
               onModuleChange: (updated: UserSelectModule) =>
                 handleModuleChange(step.step_id, module.name!, updated),
               expanded: isExpanded,
-              onExpandedChange: (exp: boolean) => handleModuleExpandedChange(moduleNodeId, exp),
+              onExpandedChange: (exp: boolean, height: number) =>
+                handleModuleExpandedChange(moduleNodeId, exp, height),
             } satisfies UserSelectNodeData,
           });
         } else if (nodeType === "weightedKeywords") {
@@ -331,13 +318,13 @@ export function WorkflowEditorPage() {
             parentId: stepNodeId,
             extent: "parent",
             draggable: true,
-            zIndex: moduleZIndex,
             data: {
               module: module as WeightedKeywordsModule,
               onModuleChange: (updated: WeightedKeywordsModule) =>
                 handleWeightedKeywordsModuleChange(step.step_id, module.name!, updated),
               expanded: isExpanded,
-              onExpandedChange: (exp: boolean) => handleModuleExpandedChange(moduleNodeId, exp),
+              onExpandedChange: (exp: boolean, height: number) =>
+                handleModuleExpandedChange(moduleNodeId, exp, height),
             } satisfies WeightedKeywordsNodeData,
           });
         } else {
@@ -349,7 +336,6 @@ export function WorkflowEditorPage() {
             parentId: stepNodeId,
             extent: "parent",
             draggable: true,
-            zIndex: moduleZIndex,
             data: {
               module,
             } satisfies PlaceholderNodeData,
@@ -405,7 +391,7 @@ export function WorkflowEditorPage() {
     });
 
     return { nodes, edges };
-  }, [workflowInfo, steps, expandedModules, handleWorkflowChange, handleStepChange, handleModuleChange, handleWeightedKeywordsModuleChange, handleModuleExpandedChange]);
+  }, [workflowInfo, steps, expandedModules, nodeHeights.heights, handleWorkflowChange, handleStepChange, handleModuleChange, handleWeightedKeywordsModuleChange, handleModuleExpandedChange]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initialEdges);
@@ -495,20 +481,21 @@ export function WorkflowEditorPage() {
   // =============================================================================
 
   return (
-    <div className="relative h-full min-h-0 bg-background text-foreground">
-      <ReactFlow
-        fitView
-        edges={edges}
-        nodes={nodes}
-        nodeTypes={nodeTypes}
-        onEdgesChange={onEdgesChange}
-        onNodesChange={onNodesChange}
-        fitViewOptions={{ padding: 0.3 }}
-      >
-        <Background gap={20} />
-        <Controls />
-        <MiniMap />
-      </ReactFlow>
+    <NodeHeightsProvider value={nodeHeights}>
+      <div className="relative h-full min-h-0 bg-background text-foreground">
+        <ReactFlow
+          fitView
+          edges={edges}
+          nodes={nodes}
+          nodeTypes={nodeTypes}
+          onEdgesChange={onEdgesChange}
+          onNodesChange={onNodesChange}
+          fitViewOptions={{ padding: 0.3 }}
+        >
+          <Background gap={20} />
+          <Controls />
+          <MiniMap />
+        </ReactFlow>
 
       {/* Left Panel - Module Library */}
       <div className="pointer-events-none absolute inset-y-4 left-4 z-20 flex">
@@ -574,6 +561,7 @@ export function WorkflowEditorPage() {
           {leftPanelCollapsed ? "Library" : "Hide"}
         </button>
       </div>
-    </div>
+      </div>
+    </NodeHeightsProvider>
   );
 }

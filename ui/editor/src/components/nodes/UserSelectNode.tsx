@@ -7,8 +7,9 @@
  * - Integrates UxSchemaEditor for display schema editing
  */
 
-import { useState, useMemo, memo, useEffect } from "react";
+import { useState, useMemo, memo, useEffect, useRef, useCallback } from "react";
 import { Handle, Position, useUpdateNodeInternals, type NodeProps } from "@xyflow/react";
+import { useReportNodeHeight } from "@/hooks/useNodeHeights";
 import {
   Button,
   Card,
@@ -47,8 +48,8 @@ export type UserSelectNodeData = {
   onModuleChange: (module: UserSelectModule) => void;
   /** Whether this module is expanded */
   expanded: boolean;
-  /** Callback when expanded state changes */
-  onExpandedChange: (expanded: boolean) => void;
+  /** Callback when expanded state changes (includes estimated height for layout) */
+  onExpandedChange: (expanded: boolean, estimatedHeight: number) => void;
 };
 
 // =============================================================================
@@ -59,10 +60,8 @@ export type UserSelectNodeData = {
 export const MODULE_HEIGHT_COLLAPSED = 120;
 /** Height of module when expanded */
 export const MODULE_HEIGHT_EXPANDED = 620;
-/** Width of module when collapsed */
-export const MODULE_WIDTH_COLLAPSED = 280;
-/** Width of module when expanded */
-export const MODULE_WIDTH_EXPANDED = 360;
+/** Width of module (same for collapsed and expanded) */
+export const MODULE_WIDTH = 340;
 
 // =============================================================================
 // Helpers
@@ -115,37 +114,49 @@ function CollapsedView({
   onExpand: () => void;
 }) {
   return (
-    <div
-      className="relative w-[280px] rounded-lg border-2 border-amber-500/50 bg-card p-3 shadow-sm cursor-pointer hover:border-amber-500 transition-colors"
-      onClick={onExpand}
-    >
+    <div className="relative w-[340px] rounded-lg border-2 border-amber-500/50 bg-card shadow-sm">
       {/* User Interaction Badge */}
       <div className="absolute -top-2 -right-2 px-1.5 py-0.5 rounded text-[9px] font-medium bg-amber-500 text-white shadow-sm">
         User Input
       </div>
 
-      <div className="flex items-start justify-between gap-2">
+      {/* Header - matches expanded CardHeader layout */}
+      <div className="flex items-start justify-between gap-2 p-3 pb-2">
         <div className="flex-1 min-w-0">
           <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
             user.select
           </p>
           <h3 className="text-sm font-semibold truncate">{module.name}</h3>
         </div>
-        <Button size="sm" variant="ghost" className="h-6 px-2 text-xs">
-          Edit
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-6 px-2 text-xs"
+          onClick={(e) => {
+            e.stopPropagation();
+            onExpand();
+          }}
+        >
+          Expand
         </Button>
       </div>
 
-      <p className="mt-2 text-xs text-muted-foreground line-clamp-2">
-        {module.inputs.prompt}
-      </p>
+      {/* Content - clickable area to expand */}
+      <div
+        className="px-3 pb-3 cursor-pointer hover:bg-muted/30 transition-colors"
+        onClick={onExpand}
+      >
+        <p className="text-xs text-muted-foreground line-clamp-2">
+          {module.inputs.prompt}
+        </p>
 
-      <div className="mt-3 flex items-center gap-3 text-[11px] text-muted-foreground">
-        <span>{getDataSummary(module.inputs.data)}</span>
-        <span>•</span>
-        <span>{module.inputs.multi_select ? "multi" : "single"}</span>
-        <span>•</span>
-        <span>{module.inputs.mode}</span>
+        <div className="mt-3 flex items-center gap-3 text-[11px] text-muted-foreground">
+          <span>{getDataSummary(module.inputs.data)}</span>
+          <span>•</span>
+          <span>{module.inputs.multi_select ? "multi" : "single"}</span>
+          <span>•</span>
+          <span>{module.inputs.mode}</span>
+        </div>
       </div>
     </div>
   );
@@ -280,7 +291,7 @@ function ExpandedView({
 
   return (
     <>
-      <Card className="relative w-[360px] shadow-lg border-2 border-amber-500/50">
+      <Card className="relative w-[340px] shadow-lg border-2 border-amber-500/50">
         {/* User Interaction Badge */}
         <div className="absolute -top-2 -right-2 px-1.5 py-0.5 rounded text-[9px] font-medium bg-amber-500 text-white shadow-sm z-10">
           User Input
@@ -522,6 +533,10 @@ function ExpandedView({
 function UserSelectNodeComponent({ id, data }: NodeProps) {
   const { module, onModuleChange, expanded, onExpandedChange } = data as unknown as UserSelectNodeData;
   const updateNodeInternals = useUpdateNodeInternals();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Report height changes to parent for layout calculations
+  useReportNodeHeight(id, containerRef);
 
   // Notify ReactFlow when node size changes (expand/collapse)
   useEffect(() => {
@@ -532,20 +547,29 @@ function UserSelectNodeComponent({ id, data }: NodeProps) {
     return () => clearTimeout(timer);
   }, [expanded, id, updateNodeInternals]);
 
+  // Handlers that include estimated height for synchronous layout update
+  const handleExpand = useCallback(() => {
+    onExpandedChange(true, MODULE_HEIGHT_EXPANDED);
+  }, [onExpandedChange]);
+
+  const handleCollapse = useCallback(() => {
+    onExpandedChange(false, MODULE_HEIGHT_COLLAPSED);
+  }, [onExpandedChange]);
+
   return (
-    <div className="relative">
+    <div ref={containerRef} className="relative">
       <Handle type="target" position={Position.Top} id="in" className="!bg-primary" />
       
       {expanded ? (
         <ExpandedView
           module={module}
           onChange={onModuleChange}
-          onCollapse={() => onExpandedChange(false)}
+          onCollapse={handleCollapse}
         />
       ) : (
         <CollapsedView
           module={module}
-          onExpand={() => onExpandedChange(true)}
+          onExpand={handleExpand}
         />
       )}
 

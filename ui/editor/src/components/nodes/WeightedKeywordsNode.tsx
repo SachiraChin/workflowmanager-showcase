@@ -8,13 +8,14 @@
  * - Jinja2 reference input for keywords source (save mode)
  */
 
-import { useState, memo, useEffect } from "react";
+import { useState, memo, useEffect, useRef, useCallback } from "react";
 import {
   Handle,
   Position,
   useUpdateNodeInternals,
   type NodeProps,
 } from "@xyflow/react";
+import { useReportNodeHeight } from "@/hooks/useNodeHeights";
 import {
   Button,
   Card,
@@ -56,8 +57,8 @@ export type WeightedKeywordsNodeData = {
   onModuleChange: (module: WeightedKeywordsModule) => void;
   /** Whether this module is expanded */
   expanded: boolean;
-  /** Callback when expanded state changes */
-  onExpandedChange: (expanded: boolean) => void;
+  /** Callback when expanded state changes (includes estimated height for layout) */
+  onExpandedChange: (expanded: boolean, estimatedHeight: number) => void;
 };
 
 // =============================================================================
@@ -70,10 +71,8 @@ export const MODULE_HEIGHT_COLLAPSED = 100;
 export const MODULE_HEIGHT_EXPANDED_LOAD = 340;
 /** Height of module when expanded (save mode) */
 export const MODULE_HEIGHT_EXPANDED_SAVE = 320;
-/** Width of module when collapsed */
-export const MODULE_WIDTH_COLLAPSED = 280;
-/** Width of module when expanded */
-export const MODULE_WIDTH_EXPANDED = 340;
+/** Width of module (same for collapsed and expanded) */
+export const MODULE_WIDTH = 340;
 
 // =============================================================================
 // Collapsed View
@@ -91,6 +90,10 @@ function CollapsedView({
     module.inputs.mode === "load"
       ? "bg-blue-500 text-white"
       : "bg-green-500 text-white";
+  const borderClass =
+    module.inputs.mode === "load"
+      ? "border-blue-500/50"
+      : "border-green-500/50";
 
   let summary: string;
   if (isLoadMode(module.inputs)) {
@@ -102,11 +105,7 @@ function CollapsedView({
   }
 
   return (
-    <div
-      className="relative w-[280px] rounded-lg border-2 border-slate-400/50 bg-card
-                 p-3 shadow-sm cursor-pointer hover:border-slate-500 transition-colors"
-      onClick={onExpand}
-    >
+    <div className={`relative w-[340px] rounded-lg border-2 ${borderClass} bg-card shadow-sm`}>
       {/* Mode Badge */}
       <div
         className={`absolute -top-2 -right-2 px-1.5 py-0.5 rounded text-[9px]
@@ -115,21 +114,36 @@ function CollapsedView({
         {modeLabel}
       </div>
 
-      <div className="flex items-start justify-between gap-2">
+      {/* Header - matches expanded CardHeader layout */}
+      <div className="flex items-start justify-between gap-2 p-3 pb-2">
         <div className="flex-1 min-w-0">
           <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
             io.weighted_keywords
           </p>
           <h3 className="text-sm font-semibold truncate">{module.name}</h3>
         </div>
-        <Button size="sm" variant="ghost" className="h-6 px-2 text-xs">
-          Edit
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-6 px-2 text-xs"
+          onClick={(e) => {
+            e.stopPropagation();
+            onExpand();
+          }}
+        >
+          Expand
         </Button>
       </div>
 
-      <p className="mt-2 text-xs text-muted-foreground line-clamp-2">
-        {summary}
-      </p>
+      {/* Content - clickable area to expand */}
+      <div
+        className="px-3 pb-3 cursor-pointer hover:bg-muted/30 transition-colors"
+        onClick={onExpand}
+      >
+        <p className="text-xs text-muted-foreground line-clamp-2">
+          {summary}
+        </p>
+      </div>
     </div>
   );
 }
@@ -491,6 +505,10 @@ function WeightedKeywordsNodeComponent({ id, data }: NodeProps) {
   const { module, onModuleChange, expanded, onExpandedChange } =
     data as unknown as WeightedKeywordsNodeData;
   const updateNodeInternals = useUpdateNodeInternals();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Report height changes to parent for layout calculations
+  useReportNodeHeight(id, containerRef);
 
   // Notify ReactFlow when node size changes (expand/collapse)
   useEffect(() => {
@@ -500,8 +518,20 @@ function WeightedKeywordsNodeComponent({ id, data }: NodeProps) {
     return () => clearTimeout(timer);
   }, [expanded, id, updateNodeInternals]);
 
+  // Handlers that include estimated height for synchronous layout update
+  const handleExpand = useCallback(() => {
+    const height = isLoadMode(module.inputs)
+      ? MODULE_HEIGHT_EXPANDED_LOAD
+      : MODULE_HEIGHT_EXPANDED_SAVE;
+    onExpandedChange(true, height);
+  }, [module.inputs, onExpandedChange]);
+
+  const handleCollapse = useCallback(() => {
+    onExpandedChange(false, MODULE_HEIGHT_COLLAPSED);
+  }, [onExpandedChange]);
+
   return (
-    <div className="relative">
+    <div ref={containerRef} className="relative">
       <Handle
         type="target"
         position={Position.Top}
@@ -514,17 +544,17 @@ function WeightedKeywordsNodeComponent({ id, data }: NodeProps) {
           <ExpandedLoadView
             module={module}
             onChange={onModuleChange}
-            onCollapse={() => onExpandedChange(false)}
+            onCollapse={handleCollapse}
           />
         ) : (
           <ExpandedSaveView
             module={module}
             onChange={onModuleChange}
-            onCollapse={() => onExpandedChange(false)}
+            onCollapse={handleCollapse}
           />
         )
       ) : (
-        <CollapsedView module={module} onExpand={() => onExpandedChange(true)} />
+        <CollapsedView module={module} onExpand={handleExpand} />
       )}
 
       <Handle

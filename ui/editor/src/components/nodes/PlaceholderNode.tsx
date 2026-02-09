@@ -5,9 +5,10 @@
  * to indicate it's not editable in the current version of the editor.
  */
 
-import { memo } from "react";
+import { memo, useRef } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import type { ModuleConfig } from "@wfm/shared";
+import { useReportNodeHeight } from "@/hooks/useNodeHeights";
 
 // =============================================================================
 // Types
@@ -23,21 +24,25 @@ export type PlaceholderNodeData = {
 
 /** Height of placeholder node */
 export const PLACEHOLDER_HEIGHT = 80;
-/** Width of placeholder node */
-export const PLACEHOLDER_WIDTH = 280;
+/** Width of placeholder node (matches other module nodes) */
+export const PLACEHOLDER_WIDTH = 340;
 
 // =============================================================================
 // Component
 // =============================================================================
 
-function PlaceholderNodeComponent({ data }: NodeProps) {
+function PlaceholderNodeComponent({ id, data }: NodeProps) {
   const { module } = data as unknown as PlaceholderNodeData;
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Report height changes to parent for layout calculations
+  useReportNodeHeight(id, containerRef);
 
   return (
-    <div className="relative">
+    <div ref={containerRef} className="relative">
       <Handle type="target" position={Position.Top} id="in" className="!bg-muted-foreground" />
 
-      <div className="w-[280px] rounded-lg border border-dashed border-muted-foreground/50 bg-muted/30 p-3">
+      <div className="w-[340px] rounded-lg border border-dashed border-muted-foreground/50 bg-muted/30 p-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <p className="text-[10px] uppercase tracking-wide text-muted-foreground/70">
