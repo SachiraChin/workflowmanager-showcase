@@ -58,7 +58,7 @@ export type UserSelectNodeData = {
 /** Height of module when collapsed */
 export const MODULE_HEIGHT_COLLAPSED = 120;
 /** Height of module when expanded */
-export const MODULE_HEIGHT_EXPANDED = 520;
+export const MODULE_HEIGHT_EXPANDED = 620;
 /** Width of module when collapsed */
 export const MODULE_WIDTH_COLLAPSED = 280;
 /** Width of module when expanded */
@@ -116,9 +116,14 @@ function CollapsedView({
 }) {
   return (
     <div
-      className="w-[280px] rounded-lg border bg-card p-3 shadow-sm cursor-pointer hover:border-primary/50 transition-colors"
+      className="relative w-[280px] rounded-lg border-2 border-amber-500/50 bg-card p-3 shadow-sm cursor-pointer hover:border-amber-500 transition-colors"
       onClick={onExpand}
     >
+      {/* User Interaction Badge */}
+      <div className="absolute -top-2 -right-2 px-1.5 py-0.5 rounded text-[9px] font-medium bg-amber-500 text-white shadow-sm">
+        User Input
+      </div>
+
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
@@ -275,7 +280,12 @@ function ExpandedView({
 
   return (
     <>
-      <Card className="w-[360px] shadow-lg border-primary/30">
+      <Card className="relative w-[360px] shadow-lg border-2 border-amber-500/50">
+        {/* User Interaction Badge */}
+        <div className="absolute -top-2 -right-2 px-1.5 py-0.5 rounded text-[9px] font-medium bg-amber-500 text-white shadow-sm z-10">
+          User Input
+        </div>
+
         <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
           <div>
             <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
@@ -524,7 +534,7 @@ function UserSelectNodeComponent({ id, data }: NodeProps) {
 
   return (
     <div className="relative">
-      <Handle type="target" position={Position.Top} className="!bg-primary" />
+      <Handle type="target" position={Position.Top} id="in" className="!bg-primary" />
       
       {expanded ? (
         <ExpandedView
@@ -539,7 +549,7 @@ function UserSelectNodeComponent({ id, data }: NodeProps) {
         />
       )}
 
-      <Handle type="source" position={Position.Bottom} className="!bg-primary" />
+      <Handle type="source" position={Position.Bottom} id="out" className="!bg-primary" />
     </div>
   );
 }

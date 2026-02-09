@@ -120,6 +120,150 @@ async def list_workflow_templates(
     return {"templates": result, "count": len(result)}
 
 
+# =============================================================================
+# Helper: Verify template access
+# =============================================================================
+
+def _get_template_with_access_check(db, template_id: str, user_id: str):
+    """
+    Get template and verify user has access to it.
+    Returns template or raises HTTPException.
+    """
+    template = db.version_repo.get_template_by_id(template_id)
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+
+    # Check access: user owns it OR it's a public global template
+    is_owner = template.get("user_id") == user_id
+    is_public_global = (
+        template.get("scope") == "global" and
+        template.get("visibility") == "public"
+    )
+
+    if not is_owner and not is_public_global:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    return template
+
+
+# =============================================================================
+# Template Detail Endpoints
+# =============================================================================
+
+@router.get("/workflow-templates/{template_id}/versions/latest")
+async def get_workflow_template_version_latest(
+    template_id: str,
+    db = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+):
+    """
+    Get the latest version's workflow definition for a template.
+
+    Returns the resolved workflow definition (steps, modules, etc.)
+    for the most recent source version.
+    """
+    template = _get_template_with_access_check(db, template_id, user_id)
+
+    # Get latest source version
+    versions = db.version_repo.get_raw_versions_for_template(template_id, limit=1)
+    if not versions:
+        raise HTTPException(status_code=404, detail="No versions found for template")
+
+    latest_version = versions[0]
+    version_id = latest_version.get("workflow_version_id")
+
+    # Get the resolved workflow definition
+    definition = db.version_repo.get_resolved_workflow(version_id)
+    if not definition:
+        raise HTTPException(status_code=404, detail="Workflow definition not found")
+
+    return {
+        "template_id": template_id,
+        "template_name": template.get("workflow_template_name"),
+        "workflow_version_id": version_id,
+        "created_at": latest_version.get("created_at"),
+        "definition": definition,
+    }
+
+
+@router.get("/workflow-templates/{template_id}/versions/{version_id}")
+async def get_workflow_template_version(
+    template_id: str,
+    version_id: str,
+    db = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+):
+    """
+    Get a specific version's workflow definition for a template.
+
+    Returns the resolved workflow definition (steps, modules, etc.)
+    for the specified version.
+    """
+    template = _get_template_with_access_check(db, template_id, user_id)
+
+    # Get the version and verify it belongs to this template
+    version = db.version_repo.get_workflow_version_by_id(version_id)
+    if not version:
+        raise HTTPException(status_code=404, detail="Version not found")
+
+    if version.get("workflow_template_id") != template_id:
+        raise HTTPException(status_code=404, detail="Version not found for this template")
+
+    # Get the resolved workflow definition
+    definition = db.version_repo.get_resolved_workflow(version_id)
+    if not definition:
+        raise HTTPException(status_code=404, detail="Workflow definition not found")
+
+    return {
+        "template_id": template_id,
+        "template_name": template.get("workflow_template_name"),
+        "workflow_version_id": version_id,
+        "created_at": version.get("created_at"),
+        "definition": definition,
+    }
+
+
+@router.get("/workflow-templates/{template_id}")
+async def get_workflow_template(
+    template_id: str,
+    db = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+    version_limit: int = 20,
+):
+    """
+    Get a specific workflow template with its versions.
+
+    Returns template metadata and list of available versions.
+    """
+    template = _get_template_with_access_check(db, template_id, user_id)
+
+    # Get versions for this template
+    versions = db.version_repo.get_raw_versions_for_template(
+        template_id, limit=version_limit
+    )
+
+    # Get workflow name from latest version
+    workflow_name = None
+    if versions:
+        latest_version = versions[0]
+        resolved = db.version_repo.get_resolved_workflow(
+            latest_version.get("workflow_version_id")
+        )
+        if resolved:
+            workflow_name = resolved.get("name")
+
+    return {
+        "template_id": template_id,
+        "template_name": template.get("workflow_template_name"),
+        "name": workflow_name,
+        "scope": template.get("scope", "user"),
+        "visibility": template.get("visibility", "visible"),
+        "derived_from": template.get("derived_from"),
+        "download_url": template.get("download_url"),
+        "versions": versions,
+    }
+
+
 @router.post("/workflow-templates/global/publish")
 async def publish_global_template(
     request: PublishGlobalTemplateRequest,

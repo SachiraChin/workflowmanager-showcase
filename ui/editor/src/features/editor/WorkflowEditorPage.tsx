@@ -20,17 +20,14 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  api,
   type StepDefinition,
-  type WorkflowTemplate,
-  type WorkflowTemplatesResponse,
 } from "@wfm/shared";
+import { editorApi } from "@/api";
 import {
   UserSelectNode,
   type UserSelectNodeData,
   MODULE_HEIGHT_COLLAPSED,
   MODULE_HEIGHT_EXPANDED,
-  MODULE_WIDTH_COLLAPSED,
   MODULE_WIDTH_EXPANDED,
 } from "@/components/nodes/UserSelectNode";
 import {
@@ -42,6 +39,11 @@ import {
   type WorkflowNodeData,
   type WorkflowInfo,
 } from "@/components/nodes/WorkflowNode";
+import {
+  PlaceholderNode,
+  type PlaceholderNodeData,
+  PLACEHOLDER_HEIGHT,
+} from "@/components/nodes/PlaceholderNode";
 import { type UserSelectModule } from "@/modules/user-select/types";
 
 // =============================================================================
@@ -62,7 +64,21 @@ const nodeTypes = {
   workflow: WorkflowNode,
   step: StepNode,
   userSelect: UserSelectNode,
+  placeholder: PlaceholderNode,
 };
+
+// Supported module types with their node type mappings
+const SUPPORTED_MODULES: Record<string, string> = {
+  "user.select": "userSelect",
+};
+
+/**
+ * Get the node type for a module based on its module_id.
+ * Returns "placeholder" for unsupported module types.
+ */
+function getNodeTypeForModule(moduleId: string): string {
+  return SUPPORTED_MODULES[moduleId] || "placeholder";
+}
 
 // =============================================================================
 // Module Library
@@ -96,7 +112,6 @@ export function WorkflowEditorPage() {
 
   const [templateLoading, setTemplateLoading] = useState(!isCreateMode);
   const [templateError, setTemplateError] = useState<string | null>(null);
-  const [resolvedTemplate, setResolvedTemplate] = useState<WorkflowTemplate | null>(null);
   const [resolvedVersionId, setResolvedVersionId] = useState<string | null>(
     requestedVersionId || null
   );
@@ -114,74 +129,8 @@ export function WorkflowEditorPage() {
   // Track which modules are expanded (key = moduleNodeId, value = expanded state)
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({});
 
-  const [steps, setSteps] = useState<StepDefinition[]>([
-    {
-      step_id: "1_user_input",
-      name: "User Input",
-      description: "Collect user preferences",
-      modules: [
-        {
-          module_id: "user.select",
-          name: "select_pet_type",
-          inputs: {
-            prompt: "What type of pet is this video for?",
-            multi_select: false,
-            mode: "select",
-            data: [
-              {
-                id: "cat",
-                label: "Cat",
-                description: "Feline friends - independent, curious, and endlessly entertaining",
-              },
-              {
-                id: "dog",
-                label: "Dog",
-                description: "Canine companions - loyal, playful, and always happy to see you",
-              },
-              {
-                id: "both",
-                label: "Cat & Dog",
-                description: "Multi-pet household - the chaos and love of furry siblings",
-              },
-            ],
-            schema: {
-              type: "array",
-              _ux: {
-                display: "visible",
-                render_as: "card-stack",
-              },
-              items: {
-                type: "object",
-                _ux: {
-                  display: "visible",
-                  render_as: "card",
-                  selectable: true,
-                },
-                properties: {
-                  id: {
-                    type: "string",
-                    _ux: { display: "hidden" },
-                  },
-                  label: {
-                    type: "string",
-                    _ux: { display: "visible", render_as: "card-title" },
-                  },
-                  description: {
-                    type: "string",
-                    _ux: { display: "visible", render_as: "card-subtitle" },
-                  },
-                },
-              },
-            },
-          },
-          outputs_to_state: {
-            selected_indices: "pet_type_indices",
-            selected_data: "pet_type_selection",
-          },
-        },
-      ],
-    },
-  ]);
+  // Steps from loaded workflow (empty until loaded in edit mode)
+  const [steps, setSteps] = useState<StepDefinition[]>([]);
 
   // =============================================================================
   // Handlers
@@ -232,31 +181,40 @@ export function WorkflowEditorPage() {
     const nodes: Node[] = [];
     const edges: Edge[] = [];
 
-    // Workflow node
+    // Layout constants - horizontal step layout
+    const workflowNodeWidth = 200; // Approximate width of workflow node
+    const workflowNodeX = 20;
+    const stepStartX = workflowNodeX + workflowNodeWidth + 200; // Space after workflow node
+    const stepStartY = 50;
+    const stepSpacingX = 80; // Horizontal spacing between steps
+
+    // Workflow node - positioned to the left of steps
     nodes.push({
       id: "workflow",
       type: "workflow",
-      position: { x: 250, y: 20 },
+      position: { x: workflowNodeX, y: stepStartY + 50 },
       data: {
         workflow: workflowInfo,
         onWorkflowChange: handleWorkflowChange,
       } satisfies WorkflowNodeData,
     });
-
-    // Layout constants
-    const stepStartY = 120;
-    const stepSpacing = 60;
     const stepPadding = 40; // Padding inside step container (space around modules)
     const stepHeaderHeight = 32; // Height of step header bar
     const moduleSpacingY = 20; // Vertical spacing between modules
     // Step width sized for expanded modules so padding stays ~40px on expand
     const stepWidth = MODULE_WIDTH_EXPANDED + stepPadding * 2;
 
-    // Helper to get module height based on expanded state
-    const getModuleHeight = (moduleId: string) =>
-      expandedModules[moduleId] ? MODULE_HEIGHT_EXPANDED : MODULE_HEIGHT_COLLAPSED;
+    // Helper to get module height based on module type and expanded state
+    const getModuleHeight = (moduleNodeId: string, moduleId: string) => {
+      const nodeType = getNodeTypeForModule(moduleId);
+      if (nodeType === "placeholder") {
+        return PLACEHOLDER_HEIGHT;
+      }
+      // For supported modules (userSelect), check expanded state
+      return expandedModules[moduleNodeId] ? MODULE_HEIGHT_EXPANDED : MODULE_HEIGHT_COLLAPSED;
+    };
 
-    let currentStepY = stepStartY;
+    let currentStepX = stepStartX;
 
     // Build step and module nodes
     // IMPORTANT: Step nodes must come before their child module nodes
@@ -267,57 +225,69 @@ export function WorkflowEditorPage() {
       // Sum up actual module heights (accounting for which are expanded)
       const modulesHeight = step.modules.length > 0
         ? step.modules.reduce((sum, mod) => {
-            const moduleId = `module_${step.step_id}_${mod.name}`;
-            return sum + getModuleHeight(moduleId);
+            const moduleNodeId = `module_${step.step_id}_${mod.name}`;
+            return sum + getModuleHeight(moduleNodeId, mod.module_id);
           }, 0) + (step.modules.length - 1) * moduleSpacingY
         : 60; // Minimum height when empty
       const stepHeight = stepHeaderHeight + stepPadding + modulesHeight + stepPadding;
 
-      // Step node (parent container)
+      // Step node (parent container) - positioned horizontally
       nodes.push({
         id: stepNodeId,
         type: "step",
-        position: { x: 150, y: currentStepY },
+        position: { x: currentStepX, y: stepStartY },
         data: {
           step,
           onStepChange: (updated: StepDefinition) => handleStepChange(step.step_id, updated),
           width: stepWidth,
           height: stepHeight,
         } satisfies StepNodeData,
-        // Mark as a group/parent node
         style: { width: stepWidth, height: stepHeight },
       });
 
-      // Module nodes within this step - positioned relative to step
+      // Module nodes within this step - positioned relative to parent step
       let currentModuleY = stepHeaderHeight + stepPadding;
       step.modules.forEach((module, moduleIndex) => {
         const moduleNodeId = `module_${step.step_id}_${module.name}`;
+        const nodeType = getNodeTypeForModule(module.module_id);
         const isExpanded = expandedModules[moduleNodeId] ?? false;
-        const moduleHeight = getModuleHeight(moduleNodeId);
+        const moduleHeight = getModuleHeight(moduleNodeId, module.module_id);
         
-        // Position relative to parent step node (centered horizontally with padding)
+        // Position relative to parent step node
         const moduleX = stepPadding;
         const moduleY = currentModuleY;
 
-        nodes.push({
-          id: moduleNodeId,
-          type: "userSelect",
-          position: { x: moduleX, y: moduleY },
-          // Parent-child relationship
-          parentId: stepNodeId,
-          // Constrain to parent bounds
-          extent: "parent",
-          // Allow parent to expand when this node grows
-          expandParent: true,
-          draggable: true,
-          data: {
-            module: module as UserSelectModule,
-            onModuleChange: (updated: UserSelectModule) =>
-              handleModuleChange(step.step_id, module.name!, updated),
-            expanded: isExpanded,
-            onExpandedChange: (exp: boolean) => handleModuleExpandedChange(moduleNodeId, exp),
-          } satisfies UserSelectNodeData,
-        });
+        // Build node data based on module type
+        if (nodeType === "userSelect") {
+          nodes.push({
+            id: moduleNodeId,
+            type: "userSelect",
+            position: { x: moduleX, y: moduleY },
+            parentId: stepNodeId,
+            extent: "parent",
+            draggable: true,
+            data: {
+              module: module as UserSelectModule,
+              onModuleChange: (updated: UserSelectModule) =>
+                handleModuleChange(step.step_id, module.name!, updated),
+              expanded: isExpanded,
+              onExpandedChange: (exp: boolean) => handleModuleExpandedChange(moduleNodeId, exp),
+            } satisfies UserSelectNodeData,
+          });
+        } else {
+          // Placeholder for unsupported module types
+          nodes.push({
+            id: moduleNodeId,
+            type: "placeholder",
+            position: { x: moduleX, y: moduleY },
+            parentId: stepNodeId,
+            extent: "parent",
+            draggable: true,
+            data: {
+              module,
+            } satisfies PlaceholderNodeData,
+          });
+        }
 
         // Update Y position for next module
         currentModuleY += moduleHeight + moduleSpacingY;
@@ -327,9 +297,12 @@ export function WorkflowEditorPage() {
           const prevModuleId = `module_${step.step_id}_${step.modules[moduleIndex - 1].name}`;
           edges.push({
             id: `${prevModuleId}_to_${moduleNodeId}`,
+            type: "default",
             source: prevModuleId,
+            sourceHandle: "out",
             target: moduleNodeId,
-            style: { stroke: "hsl(var(--muted-foreground))", strokeDasharray: "4 2" },
+            targetHandle: "in",
+            style: { stroke: "#888", strokeWidth: 4, strokeDasharray: "4 2" },
           });
         }
       });
@@ -338,11 +311,12 @@ export function WorkflowEditorPage() {
       if (stepIndex === 0) {
         edges.push({
           id: "workflow_to_first_step",
+          type: "default",
           source: "workflow",
           sourceHandle: "workflow-out",
           target: stepNodeId,
           targetHandle: "step-in",
-          style: { stroke: "hsl(var(--primary))", strokeWidth: 2 },
+          style: { stroke: "#3b82f6", strokeWidth: 4 },
         });
       }
 
@@ -351,71 +325,99 @@ export function WorkflowEditorPage() {
         const prevStepId = `step_${steps[stepIndex - 1].step_id}`;
         edges.push({
           id: `${prevStepId}_to_${stepNodeId}`,
+          type: "default",
           source: prevStepId,
           sourceHandle: "step-out",
           target: stepNodeId,
           targetHandle: "step-in",
-          style: { stroke: "hsl(var(--muted-foreground))", strokeWidth: 2 },
+          style: { stroke: "#888", strokeWidth: 4 },
         });
       }
 
-      currentStepY += stepHeight + stepSpacing;
+      currentStepX += stepWidth + stepSpacingX;
     });
 
     return { nodes, edges };
   }, [workflowInfo, steps, expandedModules, handleWorkflowChange, handleStepChange, handleModuleChange, handleModuleExpandedChange]);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initialEdges);
 
-  // Sync nodes when state changes
+  // Sync when computed values change
   useEffect(() => {
+    console.log("[WorkflowEditor] Syncing nodes:", initialNodes.length);
     setNodes(initialNodes);
+  }, [initialNodes, setNodes]);
+
+  useEffect(() => {
+    console.log("[WorkflowEditor] Syncing edges:", initialEdges.length);
+    // Log first few edges in detail
+    initialEdges.slice(0, 3).forEach((e, i) => {
+      console.log(`  Edge ${i}:`, {
+        id: e.id,
+        source: e.source,
+        sourceHandle: e.sourceHandle,
+        target: e.target,
+        targetHandle: e.targetHandle,
+      });
+    });
     setEdges(initialEdges);
-  }, [initialNodes, initialEdges, setNodes, setEdges]);
+  }, [initialEdges, setEdges]);
 
   // =============================================================================
-  // Load Template
+  // Load Workflow Definition
   // =============================================================================
 
   useEffect(() => {
     if (isCreateMode) {
       setTemplateLoading(false);
+      // In create mode, start with empty steps (user will add modules)
+      return;
+    }
+
+    if (!workflowTemplateId) {
+      setTemplateLoading(false);
       return;
     }
 
     let alive = true;
-    const loadTemplate = async () => {
+    const loadWorkflowDefinition = async () => {
       setTemplateLoading(true);
       setTemplateError(null);
 
       try {
-        const response: WorkflowTemplatesResponse = await api.listWorkflowTemplates();
+        // Fetch the workflow definition - either specific version or latest
+        const response = requestedVersionId
+          ? await editorApi.getWorkflowTemplateVersion(workflowTemplateId, requestedVersionId)
+          : await editorApi.getWorkflowTemplateVersionLatest(workflowTemplateId);
+
         if (!alive) return;
 
-        const template = response.templates.find(
-          (item) => item.template_id === workflowTemplateId
-        );
-        if (!template) {
-          setTemplateError("Workflow template not found.");
-          setResolvedTemplate(null);
-          setResolvedVersionId(null);
-          return;
-        }
+        const { definition, workflow_version_id } = response;
 
-        setResolvedTemplate(template);
-        setResolvedVersionId(requestedVersionId || template.versions[0]?.workflow_version_id || null);
+        // Update workflow info from the loaded definition
+        setWorkflowInfo({
+          workflow_id: definition.workflow_id,
+          name: definition.name || response.template_name,
+          description: definition.description,
+        });
+
+        // Update steps from the loaded definition
+        setSteps(definition.steps);
+
+        // Track the resolved version
+        setResolvedVersionId(workflow_version_id);
       } catch (error) {
         if (!alive) return;
         setTemplateError(
-          error instanceof Error ? error.message : "Failed to load workflow template"
+          error instanceof Error ? error.message : "Failed to load workflow definition"
         );
       } finally {
         if (alive) setTemplateLoading(false);
       }
     };
 
-    void loadTemplate();
+    void loadWorkflowDefinition();
     return () => {
       alive = false;
     };

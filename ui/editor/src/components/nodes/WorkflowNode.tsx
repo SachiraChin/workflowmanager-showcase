@@ -158,10 +158,10 @@ function WorkflowNodeComponent({ data }: NodeProps) {
           </div>
         </div>
 
-        {/* Output handle - connects to first step */}
+        {/* Output handle - connects to first step (right side for horizontal layout) */}
         <Handle
           type="source"
-          position={Position.Bottom}
+          position={Position.Right}
           className="!bg-primary !w-3 !h-3"
           id="workflow-out"
         />

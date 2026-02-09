@@ -148,10 +148,10 @@ function StepNodeComponent({ data }: NodeProps) {
         className="relative rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/5"
         style={{ width, height }}
       >
-        {/* Input handle - connects from previous step */}
+        {/* Input handle - connects from previous step (left side) */}
         <Handle
           type="target"
-          position={Position.Top}
+          position={Position.Left}
           className="!bg-muted-foreground !w-3 !h-3"
           id="step-in"
         />
@@ -188,10 +188,10 @@ function StepNodeComponent({ data }: NodeProps) {
           </div>
         )}
 
-        {/* Output handle - connects to next step */}
+        {/* Output handle - connects to next step (right side) */}
         <Handle
           type="source"
-          position={Position.Bottom}
+          position={Position.Right}
           className="!bg-muted-foreground !w-3 !h-3"
           id="step-out"
         />
