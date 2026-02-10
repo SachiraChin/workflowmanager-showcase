@@ -8,7 +8,7 @@
 import { useState } from "react";
 import type { WorkflowDefinition } from "@wfm/shared";
 import { useVirtualRuntime } from "./useVirtualRuntime";
-import { VirtualPreview } from "./VirtualPreview";
+import { VirtualRuntimePanel } from "./VirtualRuntimePanel";
 import { buildUserInputVirtualWorkflow } from "../poc/data/ccUserInputVirtualWorkflow";
 import type { ModuleLocation } from "./types";
 
@@ -142,18 +142,36 @@ export function VirtualRuntimeTestPage() {
           </div>
         </div>
 
-        {/* Right panel - Preview */}
+        {/* Right panel - Info */}
         <div className="overflow-auto rounded border bg-card p-4">
-          <VirtualPreview
-            status={runtime.status}
-            busy={runtime.busy}
-            response={runtime.lastResponse}
-            error={runtime.error}
-            onSubmit={handleSubmit}
-            showState={true}
-          />
+          <div className="text-sm text-muted-foreground">
+            <p>Click "Run to Module" to execute and open the preview panel.</p>
+            <p className="mt-2">
+              The panel will slide in from the right automatically.
+            </p>
+            {runtime.status !== "idle" && (
+              <button
+                type="button"
+                className="mt-4 rounded border px-3 py-1 text-xs hover:bg-muted"
+                onClick={() => runtime.actions.openPanel()}
+              >
+                Open Panel
+              </button>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Runtime Panel (slides in from right) */}
+      <VirtualRuntimePanel
+        open={runtime.panelOpen}
+        onOpenChange={runtime.actions.setPanelOpen}
+        status={runtime.status}
+        busy={runtime.busy}
+        response={runtime.lastResponse}
+        error={runtime.error}
+        onSubmit={handleSubmit}
+      />
     </div>
   );
 }

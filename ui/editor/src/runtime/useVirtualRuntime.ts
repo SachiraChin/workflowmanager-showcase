@@ -5,7 +5,7 @@
  * managing state updates and providing reactive values.
  */
 
-import { useState, useCallback, useRef, useMemo } from "react";
+import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import type { WorkflowDefinition, InteractionResponseData } from "@wfm/shared";
 import { VirtualRuntime } from "./VirtualRuntime";
 import type {
@@ -31,6 +31,10 @@ export interface VirtualRuntimeState {
   error: string | null;
   /** Current state (module outputs) */
   state: Record<string, unknown> | null;
+  /** Whether the runtime panel is open */
+  panelOpen: boolean;
+  /** Current target module (the module we're trying to reach) */
+  currentTarget: ModuleLocation | null;
 }
 
 export interface VirtualRuntimeActions {
@@ -65,8 +69,24 @@ export interface VirtualRuntimeActions {
 
   /**
    * Reset the runtime, clearing all checkpoints and state.
+   * @param closePanel - Whether to close the panel (default: false)
    */
-  reset: () => void;
+  reset: (closePanel?: boolean) => void;
+
+  /**
+   * Open the runtime panel.
+   */
+  openPanel: () => void;
+
+  /**
+   * Close the runtime panel.
+   */
+  closePanel: () => void;
+
+  /**
+   * Set the panel open state directly (for controlled usage).
+   */
+  setPanelOpen: (open: boolean) => void;
 }
 
 export interface UseVirtualRuntimeReturn extends VirtualRuntimeState {
@@ -115,6 +135,21 @@ export function useVirtualRuntime(): UseVirtualRuntimeReturn {
     useState<VirtualWorkflowResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [state, setState] = useState<Record<string, unknown> | null>(null);
+  const [panelOpen, setPanelOpenState] = useState(false);
+  const [currentTarget, setCurrentTarget] = useState<ModuleLocation | null>(null);
+
+  // Register panel change callback on mount
+  useEffect(() => {
+    runtime.setOnPanelChange((open) => {
+      setPanelOpenState(open);
+    });
+    // Sync initial state
+    setPanelOpenState(runtime.isPanelOpen());
+
+    return () => {
+      runtime.setOnPanelChange(null);
+    };
+  }, [runtime]);
 
   // Sync state from runtime
   const syncState = useCallback(() => {
@@ -122,6 +157,8 @@ export function useVirtualRuntime(): UseVirtualRuntimeReturn {
     setLastResponse(runtime.getLastResponse());
     setError(runtime.getLastError());
     setState(runtime.getLastResponse()?.state ?? null);
+    setPanelOpenState(runtime.isPanelOpen());
+    setCurrentTarget(runtime.getCurrentTarget());
   }, [runtime]);
 
   // Actions
@@ -170,10 +207,28 @@ export function useVirtualRuntime(): UseVirtualRuntimeReturn {
     [runtime]
   );
 
-  const reset = useCallback(() => {
-    runtime.reset();
-    syncState();
-  }, [runtime, syncState]);
+  const reset = useCallback(
+    (closePanel?: boolean) => {
+      runtime.reset(closePanel);
+      syncState();
+    },
+    [runtime, syncState]
+  );
+
+  const openPanel = useCallback(() => {
+    runtime.openPanel();
+  }, [runtime]);
+
+  const closePanel = useCallback(() => {
+    runtime.closePanel();
+  }, [runtime]);
+
+  const setPanelOpen = useCallback(
+    (open: boolean) => {
+      runtime.setPanelOpen(open);
+    },
+    [runtime]
+  );
 
   // Memoize actions object
   const actions = useMemo<VirtualRuntimeActions>(
@@ -182,8 +237,19 @@ export function useVirtualRuntime(): UseVirtualRuntimeReturn {
       submitResponse,
       getCheckpoint,
       reset,
+      openPanel,
+      closePanel,
+      setPanelOpen,
     }),
-    [runToModule, submitResponse, getCheckpoint, reset]
+    [
+      runToModule,
+      submitResponse,
+      getCheckpoint,
+      reset,
+      openPanel,
+      closePanel,
+      setPanelOpen,
+    ]
   );
 
   return {
@@ -192,6 +258,8 @@ export function useVirtualRuntime(): UseVirtualRuntimeReturn {
     lastResponse,
     error,
     state,
+    panelOpen,
+    currentTarget,
     actions,
   };
 }

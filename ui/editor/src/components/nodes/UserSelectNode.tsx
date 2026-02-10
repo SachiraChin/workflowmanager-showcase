@@ -50,6 +50,8 @@ export type UserSelectNodeData = {
   expanded: boolean;
   /** Callback when expanded state changes (includes estimated height for layout) */
   onExpandedChange: (expanded: boolean, estimatedHeight: number) => void;
+  /** Callback to preview this module in virtual runtime */
+  onPreview?: () => void;
 };
 
 // =============================================================================
@@ -109,9 +111,11 @@ function getDataSummary(data: unknown): string {
 function CollapsedView({
   module,
   onExpand,
+  onPreview,
 }: {
   module: UserSelectModule;
   onExpand: () => void;
+  onPreview?: () => void;
 }) {
   return (
     <div className="relative w-[340px] rounded-lg border-2 border-amber-500/50 bg-card shadow-sm">
@@ -128,17 +132,32 @@ function CollapsedView({
           </p>
           <h3 className="text-sm font-semibold truncate">{module.name}</h3>
         </div>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-6 px-2 text-xs"
-          onClick={(e) => {
-            e.stopPropagation();
-            onExpand();
-          }}
-        >
-          Expand
-        </Button>
+        <div className="flex items-center gap-1">
+          {onPreview && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2 text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                onPreview();
+              }}
+            >
+              Preview
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-6 px-2 text-xs"
+            onClick={(e) => {
+              e.stopPropagation();
+              onExpand();
+            }}
+          >
+            Expand
+          </Button>
+        </div>
       </div>
 
       {/* Content - clickable area to expand */}
@@ -255,10 +274,12 @@ function ExpandedView({
   module,
   onChange,
   onCollapse,
+  onPreview,
 }: {
   module: UserSelectModule;
   onChange: (module: UserSelectModule) => void;
   onCollapse: () => void;
+  onPreview?: () => void;
 }) {
   const [isUxEditorOpen, setIsUxEditorOpen] = useState(false);
   const [isDataSchemaEditorOpen, setIsDataSchemaEditorOpen] = useState(false);
@@ -326,14 +347,26 @@ function ExpandedView({
               onClick={(e) => e.stopPropagation()}
             />
           </div>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-6 px-2 text-xs"
-            onClick={onCollapse}
-          >
-            Collapse
-          </Button>
+          <div className="flex items-center gap-1">
+            {onPreview && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 px-2 text-xs"
+                onClick={onPreview}
+              >
+                Preview
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2 text-xs"
+              onClick={onCollapse}
+            >
+              Collapse
+            </Button>
+          </div>
         </CardHeader>
 
         <CardContent className="space-y-4" onClick={(e) => e.stopPropagation()}>
@@ -486,6 +519,16 @@ function ExpandedView({
           </div>
 
           <DialogFooter className="px-6 py-4 border-t">
+            <div className="flex-1">
+              {onPreview && (
+                <Button
+                  variant="outline"
+                  onClick={onPreview}
+                >
+                  Preview Module
+                </Button>
+              )}
+            </div>
             <Button
               variant="outline"
               onClick={() => setIsUxEditorOpen(false)}
@@ -548,7 +591,7 @@ function ExpandedView({
 // =============================================================================
 
 function UserSelectNodeComponent({ id, data }: NodeProps) {
-  const { module, onModuleChange, expanded, onExpandedChange } = data as unknown as UserSelectNodeData;
+  const { module, onModuleChange, expanded, onExpandedChange, onPreview } = data as unknown as UserSelectNodeData;
   const updateNodeInternals = useUpdateNodeInternals();
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -582,11 +625,13 @@ function UserSelectNodeComponent({ id, data }: NodeProps) {
           module={module}
           onChange={onModuleChange}
           onCollapse={handleCollapse}
+          onPreview={onPreview}
         />
       ) : (
         <CollapsedView
           module={module}
           onExpand={handleExpand}
+          onPreview={onPreview}
         />
       )}
 

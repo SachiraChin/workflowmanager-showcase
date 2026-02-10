@@ -12,8 +12,9 @@
  * - Runtime finds the latest valid checkpoint before target and resumes from there
  */
 
-import type { WorkflowDefinition, InteractionResponseData } from "@wfm/shared";
+import type { WorkflowDefinition, InteractionResponseData, InteractionRequest } from "@wfm/shared";
 import { virtualStart, virtualRespond } from "./virtual-api";
+import { buildAutoSelectionResponse } from "./auto-select";
 import type {
   ModuleLocation,
   ModuleCheckpoint,
@@ -153,6 +154,15 @@ export class VirtualRuntime {
   /** Last error message */
   private lastError: string | null = null;
 
+  /** Whether the runtime panel is open */
+  private panelOpen: boolean = false;
+
+  /** Callback when panel state changes (for React integration) */
+  private onPanelChange: ((open: boolean) => void) | null = null;
+
+  /** Current target module (the module we're trying to reach) */
+  private currentTarget: ModuleLocation | null = null;
+
   // ===========================================================================
   // Public API
   // ===========================================================================
@@ -187,6 +197,63 @@ export class VirtualRuntime {
   }
 
   /**
+   * Get the current target module (the module we're trying to reach).
+   * This is set when runToModule is called and persists through interactions.
+   */
+  getCurrentTarget(): ModuleLocation | null {
+    return this.currentTarget;
+  }
+
+  // ===========================================================================
+  // Panel Control
+  // ===========================================================================
+
+  /**
+   * Check if the panel is currently open.
+   */
+  isPanelOpen(): boolean {
+    return this.panelOpen;
+  }
+
+  /**
+   * Open the runtime panel.
+   */
+  openPanel(): void {
+    if (!this.panelOpen) {
+      this.panelOpen = true;
+      this.onPanelChange?.(true);
+    }
+  }
+
+  /**
+   * Close the runtime panel.
+   */
+  closePanel(): void {
+    if (this.panelOpen) {
+      this.panelOpen = false;
+      this.onPanelChange?.(false);
+    }
+  }
+
+  /**
+   * Set the panel open state directly (for controlled usage).
+   */
+  setPanelOpen(open: boolean): void {
+    if (this.panelOpen !== open) {
+      this.panelOpen = open;
+      this.onPanelChange?.(open);
+    }
+  }
+
+  /**
+   * Register a callback to be notified when panel state changes.
+   * Used by React hook to sync state.
+   */
+  setOnPanelChange(callback: ((open: boolean) => void) | null): void {
+    this.onPanelChange = callback;
+  }
+
+  /**
    * Run workflow to a target module.
    *
    * @param workflow - The full workflow definition
@@ -201,6 +268,10 @@ export class VirtualRuntime {
   ): Promise<RunResult> {
     this.status = "running";
     this.lastError = null;
+    this.currentTarget = target;
+
+    // Auto-open panel when execution starts
+    this.openPanel();
 
     try {
       // Update hashes and invalidate stale checkpoints
@@ -258,6 +329,9 @@ export class VirtualRuntime {
 
     this.status = "running";
 
+    // Ensure panel stays open during response
+    this.openPanel();
+
     try {
       const serverResponse = await virtualRespond({
         workflow,
@@ -282,14 +356,19 @@ export class VirtualRuntime {
 
   /**
    * Reset the runtime, clearing all checkpoints and state.
+   * Optionally close the panel.
    */
-  reset(): void {
+  reset(closePanel: boolean = false): void {
     this.checkpoints.clear();
     this.moduleHashes.clear();
     this.workflowHash = "";
     this.status = "idle";
     this.lastResponse = null;
     this.lastError = null;
+    this.currentTarget = null;
+    if (closePanel) {
+      this.closePanel();
+    }
   }
 
   // ===========================================================================
@@ -431,17 +510,24 @@ export class VirtualRuntime {
 
         // Prerequisite module - check if we have a selection for it
         const selectionKey = this.locationKey(interactionModule);
-        const selection = selectionMap.get(selectionKey);
+        let selection = selectionMap.get(selectionKey);
 
         if (!selection) {
-          // No selection provided for prerequisite - error
-          this.status = "error";
-          this.lastError = `Missing selection for prerequisite module: ${interactionModule.step_id}/${interactionModule.module_name}`;
-          this.lastResponse = response;
-          return { status: "error", error: this.lastError };
+          // No user-provided selection - try to auto-select
+          const interactionRequest = response.interaction_request as InteractionRequest | undefined;
+          if (interactionRequest) {
+            selection = buildAutoSelectionResponse(interactionRequest) ?? undefined;
+          }
         }
 
-        // Auto-respond with provided selection
+        if (!selection) {
+          // Can't auto-select (no selectable items) - return to user for input
+          this.status = "awaiting_input";
+          this.lastResponse = response;
+          return { status: "awaiting_input", response };
+        }
+
+        // Auto-respond with provided or auto-generated selection
         response = await virtualRespond({
           workflow,
           virtual_db: response.virtual_db!,

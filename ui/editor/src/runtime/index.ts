@@ -33,3 +33,6 @@ export type {
 // Components
 export { VirtualPreview } from "./VirtualPreview";
 export type { VirtualPreviewProps } from "./VirtualPreview";
+
+export { VirtualRuntimePanel } from "./VirtualRuntimePanel";
+export type { VirtualRuntimePanelProps } from "./VirtualRuntimePanel";

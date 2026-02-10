@@ -12,12 +12,10 @@ import { useState } from "react";
 import { WorkflowStartPage } from "@/features/start/WorkflowStartPage";
 import { WorkflowEditorPage } from "@/features/editor/WorkflowEditorPage";
 import { ReactFlowStressPocPage } from "@/poc/reactflow/StressPocPage";
-import { ReactFlowUserInputPocPage } from "@/poc/reactflow/UserInputPocPage";
 import { SchemaBuilderMonacoPocPage } from "@/poc/monaco/SchemaBuilderMonacoPocPage";
 import { DndKitPocPage } from "@/poc/ux-schema-editor/DndKitPocPage";
 import { PragmaticDndPocPage } from "@/poc/ux-schema-editor/PragmaticDndPocPage";
 import { UxPalettePocPage } from "@/poc/ux-schema-editor/UxPalettePocPage";
-import { UserSelectVirtualRuntimePage } from "@/runtime/UserSelectVirtualRuntimePage";
 import { VirtualRuntimeTestPage } from "@/runtime/VirtualRuntimeTestPage";
 
 function HeaderNav() {
@@ -76,13 +74,7 @@ function HeaderNav() {
                     >
                       Stress PoC
                     </Link>
-                    <Link
-                      className="block rounded px-3 py-2 hover:bg-muted"
-                      onClick={closeMenus}
-                      to="/poc/reactflow/user-input"
-                    >
-                      User Input PoC
-                    </Link>
+
                     <Link
                       className="block rounded px-3 py-2 hover:bg-muted"
                       onClick={closeMenus}
@@ -130,14 +122,7 @@ function HeaderNav() {
                       onClick={closeMenus}
                       to="/runtime/test"
                     >
-                      Virtual Runtime Test (new)
-                    </Link>
-                    <Link
-                      className="block rounded px-3 py-2 hover:bg-muted"
-                      onClick={closeMenus}
-                      to="/runtime/user-select"
-                    >
-                      user.select (legacy PoC)
+                      Virtual Runtime Test
                     </Link>
                   </div>
                 ) : null}
@@ -178,10 +163,7 @@ export default function App() {
             path="/poc/reactflow/stress"
             element={<ReactFlowStressPocPage />}
           />
-          <Route
-            path="/poc/reactflow/user-input"
-            element={<ReactFlowUserInputPocPage />}
-          />
+
           <Route
             path="/poc/monaco/schema-builder"
             element={<SchemaBuilderMonacoPocPage />}
@@ -201,10 +183,6 @@ export default function App() {
           <Route
             path="/runtime/test"
             element={<VirtualRuntimeTestPage />}
-          />
-          <Route
-            path="/runtime/user-select"
-            element={<UserSelectVirtualRuntimePage />}
           />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

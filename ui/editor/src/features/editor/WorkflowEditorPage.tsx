@@ -21,8 +21,14 @@ import {
   DialogHeader,
   DialogTitle,
   type StepDefinition,
+  type WorkflowDefinition,
 } from "@wfm/shared";
 import { editorApi } from "@/api";
+import {
+  useVirtualRuntime,
+  VirtualRuntimePanel,
+  type ModuleLocation,
+} from "@/runtime";
 import {
   UserSelectNode,
   type UserSelectNodeData,
@@ -165,6 +171,9 @@ export function WorkflowEditorPage() {
   // Track measured heights of module nodes for dynamic layout
   const nodeHeights = useNodeHeights();
 
+  // Virtual runtime for module preview
+  const runtime = useVirtualRuntime();
+
   const isCreateMode = !workflowTemplateId;
   const requestedVersionFromQuery = useMemo(() => {
     const params = new URLSearchParams(location.search);
@@ -272,6 +281,45 @@ export function WorkflowEditorPage() {
     [nodeHeights]
   );
 
+  /**
+   * Build the current workflow definition from editor state.
+   * Used for virtual runtime preview.
+   */
+  const buildWorkflowDefinition = useCallback((): WorkflowDefinition => {
+    return {
+      workflow_id: workflowInfo.workflow_id,
+      name: workflowInfo.name,
+      description: workflowInfo.description,
+      steps,
+    };
+  }, [workflowInfo, steps]);
+
+  /**
+   * Handle module preview request.
+   * Runs the virtual runtime to the target module.
+   */
+  const handleModulePreview = useCallback(
+    async (target: ModuleLocation) => {
+      const workflow = buildWorkflowDefinition();
+      await runtime.actions.runToModule(workflow, target, []);
+    },
+    [buildWorkflowDefinition, runtime.actions]
+  );
+
+  /**
+   * Handle interaction response in preview panel.
+   */
+  const handlePreviewSubmit = useCallback(
+    async (response: Parameters<typeof runtime.actions.submitResponse>[2]) => {
+      const workflow = buildWorkflowDefinition();
+      const target = runtime.currentTarget;
+      if (target) {
+        await runtime.actions.submitResponse(workflow, target, response);
+      }
+    },
+    [buildWorkflowDefinition, runtime.actions, runtime.currentTarget]
+  );
+
   // =============================================================================
   // Build Nodes and Edges
   // =============================================================================
@@ -370,6 +418,8 @@ export function WorkflowEditorPage() {
               expanded: isExpanded,
               onExpandedChange: (exp: boolean, height: number) =>
                 handleModuleExpandedChange(moduleNodeId, exp, height),
+              onPreview: () =>
+                handleModulePreview({ step_id: step.step_id, module_name: module.name! }),
             } satisfies UserSelectNodeData,
           });
         } else if (nodeType === "weightedKeywords") {
@@ -470,7 +520,7 @@ export function WorkflowEditorPage() {
     });
 
     return { nodes, edges };
-  }, [workflowInfo, steps, expandedModules, nodeHeights.heights, handleWorkflowChange, handleStepChange, handleModuleChange, handleWeightedKeywordsModuleChange, handleModuleExpandedChange]);
+  }, [workflowInfo, steps, expandedModules, nodeHeights.heights, handleWorkflowChange, handleStepChange, handleModuleChange, handleWeightedKeywordsModuleChange, handleLLMModuleChange, handleModuleExpandedChange, handleModulePreview]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initialEdges);
@@ -643,6 +693,17 @@ export function WorkflowEditorPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Virtual Runtime Preview Panel */}
+      <VirtualRuntimePanel
+        open={runtime.panelOpen}
+        onOpenChange={runtime.actions.setPanelOpen}
+        status={runtime.status}
+        busy={runtime.busy}
+        response={runtime.lastResponse}
+        error={runtime.error}
+        onSubmit={handlePreviewSubmit}
+      />
       </div>
     </NodeHeightsProvider>
   );
