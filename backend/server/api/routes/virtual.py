@@ -36,6 +36,12 @@ logger = logging.getLogger("workflow.virtual")
 
 router = APIRouter(prefix="/workflow/virtual", tags=["virtual"])
 
+# Fixed AI config for virtual execution - always use OpenAI gpt-4o-mini
+VIRTUAL_AI_CONFIG = {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+}
+
 
 class VirtualStartRequest(BaseModel):
     """Request to start virtual module execution."""
@@ -165,6 +171,7 @@ async def start_virtual_module(
             project_name="virtual_project",
             workflow_template_name=workflow_template_name,
             user_id=VIRTUAL_USER_ID,
+            ai_config=VIRTUAL_AI_CONFIG,
             force_new=True,  # Always fresh for virtual
             target=target,
         )
@@ -247,6 +254,7 @@ async def respond_virtual_module(
             workflow_run_id=virtual_run_id,
             interaction_id=request.interaction_id,
             response=request.response,
+            ai_config=VIRTUAL_AI_CONFIG,
             target=target,
         )
 
