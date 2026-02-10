@@ -33,6 +33,9 @@ import {
   Button,
   RenderProvider,
   SchemaRenderer,
+  getUx,
+  normalizeDisplay,
+  type DisplayMode,
   type SchemaProperty,
 } from "@wfm/shared";
 import type {
@@ -40,6 +43,7 @@ import type {
   DataSchemaNode,
   ConfiguredNode,
   NodeUxConfig,
+  NodeDiffStatus,
 } from "./types";
 
 // =============================================================================
@@ -91,20 +95,22 @@ type UxItem = {
 };
 
 // =============================================================================
-// Tree Building with Optional Display Schema Decoration
+// Tree Building - DisplaySchema as Primary, with DataSchema Diff
 // =============================================================================
 
 /**
- * Extract UX config from a display schema node.
+ * Extract UX config from a schema node.
+ * Uses shared getUx() to handle both _ux object and _ux.* flat notation.
  */
 function extractUxFromSchema(schema?: SchemaProperty): NodeUxConfig {
-  if (!schema?._ux) return {};
+  if (!schema) return {};
 
-  const ux = schema._ux;
+  const ux = getUx(schema as Record<string, unknown>);
   const config: NodeUxConfig = {};
 
   if (ux.render_as) config.render_as = ux.render_as;
-  if (ux.display && typeof ux.display === "string") config.display = ux.display;
+  // Preserve display value (including false for hidden)
+  if (ux.display !== undefined) config.display = ux.display;
   if (ux.nudges) config.nudges = [...ux.nudges];
   if (ux.selectable) config.selectable = true;
   if (ux.highlight) config.highlight = true;
@@ -115,15 +121,138 @@ function extractUxFromSchema(schema?: SchemaProperty): NodeUxConfig {
 }
 
 /**
- * Build configured tree from data schema, optionally decorated with display schema.
+ * Infer schema type from a SchemaProperty.
+ */
+function getSchemaType(schema?: SchemaProperty): DataSchemaNode["type"] {
+  return schema?.type || "object";
+}
+
+/**
+ * Build configured tree from displaySchema (primary), with diff status from dataSchema.
+ * 
+ * Logic:
+ * 1. displaySchema is the source of truth for tree structure
+ * 2. dataSchema is used to determine diff status:
+ *    - "normal": field exists in both
+ *    - "deleted": field in displaySchema but not in dataSchema
+ *    - "addable": field in dataSchema but not in displaySchema (added at end)
  */
 function buildConfiguredTree(
-  dataSchema: DataSchemaNode,
-  displaySchema?: SchemaProperty,
+  displaySchema: SchemaProperty | undefined,
+  dataSchema: DataSchemaNode | undefined,
   path: string[] = [],
   name = "(root)"
 ): ConfiguredNode {
   const id = path.length === 0 ? "(root)" : path.join(".");
+  const schemaType = getSchemaType(displaySchema);
+  
+  // Determine diff status for this node
+  let diffStatus: NodeDiffStatus = "normal";
+  if (path.length > 0 && !dataSchema) {
+    // This node exists in displaySchema but not in dataSchema
+    diffStatus = "deleted";
+  }
+
+  const node: ConfiguredNode = {
+    id,
+    name,
+    path,
+    schemaType,
+    isLeaf: schemaType !== "object" && schemaType !== "array",
+    ux: extractUxFromSchema(displaySchema),
+    diffStatus,
+  };
+
+  const children: ConfiguredNode[] = [];
+
+  // Handle object type
+  if (schemaType === "object") {
+    const displayProps = displaySchema?.properties || {};
+    const displayAdditionalProps = displaySchema?.additionalProperties;
+    const dataProps = dataSchema?.type === "object" ? dataSchema.properties || {} : {};
+
+    // 1. Add all fields from displaySchema properties
+    for (const [key, childDisplaySchema] of Object.entries(displayProps)) {
+      const childDataSchema = dataProps[key];
+      children.push(
+        buildConfiguredTree(
+          childDisplaySchema,
+          childDataSchema,
+          [...path, key],
+          key
+        )
+      );
+    }
+
+    // 2. If displaySchema has additionalProperties, use it as template for data fields
+    //    that aren't in displaySchema.properties
+    if (displayAdditionalProps) {
+      for (const key of Object.keys(dataProps)) {
+        if (!(key in displayProps)) {
+          // This field exists in data but uses additionalProperties schema
+          children.push(
+            buildConfiguredTree(
+              displayAdditionalProps,
+              dataProps[key],
+              [...path, key],
+              key
+            )
+          );
+        }
+      }
+    }
+
+    // 3. Add "addable" fields from dataSchema not in displaySchema
+    //    (only if no additionalProperties, otherwise they're handled above)
+    if (!displayAdditionalProps) {
+      for (const [key, childDataSchema] of Object.entries(dataProps)) {
+        if (!(key in displayProps)) {
+          // Field exists in dataSchema but not in displaySchema - mark as addable
+          children.push(
+            buildConfiguredTreeFromDataOnly(
+              childDataSchema,
+              [...path, key],
+              key
+            )
+          );
+        }
+      }
+    }
+  }
+  // Handle array type
+  else if (schemaType === "array") {
+    const itemsDisplaySchema = displaySchema?.items;
+    const itemsDataSchema = dataSchema?.type === "array" ? dataSchema.items : undefined;
+    
+    if (itemsDisplaySchema || itemsDataSchema) {
+      children.push(
+        buildConfiguredTree(
+          itemsDisplaySchema,
+          itemsDataSchema,
+          [...path, "[items]"],
+          "[items]"
+        )
+      );
+    }
+  }
+
+  if (children.length > 0) {
+    node.children = children;
+  }
+
+  return node;
+}
+
+/**
+ * Build a tree node from dataSchema only (for "addable" fields).
+ * These are fields that exist in data but have no UX config yet.
+ */
+function buildConfiguredTreeFromDataOnly(
+  dataSchema: DataSchemaNode,
+  path: string[],
+  name: string
+): ConfiguredNode {
+  const id = path.join(".");
 
   const node: ConfiguredNode = {
     id,
@@ -131,18 +260,17 @@ function buildConfiguredTree(
     path,
     schemaType: dataSchema.type,
     isLeaf: dataSchema.type !== "object" && dataSchema.type !== "array",
-    ux: extractUxFromSchema(displaySchema),
+    ux: {}, // No UX config yet
+    diffStatus: "addable",
   };
 
   if (dataSchema.type === "object" && dataSchema.properties) {
-    node.children = Object.entries(dataSchema.properties).map(([key, value]) => {
-      const childDisplaySchema = displaySchema?.properties?.[key];
-      return buildConfiguredTree(value, childDisplaySchema, [...path, key], key);
-    });
+    node.children = Object.entries(dataSchema.properties).map(([key, value]) =>
+      buildConfiguredTreeFromDataOnly(value, [...path, key], key)
+    );
   } else if (dataSchema.type === "array" && dataSchema.items) {
-    const itemsDisplaySchema = displaySchema?.items;
     node.children = [
-      buildConfiguredTree(dataSchema.items, itemsDisplaySchema, [...path, "[items]"], "[items]"),
+      buildConfiguredTreeFromDataOnly(dataSchema.items, [...path, "[items]"], "[items]"),
     ];
   }
 
@@ -264,17 +392,24 @@ function clearNodeUxKey(
 // Generate Display Schema from Configured Tree
 // =============================================================================
 
-function generateDisplaySchema(
-  node: ConfiguredNode,
-  dataSchema: DataSchemaNode
-): SchemaProperty {
+/**
+ * Generate a SchemaProperty from the configured tree.
+ * The tree structure (from displaySchema) is the source of truth.
+ * Skip "addable" nodes as they haven't been configured yet.
+ */
+function generateDisplaySchema(node: ConfiguredNode): SchemaProperty {
+  // Skip addable nodes - they don't have UX config yet
+  if (node.diffStatus === "addable") {
+    return { type: node.schemaType as SchemaProperty["type"] };
+  }
+
   const schema: SchemaProperty = {
-    type: dataSchema.type as SchemaProperty["type"],
+    type: node.schemaType as SchemaProperty["type"],
   };
 
   // Build _ux config
   const uxConfig: Record<string, unknown> = {
-    display: node.ux.display || "visible",
+    display: normalizeDisplay(node.ux.display),
   };
 
   if (node.ux.render_as) {
@@ -303,17 +438,17 @@ function generateDisplaySchema(
 
   (schema as Record<string, unknown>)["_ux"] = uxConfig;
 
-  // Handle children
-  if (dataSchema.type === "object" && dataSchema.properties && node.children) {
+  // Handle children based on node's schema type
+  if (node.schemaType === "object" && node.children) {
     schema.properties = {};
     for (const child of node.children) {
-      const childDataSchema = dataSchema.properties[child.name];
-      if (childDataSchema) {
-        schema.properties[child.name] = generateDisplaySchema(child, childDataSchema);
+      // Skip addable children when generating schema
+      if (child.diffStatus !== "addable") {
+        schema.properties[child.name] = generateDisplaySchema(child);
       }
     }
-  } else if (dataSchema.type === "array" && dataSchema.items && node.children?.[0]) {
-    schema.items = generateDisplaySchema(node.children[0], dataSchema.items);
+  } else if (node.schemaType === "array" && node.children?.[0]) {
+    schema.items = generateDisplaySchema(node.children[0]);
   }
 
   return schema;
@@ -400,6 +535,10 @@ function DroppableTreeNode({
   const hasChildren = node.children && node.children.length > 0;
   const wasJustDropped = justDropped?.nodeId === node.id;
 
+  // Diff status styling
+  const isDeleted = node.diffStatus === "deleted";
+  const isAddable = node.diffStatus === "addable";
+
   return (
     <div>
       <div
@@ -410,6 +549,8 @@ function DroppableTreeNode({
           "transition-all duration-200",
           isOver ? "bg-primary/20 ring-2 ring-primary scale-[1.02]" : "",
           !isOver ? "hover:bg-muted/30" : "",
+          isDeleted ? "bg-red-500/10 border-l-2 border-red-500" : "",
+          isAddable ? "bg-green-500/10 border-l-2 border-green-500" : "",
         ].join(" ")}
       >
         {/* Expand/collapse toggle */}
@@ -426,10 +567,36 @@ function DroppableTreeNode({
         )}
 
         {/* Node name and type */}
-        <span className="text-sm font-medium">{node.name}</span>
+        <span className={[
+          "text-sm font-medium",
+          isDeleted ? "line-through text-red-600" : "",
+          isAddable ? "text-green-600 italic" : "",
+        ].join(" ")}>
+          {node.name}
+        </span>
         <span className={`text-xs ${TYPE_COLORS[node.schemaType] || ""}`}>
           [{node.schemaType}]
         </span>
+
+        {/* Diff status badge */}
+        {isDeleted && (
+          <Badge
+            variant="outline"
+            className="text-xs py-0 bg-red-500/20 text-red-600 border-red-500/50"
+            title="This field exists in display schema but not in data"
+          >
+            deleted
+          </Badge>
+        )}
+        {isAddable && (
+          <Badge
+            variant="outline"
+            className="text-xs py-0 bg-green-500/20 text-green-600 border-green-500/50"
+            title="This field exists in data but has no UX config"
+          >
+            + add UX
+          </Badge>
+        )}
 
         {/* UX config badges */}
         {node.ux.display && node.ux.display !== "visible" && (
@@ -522,9 +689,9 @@ function DroppableTreeNode({
 // =============================================================================
 
 export function UxSchemaEditor({
+  displaySchema: initialDisplaySchema,
   dataSchema,
   data,
-  displaySchema: initialDisplaySchema,
   onChange,
   onSave,
   className,
@@ -541,24 +708,24 @@ export function UxSchemaEditor({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTreeUpdateRef = useRef<number>(0);
 
-  // Build initial tree from schemas
+  // Build initial tree from schemas (displaySchema is primary, dataSchema for diff)
   const initialTree = useMemo(
-    () => buildConfiguredTree(dataSchema, initialDisplaySchema),
+    () => buildConfiguredTree(initialDisplaySchema, dataSchema),
     [dataSchema, initialDisplaySchema]
   );
   const [configuredTree, setConfiguredTree] = useState<ConfiguredNode>(initialTree);
 
   // Reset tree when dataSchema or initialDisplaySchema changes
   useEffect(() => {
-    setConfiguredTree(buildConfiguredTree(dataSchema, initialDisplaySchema));
+    setConfiguredTree(buildConfiguredTree(initialDisplaySchema, dataSchema));
     setIsDirty(false);
     setEditorError(null);
   }, [dataSchema, initialDisplaySchema]);
 
   // Generate display schema from current tree
   const displaySchema = useMemo(
-    () => generateDisplaySchema(configuredTree, dataSchema),
-    [configuredTree, dataSchema]
+    () => generateDisplaySchema(configuredTree),
+    [configuredTree]
   );
 
   // Sync tree changes to editor text (only when not actively editing)
@@ -581,8 +748,8 @@ export function UxSchemaEditor({
     (text: string) => {
       try {
         const parsed = JSON.parse(text) as SchemaProperty;
-        // Rebuild tree from the edited schema
-        const newTree = buildConfiguredTree(dataSchema, parsed);
+        // Rebuild tree from the edited schema (parsed becomes the new displaySchema)
+        const newTree = buildConfiguredTree(parsed, dataSchema);
         setConfiguredTree(newTree);
         setEditorError(null);
         setIsDirty(true);
@@ -653,7 +820,7 @@ export function UxSchemaEditor({
     if (category === "nudges") {
       setConfiguredTree((prev) => addNudgeToNode(prev, targetId, value));
     } else if (category === "display") {
-      setConfiguredTree((prev) => updateNodeUx(prev, targetId, { display: value }));
+      setConfiguredTree((prev) => updateNodeUx(prev, targetId, { display: value as DisplayMode }));
     } else if (category === "toggles") {
       if (value === "selectable") {
         setConfiguredTree((prev) => updateNodeUx(prev, targetId, { selectable: true }));

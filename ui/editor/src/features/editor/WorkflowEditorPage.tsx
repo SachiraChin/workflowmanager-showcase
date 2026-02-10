@@ -11,15 +11,15 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useLocation, useParams } from "react-router-dom";
+import Editor from "@monaco-editor/react";
 import {
   Alert,
   AlertDescription,
-  Badge,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+  Button,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
   type StepDefinition,
 } from "@wfm/shared";
 import { editorApi } from "@/api";
@@ -95,30 +95,7 @@ function getNodeTypeForModule(moduleId: string): string {
   return SUPPORTED_MODULES[moduleId] || "placeholder";
 }
 
-// =============================================================================
-// Module Library
-// =============================================================================
 
-const MODULE_LIBRARY = [
-  {
-    moduleId: "user.select",
-    title: "User Select",
-    description: "Collects user choices from structured options.",
-    status: "available",
-  },
-  {
-    moduleId: "io.weighted_keywords",
-    title: "Weighted Keywords",
-    description: "Load or save weighted keywords for deduplication.",
-    status: "available",
-  },
-  {
-    moduleId: "api.llm",
-    title: "LLM Call",
-    description: "Call LLM APIs with structured input/output.",
-    status: "available",
-  },
-] as const;
 
 // =============================================================================
 // Zoom Controls Component
@@ -183,7 +160,7 @@ export function WorkflowEditorPage() {
   const { workflowTemplateId } = useParams<{ workflowTemplateId: string }>();
   const location = useLocation();
   const state = (location.state ?? {}) as EditorLocationState;
-  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
+  const [isWorkflowViewOpen, setIsWorkflowViewOpen] = useState(false);
 
   // Track measured heights of module nodes for dynamic layout
   const nodeHeights = useNodeHeights();
@@ -599,70 +576,73 @@ export function WorkflowEditorPage() {
           <ZoomControls />
         </ReactFlow>
 
-      {/* Left Panel - Module Library */}
-      <div className="pointer-events-none absolute inset-y-4 left-4 z-20 flex">
-        {!leftPanelCollapsed ? (
-          <aside className="pointer-events-auto h-full w-72 overflow-auto rounded-xl border bg-card/95 p-4 shadow-lg backdrop-blur-sm">
-            <div className="space-y-4">
-              <section>
-                <h2 className="text-sm font-semibold">Module Library</h2>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Drag modules onto the canvas to add them.
-                </p>
-              </section>
-
-              {MODULE_LIBRARY.map((module) => (
-                <Card key={module.moduleId} className="cursor-grab active:cursor-grabbing">
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <CardTitle className="text-sm">{module.title}</CardTitle>
-                      <Badge variant="secondary" className="text-[10px]">
-                        {module.status}
-                      </Badge>
-                    </div>
-                    <CardDescription className="text-xs">{module.moduleId}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-xs text-muted-foreground">{module.description}</p>
-                  </CardContent>
-                </Card>
-              ))}
-
-              {/* Workflow Info */}
-              {templateError ? (
-                <Alert>
-                  <AlertDescription>{templateError}</AlertDescription>
-                </Alert>
-              ) : null}
-
-              {templateLoading ? (
-                <p className="text-sm text-muted-foreground">Loading...</p>
-              ) : null}
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xs">Session Info</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-1 text-[11px] text-muted-foreground">
-                  <p>Mode: {isCreateMode ? "create" : "edit"}</p>
-                  <p>Workflow: {workflowInfo.name || "Untitled"}</p>
-                  <p>Steps: {steps.length}</p>
-                  {!isCreateMode && (
-                    <p>Version: {resolvedVersionId || "latest"}</p>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </aside>
-        ) : null}
-        <button
-          className="pointer-events-auto ml-2 mt-3 h-8 rounded-md border bg-card px-2 text-xs shadow-sm hover:bg-muted/50"
-          onClick={() => setLeftPanelCollapsed((current) => !current)}
-          type="button"
+      {/* Top Left - View Workflow Button */}
+      <div className="absolute top-4 left-4 z-20">
+        <Button
+          variant="outline"
+          size="sm"
+          className="shadow-sm"
+          onClick={() => setIsWorkflowViewOpen(true)}
         >
-          {leftPanelCollapsed ? "Library" : "Hide"}
-        </button>
+          View Full Workflow
+        </Button>
+
+        {/* Loading/Error indicators */}
+        {templateLoading && (
+          <span className="ml-2 text-sm text-muted-foreground">Loading...</span>
+        )}
+        {templateError && (
+          <Alert className="mt-2 max-w-xs">
+            <AlertDescription>{templateError}</AlertDescription>
+          </Alert>
+        )}
       </div>
+
+      {/* Full Workflow JSON Dialog */}
+      <Dialog open={isWorkflowViewOpen} onOpenChange={setIsWorkflowViewOpen}>
+        <DialogContent
+          className="flex flex-col p-0"
+          style={{ width: "80vw", height: "80vh", maxWidth: "80vw", maxHeight: "80vh" }}
+        >
+          <DialogHeader className="px-6 pt-6 pb-2">
+            <DialogTitle>
+              Full Workflow Definition
+              {resolvedVersionId && (
+                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                  (v: {resolvedVersionId.slice(0, 8)}...)
+                </span>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 min-h-0 px-2 pb-2">
+            <Editor
+              height="100%"
+              defaultLanguage="json"
+              value={JSON.stringify(
+                {
+                  workflow_id: workflowInfo.workflow_id,
+                  name: workflowInfo.name,
+                  description: workflowInfo.description,
+                  steps,
+                },
+                null,
+                2
+              )}
+              options={{
+                readOnly: true,
+                minimap: { enabled: false },
+                fontSize: 12,
+                lineNumbers: "on",
+                scrollBeyondLastLine: false,
+                folding: true,
+                wordWrap: "on",
+                automaticLayout: true,
+              }}
+              theme="vs-dark"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
       </div>
     </NodeHeightsProvider>
   );

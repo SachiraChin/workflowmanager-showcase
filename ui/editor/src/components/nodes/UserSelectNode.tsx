@@ -196,7 +196,21 @@ function dataSchemaNodeToJsonSchemaNode(node: DataSchemaNode): JsonSchemaObject[
  * Convert DataSchemaNode to JsonSchemaObject for the schema editor.
  * The editor expects an object schema at the root.
  */
-function dataSchemaToJsonSchema(schema: DataSchemaNode): JsonSchemaObject {
+function dataSchemaToJsonSchema(schema: DataSchemaNode | undefined): JsonSchemaObject {
+  if (!schema) {
+    // No data schema available (e.g., data from state reference)
+    // Return empty object schema as fallback
+    return {
+      type: "object",
+      properties: {
+        id: { type: "string" },
+        label: { type: "string" },
+        description: { type: "string" },
+      },
+      additionalProperties: false,
+    };
+  }
+
   // If it's an array, extract the items schema as the object to edit
   if (schema.type === "array" && schema.items) {
     if (schema.items.type === "object" && schema.items.properties) {
@@ -254,15 +268,18 @@ function ExpandedView({
   const hasInlineData = Array.isArray(module.inputs.data);
   const hasInlineSchema = !isJsonRefObject(module.inputs.schema);
 
-  const dataSchema = useMemo<DataSchemaNode>(() => {
+  // dataSchema is only available when we have inline data to infer from
+  // When data is a state reference, dataSchema is undefined (displaySchema is primary)
+  const dataSchema = useMemo<DataSchemaNode | undefined>(() => {
     if (hasInlineData) {
       return inferDataSchema(module.inputs.data);
     }
-    return { type: "array", items: { type: "object" } };
+    return undefined;
   }, [module.inputs.data, hasInlineData]);
 
   const previewData = hasInlineData ? module.inputs.data : [];
 
+  // displaySchema comes from module.inputs.schema (already resolved by workflow resolver)
   const currentDisplaySchema = useMemo<SchemaProperty | undefined>(() => {
     if (hasInlineSchema && module.inputs.schema && typeof module.inputs.schema === "object") {
       return module.inputs.schema as SchemaProperty;
