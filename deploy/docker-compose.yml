@@ -20,7 +20,7 @@ version: '3.8'
 
 services:
   # ===========================================================================
-  # MongoDB Database
+  # MongoDB Database (Production)
   # ===========================================================================
   mongo:
     image: mongo:7
@@ -52,6 +52,28 @@ services:
       - wfm-network
 
   # ===========================================================================
+  # MongoDB Database (Virtual Execution)
+  # Separate instance for workflow editor virtual/preview execution.
+  # Isolated from production data - databases are created and dropped per run.
+  # ===========================================================================
+  mongo-virtual:
+    image: mongo:7
+    container_name: wfm-mongo-virtual
+    restart: unless-stopped
+    # Not exposed to host - only accessible within Docker network
+    environment:
+      TZ: ${TZ:-UTC}
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - wfm-network
+    # No persistent volume - data is ephemeral (created/dropped per virtual run)
+
+  # ===========================================================================
   # Backend API Server
   # ===========================================================================
   server:
@@ -62,6 +84,8 @@ services:
     restart: unless-stopped
     depends_on:
       mongo:
+        condition: service_healthy
+      mongo-virtual:
         condition: service_healthy
     ports:
       # Exposed on 9090, nginx proxy points here
@@ -75,6 +99,8 @@ services:
       # Database
       MONGODB_URI: mongodb://mongo:27017
       MONGODB_DATABASE: ${MONGODB_DATABASE:-workflow_db}
+      # Virtual execution uses separate MongoDB instance
+      MONGODB_VIRTUAL_URI: ${MONGODB_VIRTUAL_URI:-mongodb://mongo-virtual:27017}
       
       # Server
       SERVER_BASE_URL: ${SERVER_BASE_URL:-http://localhost:9000}

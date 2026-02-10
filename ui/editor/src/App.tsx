@@ -18,6 +18,7 @@ import { DndKitPocPage } from "@/poc/ux-schema-editor/DndKitPocPage";
 import { PragmaticDndPocPage } from "@/poc/ux-schema-editor/PragmaticDndPocPage";
 import { UxPalettePocPage } from "@/poc/ux-schema-editor/UxPalettePocPage";
 import { UserSelectVirtualRuntimePage } from "@/runtime/UserSelectVirtualRuntimePage";
+import { VirtualRuntimeTestPage } from "@/runtime/VirtualRuntimeTestPage";
 
 function HeaderNav() {
   const location = useLocation();
@@ -125,11 +126,18 @@ function HeaderNav() {
                 {openMenu === "runtime" ? (
                   <div className="absolute right-0 z-20 mt-2 w-72 rounded-md border bg-card p-1 shadow-md">
                     <Link
+                      className="block rounded px-3 py-2 hover:bg-muted font-medium text-primary"
+                      onClick={closeMenus}
+                      to="/runtime/test"
+                    >
+                      Virtual Runtime Test (new)
+                    </Link>
+                    <Link
                       className="block rounded px-3 py-2 hover:bg-muted"
                       onClick={closeMenus}
                       to="/runtime/user-select"
                     >
-                      user.select (first 2 modules)
+                      user.select (legacy PoC)
                     </Link>
                   </div>
                 ) : null}
@@ -189,6 +197,10 @@ export default function App() {
           <Route
             path="/poc/ux-schema/palette"
             element={<UxPalettePocPage />}
+          />
+          <Route
+            path="/runtime/test"
+            element={<VirtualRuntimeTestPage />}
           />
           <Route
             path="/runtime/user-select"

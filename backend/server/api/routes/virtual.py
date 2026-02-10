@@ -24,6 +24,7 @@ from backend.db.virtual import VIRTUAL_USER_ID, VirtualDatabase
 from models import (
     ExecutionTarget,
     InteractionResponseData,
+    VirtualWorkflowResponse,
     WorkflowResponse,
     WorkflowStatus,
 )
@@ -86,20 +87,37 @@ def compute_content_hash(workflow: Dict[str, Any]) -> str:
     return hashlib.sha256(content.encode()).hexdigest()
 
 
-def add_virtual_state_to_result(
+def to_virtual_response(
     response: WorkflowResponse,
     vdb: VirtualDatabase,
     virtual_run_id: str,
-) -> WorkflowResponse:
-    """Add virtual_db and virtual_run_id to response result."""
-    result = response.result.copy() if response.result else {}
-    result["virtual_run_id"] = virtual_run_id
-    result["virtual_db"] = vdb.export_state()
-    response.result = result
-    return response
+) -> VirtualWorkflowResponse:
+    """Convert WorkflowResponse to VirtualWorkflowResponse with virtual fields.
+    
+    Adds virtual-specific fields at root level:
+    - virtual_run_id: The workflow run ID for subsequent requests
+    - virtual_db: Compressed database state (opaque, for sending back)
+    - state: Current module outputs as plain dict (for UI to read)
+    """
+    return VirtualWorkflowResponse(
+        # Copy all base WorkflowResponse fields
+        workflow_run_id=response.workflow_run_id,
+        status=response.status,
+        message=response.message,
+        progress=response.progress,
+        interaction_request=response.interaction_request,
+        result=response.result,
+        error=response.error,
+        validation_errors=response.validation_errors,
+        validation_warnings=response.validation_warnings,
+        # Add virtual-specific fields
+        virtual_run_id=virtual_run_id,
+        virtual_db=vdb.export_state(),
+        state=vdb.state_repo.get_module_outputs(virtual_run_id),
+    )
 
 
-@router.post("/start", response_model=WorkflowResponse)
+@router.post("/start", response_model=VirtualWorkflowResponse)
 async def start_virtual_module(
     request: VirtualStartRequest,
     user_id: str = Depends(get_current_user_id),
@@ -152,23 +170,25 @@ async def start_virtual_module(
         )
 
         virtual_run_id = result.workflow_run_id
-        return add_virtual_state_to_result(result, vdb, virtual_run_id)
+        return to_virtual_response(result, vdb, virtual_run_id)
 
     except Exception as e:
         logger.exception("Virtual start failed: %s", e)
-        return WorkflowResponse(
+        return VirtualWorkflowResponse(
             workflow_run_id=virtual_run_id,
             status=WorkflowStatus.ERROR,
             error=str(e),
             result={
                 "error_type": "execution_failed",
                 "details": {"exception": str(e)},
-                "virtual_db": vdb.export_state() if vdb else None,
             },
+            virtual_run_id=virtual_run_id,
+            virtual_db=vdb.export_state() if vdb else None,
+            state=vdb.state_repo.get_module_outputs(virtual_run_id) if vdb and virtual_run_id else None,
         )
 
 
-@router.post("/respond", response_model=WorkflowResponse)
+@router.post("/respond", response_model=VirtualWorkflowResponse)
 async def respond_virtual_module(
     request: VirtualRespondRequest,
     user_id: str = Depends(get_current_user_id),
@@ -230,17 +250,19 @@ async def respond_virtual_module(
             target=target,
         )
 
-        return add_virtual_state_to_result(result, vdb, virtual_run_id)
+        return to_virtual_response(result, vdb, virtual_run_id)
 
     except Exception as e:
         logger.exception("Virtual respond failed: %s", e)
-        return WorkflowResponse(
+        return VirtualWorkflowResponse(
             workflow_run_id=virtual_run_id,
             status=WorkflowStatus.ERROR,
             error=str(e),
             result={
                 "error_type": "execution_failed",
                 "details": {"exception": str(e)},
-                "virtual_db": vdb.export_state() if vdb else None,
             },
+            virtual_run_id=virtual_run_id,
+            virtual_db=vdb.export_state() if vdb else None,
+            state=vdb.state_repo.get_module_outputs(virtual_run_id) if vdb else None,
         )

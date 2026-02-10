@@ -1,9 +1,14 @@
 """
-Virtual Database using mongomock for stateless workflow execution.
+Virtual Database using real MongoDB with sandboxed databases.
 
-Provides the same interface as Database but uses an in-memory mongomock
-instance. State can be exported to a compressed string and imported back,
-allowing the client to maintain state between requests.
+Provides the same interface as Database but creates isolated databases
+for each virtual execution. State can be exported to a compressed string
+and imported back, allowing the client to maintain state between requests.
+
+Key differences from the main Database:
+- Creates a unique database per virtual execution (virtual_<uuid>)
+- Databases are automatically cleaned up after use
+- Uses a separate MongoDB instance in production for isolation
 
 Usage:
     # Create fresh virtual database
@@ -17,16 +22,21 @@ Usage:
     
     # Export state for client
     compressed = vdb.export_state()
+    
+    # Clean up when done
+    vdb.cleanup()
 """
 
 import gzip
 import base64
 import json
 import logging
+import os
+import uuid
 from typing import Dict, Any, Optional
 from datetime import datetime, timezone
 
-import mongomock
+from pymongo import MongoClient
 from bson import ObjectId
 
 from .repos import (
@@ -40,19 +50,48 @@ from .repos import (
     VersionRepository,
     ContentRepository,
 )
+from .mixins.config import DatabaseConfigMixin
+from .mixins.history import DatabaseHistoryMixin
+from .mixins.recovery import DatabaseRecoveryMixin
 
 logger = logging.getLogger(__name__)
 
 VIRTUAL_USER_ID = "virtual_user_001"
 
+# Get virtual MongoDB URI from environment
+# In dev: defaults to same as main MongoDB
+# In prod: should point to separate mongo-virtual instance
+def get_virtual_mongo_uri() -> str:
+    """Get MongoDB URI for virtual execution."""
+    virtual_uri = os.environ.get("MONGODB_VIRTUAL_URI")
+    if virtual_uri:
+        return virtual_uri
+    # Fallback to main MongoDB URI
+    return os.environ.get("MONGODB_URI", "mongodb://localhost:27017")
 
-class VirtualDatabase:
+
+# Shared client for virtual databases (connection pooling)
+_virtual_client: Optional[MongoClient] = None
+
+
+def get_virtual_client() -> MongoClient:
+    """Get or create the shared MongoDB client for virtual execution."""
+    global _virtual_client
+    if _virtual_client is None:
+        uri = get_virtual_mongo_uri()
+        logger.info(f"Creating virtual MongoDB client: {uri}")
+        _virtual_client = MongoClient(uri)
+    return _virtual_client
+
+
+class VirtualDatabase(DatabaseHistoryMixin, DatabaseConfigMixin, DatabaseRecoveryMixin):
     """
-    In-memory database using mongomock for virtual workflow execution.
+    Database using real MongoDB with sandboxed databases for virtual execution.
     
-    Provides the same interface as Database but uses mongomock instead
-    of real MongoDB. State can be exported to a compressed string and
-    imported back.
+    Creates a unique database per instance (virtual_<uuid>) that is isolated
+    from production data. The database is dropped when cleanup() is called.
+    
+    Inherits from the same mixins as Database for interface compatibility.
     """
     
     def __init__(self, compressed_state: Optional[str] = None):
@@ -63,8 +102,13 @@ class VirtualDatabase:
             compressed_state: Optional base64-encoded gzip of JSON state.
                              If provided, decompresses and imports.
         """
-        self.client = mongomock.MongoClient()
-        self.db = self.client["virtual_db"]
+        self.client = get_virtual_client()
+        
+        # Generate unique database name
+        self.db_name = f"virtual_{uuid.uuid4().hex[:12]}"
+        self.db = self.client[self.db_name]
+        
+        logger.debug(f"Created virtual database: {self.db_name}")
         
         # Import initial state if provided
         if compressed_state:
@@ -117,7 +161,7 @@ class VirtualDatabase:
             })
     
     def _import_state(self, state: Dict[str, Any]):
-        """Import state from JSON dict into mongomock."""
+        """Import state from JSON dict into database."""
         for collection_name, documents in state.items():
             if documents:
                 # Deep copy to avoid modifying original
@@ -185,6 +229,19 @@ class VirtualDatabase:
                 result[key] = value
         return result
     
+    def cleanup(self):
+        """Drop the virtual database to free resources."""
+        logger.debug(f"Dropping virtual database: {self.db_name}")
+        self.client.drop_database(self.db_name)
+    
     def close(self):
-        """Close the mongomock client (no-op but maintains interface)."""
-        pass
+        """Clean up the virtual database."""
+        self.cleanup()
+    
+    def __del__(self):
+        """Ensure cleanup on garbage collection."""
+        try:
+            self.cleanup()
+        except Exception:
+            # Ignore errors during cleanup (connection may already be closed)
+            pass

@@ -49,9 +49,13 @@ from .sub_action import (
 from .execution import (
     ExecutionTarget,
 )
+from .virtual import (
+    VirtualWorkflowResponse,
+)
 
 # Rebuild models with forward references now that all types are available
 WorkflowResponse.model_rebuild()
+VirtualWorkflowResponse.model_rebuild()
 
 __all__ = [
     # Workflow
@@ -92,4 +96,6 @@ __all__ = [
     'SubActionEvent',
     # Execution controls
     'ExecutionTarget',
+    # Virtual workflow
+    'VirtualWorkflowResponse',
 ]

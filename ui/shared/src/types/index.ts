@@ -11,6 +11,7 @@ export type WorkflowStatus =
   | "created"
   | "processing"
   | "awaiting_input"
+  | "target_reached"
   | "completed"
   | "error"
   | "validation_failed";
