@@ -8,6 +8,7 @@
 import { memo, useRef } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import type { ModuleConfig } from "@wfm/shared";
+import { Button } from "@wfm/shared";
 import { useReportNodeHeight } from "@/hooks/useNodeHeights";
 
 // =============================================================================
@@ -16,6 +17,8 @@ import { useReportNodeHeight } from "@/hooks/useNodeHeights";
 
 export type PlaceholderNodeData = {
   module: ModuleConfig;
+  /** Callback to view state up to this module (runs module, opens state panel) */
+  onViewState?: () => void;
 };
 
 // =============================================================================
@@ -32,7 +35,7 @@ export const PLACEHOLDER_WIDTH = 340;
 // =============================================================================
 
 function PlaceholderNodeComponent({ id, data }: NodeProps) {
-  const { module } = data as unknown as PlaceholderNodeData;
+  const { module, onViewState } = data as unknown as PlaceholderNodeData;
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Report height changes to parent for layout calculations
@@ -52,6 +55,19 @@ function PlaceholderNodeComponent({ id, data }: NodeProps) {
               {module.name || "Unnamed Module"}
             </h3>
           </div>
+          {onViewState && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2 text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                onViewState();
+              }}
+            >
+              State
+            </Button>
+          )}
         </div>
 
         <p className="mt-2 text-xs text-muted-foreground/60 italic">

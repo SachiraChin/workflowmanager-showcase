@@ -59,6 +59,8 @@ export type WeightedKeywordsNodeData = {
   expanded: boolean;
   /** Callback when expanded state changes (includes estimated height for layout) */
   onExpandedChange: (expanded: boolean, estimatedHeight: number) => void;
+  /** Callback to view state up to this module (runs module, opens state panel) */
+  onViewState?: () => void;
 };
 
 // =============================================================================
@@ -81,9 +83,11 @@ export const MODULE_WIDTH = 340;
 function CollapsedView({
   module,
   onExpand,
+  onViewState,
 }: {
   module: WeightedKeywordsModule;
   onExpand: () => void;
+  onViewState?: () => void;
 }) {
   const modeLabel = module.inputs.mode === "load" ? "Load" : "Save";
   const modeBadgeClass =
@@ -122,17 +126,32 @@ function CollapsedView({
           </p>
           <h3 className="text-sm font-semibold truncate">{module.name}</h3>
         </div>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-6 px-2 text-xs"
-          onClick={(e) => {
-            e.stopPropagation();
-            onExpand();
-          }}
-        >
-          Expand
-        </Button>
+        <div className="flex items-center gap-1">
+          {onViewState && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2 text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                onViewState();
+              }}
+            >
+              State
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-6 px-2 text-xs"
+            onClick={(e) => {
+              e.stopPropagation();
+              onExpand();
+            }}
+          >
+            Expand
+          </Button>
+        </div>
       </div>
 
       {/* Content - clickable area to expand */}
@@ -156,10 +175,12 @@ function ExpandedLoadView({
   module,
   onChange,
   onCollapse,
+  onViewState,
 }: {
   module: WeightedKeywordsModule;
   onChange: (module: WeightedKeywordsModule) => void;
   onCollapse: () => void;
+  onViewState?: () => void;
 }) {
   const [isPipelineEditorOpen, setIsPipelineEditorOpen] = useState(false);
   const [draftPipeline, setDraftPipeline] = useState("");
@@ -220,14 +241,26 @@ function ExpandedLoadView({
               onClick={(e) => e.stopPropagation()}
             />
           </div>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-6 px-2 text-xs"
-            onClick={onCollapse}
-          >
-            Collapse
-          </Button>
+          <div className="flex items-center gap-1">
+            {onViewState && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 px-2 text-xs"
+                onClick={onViewState}
+              >
+                State
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2 text-xs"
+              onClick={onCollapse}
+            >
+              Collapse
+            </Button>
+          </div>
         </CardHeader>
 
         <CardContent className="space-y-4" onClick={(e) => e.stopPropagation()}>
@@ -353,10 +386,12 @@ function ExpandedSaveView({
   module,
   onChange,
   onCollapse,
+  onViewState,
 }: {
   module: WeightedKeywordsModule;
   onChange: (module: WeightedKeywordsModule) => void;
   onCollapse: () => void;
+  onViewState?: () => void;
 }) {
   // Type assertion - this component is only rendered when mode is "save"
   const inputs = module.inputs as WeightedKeywordsSaveInputs;
@@ -410,14 +445,26 @@ function ExpandedSaveView({
             onClick={(e) => e.stopPropagation()}
           />
         </div>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-6 px-2 text-xs"
-          onClick={onCollapse}
-        >
-          Collapse
-        </Button>
+        <div className="flex items-center gap-1">
+          {onViewState && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2 text-xs"
+              onClick={onViewState}
+            >
+              State
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-6 px-2 text-xs"
+            onClick={onCollapse}
+          >
+            Collapse
+          </Button>
+        </div>
       </CardHeader>
 
       <CardContent className="space-y-4" onClick={(e) => e.stopPropagation()}>
@@ -502,7 +549,7 @@ function ExpandedSaveView({
 // =============================================================================
 
 function WeightedKeywordsNodeComponent({ id, data }: NodeProps) {
-  const { module, onModuleChange, expanded, onExpandedChange } =
+  const { module, onModuleChange, expanded, onExpandedChange, onViewState } =
     data as unknown as WeightedKeywordsNodeData;
   const updateNodeInternals = useUpdateNodeInternals();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -545,16 +592,18 @@ function WeightedKeywordsNodeComponent({ id, data }: NodeProps) {
             module={module}
             onChange={onModuleChange}
             onCollapse={handleCollapse}
+            onViewState={onViewState}
           />
         ) : (
           <ExpandedSaveView
             module={module}
             onChange={onModuleChange}
             onCollapse={handleCollapse}
+            onViewState={onViewState}
           />
         )
       ) : (
-        <CollapsedView module={module} onExpand={handleExpand} />
+        <CollapsedView module={module} onExpand={handleExpand} onViewState={onViewState} />
       )}
 
       <Handle

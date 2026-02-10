@@ -304,7 +304,8 @@ class InteractionHandler:
                     workflow_def=workflow_def,
                     position=position,
                     services=services,
-                    cancel_event=cancel_event
+                    cancel_event=cancel_event,
+                    target=target,
                 )
             else:
                 # Workflow completed

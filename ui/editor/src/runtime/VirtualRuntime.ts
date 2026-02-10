@@ -157,11 +157,24 @@ export class VirtualRuntime {
   /** Whether the runtime panel is open */
   private panelOpen: boolean = false;
 
+  /** Whether the state panel is open */
+  private statePanelOpen: boolean = false;
+
   /** Callback when panel state changes (for React integration) */
   private onPanelChange: ((open: boolean) => void) | null = null;
 
+  /** Callback when state panel state changes (for React integration) */
+  private onStatePanelChange: ((open: boolean) => void) | null = null;
+
   /** Current target module (the module we're trying to reach) */
   private currentTarget: ModuleLocation | null = null;
+
+  /** 
+   * Module to filter state display to (for module-specific State button).
+   * When set, StatePanel should only show state available to this module.
+   * When null, show all state (for "View Full State" button).
+   */
+  private stateUpToModule: ModuleLocation | null = null;
 
   // ===========================================================================
   // Public API
@@ -202,6 +215,39 @@ export class VirtualRuntime {
    */
   getCurrentTarget(): ModuleLocation | null {
     return this.currentTarget;
+  }
+
+  /**
+   * Get the module to filter state display to.
+   * When set, StatePanel should only show state available to this module.
+   * When null, show all state.
+   */
+  getStateUpToModule(): ModuleLocation | null {
+    return this.stateUpToModule;
+  }
+
+  /**
+   * Check if we have state that covers a given module.
+   * Returns true if we have a checkpoint at or after the target module.
+   */
+  hasStateCovering(workflow: WorkflowDefinition, target: ModuleLocation): boolean {
+    const moduleOrder = getModuleOrder(workflow);
+    const targetIndex = getModuleIndex(workflow, target);
+    
+    if (targetIndex === -1) return false;
+
+    // Check if we have any checkpoint at or after the target
+    for (let i = targetIndex; i < moduleOrder.length; i++) {
+      const location = moduleOrder[i];
+      const key = this.locationKey(location);
+      const checkpoint = this.checkpoints.get(key);
+      
+      if (checkpoint && checkpoint.workflow_hash === this.workflowHash) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   // ===========================================================================
@@ -253,25 +299,99 @@ export class VirtualRuntime {
     this.onPanelChange = callback;
   }
 
+  // ===========================================================================
+  // State Panel Control
+  // ===========================================================================
+
+  /**
+   * Check if the state panel is currently open.
+   */
+  isStatePanelOpen(): boolean {
+    return this.statePanelOpen;
+  }
+
+  /**
+   * Open the state panel (internal - preserves stateUpToModule).
+   */
+  openStatePanel(): void {
+    if (!this.statePanelOpen) {
+      this.statePanelOpen = true;
+      this.onStatePanelChange?.(true);
+    }
+  }
+
+  /**
+   * Open the state panel showing full state (clears stateUpToModule filter).
+   */
+  openFullStatePanel(): void {
+    this.stateUpToModule = null;
+    this.openStatePanel();
+  }
+
+  /**
+   * Close the state panel.
+   */
+  closeStatePanel(): void {
+    if (this.statePanelOpen) {
+      this.statePanelOpen = false;
+      this.onStatePanelChange?.(false);
+    }
+  }
+
+  /**
+   * Set the state panel open state directly (for controlled usage).
+   */
+  setStatePanelOpen(open: boolean): void {
+    if (this.statePanelOpen !== open) {
+      this.statePanelOpen = open;
+      this.onStatePanelChange?.(open);
+    }
+  }
+
+  /**
+   * Register a callback to be notified when state panel state changes.
+   * Used by React hook to sync state.
+   */
+  setOnStatePanelChange(callback: ((open: boolean) => void) | null): void {
+    this.onStatePanelChange = callback;
+  }
+
   /**
    * Run workflow to a target module.
    *
    * @param workflow - The full workflow definition
    * @param target - The module to run to
    * @param selections - Pre-defined selections for prerequisite interactive modules
+   * @param options - Optional configuration
+   * @param options.openPanel - Which panel to open: "preview" (default), "state", or "none"
    * @returns RunResult with status and optional response/error
    */
   async runToModule(
     workflow: WorkflowDefinition,
     target: ModuleLocation,
-    selections: ModuleSelection[]
+    selections: ModuleSelection[],
+    options?: { openPanel?: "preview" | "state" | "none" }
   ): Promise<RunResult> {
+    const { openPanel = "preview" } = options ?? {};
+    
+    console.log("[VirtualRuntime] runToModule called with target:", target);
+    
     this.status = "running";
     this.lastError = null;
+    this.lastResponse = null;  // Clear previous response to show loading
     this.currentTarget = target;
 
+    // Set stateUpToModule when opening state panel
+    if (openPanel === "state") {
+      this.stateUpToModule = target;
+    }
+
     // Auto-open panel when execution starts
-    this.openPanel();
+    if (openPanel === "preview") {
+      this.openPanel();
+    } else if (openPanel === "state") {
+      this.openStatePanel();
+    }
 
     try {
       // Update hashes and invalidate stale checkpoints
@@ -355,10 +475,52 @@ export class VirtualRuntime {
   }
 
   /**
-   * Reset the runtime, clearing all checkpoints and state.
-   * Optionally close the panel.
+   * Run workflow to a target module for state inspection only.
+   *
+   * This runs the workflow but opens the state panel instead of the preview panel.
+   * If we already have state covering this module, just opens the panel without re-running.
+   *
+   * @param workflow - The full workflow definition
+   * @param target - The module to run to
+   * @param selections - Pre-defined selections for prerequisite interactive modules
+   * @returns RunResult with status and optional response/error
    */
-  reset(closePanel: boolean = false): void {
+  async runToModuleForState(
+    workflow: WorkflowDefinition,
+    target: ModuleLocation,
+    selections: ModuleSelection[]
+  ): Promise<RunResult> {
+    console.log("[VirtualRuntime] runToModuleForState called with target:", target);
+    
+    // Set the filter for state display
+    this.stateUpToModule = target;
+
+    // Update hashes to check for stale checkpoints
+    await this.updateHashes(workflow);
+
+    // Check if we already have state covering this module
+    if (this.hasStateCovering(workflow, target) && this.lastResponse?.state) {
+      console.log("[VirtualRuntime] Already have state covering this module, skipping API call");
+      // Already have state - just open the panel
+      this.openStatePanel();
+      return {
+        status: this.status === "idle" ? "completed" : this.status,
+        response: this.lastResponse,
+      };
+    }
+
+    console.log("[VirtualRuntime] Need to run to get state, calling runToModule");
+    // Need to run to get state
+    return this.runToModule(workflow, target, selections, {
+      openPanel: "state",
+    });
+  }
+
+  /**
+   * Reset the runtime, clearing all checkpoints and state.
+   * Optionally close panels.
+   */
+  reset(closePanels: boolean = false): void {
     this.checkpoints.clear();
     this.moduleHashes.clear();
     this.workflowHash = "";
@@ -366,8 +528,9 @@ export class VirtualRuntime {
     this.lastResponse = null;
     this.lastError = null;
     this.currentTarget = null;
-    if (closePanel) {
+    if (closePanels) {
       this.closePanel();
+      this.closeStatePanel();
     }
   }
 
@@ -441,6 +604,12 @@ export class VirtualRuntime {
     checkpoint: ModuleCheckpoint | null,
     selectionMap: Map<string, InteractionResponseData>
   ): Promise<RunResult> {
+    console.log("[VirtualRuntime] executeToTarget - API call with:", {
+      target_step_id: target.step_id,
+      target_module_name: target.module_name,
+      hasCheckpoint: !!checkpoint,
+    });
+    
     // Start execution from checkpoint or fresh
     let serverResponse = await virtualStart({
       workflow,
@@ -448,6 +617,9 @@ export class VirtualRuntime {
       target_step_id: target.step_id,
       target_module_name: target.module_name,
     });
+    
+    console.log("[VirtualRuntime] API response status:", serverResponse.status, 
+      "progress:", serverResponse.progress);
 
     // Process response and potentially auto-respond to prerequisite interactions
     return this.processExecutionLoop(
@@ -517,11 +689,17 @@ export class VirtualRuntime {
           const interactionRequest = response.interaction_request as InteractionRequest | undefined;
           if (interactionRequest) {
             selection = buildAutoSelectionResponse(interactionRequest) ?? undefined;
+            console.log("[VirtualRuntime] Auto-select for prerequisite module:", {
+              module: interactionModule,
+              selection,
+              interactionRequest: interactionRequest,
+            });
           }
         }
 
         if (!selection) {
           // Can't auto-select (no selectable items) - return to user for input
+          console.log("[VirtualRuntime] Cannot auto-select, returning awaiting_input");
           this.status = "awaiting_input";
           this.lastResponse = response;
           return { status: "awaiting_input", response };

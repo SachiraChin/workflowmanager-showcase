@@ -33,8 +33,12 @@ export interface VirtualRuntimeState {
   state: Record<string, unknown> | null;
   /** Whether the runtime panel is open */
   panelOpen: boolean;
+  /** Whether the state panel is open */
+  statePanelOpen: boolean;
   /** Current target module (the module we're trying to reach) */
   currentTarget: ModuleLocation | null;
+  /** Module to filter state display to (null for full state) */
+  stateUpToModule: ModuleLocation | null;
 }
 
 export interface VirtualRuntimeActions {
@@ -45,6 +49,19 @@ export interface VirtualRuntimeActions {
    * @param selections - Pre-defined selections for prerequisite interactive modules
    */
   runToModule: (
+    workflow: WorkflowDefinition,
+    target: ModuleLocation,
+    selections?: ModuleSelection[]
+  ) => Promise<void>;
+
+  /**
+   * Run workflow to a target module for state inspection only.
+   * Opens state panel instead of preview panel.
+   * @param workflow - The full workflow definition
+   * @param target - The module to run to
+   * @param selections - Pre-defined selections for prerequisite interactive modules
+   */
+  runToModuleForState: (
     workflow: WorkflowDefinition,
     target: ModuleLocation,
     selections?: ModuleSelection[]
@@ -87,6 +104,26 @@ export interface VirtualRuntimeActions {
    * Set the panel open state directly (for controlled usage).
    */
   setPanelOpen: (open: boolean) => void;
+
+  /**
+   * Open the state panel (preserves current stateUpToModule filter).
+   */
+  openStatePanel: () => void;
+
+  /**
+   * Open the state panel showing full state (clears filter).
+   */
+  openFullStatePanel: () => void;
+
+  /**
+   * Close the state panel.
+   */
+  closeStatePanel: () => void;
+
+  /**
+   * Set the state panel open state directly (for controlled usage).
+   */
+  setStatePanelOpen: (open: boolean) => void;
 }
 
 export interface UseVirtualRuntimeReturn extends VirtualRuntimeState {
@@ -136,18 +173,25 @@ export function useVirtualRuntime(): UseVirtualRuntimeReturn {
   const [error, setError] = useState<string | null>(null);
   const [state, setState] = useState<Record<string, unknown> | null>(null);
   const [panelOpen, setPanelOpenState] = useState(false);
+  const [statePanelOpen, setStatePanelOpenState] = useState(false);
   const [currentTarget, setCurrentTarget] = useState<ModuleLocation | null>(null);
+  const [stateUpToModule, setStateUpToModule] = useState<ModuleLocation | null>(null);
 
-  // Register panel change callback on mount
+  // Register panel change callbacks on mount
   useEffect(() => {
     runtime.setOnPanelChange((open) => {
       setPanelOpenState(open);
     });
+    runtime.setOnStatePanelChange((open) => {
+      setStatePanelOpenState(open);
+    });
     // Sync initial state
     setPanelOpenState(runtime.isPanelOpen());
+    setStatePanelOpenState(runtime.isStatePanelOpen());
 
     return () => {
       runtime.setOnPanelChange(null);
+      runtime.setOnStatePanelChange(null);
     };
   }, [runtime]);
 
@@ -158,7 +202,9 @@ export function useVirtualRuntime(): UseVirtualRuntimeReturn {
     setError(runtime.getLastError());
     setState(runtime.getLastResponse()?.state ?? null);
     setPanelOpenState(runtime.isPanelOpen());
+    setStatePanelOpenState(runtime.isStatePanelOpen());
     setCurrentTarget(runtime.getCurrentTarget());
+    setStateUpToModule(runtime.getStateUpToModule());
   }, [runtime]);
 
   // Actions
@@ -170,9 +216,34 @@ export function useVirtualRuntime(): UseVirtualRuntimeReturn {
     ) => {
       setBusy(true);
       setError(null);
+      // Clear previous response immediately so panel shows loading state
+      setLastResponse(null);
+      setState(null);
 
       try {
         await runtime.runToModule(workflow, target, selections);
+      } finally {
+        syncState();
+        setBusy(false);
+      }
+    },
+    [runtime, syncState]
+  );
+
+  const runToModuleForState = useCallback(
+    async (
+      workflow: WorkflowDefinition,
+      target: ModuleLocation,
+      selections: ModuleSelection[] = []
+    ) => {
+      setBusy(true);
+      setError(null);
+      // Clear previous response immediately so panel shows loading state
+      setLastResponse(null);
+      setState(null);
+
+      try {
+        await runtime.runToModuleForState(workflow, target, selections);
       } finally {
         syncState();
         setBusy(false);
@@ -230,25 +301,56 @@ export function useVirtualRuntime(): UseVirtualRuntimeReturn {
     [runtime]
   );
 
+  const openStatePanel = useCallback(() => {
+    runtime.openStatePanel();
+    syncState();  // Sync to get stateUpToModule
+  }, [runtime, syncState]);
+
+  const openFullStatePanel = useCallback(() => {
+    runtime.openFullStatePanel();
+    syncState();  // Sync to get stateUpToModule (null)
+  }, [runtime, syncState]);
+
+  const closeStatePanel = useCallback(() => {
+    runtime.closeStatePanel();
+  }, [runtime]);
+
+  const setStatePanelOpen = useCallback(
+    (open: boolean) => {
+      runtime.setStatePanelOpen(open);
+    },
+    [runtime]
+  );
+
   // Memoize actions object
   const actions = useMemo<VirtualRuntimeActions>(
     () => ({
       runToModule,
+      runToModuleForState,
       submitResponse,
       getCheckpoint,
       reset,
       openPanel,
       closePanel,
       setPanelOpen,
+      openStatePanel,
+      openFullStatePanel,
+      closeStatePanel,
+      setStatePanelOpen,
     }),
     [
       runToModule,
+      runToModuleForState,
       submitResponse,
       getCheckpoint,
       reset,
       openPanel,
       closePanel,
       setPanelOpen,
+      openStatePanel,
+      openFullStatePanel,
+      closeStatePanel,
+      setStatePanelOpen,
     ]
   );
 
@@ -259,7 +361,9 @@ export function useVirtualRuntime(): UseVirtualRuntimeReturn {
     error,
     state,
     panelOpen,
+    statePanelOpen,
     currentTarget,
+    stateUpToModule,
     actions,
   };
 }

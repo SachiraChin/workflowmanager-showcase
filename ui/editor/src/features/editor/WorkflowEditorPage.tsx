@@ -27,6 +27,7 @@ import { editorApi } from "@/api";
 import {
   useVirtualRuntime,
   VirtualRuntimePanel,
+  StatePanel,
   type ModuleLocation,
 } from "@/runtime";
 import {
@@ -307,6 +308,18 @@ export function WorkflowEditorPage() {
   );
 
   /**
+   * Handle module view state request.
+   * Runs the virtual runtime to the target module and opens state panel.
+   */
+  const handleModuleViewState = useCallback(
+    async (target: ModuleLocation) => {
+      const workflow = buildWorkflowDefinition();
+      await runtime.actions.runToModuleForState(workflow, target, []);
+    },
+    [buildWorkflowDefinition, runtime.actions]
+  );
+
+  /**
    * Handle interaction response in preview panel.
    */
   const handlePreviewSubmit = useCallback(
@@ -418,6 +431,8 @@ export function WorkflowEditorPage() {
               expanded: isExpanded,
               onExpandedChange: (exp: boolean, height: number) =>
                 handleModuleExpandedChange(moduleNodeId, exp, height),
+              onViewState: () =>
+                handleModuleViewState({ step_id: step.step_id, module_name: module.name! }),
               onPreview: () =>
                 handleModulePreview({ step_id: step.step_id, module_name: module.name! }),
             } satisfies UserSelectNodeData,
@@ -437,6 +452,8 @@ export function WorkflowEditorPage() {
               expanded: isExpanded,
               onExpandedChange: (exp: boolean, height: number) =>
                 handleModuleExpandedChange(moduleNodeId, exp, height),
+              onViewState: () =>
+                handleModuleViewState({ step_id: step.step_id, module_name: module.name! }),
             } satisfies WeightedKeywordsNodeData,
           });
         } else if (nodeType === "llm") {
@@ -454,6 +471,8 @@ export function WorkflowEditorPage() {
               expanded: isExpanded,
               onExpandedChange: (exp: boolean, height: number) =>
                 handleModuleExpandedChange(moduleNodeId, exp, height),
+              onViewState: () =>
+                handleModuleViewState({ step_id: step.step_id, module_name: module.name! }),
             } satisfies LLMNodeData,
           });
         } else {
@@ -467,6 +486,8 @@ export function WorkflowEditorPage() {
             draggable: true,
             data: {
               module,
+              onViewState: () =>
+                handleModuleViewState({ step_id: step.step_id, module_name: module.name! }),
             } satisfies PlaceholderNodeData,
           });
         }
@@ -520,7 +541,7 @@ export function WorkflowEditorPage() {
     });
 
     return { nodes, edges };
-  }, [workflowInfo, steps, expandedModules, nodeHeights.heights, handleWorkflowChange, handleStepChange, handleModuleChange, handleWeightedKeywordsModuleChange, handleLLMModuleChange, handleModuleExpandedChange, handleModulePreview]);
+  }, [workflowInfo, steps, expandedModules, nodeHeights.heights, handleWorkflowChange, handleStepChange, handleModuleChange, handleWeightedKeywordsModuleChange, handleLLMModuleChange, handleModuleExpandedChange, handleModuleViewState, handleModulePreview]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initialEdges);
@@ -626,8 +647,8 @@ export function WorkflowEditorPage() {
           <ZoomControls />
         </ReactFlow>
 
-      {/* Top Left - View Workflow Button */}
-      <div className="absolute top-4 left-4 z-20">
+      {/* Top Left - View Workflow & State Buttons */}
+      <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
         <Button
           variant="outline"
           size="sm"
@@ -635,6 +656,15 @@ export function WorkflowEditorPage() {
           onClick={() => setIsWorkflowViewOpen(true)}
         >
           View Full Workflow
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="shadow-sm"
+          onClick={() => runtime.actions.openFullStatePanel()}
+          disabled={!runtime.state}
+        >
+          View Full State
         </Button>
 
         {/* Loading/Error indicators */}
@@ -703,6 +733,16 @@ export function WorkflowEditorPage() {
         response={runtime.lastResponse}
         error={runtime.error}
         onSubmit={handlePreviewSubmit}
+      />
+
+      {/* State Panel (left drawer) */}
+      <StatePanel
+        open={runtime.statePanelOpen}
+        onOpenChange={runtime.actions.setStatePanelOpen}
+        workflow={buildWorkflowDefinition()}
+        state={runtime.state}
+        loading={runtime.busy}
+        upToModule={runtime.stateUpToModule}
       />
       </div>
     </NodeHeightsProvider>

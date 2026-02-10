@@ -42,6 +42,8 @@ export type LLMNodeData = {
   expanded: boolean;
   /** Callback when expanded state changes (includes estimated height for layout) */
   onExpandedChange: (expanded: boolean, estimatedHeight: number) => void;
+  /** Callback to view state up to this module (runs module, opens state panel) */
+  onViewState?: () => void;
 };
 
 // =============================================================================
@@ -83,9 +85,11 @@ function getModelDisplay(model: string | undefined): string {
 function CollapsedView({
   module,
   onExpand,
+  onViewState,
 }: {
   module: LLMModule;
   onExpand: () => void;
+  onViewState?: () => void;
 }) {
   const provider = module.inputs.provider ?? "openai";
   const model = module.inputs.ai_config?.model ?? module.inputs.model;
@@ -105,17 +109,32 @@ function CollapsedView({
           </p>
           <h3 className="text-sm font-semibold truncate">{module.name}</h3>
         </div>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-6 px-2 text-xs"
-          onClick={(e) => {
-            e.stopPropagation();
-            onExpand();
-          }}
-        >
-          Expand
-        </Button>
+        <div className="flex items-center gap-1">
+          {onViewState && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2 text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                onViewState();
+              }}
+            >
+              State
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-6 px-2 text-xs"
+            onClick={(e) => {
+              e.stopPropagation();
+              onExpand();
+            }}
+          >
+            Expand
+          </Button>
+        </div>
       </div>
 
       {/* Content - clickable area to expand */}
@@ -156,11 +175,13 @@ function ExpandedView({
   module,
   onChange,
   onCollapse,
+  onViewState,
   stateVariables,
 }: {
   module: LLMModule;
   onChange: (module: LLMModule) => void;
   onCollapse: () => void;
+  onViewState?: () => void;
   stateVariables: StateVariable[];
 }) {
   const [isPromptEditorOpen, setIsPromptEditorOpen] = useState(false);
@@ -217,14 +238,26 @@ function ExpandedView({
               onClick={(e) => e.stopPropagation()}
             />
           </div>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-6 px-2 text-xs"
-            onClick={onCollapse}
-          >
-            Collapse
-          </Button>
+          <div className="flex items-center gap-1">
+            {onViewState && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 px-2 text-xs"
+                onClick={onViewState}
+              >
+                State
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2 text-xs"
+              onClick={onCollapse}
+            >
+              Collapse
+            </Button>
+          </div>
         </CardHeader>
 
         <CardContent className="space-y-3" onClick={(e) => e.stopPropagation()}>
@@ -333,7 +366,7 @@ function ExpandedView({
 // =============================================================================
 
 function LLMNodeComponent({ id, data }: NodeProps) {
-  const { module, onModuleChange, expanded, onExpandedChange } =
+  const { module, onModuleChange, expanded, onExpandedChange, onViewState } =
     data as unknown as LLMNodeData;
   const updateNodeInternals = useUpdateNodeInternals();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -372,10 +405,11 @@ function LLMNodeComponent({ id, data }: NodeProps) {
           module={module}
           onChange={onModuleChange}
           onCollapse={handleCollapse}
+          onViewState={onViewState}
           stateVariables={[]}  // TODO: Pass actual state variables from workflow context
         />
       ) : (
-        <CollapsedView module={module} onExpand={handleExpand} />
+        <CollapsedView module={module} onExpand={handleExpand} onViewState={onViewState} />
       )}
 
       <Handle

@@ -50,6 +50,8 @@ export type UserSelectNodeData = {
   expanded: boolean;
   /** Callback when expanded state changes (includes estimated height for layout) */
   onExpandedChange: (expanded: boolean, estimatedHeight: number) => void;
+  /** Callback to view state up to this module (runs module, opens state panel) */
+  onViewState?: () => void;
   /** Callback to preview this module in virtual runtime */
   onPreview?: () => void;
 };
@@ -111,10 +113,12 @@ function getDataSummary(data: unknown): string {
 function CollapsedView({
   module,
   onExpand,
+  onViewState,
   onPreview,
 }: {
   module: UserSelectModule;
   onExpand: () => void;
+  onViewState?: () => void;
   onPreview?: () => void;
 }) {
   return (
@@ -133,6 +137,19 @@ function CollapsedView({
           <h3 className="text-sm font-semibold truncate">{module.name}</h3>
         </div>
         <div className="flex items-center gap-1">
+          {onViewState && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2 text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                onViewState();
+              }}
+            >
+              State
+            </Button>
+          )}
           {onPreview && (
             <Button
               size="sm"
@@ -274,11 +291,13 @@ function ExpandedView({
   module,
   onChange,
   onCollapse,
+  onViewState,
   onPreview,
 }: {
   module: UserSelectModule;
   onChange: (module: UserSelectModule) => void;
   onCollapse: () => void;
+  onViewState?: () => void;
   onPreview?: () => void;
 }) {
   const [isUxEditorOpen, setIsUxEditorOpen] = useState(false);
@@ -348,6 +367,16 @@ function ExpandedView({
             />
           </div>
           <div className="flex items-center gap-1">
+            {onViewState && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 px-2 text-xs"
+                onClick={onViewState}
+              >
+                State
+              </Button>
+            )}
             {onPreview && (
               <Button
                 size="sm"
@@ -591,7 +620,7 @@ function ExpandedView({
 // =============================================================================
 
 function UserSelectNodeComponent({ id, data }: NodeProps) {
-  const { module, onModuleChange, expanded, onExpandedChange, onPreview } = data as unknown as UserSelectNodeData;
+  const { module, onModuleChange, expanded, onExpandedChange, onViewState, onPreview } = data as unknown as UserSelectNodeData;
   const updateNodeInternals = useUpdateNodeInternals();
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -625,12 +654,14 @@ function UserSelectNodeComponent({ id, data }: NodeProps) {
           module={module}
           onChange={onModuleChange}
           onCollapse={handleCollapse}
+          onViewState={onViewState}
           onPreview={onPreview}
         />
       ) : (
         <CollapsedView
           module={module}
           onExpand={handleExpand}
+          onViewState={onViewState}
           onPreview={onPreview}
         />
       )}

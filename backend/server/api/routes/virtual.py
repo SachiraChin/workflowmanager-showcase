@@ -163,6 +163,12 @@ async def start_virtual_module(
             step_id=request.target_step_id,
             module_name=request.target_module_name,
         )
+        
+        logger.info(
+            "Virtual start - target: step_id=%s, module_name=%s",
+            request.target_step_id,
+            request.target_module_name,
+        )
 
         # Call processor.start_workflow (same as real /start)
         # This creates workflow_run, branch, and executes up to target

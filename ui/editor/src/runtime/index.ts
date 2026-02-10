@@ -36,3 +36,6 @@ export type { VirtualPreviewProps } from "./VirtualPreview";
 
 export { VirtualRuntimePanel } from "./VirtualRuntimePanel";
 export type { VirtualRuntimePanelProps } from "./VirtualRuntimePanel";
+
+export { StatePanel } from "./StatePanel";
+export type { StatePanelProps } from "./StatePanel";
