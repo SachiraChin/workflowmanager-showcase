@@ -8,13 +8,14 @@ import time
 import logging
 import threading
 import asyncio
-from typing import Dict, Any, Union
+from typing import Dict, Any, Optional, Union
 
 from backend.db import Database, DbEventType
 from models import (
     WorkflowStatus,
     WorkflowResponse,
     InteractionResponseData,
+    ExecutionTarget,
 )
 from .workflow_context import WorkflowExecutionContext, StateProxy
 from .validation import validate_response, get_validations_for_action
@@ -54,7 +55,8 @@ class InteractionHandler:
         services: Dict,
         module_outputs: Dict,
         interaction_response: InteractionResponseData,
-        cancel_event: Union[threading.Event, asyncio.Event] = None
+        cancel_event: Union[threading.Event, asyncio.Event] = None,
+        target: Optional[ExecutionTarget] = None,
     ) -> WorkflowResponse:
         """Continue execution after receiving interaction response"""
         tc0 = time.time()
@@ -274,9 +276,13 @@ class InteractionHandler:
             services=services,
             config=config,
             workflow_def=workflow_def,
-            cancel_event=cancel_event
+            cancel_event=cancel_event,
+            target=target,
         )
         self.logger.debug(f"[TIMING]   execute_step_modules: {(time.time()-tc5)*1000:.0f}ms")
+
+        if result.status == WorkflowStatus.TARGET_REACHED:
+            return result
 
         # If step completed (PROCESSING status), continue to next steps
         if result.status == WorkflowStatus.PROCESSING:

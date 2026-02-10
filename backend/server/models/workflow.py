@@ -17,6 +17,7 @@ class WorkflowStatus(str, Enum):
     CREATED = "created"
     PROCESSING = "processing"
     AWAITING_INPUT = "awaiting_input"
+    TARGET_REACHED = "target_reached"
     COMPLETED = "completed"
     ERROR = "error"
     VALIDATION_FAILED = "validation_failed"

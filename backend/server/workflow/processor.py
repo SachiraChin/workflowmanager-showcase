@@ -12,6 +12,7 @@ from typing import Dict, Any, Optional, List
 
 from backend.db import Database, DbEventType
 from models import (
+    ExecutionTarget,
     WorkflowStatus,
     WorkflowResponse,
     InteractionResponseData,
@@ -71,7 +72,8 @@ class WorkflowProcessor(WorkflowStreamingMixin):
         user_id: str,
         ai_config: Dict[str, Any] = None,
         force_new: bool = False,
-        capabilities: List[str] = None
+        capabilities: List[str] = None,
+        target: Optional[ExecutionTarget] = None,
     ) -> WorkflowResponse:
         """
         Start or resume a workflow.
@@ -84,6 +86,7 @@ class WorkflowProcessor(WorkflowStreamingMixin):
             ai_config: AI configuration
             force_new: Force new workflow even if one exists
             capabilities: List of client capabilities for version selection
+            target: Optional execution target - stop after reaching this step/module
 
         Returns:
             WorkflowResponse with status and optional interaction request
@@ -252,7 +255,8 @@ class WorkflowProcessor(WorkflowStreamingMixin):
             workflow_run_id=workflow_run_id,
             workflow_def=workflow_def,
             position=position,
-            services=services
+            services=services,
+            target=target,
         )
 
     def resume_workflow_with_update(
@@ -362,7 +366,8 @@ class WorkflowProcessor(WorkflowStreamingMixin):
         workflow_run_id: str,
         interaction_id: str,
         response: InteractionResponseData,
-        ai_config: Optional[Dict[str, Any]] = None
+        ai_config: Optional[Dict[str, Any]] = None,
+        target: Optional[ExecutionTarget] = None,
     ) -> WorkflowResponse:
         """
         Process user response to an interaction.
@@ -372,6 +377,7 @@ class WorkflowProcessor(WorkflowStreamingMixin):
             interaction_id: The interaction being responded to
             response: The user's response data
             ai_config: Optional runtime override for AI configuration (provider, model)
+            target: Optional execution target - stop after reaching this step/module
         """
         t0 = time.time()
 
@@ -450,7 +456,8 @@ class WorkflowProcessor(WorkflowStreamingMixin):
             position=position,
             services=services,
             module_outputs=module_outputs,
-            interaction_response=response
+            interaction_response=response,
+            target=target,
         )
         self.logger.debug(f"[TIMING] continue_after_interaction: {(time.time()-t5)*1000:.0f}ms")
         self.logger.debug(f"[TIMING] TOTAL respond: {(time.time()-t0)*1000:.0f}ms")

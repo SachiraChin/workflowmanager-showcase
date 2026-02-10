@@ -5,13 +5,14 @@ Handles step and module execution within workflows.
 """
 
 import logging
-from typing import Dict, Any, TYPE_CHECKING
+from typing import Dict, Any, Optional, TYPE_CHECKING
 
 from backend.db import Database, DbEventType
 from models import (
     WorkflowStatus,
     WorkflowResponse,
     WorkflowProgress,
+    ExecutionTarget,
 )
 from .workflow_context import WorkflowExecutionContext, StateProxy
 from utils import sanitize_error_message, get_nested_value
@@ -169,7 +170,8 @@ class WorkflowExecutor:
         workflow_def: Dict,
         position: Dict,
         services: Dict,
-        cancel_event=None
+        cancel_event=None,
+        target: Optional[ExecutionTarget] = None,
     ) -> WorkflowResponse:
         """Execute workflow from current position until interaction or completion"""
         steps = workflow_def.get('steps', [])
@@ -237,10 +239,14 @@ class WorkflowExecutor:
                 services=services,
                 config=config,
                 workflow_def=workflow_def,
-                cancel_event=cancel_event
+                cancel_event=cancel_event,
+                target=target,
             )
 
             if result.status == WorkflowStatus.AWAITING_INPUT:
+                return result
+
+            if result.status == WorkflowStatus.TARGET_REACHED:
                 return result
 
             if result.status == WorkflowStatus.ERROR:
@@ -277,7 +283,8 @@ class WorkflowExecutor:
         services: Dict,
         config: Dict,
         workflow_def: Dict,
-        cancel_event=None
+        cancel_event=None,
+        target: Optional[ExecutionTarget] = None,
     ) -> WorkflowResponse:
         """Execute modules within a step"""
         modules = step.get('modules', [])
@@ -413,6 +420,26 @@ class WorkflowExecutor:
                     module_outputs=module_outputs
                 )
 
+                if (
+                    target
+                    and step_id == target.step_id
+                    and module_name == target.module_name
+                ):
+                    return WorkflowResponse(
+                        workflow_run_id=workflow_run_id,
+                        status=WorkflowStatus.TARGET_REACHED,
+                        message=(
+                            "Execution stopped at target "
+                            f"{target.step_id}/{target.module_name}"
+                        ),
+                        result={
+                            "target": {
+                                "step_id": target.step_id,
+                                "module_name": target.module_name,
+                            }
+                        },
+                    )
+
             except Exception as e:
                 self.logger.error(f"Module {module_id} failed: {e}")
                 self.db.event_repo.store_event(
@@ -441,7 +468,8 @@ class WorkflowExecutor:
         step_id: str,
         module_index: int,
         services: Dict,
-        retry_context: Dict = None
+        retry_context: Dict = None,
+        target: Optional[ExecutionTarget] = None,
     ) -> WorkflowResponse:
         """Execute from a specific module (for retry)"""
         steps = workflow_def.get('steps', [])
@@ -482,7 +510,8 @@ class WorkflowExecutor:
             module_outputs=module_outputs,
             services=services,
             config=config,
-            workflow_def=workflow_def
+            workflow_def=workflow_def,
+            target=target,
         )
 
     def store_module_outputs(

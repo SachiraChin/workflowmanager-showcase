@@ -46,6 +46,9 @@ from .sub_action import (
     SubActionError,
     SubActionEvent,
 )
+from .execution import (
+    ExecutionTarget,
+)
 
 # Rebuild models with forward references now that all types are available
 WorkflowResponse.model_rebuild()
@@ -87,4 +90,6 @@ __all__ = [
     'SubActionComplete',
     'SubActionError',
     'SubActionEvent',
+    # Execution controls
+    'ExecutionTarget',
 ]
