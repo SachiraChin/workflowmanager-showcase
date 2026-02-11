@@ -175,6 +175,21 @@ export interface WorkflowTemplate {
   derived_from?: string;
   download_url?: string;
   versions: WorkflowVersion[];
+  /** True if current user owns this template */
+  is_owner?: boolean;
+  /** True if this is a global template */
+  is_global?: boolean;
+  /** True if current user can edit (owner or admin for global) */
+  can_edit?: boolean;
+}
+
+/** Response from POST /workflow-templates/{template_id}/versions/{version_id}/clone */
+export interface CloneVersionResponse {
+  template_id: string;
+  version_id: string;
+  template_name: string;
+  is_new_template: boolean;
+  is_new_version: boolean;
 }
 
 export interface WorkflowTemplatesResponse {
@@ -256,6 +271,8 @@ export interface WorkflowStatusResponse {
   workflow_run_id: string;
   project_name: string;
   workflow_template_name: string;
+  workflow_template_id?: string;
+  workflow_version_id?: string;
   status: WorkflowStatus;
   progress: WorkflowProgress;
   interaction_request?: InteractionRequest;

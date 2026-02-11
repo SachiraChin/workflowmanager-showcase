@@ -9,6 +9,7 @@ import { api } from "@wfm/shared";
 import type {
   WorkflowTemplateResponse,
   WorkflowVersionResponse,
+  CloneVersionResponse,
 } from "./types";
 
 // =============================================================================
@@ -47,6 +48,21 @@ export const editorApi = {
   ): Promise<WorkflowVersionResponse> {
     const response = await api.fetchResponse(
       `/workflow-templates/${templateId}/versions/${versionId}`
+    );
+    return response.json();
+  },
+
+  /**
+   * Clone a global template version to the user's own template.
+   * Used when non-admin users want to edit a global template.
+   */
+  async cloneGlobalVersionToUser(
+    templateId: string,
+    versionId: string
+  ): Promise<CloneVersionResponse> {
+    const response = await api.fetchResponse(
+      `/workflow-templates/${templateId}/versions/${versionId}/clone`,
+      { method: "POST" }
     );
     return response.json();
   },

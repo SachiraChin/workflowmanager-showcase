@@ -54,3 +54,36 @@ export function toMediaUrl(urlOrPath: string): string {
   // Relative path from server - prepend API_URL
   return `${API_URL}${urlOrPath}`;
 }
+
+/**
+ * Get the editor base URL from environment variable.
+ *
+ * Uses VITE_EDITOR_URL environment variable.
+ * - In development: typically empty string or http://localhost:5174
+ * - In production: typically /editor (relative) or full URL
+ *
+ * Returns empty string if not configured.
+ */
+export function getEditorUrl(): string {
+  return import.meta.env.VITE_EDITOR_URL || "";
+}
+
+/**
+ * Cached editor URL (computed once on load).
+ */
+export const EDITOR_URL = getEditorUrl();
+
+/**
+ * Build a URL to edit a workflow in the editor.
+ *
+ * @param templateId - Workflow template ID
+ * @param versionId - Workflow version ID (optional)
+ * @returns Full URL to the editor page for this workflow
+ */
+export function buildEditorWorkflowUrl(templateId: string, versionId?: string): string {
+  const base = EDITOR_URL;
+  if (versionId) {
+    return `${base}/workflow/${templateId}/${versionId}`;
+  }
+  return `${base}/workflow/${templateId}`;
+}

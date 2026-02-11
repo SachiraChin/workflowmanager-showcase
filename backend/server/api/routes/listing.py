@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, Query, Depends
 from jinja2 import Environment, BaseLoader
 
-from ..dependencies import get_db, get_current_user_id, require_admin_user
+from ..dependencies import get_db, get_current_user_id, get_verified_template, require_admin_user
 from models import PublishGlobalTemplateRequest
 
 logger = logging.getLogger('workflow.api')
@@ -128,6 +128,9 @@ def _get_template_with_access_check(db, template_id: str, user_id: str):
     """
     Get template and verify user has access to it.
     Returns template or raises HTTPException.
+    
+    NOTE: For endpoints that need access info (is_owner, can_edit),
+    use the get_verified_template dependency instead.
     """
     template = db.version_repo.get_template_by_id(template_id)
     if not template:
@@ -152,17 +155,21 @@ def _get_template_with_access_check(db, template_id: str, user_id: str):
 
 @router.get("/workflow-templates/{template_id}/versions/latest")
 async def get_workflow_template_version_latest(
-    template_id: str,
     db = Depends(get_db),
-    user_id: str = Depends(get_current_user_id),
+    template: dict = Depends(get_verified_template),
 ):
     """
     Get the latest version's workflow definition for a template.
 
     Returns the resolved workflow definition (steps, modules, etc.)
     for the most recent source version.
+    
+    Also includes access info:
+    - is_owner: True if user owns the template
+    - is_global: True if template is a global template
+    - can_edit: True if user can edit (owner or admin for global)
     """
-    template = _get_template_with_access_check(db, template_id, user_id)
+    template_id = template.get("workflow_template_id")
 
     # Get latest source version
     versions = db.version_repo.get_raw_versions_for_template(template_id, limit=1)
@@ -171,6 +178,60 @@ async def get_workflow_template_version_latest(
 
     latest_version = versions[0]
     version_id = latest_version.get("workflow_version_id")
+
+    can_edit = template.get("_access_can_edit")
+    is_global = template.get("_access_is_global")
+    user_id = template.get("_access_user_id")
+
+    # For global templates user can't edit, check if user has a clone
+    if is_global and not can_edit:
+        workflow_template_name = template.get("workflow_template_name")
+        content_hash = latest_version.get("content_hash")
+
+        # Check if user has a template with same name
+        user_template = db.version_repo.workflow_templates.find_one({
+            "workflow_template_name": workflow_template_name,
+            "user_id": user_id,
+            "scope": "user",
+        })
+
+        if user_template:
+            user_template_id = user_template.get("workflow_template_id")
+            # Check if user has a version with same content hash
+            user_version = db.version_repo.workflow_versions.find_one({
+                "workflow_template_id": user_template_id,
+                "content_hash": content_hash,
+            })
+
+            if user_version:
+                # User already has this version cloned - redirect to it
+                return {
+                    "template_id": template_id,
+                    "template_name": workflow_template_name,
+                    "workflow_version_id": version_id,
+                    "created_at": latest_version.get("created_at"),
+                    "definition": None,
+                    "is_owner": False,
+                    "is_global": is_global,
+                    "can_edit": False,
+                    "redirect_to": {
+                        "template_id": user_template_id,
+                        "version_id": user_version.get("workflow_version_id"),
+                    },
+                }
+
+        # No clone exists - user must clone first
+        return {
+            "template_id": template_id,
+            "template_name": template.get("workflow_template_name"),
+            "workflow_version_id": version_id,
+            "created_at": latest_version.get("created_at"),
+            "definition": None,
+            "is_owner": False,
+            "is_global": is_global,
+            "can_edit": False,
+            "redirect_to": None,
+        }
 
     # Get the resolved workflow definition
     definition = db.version_repo.get_resolved_workflow(version_id)
@@ -183,23 +244,31 @@ async def get_workflow_template_version_latest(
         "workflow_version_id": version_id,
         "created_at": latest_version.get("created_at"),
         "definition": definition,
+        "is_owner": template.get("_access_is_owner"),
+        "is_global": is_global,
+        "can_edit": can_edit,
+        "redirect_to": None,
     }
 
 
 @router.get("/workflow-templates/{template_id}/versions/{version_id}")
 async def get_workflow_template_version(
-    template_id: str,
     version_id: str,
     db = Depends(get_db),
-    user_id: str = Depends(get_current_user_id),
+    template: dict = Depends(get_verified_template),
 ):
     """
     Get a specific version's workflow definition for a template.
 
     Returns the resolved workflow definition (steps, modules, etc.)
     for the specified version.
+    
+    Also includes access info:
+    - is_owner: True if user owns the template
+    - is_global: True if template is a global template
+    - can_edit: True if user can edit (owner or admin for global)
     """
-    template = _get_template_with_access_check(db, template_id, user_id)
+    template_id = template.get("workflow_template_id")
 
     # Get the version and verify it belongs to this template
     version = db.version_repo.get_workflow_version_by_id(version_id)
@@ -214,28 +283,86 @@ async def get_workflow_template_version(
     if not definition:
         raise HTTPException(status_code=404, detail="Workflow definition not found")
 
+    can_edit = template.get("_access_can_edit")
+    is_global = template.get("_access_is_global")
+    user_id = template.get("_access_user_id")
+
+    # For global templates user can't edit, check if user has a clone
+    if is_global and not can_edit:
+        workflow_template_name = template.get("workflow_template_name")
+        content_hash = version.get("content_hash")
+
+        # Check if user has a template with same name
+        user_template = db.version_repo.workflow_templates.find_one({
+            "workflow_template_name": workflow_template_name,
+            "user_id": user_id,
+            "scope": "user",
+        })
+
+        if user_template:
+            user_template_id = user_template.get("workflow_template_id")
+            # Check if user has a version with same content hash
+            user_version = db.version_repo.workflow_versions.find_one({
+                "workflow_template_id": user_template_id,
+                "content_hash": content_hash,
+            })
+
+            if user_version:
+                # User already has this version cloned - redirect to it
+                return {
+                    "template_id": template_id,
+                    "template_name": workflow_template_name,
+                    "workflow_version_id": version_id,
+                    "created_at": version.get("created_at"),
+                    "definition": None,
+                    "is_owner": False,
+                    "is_global": is_global,
+                    "can_edit": False,
+                    "redirect_to": {
+                        "template_id": user_template_id,
+                        "version_id": user_version.get("workflow_version_id"),
+                    },
+                }
+
+        # No clone exists - user must clone first
+        return {
+            "template_id": template_id,
+            "template_name": template.get("workflow_template_name"),
+            "workflow_version_id": version_id,
+            "created_at": version.get("created_at"),
+            "definition": None,
+            "is_owner": False,
+            "is_global": is_global,
+            "can_edit": False,
+            "redirect_to": None,
+        }
+
     return {
         "template_id": template_id,
         "template_name": template.get("workflow_template_name"),
         "workflow_version_id": version_id,
         "created_at": version.get("created_at"),
         "definition": definition,
+        "is_owner": template.get("_access_is_owner"),
+        "is_global": is_global,
+        "can_edit": can_edit,
+        "redirect_to": None,
     }
 
 
 @router.get("/workflow-templates/{template_id}")
 async def get_workflow_template(
-    template_id: str,
     db = Depends(get_db),
-    user_id: str = Depends(get_current_user_id),
+    template: dict = Depends(get_verified_template),
     version_limit: int = 20,
 ):
     """
     Get a specific workflow template with its versions.
 
     Returns template metadata and list of available versions.
+    Also includes access info (is_owner, is_global, can_edit).
     """
-    template = _get_template_with_access_check(db, template_id, user_id)
+    template_id = template.get("workflow_template_id")
 
     # Get versions for this template
     versions = db.version_repo.get_raw_versions_for_template(
@@ -261,6 +388,77 @@ async def get_workflow_template(
         "derived_from": template.get("derived_from"),
         "download_url": template.get("download_url"),
         "versions": versions,
+        "is_owner": template.get("_access_is_owner"),
+        "is_global": template.get("_access_is_global"),
+        "can_edit": template.get("_access_can_edit"),
+    }
+
+
+@router.post("/workflow-templates/{template_id}/versions/{version_id}/clone")
+async def clone_global_version_to_user(
+    version_id: str,
+    db = Depends(get_db),
+    template: dict = Depends(get_verified_template),
+):
+    """
+    Clone a global template version to the user's own template.
+
+    This allows non-admin users to edit global templates by creating
+    a personal copy. Uses the same template name - if user already has
+    a template with that name, the version is added there.
+
+    Returns:
+    - template_id: The user's template ID (new or existing)
+    - version_id: The cloned version ID
+    - template_name: The template name
+    - is_new_template: True if a new template was created
+    """
+    global_template_id = template.get("workflow_template_id")
+    user_id = template.get("_access_user_id")
+    is_global = template.get("_access_is_global")
+    workflow_template_name = template.get("workflow_template_name")
+
+    if not is_global:
+        raise HTTPException(
+            status_code=400,
+            detail="This endpoint is only for cloning global templates"
+        )
+
+    # Get the source version
+    source_version = db.version_repo.get_workflow_version_by_id(version_id)
+    if not source_version:
+        raise HTTPException(status_code=404, detail="Version not found")
+
+    if source_version.get("workflow_template_id") != global_template_id:
+        raise HTTPException(status_code=404, detail="Version not found for this template")
+
+    # Get or create user's template with the same name
+    # This uses workflow_template_name + user_id as unique key
+    user_template_id, is_new_template = db.version_repo.get_or_create_template(
+        workflow_template_name=workflow_template_name,
+        user_id=user_id,
+    )
+
+    # Clone the version to user's template using process_and_store_workflow_versions
+    # This will also handle deduplication by content_hash
+    resolved_workflow = source_version.get("resolved_workflow", {})
+    content_hash = source_version.get("content_hash")
+    source_type = source_version.get("source_type", "json")
+
+    user_version_id, _, is_new_version = db.version_repo.process_and_store_workflow_versions(
+        resolved_workflow=resolved_workflow,
+        content_hash=content_hash,
+        source_type=source_type,
+        workflow_template_name=workflow_template_name,
+        user_id=user_id,
+    )
+
+    return {
+        "template_id": user_template_id,
+        "version_id": user_version_id,
+        "template_name": workflow_template_name,
+        "is_new_template": is_new_template,
+        "is_new_version": is_new_version,
     }
 
 

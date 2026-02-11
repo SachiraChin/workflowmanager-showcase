@@ -10,7 +10,7 @@ import {
   type Node,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useLocation, useParams } from "react-router-dom";
+import { useLocation, useParams, useNavigate } from "react-router-dom";
 import Editor from "@monaco-editor/react";
 import {
   Alert,
@@ -164,7 +164,10 @@ function ZoomControls() {
 // =============================================================================
 
 export function WorkflowEditorPage() {
-  const { workflowTemplateId } = useParams<{ workflowTemplateId: string }>();
+  const { workflowTemplateId, workflowVersionId: urlVersionId } = useParams<{
+    workflowTemplateId: string;
+    workflowVersionId: string;
+  }>();
   const location = useLocation();
   const state = (location.state ?? {}) as EditorLocationState;
   const [isWorkflowViewOpen, setIsWorkflowViewOpen] = useState(false);
@@ -176,17 +179,29 @@ export function WorkflowEditorPage() {
   const runtime = useVirtualRuntime();
 
   const isCreateMode = !workflowTemplateId;
+  // Version priority: URL path > router state > query param
   const requestedVersionFromQuery = useMemo(() => {
     const params = new URLSearchParams(location.search);
     return params.get("workflow_version_id");
   }, [location.search]);
-  const requestedVersionId = state.workflowVersionId || requestedVersionFromQuery;
+  const requestedVersionId = urlVersionId || state.workflowVersionId || requestedVersionFromQuery;
 
+  const navigate = useNavigate();
+  
   const [templateLoading, setTemplateLoading] = useState(!isCreateMode);
   const [templateError, setTemplateError] = useState<string | null>(null);
   const [resolvedVersionId, setResolvedVersionId] = useState<string | null>(
     requestedVersionId || null
   );
+
+  // Clone confirmation dialog state (for non-admin editing global templates)
+  const [showCloneDialog, setShowCloneDialog] = useState(false);
+  const [cloneInfo, setCloneInfo] = useState<{
+    templateId: string;
+    versionId: string;
+    templateName: string;
+  } | null>(null);
+  const [isCloning, setIsCloning] = useState(false);
 
   // =============================================================================
   // Workflow State
@@ -332,6 +347,39 @@ export function WorkflowEditorPage() {
     },
     [buildWorkflowDefinition, runtime.actions, runtime.currentTarget]
   );
+
+  /**
+   * Handle clone confirmation - clone global template to user's template.
+   */
+  const handleCloneConfirm = useCallback(async () => {
+    if (!cloneInfo) return;
+
+    setIsCloning(true);
+    try {
+      const result = await editorApi.cloneGlobalVersionToUser(
+        cloneInfo.templateId,
+        cloneInfo.versionId
+      );
+      // Navigate to the cloned version
+      setShowCloneDialog(false);
+      navigate(`/workflow/${result.template_id}/${result.version_id}`);
+    } catch (error) {
+      setTemplateError(
+        error instanceof Error ? error.message : "Failed to clone workflow"
+      );
+      setShowCloneDialog(false);
+    } finally {
+      setIsCloning(false);
+    }
+  }, [cloneInfo, navigate]);
+
+  /**
+   * Handle clone cancel - go back.
+   */
+  const handleCloneCancel = useCallback(() => {
+    setShowCloneDialog(false);
+    navigate(-1);
+  }, [navigate]);
 
   // =============================================================================
   // Build Nodes and Edges
@@ -598,7 +646,31 @@ export function WorkflowEditorPage() {
 
         if (!alive) return;
 
-        const { definition, workflow_version_id } = response;
+        const { definition, workflow_version_id, can_edit, is_global, template_name, redirect_to } = response;
+
+        // If user can't edit (non-admin trying to edit global template)
+        if (!can_edit && is_global) {
+          // If user already has a clone, redirect to it
+          if (redirect_to) {
+            navigate(`/workflow/${redirect_to.template_id}/${redirect_to.version_id}`, { replace: true });
+            return;
+          }
+          // No clone exists - show clone dialog
+          setCloneInfo({
+            templateId: workflowTemplateId,
+            versionId: workflow_version_id,
+            templateName: template_name,
+          });
+          setShowCloneDialog(true);
+          setTemplateLoading(false);
+          return;
+        }
+
+        // Safety check - definition should always exist if can_edit is true
+        if (!definition) {
+          setTemplateError("Workflow definition not available");
+          return;
+        }
 
         // Update workflow info from the loaded definition
         setWorkflowInfo({
@@ -722,6 +794,41 @@ export function WorkflowEditorPage() {
               }}
               theme="vs-dark"
             />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Clone Global Template Dialog */}
+      <Dialog open={showCloneDialog} onOpenChange={() => {}}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Clone Global Template?</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              This is a global template that you cannot edit directly.
+              Would you like to create a personal copy that you can modify?
+            </p>
+            {cloneInfo && (
+              <div className="rounded-md bg-muted p-3 text-sm">
+                <p><strong>Template:</strong> {cloneInfo.templateName}</p>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={handleCloneCancel}
+              disabled={isCloning}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCloneConfirm}
+              disabled={isCloning}
+            >
+              {isCloning ? "Cloning..." : "Clone & Edit"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

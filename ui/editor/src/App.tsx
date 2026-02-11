@@ -8,8 +8,9 @@ import {
   useLocation,
   useNavigate,
 } from "react-router-dom";
-import { useState } from "react";
-import { Moon, Sun } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Moon, Sun, LogOut } from "lucide-react";
+import { EDITOR_URL, api } from "@wfm/shared";
 import { WorkflowStartPage } from "@/features/start/WorkflowStartPage";
 import { WorkflowEditorPage } from "@/features/editor/WorkflowEditorPage";
 import { ReactFlowStressPocPage } from "@/poc/reactflow/StressPocPage";
@@ -43,10 +44,57 @@ function ThemeToggle() {
   );
 }
 
+function UserMenu() {
+  const [user, setUser] = useState<{ username: string; role?: string | null } | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  useEffect(() => {
+    api.getCurrentUser()
+      .then(setUser)
+      .catch(() => setUser(null));
+  }, []);
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await api.logout();
+      // Redirect to login or home page
+      window.location.href = "/";
+    } catch {
+      // Still redirect even if logout fails
+      window.location.href = "/";
+    }
+  };
+
+  if (!user) {
+    return null;
+  }
+
+  return (
+    <div className="flex items-center gap-2 text-sm">
+      <span className="text-muted-foreground">
+        {user.username}
+        {user.role === "admin" && (
+          <span className="ml-1 text-xs text-amber-600 dark:text-amber-400">(admin)</span>
+        )}
+      </span>
+      <button
+        className="cursor-pointer rounded-md border bg-card p-2 hover:bg-muted/40"
+        onClick={handleLogout}
+        disabled={isLoggingOut}
+        type="button"
+        title="Logout"
+      >
+        <LogOut className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
 function HeaderNav() {
   const location = useLocation();
   const navigate = useNavigate();
-  const isEditorRoute = location.pathname.startsWith("/editor/");
+  const isWorkflowRoute = location.pathname.startsWith("/workflow/");
   const [openMenu, setOpenMenu] = useState<"poc" | "runtime" | null>(null);
 
   const closeMenus = () => setOpenMenu(null);
@@ -57,13 +105,17 @@ function HeaderNav() {
 
   return (
     <header className="relative z-50 border-b bg-card">
+      {/* Development notice banner */}
+      <div className="bg-amber-100 dark:bg-amber-900/40 px-4 py-1.5 text-center text-xs text-amber-800 dark:text-amber-200">
+        Early Development: Changes are not persisted. Use to preview and explore how modules work.
+      </div>
       <div
         className={[
           "flex h-14 items-center px-4",
-          isEditorRoute ? "justify-end" : "mx-auto max-w-7xl justify-between",
+          isWorkflowRoute ? "justify-end" : "mx-auto max-w-7xl justify-between",
         ].join(" ")}
       >
-        {isEditorRoute ? (
+        {isWorkflowRoute ? (
           <div className="flex items-center gap-2 text-sm">
             <button
               className="cursor-pointer rounded-md border bg-card px-3 py-1.5 hover:bg-muted/40"
@@ -75,7 +127,9 @@ function HeaderNav() {
             <Link className="text-sm font-semibold" to="/">
               Workflow Editor
             </Link>
+            <div className="flex-1" />
             <ThemeToggle />
+            <UserMenu />
           </div>
         ) : (
           <>
@@ -83,6 +137,7 @@ function HeaderNav() {
               Workflow Editor
             </Link>
             <nav className="flex items-center gap-2 text-sm">
+              <UserMenu />
               <ThemeToggle />
               <div className="relative">
                 <button
@@ -176,14 +231,21 @@ function AppShell() {
 }
 
 export default function App() {
+  // Use EDITOR_URL as basename for subdirectory deployment (e.g., /editor in production)
+  const basename = EDITOR_URL || undefined;
+
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={basename}>
       <Routes>
         <Route element={<AppShell />}>
           <Route path="/" element={<WorkflowStartPage />} />
-          <Route path="/editor/new" element={<WorkflowEditorPage />} />
+          <Route path="/workflow/new" element={<WorkflowEditorPage />} />
           <Route
-            path="/editor/:workflowTemplateId"
+            path="/workflow/:workflowTemplateId"
+            element={<WorkflowEditorPage />}
+          />
+          <Route
+            path="/workflow/:workflowTemplateId/:workflowVersionId"
             element={<WorkflowEditorPage />}
           />
           <Route

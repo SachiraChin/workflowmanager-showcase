@@ -60,7 +60,9 @@ services:
     image: mongo:7
     container_name: wfm-mongo-virtual
     restart: unless-stopped
-    # Not exposed to host - only accessible within Docker network
+    ports:
+      # Exposed on 27018 for debugging/inspection (separate from main mongo on 27017)
+      - "27018:27017"
     environment:
       TZ: ${TZ:-UTC}
     healthcheck:

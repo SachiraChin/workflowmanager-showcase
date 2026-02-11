@@ -17,6 +17,8 @@ class WorkflowStatusResponse(BaseModel):
     workflow_run_id: str
     project_name: str
     workflow_template_name: str
+    workflow_template_id: Optional[str] = None
+    workflow_version_id: Optional[str] = None
     status: WorkflowStatus
     progress: WorkflowProgress
     interaction_request: Optional[ApiInteractionRequest] = None

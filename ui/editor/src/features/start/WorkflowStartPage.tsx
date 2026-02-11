@@ -148,7 +148,7 @@ export function WorkflowStartPage() {
               >
                 <p className="text-sm font-semibold">Create New Workflow</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Set workflow name and optional id, then open `/editor/new`.
+                  Set workflow name and optional id, then open the editor.
                 </p>
               </button>
 
@@ -162,7 +162,7 @@ export function WorkflowStartPage() {
               >
                 <p className="text-sm font-semibold">Edit Existing Workflow</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Select template and version, then open `/editor/:workflow_template_id`.
+                  Select template and version to edit.
                 </p>
               </button>
             </div>
@@ -197,7 +197,7 @@ export function WorkflowStartPage() {
 
                 <div className="flex items-center justify-between rounded border bg-muted/30 px-3 py-2 text-xs">
                   <span className="text-muted-foreground">Route preview</span>
-                  <span className="font-medium">/editor/new</span>
+                  <span className="font-medium">/workflow/new</span>
                 </div>
 
                 <Button
@@ -205,7 +205,7 @@ export function WorkflowStartPage() {
                   disabled={!canCreate}
                   onClick={() => {
                     const nextWorkflowId = workflowId.trim() || buildDefaultWorkflowId(workflowName);
-                    navigate("/editor/new", {
+                    navigate("/workflow/new", {
                       state: {
                         workflowName: workflowName.trim(),
                         workflowId: nextWorkflowId,
@@ -278,7 +278,7 @@ export function WorkflowStartPage() {
 
                     <div className="flex items-center justify-between rounded border bg-muted/30 px-3 py-2 text-xs">
                       <span className="text-muted-foreground">Route preview</span>
-                      <span className="font-medium">/editor/{selectedTemplateId || "..."}</span>
+                      <span className="font-medium">/workflow/{selectedTemplateId || "..."}/{selectedVersionId || "..."}</span>
                     </div>
 
                     <Button
@@ -286,9 +286,7 @@ export function WorkflowStartPage() {
                       disabled={!canEdit}
                       onClick={() => {
                         if (!selectedTemplateId || !selectedVersionId) return;
-                        navigate(`/editor/${selectedTemplateId}`, {
-                          state: { workflowVersionId: selectedVersionId },
-                        });
+                        navigate(`/workflow/${selectedTemplateId}/${selectedVersionId}`);
                       }}
                       type="button"
                     >

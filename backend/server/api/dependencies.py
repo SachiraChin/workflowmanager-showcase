@@ -200,3 +200,53 @@ async def get_verified_workflow(
         raise HTTPException(status_code=403, detail="Access denied")
 
     return db.workflow_repo.get_workflow(workflow_run_id)
+
+
+async def get_verified_template(
+    template_id: str = Path(..., description="Workflow template ID"),
+    user: Dict[str, Any] = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """
+    Get template after verifying user has access.
+
+    This dependency combines authentication with authorization:
+    1. Authenticates the user via get_current_user
+    2. Verifies the template exists
+    3. Verifies the user has read access (owner or public global)
+    4. Adds access_info with edit permissions
+
+    Returns template document with added fields:
+    - _access_user_id: The authenticated user's ID
+    - _access_is_owner: True if user owns the template
+    - _access_is_global: True if template is a global template
+    - _access_can_edit: True if user can edit (owner or admin for global)
+
+    Raises:
+        HTTPException 401: User not authenticated
+        HTTPException 403: Access denied
+        HTTPException 404: Template not found
+    """
+    db = get_db()
+    user_id = user.get("user_id")
+    user_role = user.get("role")
+
+    template = db.version_repo.get_template_by_id(template_id)
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+
+    # Check access: user owns it OR it's a public global template
+    is_owner = template.get("user_id") == user_id
+    is_global = template.get("scope") == "global"
+    is_public_global = is_global and template.get("visibility") == "public"
+    is_admin = user_role == "admin"
+
+    if not is_owner and not is_public_global:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # Add access info to template
+    template["_access_user_id"] = user_id
+    template["_access_is_owner"] = is_owner
+    template["_access_is_global"] = is_global
+    template["_access_can_edit"] = is_owner or (is_global and is_admin)
+
+    return template

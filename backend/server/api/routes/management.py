@@ -61,6 +61,8 @@ async def get_workflow_status(
         workflow_run_id=workflow_run_id,
         project_name=workflow.get("project_name", ""),
         workflow_template_name=workflow.get("workflow_template_name", "default"),
+        workflow_template_id=workflow.get("workflow_template_id"),
+        workflow_version_id=workflow.get("current_workflow_version_id"),
         status=status,
         progress=WorkflowProgress(
             current_step=position.get("current_step"),

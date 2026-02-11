@@ -25,6 +25,7 @@ import { RunnerGuidanceOverlay } from "@/features/workflow-guidance";
 import { useWorkflowExecution } from "@/state/hooks/useWorkflowExecution";
 import { useWorkflowStore } from "@/state/workflow-store";
 import { WorkflowStateProvider } from "@wfm/shared";
+import { api } from "@/core/api";
 import type { CompletedInteraction, InteractionResponseData } from "@/core/types";
 
 /** Interaction with step context for rendering */
@@ -59,6 +60,10 @@ export function WorkflowRunnerPage({ onRestart }: WorkflowRunnerPageProps) {
 
   // Version confirmation loading state
   const [isConfirmingVersion, setIsConfirmingVersion] = useState(false);
+
+  // Workflow template/version IDs for editor link
+  const [workflowTemplateId, setWorkflowTemplateId] = useState<string | undefined>();
+  const [workflowVersionId, setWorkflowVersionId] = useState<string | undefined>();
 
   // Workflow execution hook
   const {
@@ -146,6 +151,24 @@ export function WorkflowRunnerPage({ onRestart }: WorkflowRunnerPageProps) {
 
   // Calculate max navigable index for single view
   const maxViewIndex = totalCards - 1;
+
+  // Fetch workflow template/version IDs for editor link
+  useEffect(() => {
+    if (!workflowRunId) return;
+
+    const fetchWorkflowInfo = async () => {
+      try {
+        const statusResponse = await api.getStatus(workflowRunId);
+        setWorkflowTemplateId(statusResponse.workflow_template_id);
+        setWorkflowVersionId(statusResponse.workflow_version_id);
+      } catch (e) {
+        // Silently ignore - editor link is optional
+        console.debug("Failed to fetch workflow info for editor link", e);
+      }
+    };
+
+    fetchWorkflowInfo();
+  }, [workflowRunId]);
 
   // Fetch status display fields when workflow is running
   // TEMPORARILY DISABLED for debugging
@@ -246,6 +269,8 @@ export function WorkflowRunnerPage({ onRestart }: WorkflowRunnerPageProps) {
                 statusDisplayFields={statusDisplayFields}
                 projectName={projectName ?? "Unknown"}
                 workflowRunId={workflowRunId ?? ""}
+                workflowTemplateId={workflowTemplateId}
+                workflowVersionId={workflowVersionId}
                 onCancel={handleExit}
                 onRestart={handleRestart}
               />

@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { Download, Loader2 } from "lucide-react";
+import { Download, Loader2, Pencil } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { api } from "@/core/api";
+import { api, buildEditorWorkflowUrl } from "@/core/api";
 import type {
   WorkflowTemplate,
   WorkflowTemplatesResponse,
@@ -251,26 +251,43 @@ export function TemplateSelector({
       {selectedTemplate && selectedTemplate.versions.length > 0 && (
         <div className="space-y-2">
           <Label htmlFor="version">Version</Label>
-          <Select
-            value={value}
-            onValueChange={handleVersionChange}
-            disabled={disabled}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select a version" />
-            </SelectTrigger>
-            <SelectContent>
-              {selectedTemplate.versions.map((version, index) => (
-                <SelectItem
-                  key={version.workflow_version_id}
-                  value={version.workflow_version_id}
-                >
-                  {index === 0 ? "(Latest) " : ""}
-                  {formatVersionDate(version.created_at)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <Select
+              value={value}
+              onValueChange={handleVersionChange}
+              disabled={disabled}
+            >
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder="Select a version" />
+              </SelectTrigger>
+              <SelectContent>
+                {selectedTemplate.versions.map((version, index) => (
+                  <SelectItem
+                    key={version.workflow_version_id}
+                    value={version.workflow_version_id}
+                  >
+                    {index === 0 ? "(Latest) " : ""}
+                    {formatVersionDate(version.created_at)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={disabled || !value}
+              asChild
+              className="gap-1"
+            >
+              <a
+                href={buildEditorWorkflowUrl(selectedTemplateId, value)}
+                title="Edit this version in workflow editor (In Development)"
+              >
+                <Pencil className="h-4 w-4" />
+                <span className="text-xs text-amber-600 dark:text-amber-400">(Dev)</span>
+              </a>
+            </Button>
+          </div>
           <p className="text-xs text-muted-foreground">
             Select a specific workflow version to run
           </p>

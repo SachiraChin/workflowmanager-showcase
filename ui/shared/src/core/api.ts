@@ -20,6 +20,7 @@ import type {
   SubActionRequest,
   WorkflowFileContent,
   ModelsResponse,
+  CloneVersionResponse,
 } from "../types/index";
 import { API_URL } from "./config";
 
@@ -349,6 +350,20 @@ class ApiClient {
 
   async listWorkflowTemplates(): Promise<WorkflowTemplatesResponse> {
     return this.request<WorkflowTemplatesResponse>("/workflow-templates");
+  }
+
+  /**
+   * Clone a global template version to the user's own template.
+   * Used when non-admin users want to edit a global template.
+   */
+  async cloneGlobalVersionToUser(
+    templateId: string,
+    versionId: string
+  ): Promise<CloneVersionResponse> {
+    return this.request<CloneVersionResponse>(
+      `/workflow-templates/${templateId}/versions/${versionId}/clone`,
+      { method: "POST" }
+    );
   }
 
   async publishGlobalTemplate(sourceVersionId: string): Promise<{

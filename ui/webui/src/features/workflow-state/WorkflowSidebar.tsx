@@ -9,7 +9,7 @@
  */
 
 import { useEffect } from "react";
-import { LogOut, RefreshCw, Layers, Square } from "lucide-react";
+import { LogOut, RefreshCw, Layers, Square, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -24,7 +24,7 @@ import {
 // TODO: Re-enable when ExecutionStatus is fixed
 // import { ExecutionStatus } from "./ExecutionStatus";
 import { useWorkflowStore } from "@/state/workflow-store";
-import { api } from "@/core/api";
+import { api, buildEditorWorkflowUrl } from "@/core/api";
 import type { WorkflowProgress, WorkflowStatus } from "@/core/types";
 
 // =============================================================================
@@ -60,6 +60,10 @@ interface WorkflowSidebarProps {
   projectName: string;
   /** Workflow run ID */
   workflowRunId: string;
+  /** Workflow template ID (for editor link) */
+  workflowTemplateId?: string;
+  /** Workflow version ID (for editor link) */
+  workflowVersionId?: string;
   /** Called when cancel button is clicked */
   onCancel: () => void;
   /** Called when start new button is clicked */
@@ -82,6 +86,8 @@ export function WorkflowSidebar({
   statusDisplayFields: _statusDisplayFields,
   projectName,
   workflowRunId,
+  workflowTemplateId,
+  workflowVersionId,
   onCancel,
   onRestart,
 }: WorkflowSidebarProps) {
@@ -184,6 +190,22 @@ export function WorkflowSidebar({
           )}
           {viewMode === "scroll" ? "Single" : "Scroll"}
         </Button>
+        {/* Edit in editor button */}
+        {workflowTemplateId && workflowVersionId && (
+          <Button
+            variant="outline"
+            size="sm"
+            asChild
+            title="Edit this workflow in the visual editor (In Development)"
+            className="gap-1"
+          >
+            <a href={buildEditorWorkflowUrl(workflowTemplateId, workflowVersionId)}>
+              <Pencil className="h-4 w-4" />
+              Edit
+              <span className="text-xs text-amber-600 dark:text-amber-400">(Dev)</span>
+            </a>
+          </Button>
+        )}
         {/* Start New button - only when workflow finished */}
         {(pageState === "completed" || pageState === "error") && (
           <Button variant="outline" onClick={onRestart} size="sm">

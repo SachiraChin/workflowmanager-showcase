@@ -129,23 +129,43 @@ show_status() {
     docker-compose ps
     echo ""
     log_info "Service URLs (exposed ports):"
-    echo "  MongoDB:  localhost:27017"
-    echo "  Server:   localhost:9090"
-    echo "  WebUI:    localhost:8080"
-    echo "  Worker:   (no port - background service)"
     echo ""
-    log_info "Nginx proxy configured to these ports"
+    echo "  Databases:"
+    echo "    MongoDB (prod):    localhost:27017"
+    echo "    MongoDB (virtual): localhost:27018"
+    echo ""
+    echo "  Backend:"
+    echo "    API Server:        localhost:9090"
+    echo "    Worker:            (no port - background service)"
+    echo ""
+    echo "  Frontend:"
+    echo "    WebUI:             localhost:8080"
+    echo "    Editor:            localhost:8080/editor/"
+    echo ""
+    log_info "Notes:"
+    echo "  - WebUI and Editor are served from same container"
+    echo "  - Editor is in early development (preview only, no persistence)"
+    echo "  - Virtual MongoDB is for editor preview execution (ephemeral)"
+    echo ""
+    log_info "Nginx proxy should point to these ports"
 }
 
 # Health check
 health_check() {
     log_info "Running health checks..."
     
-    # Check MongoDB
+    # Check MongoDB (prod)
     if docker-compose exec -T mongo mongosh --eval "db.adminCommand('ping')" &>/dev/null; then
-        log_success "MongoDB: healthy"
+        log_success "MongoDB (prod): healthy"
     else
-        log_error "MongoDB: unhealthy"
+        log_error "MongoDB (prod): unhealthy"
+    fi
+    
+    # Check MongoDB (virtual)
+    if docker-compose exec -T mongo-virtual mongosh --eval "db.adminCommand('ping')" &>/dev/null; then
+        log_success "MongoDB (virtual): healthy"
+    else
+        log_error "MongoDB (virtual): unhealthy"
     fi
     
     # Check Server
@@ -160,6 +180,13 @@ health_check() {
         log_success "WebUI: healthy"
     else
         log_error "WebUI: unhealthy"
+    fi
+    
+    # Check Editor (served from same container as WebUI)
+    if curl -sf http://localhost:8080/editor/ &>/dev/null; then
+        log_success "Editor: healthy"
+    else
+        log_error "Editor: unhealthy"
     fi
     
     # Check Worker (check if container is running)
