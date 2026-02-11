@@ -9,6 +9,7 @@ import {
   useNavigate,
 } from "react-router-dom";
 import { useState } from "react";
+import { Moon, Sun } from "lucide-react";
 import { WorkflowStartPage } from "@/features/start/WorkflowStartPage";
 import { WorkflowEditorPage } from "@/features/editor/WorkflowEditorPage";
 import { ReactFlowStressPocPage } from "@/poc/reactflow/StressPocPage";
@@ -17,6 +18,30 @@ import { DndKitPocPage } from "@/poc/ux-schema-editor/DndKitPocPage";
 import { PragmaticDndPocPage } from "@/poc/ux-schema-editor/PragmaticDndPocPage";
 import { UxPalettePocPage } from "@/poc/ux-schema-editor/UxPalettePocPage";
 import { VirtualRuntimeTestPage } from "@/runtime/VirtualRuntimeTestPage";
+import { useTheme } from "@/components/theme-provider";
+
+function ThemeToggle() {
+  const { resolvedTheme, setTheme } = useTheme();
+
+  const toggleTheme = () => {
+    setTheme(resolvedTheme === "dark" ? "light" : "dark");
+  };
+
+  return (
+    <button
+      className="cursor-pointer rounded-md border bg-card p-2 hover:bg-muted/40"
+      onClick={toggleTheme}
+      type="button"
+      aria-label={`Switch to ${resolvedTheme === "dark" ? "light" : "dark"} mode`}
+    >
+      {resolvedTheme === "dark" ? (
+        <Sun className="h-4 w-4" />
+      ) : (
+        <Moon className="h-4 w-4" />
+      )}
+    </button>
+  );
+}
 
 function HeaderNav() {
   const location = useLocation();
@@ -50,6 +75,7 @@ function HeaderNav() {
             <Link className="text-sm font-semibold" to="/">
               Workflow Editor
             </Link>
+            <ThemeToggle />
           </div>
         ) : (
           <>
@@ -57,6 +83,7 @@ function HeaderNav() {
               Workflow Editor
             </Link>
             <nav className="flex items-center gap-2 text-sm">
+              <ThemeToggle />
               <div className="relative">
                 <button
                   className="cursor-pointer rounded-md border bg-card px-3 py-1.5 hover:bg-muted/40"

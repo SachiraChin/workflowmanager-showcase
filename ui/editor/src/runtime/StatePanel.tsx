@@ -372,12 +372,16 @@ export function StatePanel({
           <SheetTitle className="flex items-center gap-2">
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
             Workflow State
-            {upToModule && (
-              <span className="ml-2 text-xs font-normal text-muted-foreground">
-                (up to {upToModule.module_name})
-              </span>
-            )}
           </SheetTitle>
+          {upToModule ? (
+            <p className="text-xs text-muted-foreground">
+              State available to <span className="font-medium text-foreground/80">{upToModule.step_id} → {upToModule.module_name}</span>
+            </p>
+          ) : (
+            <p className="text-xs text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40 px-2 py-1 rounded font-medium">
+              Full state up to currently processed steps and modules
+            </p>
+          )}
         </SheetHeader>
 
         <SheetBody>

@@ -353,6 +353,7 @@ export function WorkflowEditorPage() {
       id: "workflow",
       type: "workflow",
       position: { x: workflowNodeX, y: stepStartY + 50 },
+      draggable: false,
       data: {
         workflow: workflowInfo,
         onWorkflowChange: handleWorkflowChange,
@@ -394,6 +395,7 @@ export function WorkflowEditorPage() {
         id: stepNodeId,
         type: "step",
         position: { x: currentStepX, y: stepStartY },
+        draggable: false,
         data: {
           step,
           onStepChange: (updated: StepDefinition) => handleStepChange(step.step_id, updated),
@@ -423,7 +425,7 @@ export function WorkflowEditorPage() {
             position: { x: moduleX, y: moduleY },
             parentId: stepNodeId,
             extent: "parent",
-            draggable: true,
+            draggable: false,
             data: {
               module: module as UserSelectModule,
               onModuleChange: (updated: UserSelectModule) =>
@@ -444,7 +446,7 @@ export function WorkflowEditorPage() {
             position: { x: moduleX, y: moduleY },
             parentId: stepNodeId,
             extent: "parent",
-            draggable: true,
+            draggable: false,
             data: {
               module: module as WeightedKeywordsModule,
               onModuleChange: (updated: WeightedKeywordsModule) =>
@@ -463,7 +465,7 @@ export function WorkflowEditorPage() {
             position: { x: moduleX, y: moduleY },
             parentId: stepNodeId,
             extent: "parent",
-            draggable: true,
+            draggable: false,
             data: {
               module: module as LLMModule,
               onModuleChange: (updated: LLMModule) =>
@@ -483,7 +485,7 @@ export function WorkflowEditorPage() {
             position: { x: moduleX, y: moduleY },
             parentId: stepNodeId,
             extent: "parent",
-            draggable: true,
+            draggable: false,
             data: {
               module,
               onViewState: () =>

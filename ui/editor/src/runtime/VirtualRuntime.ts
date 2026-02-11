@@ -233,7 +233,6 @@ export class VirtualRuntime {
   hasStateCovering(workflow: WorkflowDefinition, target: ModuleLocation): boolean {
     const moduleOrder = getModuleOrder(workflow);
     const targetIndex = getModuleIndex(workflow, target);
-    
     if (targetIndex === -1) return false;
 
     // Check if we have any checkpoint at or after the target
@@ -241,7 +240,6 @@ export class VirtualRuntime {
       const location = moduleOrder[i];
       const key = this.locationKey(location);
       const checkpoint = this.checkpoints.get(key);
-      
       if (checkpoint && checkpoint.workflow_hash === this.workflowHash) {
         return true;
       }
