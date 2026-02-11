@@ -164,21 +164,27 @@ async def start_virtual_module(
             module_name=request.target_module_name,
         )
         
+        # Determine if this is a fresh start or resume
+        # If virtual_db is provided, we're resuming from existing state
+        is_fresh_start = request.virtual_db is None
+        
         logger.info(
-            "Virtual start - target: step_id=%s, module_name=%s",
+            "Virtual start - target: step_id=%s, module_name=%s, fresh=%s",
             request.target_step_id,
             request.target_module_name,
+            is_fresh_start,
         )
 
         # Call processor.start_workflow (same as real /start)
         # This creates workflow_run, branch, and executes up to target
+        # force_new=True only for fresh starts, otherwise preserve events from virtual_db
         result = processor.start_workflow(
             version_id=version_id,
             project_name="virtual_project",
             workflow_template_name=workflow_template_name,
             user_id=VIRTUAL_USER_ID,
             ai_config=VIRTUAL_AI_CONFIG,
-            force_new=True,  # Always fresh for virtual
+            force_new=is_fresh_start,
             target=target,
         )
 
@@ -279,4 +285,310 @@ async def respond_virtual_module(
             virtual_run_id=virtual_run_id,
             virtual_db=vdb.export_state() if vdb else None,
             state=vdb.state_repo.get_module_outputs(virtual_run_id) if vdb else None,
+        )
+
+
+# =============================================================================
+# Resume/Confirm Endpoint
+# =============================================================================
+
+
+class VirtualResumeConfirmRequest(BaseModel):
+    """Request to resume virtual workflow with updated workflow and execute to target."""
+
+    workflow: Dict[str, Any] = Field(
+        ..., description="Full resolved workflow JSON (potentially updated)"
+    )
+    virtual_db: str = Field(
+        ...,
+        description="Base64-encoded gzip of virtual database JSON from previous response",
+    )
+    target_step_id: str = Field(
+        ..., description="Step ID containing target module"
+    )
+    target_module_name: str = Field(
+        ..., description="Module name to execute up to"
+    )
+
+
+@router.post("/resume/confirm", response_model=VirtualWorkflowResponse)
+async def resume_confirm_virtual(
+    request: VirtualResumeConfirmRequest,
+    user_id: str = Depends(get_current_user_id),
+):
+    """
+    Resume virtual workflow with updated workflow and execute to target.
+
+    Mirrors POST /workflow/{id}/resume/confirm for real workflows.
+
+    This endpoint:
+    1. Imports the virtual_db state (preserving existing events)
+    2. Stores the (potentially updated) workflow as a new version
+    3. Resumes execution from current position to the target module
+
+    Use this when:
+    - User clicks on a module that hasn't been executed yet
+    - Workflow may have been edited since last execution
+    """
+    vdb: Optional[VirtualDatabase] = None
+    virtual_run_id = ""
+
+    try:
+        # Create virtual database from provided state
+        vdb = VirtualDatabase(request.virtual_db)
+        
+        # Debug: Log what collections were imported
+        collection_names = vdb.db.list_collection_names()
+        workflow_runs_count = vdb.workflow_runs.count_documents({})
+        logger.info(
+            "Virtual resume/confirm - imported db has collections=%s, workflow_runs_count=%d",
+            collection_names,
+            workflow_runs_count,
+        )
+
+        # Store workflow as version
+        workflow_template_name = request.workflow.get("workflow_id", "virtual")
+        content_hash = compute_content_hash(request.workflow)
+
+        version_id, _, _ = vdb.version_repo.process_and_store_workflow_versions(
+            resolved_workflow=request.workflow,
+            content_hash=content_hash,
+            source_type="json",
+            workflow_template_name=workflow_template_name,
+            user_id=VIRTUAL_USER_ID,
+        )
+
+        # Find existing workflow run from imported db
+        existing_run = vdb.workflow_runs.find_one({})
+        if not existing_run:
+            logger.warning(
+                "Virtual resume/confirm - no workflow run found after import! collections=%s",
+                collection_names,
+            )
+            return VirtualWorkflowResponse(
+                workflow_run_id="",
+                status=WorkflowStatus.ERROR,
+                error="No workflow run found in virtual_db",
+                virtual_run_id="",
+                virtual_db=vdb.export_state(),
+                state=None,
+            )
+
+        virtual_run_id = existing_run.get("workflow_run_id", "")
+
+        # Update workflow run to use new version
+        vdb.workflow_runs.update_one(
+            {"workflow_run_id": virtual_run_id},
+            {"$set": {"current_workflow_version_id": version_id}},
+        )
+
+        # Track version history
+        vdb.workflow_repo.add_version_history_entry(
+            workflow_run_id=virtual_run_id,
+            workflow_version_id=version_id,
+        )
+
+        # Create execution target
+        target = ExecutionTarget(
+            step_id=request.target_step_id,
+            module_name=request.target_module_name,
+        )
+
+        logger.info(
+            "Virtual resume/confirm - target: step_id=%s, module_name=%s",
+            request.target_step_id,
+            request.target_module_name,
+        )
+
+        # Create processor and resume with update
+        processor = WorkflowProcessor(vdb)
+        result = processor.resume_workflow_with_update(
+            workflow_run_id=virtual_run_id,
+            version_id=version_id,
+            user_id=VIRTUAL_USER_ID,
+            ai_config=VIRTUAL_AI_CONFIG,
+            target=target,
+        )
+
+        return to_virtual_response(result, vdb, virtual_run_id)
+
+    except Exception as e:
+        logger.exception("Virtual resume/confirm failed: %s", e)
+        return VirtualWorkflowResponse(
+            workflow_run_id=virtual_run_id,
+            status=WorkflowStatus.ERROR,
+            error=str(e),
+            result={
+                "error_type": "execution_failed",
+                "details": {"exception": str(e)},
+            },
+            virtual_run_id=virtual_run_id,
+            virtual_db=vdb.export_state() if vdb else None,
+            state=vdb.state_repo.get_module_outputs(virtual_run_id)
+            if vdb and virtual_run_id
+            else None,
+        )
+
+
+# =============================================================================
+# State Endpoint
+# =============================================================================
+
+
+class VirtualStateRequest(BaseModel):
+    """Request to get state from virtual database."""
+
+    virtual_db: str = Field(
+        ...,
+        description="Base64-encoded gzip of virtual database JSON",
+    )
+    virtual_run_id: str = Field(
+        ..., description="Virtual run ID"
+    )
+
+
+class VirtualStateResponse(BaseModel):
+    """Response containing workflow state."""
+
+    steps: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Hierarchical module state by step/module",
+    )
+    state_mapped: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="State-mapped values (flat dict)",
+    )
+    files: list = Field(
+        default_factory=list,
+        description="File tree structure",
+    )
+
+
+@router.post("/state", response_model=VirtualStateResponse)
+async def get_virtual_state(
+    request: VirtualStateRequest,
+    user_id: str = Depends(get_current_user_id),
+):
+    """
+    Get workflow state from virtual database.
+
+    Mirrors GET /workflow/{id}/state/v2 for real workflows.
+
+    Returns the full workflow state without executing anything.
+    Used by editor to display state panel.
+    """
+    try:
+        # Create virtual database from provided state
+        vdb = VirtualDatabase(request.virtual_db)
+
+        # Get full workflow state (same as state/v2 endpoint)
+        state = vdb.state_repo.get_full_workflow_state(request.virtual_run_id)
+
+        return VirtualStateResponse(
+            steps=state.get("steps", {}),
+            state_mapped=state.get("state_mapped", {}),
+            files=state.get("files", []),
+        )
+
+    except Exception as e:
+        logger.exception("Virtual state failed: %s", e)
+        return VirtualStateResponse(
+            steps={},
+            state_mapped={},
+            files=[],
+        )
+
+
+# =============================================================================
+# Interaction History Endpoint
+# =============================================================================
+
+
+class VirtualInteractionHistoryRequest(BaseModel):
+    """Request to get interaction history from virtual database."""
+
+    virtual_db: str = Field(
+        ...,
+        description="Base64-encoded gzip of virtual database JSON",
+    )
+    virtual_run_id: str = Field(
+        ..., description="Virtual run ID"
+    )
+
+
+class CompletedInteraction(BaseModel):
+    """A completed interaction with request and response."""
+
+    interaction_id: str
+    request: Dict[str, Any] = Field(
+        description="Full InteractionRequest data for rendering"
+    )
+    response: Dict[str, Any] = Field(
+        description="User's response data"
+    )
+    step_id: Optional[str] = None
+    module_name: Optional[str] = None
+    timestamp: Optional[str] = None
+
+
+class VirtualInteractionHistoryResponse(BaseModel):
+    """Response containing interaction history."""
+
+    interactions: list[CompletedInteraction] = Field(
+        default_factory=list,
+        description="List of completed interactions",
+    )
+    pending_interaction: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Current pending interaction if any",
+    )
+
+
+@router.post("/interaction-history", response_model=VirtualInteractionHistoryResponse)
+async def get_virtual_interaction_history(
+    request: VirtualInteractionHistoryRequest,
+    user_id: str = Depends(get_current_user_id),
+):
+    """
+    Get interaction history from virtual database.
+
+    Mirrors GET /workflow/{id}/interaction-history for real workflows.
+
+    Returns all completed interactions (request + response pairs) and
+    the current pending interaction if any.
+    """
+    try:
+        # Create virtual database from provided state
+        vdb = VirtualDatabase(request.virtual_db)
+
+        # Get interaction history
+        interactions = vdb.state_repo.get_interaction_history(request.virtual_run_id)
+
+        # Get pending interaction from position
+        position = vdb.state_repo.get_workflow_position(request.virtual_run_id)
+        pending_data = position.get("pending_interaction")
+
+        # Convert to response format
+        completed = [
+            CompletedInteraction(
+                interaction_id=i.get("interaction_id", ""),
+                request=i.get("request", {}),
+                response=i.get("response", {}),
+                step_id=i.get("step_id"),
+                module_name=i.get("module_name"),
+                timestamp=str(i.get("timestamp")) if i.get("timestamp") else None,
+            )
+            for i in interactions
+        ]
+
+        return VirtualInteractionHistoryResponse(
+            interactions=completed,
+            pending_interaction=pending_data,
+        )
+
+    except Exception as e:
+        logger.exception("Virtual interaction-history failed: %s", e)
+        return VirtualInteractionHistoryResponse(
+            interactions=[],
+            pending_interaction=None,
         )

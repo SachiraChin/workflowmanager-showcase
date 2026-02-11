@@ -8,16 +8,27 @@
 export type {
   VirtualStartRequest,
   VirtualRespondRequest,
+  VirtualResumeConfirmRequest,
+  VirtualStateRequest,
+  VirtualStateResponse,
+  VirtualInteractionHistoryRequest,
+  VirtualInteractionHistoryResponse,
+  CompletedInteraction,
   VirtualWorkflowResponse,
   ModuleLocation,
-  ModuleCheckpoint,
   ModuleSelection,
   RuntimeStatus,
   RunResult,
 } from "./types";
 
 // API
-export { virtualStart, virtualRespond } from "./virtual-api";
+export {
+  virtualStart,
+  virtualRespond,
+  virtualResumeConfirm,
+  virtualGetState,
+  virtualGetInteractionHistory,
+} from "./virtual-api";
 
 // Runtime
 export { VirtualRuntime } from "./VirtualRuntime";

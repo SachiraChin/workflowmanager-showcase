@@ -51,6 +51,81 @@ export interface VirtualRespondRequest {
   response: InteractionResponseData;
 }
 
+/**
+ * Request to resume virtual workflow with updated workflow and execute to target.
+ * Sent to POST /workflow/virtual/resume/confirm
+ */
+export interface VirtualResumeConfirmRequest {
+  /** Full resolved workflow JSON (potentially updated) */
+  workflow: WorkflowDefinition;
+  /** Base64-encoded gzip of virtual database JSON from previous response */
+  virtual_db: string;
+  /** Step ID containing target module */
+  target_step_id: string;
+  /** Module name to execute up to */
+  target_module_name: string;
+}
+
+/**
+ * Request to get state from virtual database.
+ * Sent to POST /workflow/virtual/state
+ */
+export interface VirtualStateRequest {
+  /** Base64-encoded gzip of virtual database JSON */
+  virtual_db: string;
+  /** Virtual run ID */
+  virtual_run_id: string;
+}
+
+/**
+ * Response containing workflow state.
+ * Returned from POST /workflow/virtual/state
+ */
+export interface VirtualStateResponse {
+  /** Hierarchical module state by step/module */
+  steps: Record<string, unknown>;
+  /** State-mapped values (flat dict) */
+  state_mapped: Record<string, unknown>;
+  /** File tree structure */
+  files: unknown[];
+}
+
+/**
+ * Request to get interaction history from virtual database.
+ * Sent to POST /workflow/virtual/interaction-history
+ */
+export interface VirtualInteractionHistoryRequest {
+  /** Base64-encoded gzip of virtual database JSON */
+  virtual_db: string;
+  /** Virtual run ID */
+  virtual_run_id: string;
+}
+
+/**
+ * A completed interaction with request and response.
+ */
+export interface CompletedInteraction {
+  interaction_id: string;
+  /** Full InteractionRequest data for rendering */
+  request: Record<string, unknown>;
+  /** User's response data */
+  response: Record<string, unknown>;
+  step_id?: string;
+  module_name?: string;
+  timestamp?: string;
+}
+
+/**
+ * Response containing interaction history.
+ * Returned from POST /workflow/virtual/interaction-history
+ */
+export interface VirtualInteractionHistoryResponse {
+  /** List of completed interactions */
+  interactions: CompletedInteraction[];
+  /** Current pending interaction if any */
+  pending_interaction: Record<string, unknown> | null;
+}
+
 // =============================================================================
 // API Response Types
 // =============================================================================

@@ -265,12 +265,21 @@ class WorkflowProcessor(WorkflowStreamingMixin):
         version_id: str,
         user_id: str,
         ai_config: Dict[str, Any] = None,
-        capabilities: List[str] = None
+        capabilities: List[str] = None,
+        target: Optional[ExecutionTarget] = None,
     ) -> WorkflowResponse:
         """
         Resume a workflow with an updated workflow definition.
 
         Called after user confirms version change.
+        
+        Args:
+            workflow_run_id: The workflow run identifier
+            version_id: The new version to use
+            user_id: User ID for access control
+            ai_config: Optional runtime override for AI configuration
+            capabilities: Client capabilities for version selection
+            target: Optional execution target - stop after reaching this step/module
         """
         if capabilities is None:
             capabilities = []
@@ -352,13 +361,17 @@ class WorkflowProcessor(WorkflowStreamingMixin):
             'session_timestamp': datetime.now().strftime('%Y%m%d_%H%M%S'),
         }
 
-        self.logger.debug(f"[RESUME WITH UPDATE] Resuming workflow {workflow_run_id} with version {version_id}...")
+        self.logger.debug(
+            f"[RESUME WITH UPDATE] Resuming workflow {workflow_run_id} with version {version_id}, "
+            f"target={target.step_id}/{target.module_name if target else 'none'}..."
+        )
 
         return self.executor.execute_from_position(
             workflow_run_id=workflow_run_id,
             workflow_def=workflow_def,
             position=position,
-            services=services
+            services=services,
+            target=target,
         )
 
     def respond(

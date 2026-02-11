@@ -19,7 +19,7 @@ import {
   type WorkflowDefinition,
 } from "@wfm/shared";
 import { Copy, Check, ChevronRight, ChevronDown, Circle, Loader2 } from "lucide-react";
-import type { ModuleLocation } from "./types";
+import type { ModuleLocation, VirtualStateResponse } from "./types";
 
 // =============================================================================
 // Types
@@ -32,8 +32,8 @@ export interface StatePanelProps {
   onOpenChange: (open: boolean) => void;
   /** Current workflow definition */
   workflow: WorkflowDefinition | null;
-  /** Current state from virtual runtime (module_outputs with state_mapped at root) */
-  state: Record<string, unknown> | null;
+  /** Current state from virtual runtime */
+  state: VirtualStateResponse | null;
   /** Whether state is currently loading */
   loading?: boolean;
   /** Optional: only show state up to this module (exclusive) */
@@ -350,6 +350,42 @@ function AvailabilityDivider({ availableTo }: AvailabilityDividerProps) {
 // Main Component
 // =============================================================================
 
+/**
+ * Transform VirtualStateResponse into the flat state format used by buildStateGroups.
+ * 
+ * The new format has:
+ * - steps: { step_id: { module_name: { module_completed: {...} } } }
+ * - state_mapped: { key: value }
+ * 
+ * We need to produce:
+ * - { module_name: { ...outputs, _state_mapped: {...} }, state_key: value, ... }
+ */
+function transformStateForDisplay(state: VirtualStateResponse): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+
+  // Extract module outputs from steps
+  const steps = state.steps || {};
+  for (const stepId of Object.keys(steps)) {
+    const stepData = steps[stepId] as Record<string, unknown>;
+    for (const moduleName of Object.keys(stepData)) {
+      const moduleData = stepData[moduleName] as Record<string, unknown>;
+      // Extract module_completed event data
+      const moduleCompleted = moduleData?.module_completed as Record<string, unknown>;
+      if (moduleCompleted) {
+        result[moduleName] = moduleCompleted;
+      }
+    }
+  }
+
+  // Add state_mapped values at root level
+  const stateMapped = state.state_mapped || {};
+  for (const [key, value] of Object.entries(stateMapped)) {
+    result[key] = value;
+  }
+
+  return result;
+}
+
 export function StatePanel({
   open,
   onOpenChange,
@@ -360,7 +396,8 @@ export function StatePanel({
 }: StatePanelProps) {
   const groups = useMemo(() => {
     if (!workflow || !state) return [];
-    return buildStateGroups(workflow, state, upToModule);
+    const flatState = transformStateForDisplay(state);
+    return buildStateGroups(workflow, flatState, upToModule);
   }, [workflow, state, upToModule]);
 
   const hasState = groups.length > 0;

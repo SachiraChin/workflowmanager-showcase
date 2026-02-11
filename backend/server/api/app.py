@@ -168,13 +168,15 @@ async def shutdown():
 app.include_router(execution_router)
 app.include_router(streaming_router)
 app.include_router(state_router)
+# Virtual router MUST be before management_router because management has
+# /{workflow_run_id}/resume/confirm which would match /virtual/resume/confirm
+app.include_router(virtual_router)
 app.include_router(management_router)
 app.include_router(files_router)
 app.include_router(listing_router)
 app.include_router(media_router)
 app.include_router(tasks_router)
 app.include_router(models_router)
-app.include_router(virtual_router)
 app.include_router(auth.router)
 
 

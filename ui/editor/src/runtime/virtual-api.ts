@@ -9,6 +9,11 @@ import type {
   VirtualStartRequest,
   VirtualRespondRequest,
   VirtualWorkflowResponse,
+  VirtualResumeConfirmRequest,
+  VirtualStateRequest,
+  VirtualStateResponse,
+  VirtualInteractionHistoryRequest,
+  VirtualInteractionHistoryResponse,
 } from "./types";
 
 /**
@@ -55,6 +60,58 @@ export async function virtualRespond(
 ): Promise<VirtualWorkflowResponse> {
   return postJson<VirtualWorkflowResponse>(
     "/workflow/virtual/respond",
+    request as unknown as Record<string, unknown>
+  );
+}
+
+/**
+ * Resume virtual workflow with updated workflow and execute to target.
+ *
+ * Use this when:
+ * - User clicks on a module that hasn't been executed yet
+ * - Workflow may have been edited since last execution
+ *
+ * The server will:
+ * 1. Import the virtual_db state (preserving existing events)
+ * 2. Store the (potentially updated) workflow as a new version
+ * 3. Resume execution from current position to the target module
+ */
+export async function virtualResumeConfirm(
+  request: VirtualResumeConfirmRequest
+): Promise<VirtualWorkflowResponse> {
+  return postJson<VirtualWorkflowResponse>(
+    "/workflow/virtual/resume/confirm",
+    request as unknown as Record<string, unknown>
+  );
+}
+
+/**
+ * Get workflow state from virtual database.
+ *
+ * Returns the full workflow state without executing anything.
+ * Used to display state panel.
+ */
+export async function virtualGetState(
+  request: VirtualStateRequest
+): Promise<VirtualStateResponse> {
+  return postJson<VirtualStateResponse>(
+    "/workflow/virtual/state",
+    request as unknown as Record<string, unknown>
+  );
+}
+
+/**
+ * Get interaction history from virtual database.
+ *
+ * Returns all completed interactions (request + response pairs) and
+ * the current pending interaction if any.
+ * Used to render preview of completed interactive modules.
+ */
+export async function virtualGetInteractionHistory(
+  request: VirtualInteractionHistoryRequest
+): Promise<VirtualInteractionHistoryResponse> {
+  return postJson<VirtualInteractionHistoryResponse>(
+    "/workflow/virtual/interaction-history",
     request as unknown as Record<string, unknown>
   );
 }

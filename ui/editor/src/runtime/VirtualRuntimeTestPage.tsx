@@ -114,12 +114,12 @@ export function VirtualRuntimeTestPage() {
             </p>
           </div>
 
-          {/* Checkpoints */}
+          {/* Interaction History */}
           <div className="rounded border bg-card p-3">
-            <h2 className="mb-2 text-sm font-semibold">Checkpoints</h2>
+            <h2 className="mb-2 text-sm font-semibold">Interaction History</h2>
             <div className="space-y-1 text-xs">
               {MODULE_LOCATIONS.map((loc) => {
-                const checkpoint = runtime.actions.getCheckpoint(loc);
+                const interaction = runtime.actions.getInteractionForModule(loc);
                 return (
                   <div
                     key={`${loc.step_id}/${loc.module_name}`}
@@ -128,12 +128,12 @@ export function VirtualRuntimeTestPage() {
                     <span className="truncate">{loc.module_name}</span>
                     <span
                       className={
-                        checkpoint
+                        interaction
                           ? "text-emerald-600"
                           : "text-muted-foreground"
                       }
                     >
-                      {checkpoint ? "cached" : "-"}
+                      {interaction ? "cached" : "-"}
                     </span>
                   </div>
                 );

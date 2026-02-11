@@ -21,7 +21,7 @@ import {
   type InteractionResponseData,
 } from "@wfm/shared";
 import { Loader2 } from "lucide-react";
-import type { RuntimeStatus, VirtualWorkflowResponse } from "./types";
+import type { RuntimeStatus, VirtualWorkflowResponse, CompletedInteraction } from "./types";
 
 // =============================================================================
 // Props
@@ -42,6 +42,8 @@ export interface VirtualRuntimePanelProps {
   error?: string | null;
   /** Called when user submits interaction response */
   onSubmit?: (response: InteractionResponseData) => void;
+  /** Completed interaction data (for showing historical interactions in readonly mode) */
+  completedInteraction?: CompletedInteraction | null;
 }
 
 // =============================================================================
@@ -56,6 +58,7 @@ export function VirtualRuntimePanel({
   response,
   error,
   onSubmit,
+  completedInteraction,
 }: VirtualRuntimePanelProps) {
   const interactionRequest = response?.interaction_request as
     | InteractionRequest
@@ -63,8 +66,9 @@ export function VirtualRuntimePanel({
 
   // Determine what type of content to show
   const hasUxContent = status === "awaiting_input" && interactionRequest;
+  const hasCompletedInteraction = status === "completed" && completedInteraction;
   const hasNonUxResponse =
-    (status === "completed" || status === "error") && response;
+    (status === "completed" || status === "error") && response && !hasCompletedInteraction;
 
   // Handle submit
   const handleSubmit = (responseData: InteractionResponseData) => {
@@ -103,13 +107,18 @@ export function VirtualRuntimePanel({
           {/* Error display */}
           {status === "error" && error && <ErrorContent error={error} />}
 
-          {/* UX Interaction display */}
+          {/* UX Interaction display (live, awaiting input) */}
           {hasUxContent && (
             <UxContent
               request={interactionRequest}
               busy={busy}
               onSubmit={handleSubmit}
             />
+          )}
+
+          {/* Completed interaction display (readonly, historical) */}
+          {hasCompletedInteraction && (
+            <CompletedInteractionContent interaction={completedInteraction} />
           )}
 
           {/* Non-UX Response display */}
@@ -158,6 +167,33 @@ function UxContent({ request, busy, onSubmit }: UxContentProps) {
     <RenderProvider value={{ debugMode: false, readonly: false }}>
       <InteractionHost disabled={busy} onSubmit={onSubmit} request={request} />
     </RenderProvider>
+  );
+}
+
+/**
+ * Renders a completed interaction in readonly mode.
+ * Shows the interaction form with the user's previous response pre-filled and disabled.
+ */
+function CompletedInteractionContent({ interaction }: { interaction: CompletedInteraction }) {
+  // Cast the request to InteractionRequest type
+  const request = interaction.request as unknown as InteractionRequest;
+  const response = interaction.response as InteractionResponseData;
+  
+  return (
+    <div className="space-y-4">
+      <div className="rounded border bg-blue-50 p-3 text-sm text-blue-700 dark:bg-blue-950/20 dark:text-blue-400">
+        Previously completed interaction
+      </div>
+      <RenderProvider value={{ debugMode: false, readonly: true }}>
+        <InteractionHost 
+          disabled={true} 
+          onSubmit={() => {}} 
+          request={request}
+          mode={{ type: "readonly", response }}
+          timestamp={interaction.timestamp}
+        />
+      </RenderProvider>
+    </div>
   );
 }
 

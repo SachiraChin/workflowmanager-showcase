@@ -1,25 +1,37 @@
 /**
  * VirtualRuntime - Core runtime for virtual workflow execution.
  *
- * Manages:
- * - Per-module checkpoint caching (virtual_db snapshots)
- * - Hash-based invalidation (workflow and module config changes)
- * - Execution flow from checkpoints to target modules
+ * New simplified state model:
+ * - Single virtualDb and state (not per-module checkpoints)
+ * - Tracks furthestModuleIndex to know if target needs execution
+ * - Hash workflow slice [0, furthestModuleIndex] for change detection
+ * - Stores interaction history for rendering completed interactive modules
  *
- * Key concepts:
- * - Checkpoint: Saved virtual_db state after a module completes successfully
- * - When a module or any preceding module changes, its checkpoint is invalidated
- * - Runtime finds the latest valid checkpoint before target and resumes from there
+ * Key behavior:
+ * - Backward navigation (target ≤ furthestModuleIndex): NO API call, use cached data
+ * - Forward navigation (target > furthestModuleIndex): Call /virtual/resume/confirm
+ * - Workflow changed before target: Reset with /virtual/start (fresh)
  */
 
-import type { WorkflowDefinition, InteractionResponseData, InteractionRequest } from "@wfm/shared";
-import { virtualStart, virtualRespond } from "./virtual-api";
+import type {
+  WorkflowDefinition,
+  InteractionResponseData,
+  InteractionRequest,
+} from "@wfm/shared";
+import {
+  virtualStart,
+  virtualRespond,
+  virtualResumeConfirm,
+  virtualGetState,
+  virtualGetInteractionHistory,
+} from "./virtual-api";
 import { buildAutoSelectionResponse } from "./auto-select";
 import type {
   ModuleLocation,
-  ModuleCheckpoint,
   ModuleSelection,
   VirtualWorkflowResponse,
+  VirtualStateResponse,
+  CompletedInteraction,
   RuntimeStatus,
   RunResult,
 } from "./types";
@@ -30,25 +42,21 @@ import type {
 
 /**
  * Simple string hash function (djb2 algorithm).
- * Fallback when crypto.subtle is not available.
  */
 function simpleHash(str: string): string {
   let hash = 5381;
   for (let i = 0; i < str.length; i++) {
     hash = (hash * 33) ^ str.charCodeAt(i);
   }
-  // Convert to unsigned 32-bit integer and then to hex
   return (hash >>> 0).toString(16).padStart(8, "0");
 }
 
 /**
  * Compute hash of a value (JSON serialized).
- * Uses crypto.subtle if available, falls back to simple hash.
  */
 async function computeHash(value: unknown): Promise<string> {
-  const json = JSON.stringify(value, Object.keys(value as object).sort());
+  const json = JSON.stringify(value, null, 0);
 
-  // Try crypto.subtle first (available in secure contexts)
   if (typeof crypto !== "undefined" && crypto.subtle) {
     try {
       const encoder = new TextEncoder();
@@ -61,29 +69,7 @@ async function computeHash(value: unknown): Promise<string> {
     }
   }
 
-  // Fallback to simple hash
   return simpleHash(json);
-}
-
-/**
- * Compute hash for a workflow (excluding runtime-variable parts).
- */
-async function hashWorkflow(workflow: WorkflowDefinition): Promise<string> {
-  return computeHash(workflow);
-}
-
-/**
- * Compute hash for a specific module's configuration.
- */
-async function hashModule(
-  workflow: WorkflowDefinition,
-  location: ModuleLocation
-): Promise<string> {
-  const step = workflow.steps.find((s) => s.step_id === location.step_id);
-  if (!step) return "";
-  const module = step.modules.find((m) => m.name === location.module_name);
-  if (!module) return "";
-  return computeHash(module);
 }
 
 // =============================================================================
@@ -122,28 +108,81 @@ function getModuleIndex(
   );
 }
 
-// Note: isBefore can be used for future optimizations
-// function isBefore(
-//   workflow: WorkflowDefinition,
-//   a: ModuleLocation,
-//   b: ModuleLocation
-// ): boolean {
-//   return getModuleIndex(workflow, a) < getModuleIndex(workflow, b);
-// }
+/**
+ * Get a slice of workflow containing only modules [0, endIndex].
+ * Used for hashing to detect changes in modules before a target.
+ */
+function getWorkflowSlice(
+  workflow: WorkflowDefinition,
+  endIndex: number
+): unknown {
+  const moduleOrder = getModuleOrder(workflow);
+  const modulesInSlice = moduleOrder.slice(0, endIndex + 1);
+
+  // Build a simplified structure for hashing
+  const sliceData: Array<{ step_id: string; module: unknown }> = [];
+
+  for (const loc of modulesInSlice) {
+    const step = workflow.steps.find((s) => s.step_id === loc.step_id);
+    const module = step?.modules.find((m) => m.name === loc.module_name);
+    if (module) {
+      sliceData.push({
+        step_id: loc.step_id,
+        module,
+      });
+    }
+  }
+
+  return sliceData;
+}
+
+// =============================================================================
+// Session Storage for Selections
+// =============================================================================
+
+/**
+ * Generate a unique session ID for storing selections.
+ */
+function generateSessionId(): string {
+  return `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+}
 
 // =============================================================================
 // VirtualRuntime Class
 // =============================================================================
 
 export class VirtualRuntime {
-  /** Per-module checkpoints, keyed by "step_id/module_name" */
-  private checkpoints: Map<string, ModuleCheckpoint> = new Map();
+  // ---------------------------------------------------------------------------
+  // Core State (replaces per-module checkpoints)
+  // ---------------------------------------------------------------------------
 
-  /** Per-module hashes for change detection, keyed by "step_id/module_name" */
-  private moduleHashes: Map<string, string> = new Map();
+  /** The virtual database blob (opaque, for sending to server) */
+  private virtualDb: string | null = null;
 
-  /** Hash of the full workflow for change detection */
-  private workflowHash: string = "";
+  /** Virtual run ID */
+  private virtualRunId: string | null = null;
+
+  /** State from /virtual/state endpoint */
+  private state: VirtualStateResponse | null = null;
+
+  /** Interaction history from /virtual/interaction-history endpoint */
+  private interactionHistory: Map<string, CompletedInteraction> = new Map();
+
+  /** Pending interaction (if workflow is awaiting input) */
+  private pendingInteraction: Record<string, unknown> | null = null;
+
+  /** Furthest module index we've executed to (-1 means nothing executed) */
+  private furthestModuleIndex: number = -1;
+
+  /** Hashes of workflow slices for change detection. Key is module index. */
+  private workflowSliceHashes: Map<number, string> = new Map();
+
+  /** Session ID for storing selections in sessionStorage */
+  private sessionId: string;
+
+  // ---------------------------------------------------------------------------
+  // UI State
+  // ---------------------------------------------------------------------------
 
   /** Current runtime status */
   private status: RuntimeStatus = "idle";
@@ -154,7 +193,7 @@ export class VirtualRuntime {
   /** Last error message */
   private lastError: string | null = null;
 
-  /** Whether the runtime panel is open */
+  /** Whether the preview panel is open */
   private panelOpen: boolean = false;
 
   /** Whether the state panel is open */
@@ -169,99 +208,90 @@ export class VirtualRuntime {
   /** Current target module (the module we're trying to reach) */
   private currentTarget: ModuleLocation | null = null;
 
-  /** 
+  /**
    * Module to filter state display to (for module-specific State button).
    * When set, StatePanel should only show state available to this module.
-   * When null, show all state (for "View Full State" button).
+   * When null, show all state.
    */
   private stateUpToModule: ModuleLocation | null = null;
 
+  // ---------------------------------------------------------------------------
+  // Constructor
+  // ---------------------------------------------------------------------------
+
+  constructor() {
+    this.sessionId = generateSessionId();
+  }
+
   // ===========================================================================
-  // Public API
+  // Public API - Getters
   // ===========================================================================
 
-  /**
-   * Get current runtime status.
-   */
   getStatus(): RuntimeStatus {
     return this.status;
   }
 
-  /**
-   * Get last response from server.
-   */
   getLastResponse(): VirtualWorkflowResponse | null {
     return this.lastResponse;
   }
 
-  /**
-   * Get last error message.
-   */
   getLastError(): string | null {
     return this.lastError;
   }
 
-  /**
-   * Get checkpoint for a module if it exists and is valid.
-   */
-  getCheckpoint(location: ModuleLocation): ModuleCheckpoint | null {
-    const key = this.locationKey(location);
-    return this.checkpoints.get(key) ?? null;
-  }
-
-  /**
-   * Get the current target module (the module we're trying to reach).
-   * This is set when runToModule is called and persists through interactions.
-   */
   getCurrentTarget(): ModuleLocation | null {
     return this.currentTarget;
   }
 
-  /**
-   * Get the module to filter state display to.
-   * When set, StatePanel should only show state available to this module.
-   * When null, show all state.
-   */
   getStateUpToModule(): ModuleLocation | null {
     return this.stateUpToModule;
   }
 
+  getVirtualDb(): string | null {
+    return this.virtualDb;
+  }
+
+  getVirtualRunId(): string | null {
+    return this.virtualRunId;
+  }
+
+  getState(): VirtualStateResponse | null {
+    return this.state;
+  }
+
   /**
-   * Check if we have state that covers a given module.
-   * Returns true if we have a checkpoint at or after the target module.
+   * Get interaction data for a specific module (for rendering preview).
    */
-  hasStateCovering(workflow: WorkflowDefinition, target: ModuleLocation): boolean {
-    const moduleOrder = getModuleOrder(workflow);
+  getInteractionForModule(location: ModuleLocation): CompletedInteraction | null {
+    const key = this.locationKey(location);
+    return this.interactionHistory.get(key) ?? null;
+  }
+
+  /**
+   * Get pending interaction if workflow is awaiting input.
+   */
+  getPendingInteraction(): Record<string, unknown> | null {
+    return this.pendingInteraction;
+  }
+
+  /**
+   * Check if we have state covering a given module.
+   * Returns true if targetIndex ≤ furthestModuleIndex.
+   */
+  hasStateFor(workflow: WorkflowDefinition, target: ModuleLocation): boolean {
     const targetIndex = getModuleIndex(workflow, target);
     if (targetIndex === -1) return false;
-
-    // Check if we have any checkpoint at or after the target
-    for (let i = targetIndex; i < moduleOrder.length; i++) {
-      const location = moduleOrder[i];
-      const key = this.locationKey(location);
-      const checkpoint = this.checkpoints.get(key);
-      if (checkpoint && checkpoint.workflow_hash === this.workflowHash) {
-        return true;
-      }
-    }
-
-    return false;
+    return targetIndex <= this.furthestModuleIndex;
   }
 
   // ===========================================================================
   // Panel Control
   // ===========================================================================
 
-  /**
-   * Check if the panel is currently open.
-   */
   isPanelOpen(): boolean {
     return this.panelOpen;
   }
 
-  /**
-   * Open the runtime panel.
-   */
   openPanel(): void {
     if (!this.panelOpen) {
       this.panelOpen = true;
@@ -269,9 +299,6 @@ export class VirtualRuntime {
     }
   }
 
-  /**
-   * Close the runtime panel.
-   */
   closePanel(): void {
     if (this.panelOpen) {
       this.panelOpen = false;
@@ -279,9 +306,6 @@ export class VirtualRuntime {
     }
   }
 
-  /**
-   * Set the panel open state directly (for controlled usage).
-   */
   setPanelOpen(open: boolean): void {
     if (this.panelOpen !== open) {
       this.panelOpen = open;
@@ -289,28 +313,14 @@ export class VirtualRuntime {
     }
   }
 
-  /**
-   * Register a callback to be notified when panel state changes.
-   * Used by React hook to sync state.
-   */
   setOnPanelChange(callback: ((open: boolean) => void) | null): void {
     this.onPanelChange = callback;
   }
 
-  // ===========================================================================
-  // State Panel Control
-  // ===========================================================================
-
-  /**
-   * Check if the state panel is currently open.
-   */
   isStatePanelOpen(): boolean {
     return this.statePanelOpen;
   }
 
-  /**
-   * Open the state panel (internal - preserves stateUpToModule).
-   */
   openStatePanel(): void {
     if (!this.statePanelOpen) {
       this.statePanelOpen = true;
@@ -318,17 +328,11 @@ export class VirtualRuntime {
     }
   }
 
-  /**
-   * Open the state panel showing full state (clears stateUpToModule filter).
-   */
   openFullStatePanel(): void {
     this.stateUpToModule = null;
     this.openStatePanel();
   }
 
-  /**
-   * Close the state panel.
-   */
   closeStatePanel(): void {
     if (this.statePanelOpen) {
       this.statePanelOpen = false;
@@ -336,9 +340,6 @@ export class VirtualRuntime {
     }
   }
 
-  /**
-   * Set the state panel open state directly (for controlled usage).
-   */
   setStatePanelOpen(open: boolean): void {
     if (this.statePanelOpen !== open) {
       this.statePanelOpen = open;
@@ -346,23 +347,21 @@ export class VirtualRuntime {
     }
   }
 
-  /**
-   * Register a callback to be notified when state panel state changes.
-   * Used by React hook to sync state.
-   */
   setOnStatePanelChange(callback: ((open: boolean) => void) | null): void {
     this.onStatePanelChange = callback;
   }
 
+  // ===========================================================================
+  // Core Execution Methods
+  // ===========================================================================
+
   /**
    * Run workflow to a target module.
    *
-   * @param workflow - The full workflow definition
-   * @param target - The module to run to
-   * @param selections - Pre-defined selections for prerequisite interactive modules
-   * @param options - Optional configuration
-   * @param options.openPanel - Which panel to open: "preview" (default), "state", or "none"
-   * @returns RunResult with status and optional response/error
+   * Logic:
+   * 1. Check if workflow changed before target → reset if needed
+   * 2. Check if target ≤ furthestModuleIndex → use cached data (no API call)
+   * 3. Otherwise → execute forward to target
    */
   async runToModule(
     workflow: WorkflowDefinition,
@@ -371,20 +370,21 @@ export class VirtualRuntime {
     options?: { openPanel?: "preview" | "state" | "none" }
   ): Promise<RunResult> {
     const { openPanel = "preview" } = options ?? {};
-    
-    console.log("[VirtualRuntime] runToModule called with target:", target);
-    
+
+    console.log("[VirtualRuntime] runToModule:", {
+      target,
+      furthestModuleIndex: this.furthestModuleIndex,
+      openPanel,
+    });
+
     this.status = "running";
     this.lastError = null;
-    this.lastResponse = null;  // Clear previous response to show loading
     this.currentTarget = target;
 
-    // Set stateUpToModule when opening state panel
     if (openPanel === "state") {
       this.stateUpToModule = target;
     }
 
-    // Auto-open panel when execution starts
     if (openPanel === "preview") {
       this.openPanel();
     } else if (openPanel === "state") {
@@ -392,46 +392,80 @@ export class VirtualRuntime {
     }
 
     try {
-      // Update hashes and invalidate stale checkpoints
-      await this.updateHashes(workflow);
-
-      // Find the best checkpoint to resume from
-      const checkpoint = this.findBestCheckpoint(workflow, target);
-
-      // Build selection map for quick lookup
-      const selectionMap = new Map<string, InteractionResponseData>();
-      for (const sel of selections) {
-        selectionMap.set(this.locationKey(sel), sel.response);
+      const targetIndex = getModuleIndex(workflow, target);
+      if (targetIndex === -1) {
+        throw new Error(`Module not found: ${target.step_id}/${target.module_name}`);
       }
 
-      // Execute from checkpoint (or start) to target
-      const result = await this.executeToTarget(
-        workflow,
-        target,
-        checkpoint,
-        selectionMap
-      );
+      // Check if we need to reset (workflow changed before target)
+      const needsReset = await this.checkNeedsReset(workflow, targetIndex);
 
-      return result;
+      if (needsReset) {
+        console.log("[VirtualRuntime] Workflow changed, resetting...");
+        await this.resetAndStart(workflow, target, selections);
+      } else if (targetIndex <= this.furthestModuleIndex) {
+        // Already have state for this target - no API call needed
+        console.log("[VirtualRuntime] Already have state, using cache");
+        this.status = "completed";
+        return { status: "completed", response: this.lastResponse ?? undefined };
+      } else {
+        // Need to execute forward
+        console.log("[VirtualRuntime] Executing forward to target...");
+        await this.executeForward(workflow, target, selections);
+      }
+
+      // Fetch state and interaction history after execution
+      await this.fetchStateAndHistory();
+
+      // Update furthest position and store hash
+      const newFurthestIndex = Math.max(this.furthestModuleIndex, targetIndex);
+      if (newFurthestIndex > this.furthestModuleIndex) {
+        this.furthestModuleIndex = newFurthestIndex;
+      }
+      // Store hash for this target index
+      const targetHash = await computeHash(
+        getWorkflowSlice(workflow, targetIndex)
+      );
+      this.workflowSliceHashes.set(targetIndex, targetHash);
+
+      return { status: this.status, response: this.lastResponse ?? undefined };
     } catch (error) {
       this.status = "error";
       this.lastError = error instanceof Error ? error.message : String(error);
-      return {
-        status: "error",
-        error: this.lastError,
-      };
+      return { status: "error", error: this.lastError };
     }
   }
 
   /**
+   * Run workflow to a target module for state inspection only.
+   * Opens the state panel instead of the preview panel.
+   */
+  async runToModuleForState(
+    workflow: WorkflowDefinition,
+    target: ModuleLocation,
+    selections: ModuleSelection[]
+  ): Promise<RunResult> {
+    console.log("[VirtualRuntime] runToModuleForState:", target);
+
+    this.stateUpToModule = target;
+
+    // Check if we already have state covering this module
+    if (this.hasStateFor(workflow, target) && this.state) {
+      console.log("[VirtualRuntime] Already have state, opening panel");
+      this.openStatePanel();
+      return {
+        status: this.status === "idle" ? "completed" : this.status,
+        response: this.lastResponse ?? undefined,
+      };
+    }
+
+    return this.runToModule(workflow, target, selections, {
+      openPanel: "state",
+    });
+  }
+
+  /**
    * Submit a response to the current interaction.
-   *
-   * Call this after runToModule returns status "awaiting_input".
-   *
-   * @param workflow - The full workflow definition
-   * @param target - The target module (same as in runToModule)
-   * @param response - User's response to the interaction
-   * @returns RunResult with updated status
    */
   async submitResponse(
     workflow: WorkflowDefinition,
@@ -445,87 +479,88 @@ export class VirtualRuntime {
       };
     }
 
-    this.status = "running";
+    if (!this.virtualDb || !this.virtualRunId) {
+      return {
+        status: "error",
+        error: "No virtual database state",
+      };
+    }
 
-    // Ensure panel stays open during response
+    this.status = "running";
     this.openPanel();
 
     try {
       const serverResponse = await virtualRespond({
         workflow,
-        virtual_db: this.lastResponse.virtual_db!,
-        virtual_run_id: this.lastResponse.virtual_run_id,
+        virtual_db: this.virtualDb,
+        virtual_run_id: this.virtualRunId,
         target_step_id: target.step_id,
         target_module_name: target.module_name,
         interaction_id: this.lastResponse.interaction_request!.interaction_id,
         response,
       });
 
-      return this.handleServerResponse(workflow, target, serverResponse);
+      this.lastResponse = serverResponse;
+      this.virtualDb = serverResponse.virtual_db;
+
+      if (serverResponse.status === "error") {
+        this.status = "error";
+        this.lastError = serverResponse.error ?? "Unknown error";
+        return { status: "error", error: this.lastError };
+      }
+
+      if (
+        serverResponse.status === "completed" ||
+        serverResponse.status === "target_reached"
+      ) {
+        this.status = "completed";
+        await this.fetchStateAndHistory();
+        
+        // Update furthest position and store hash
+        const targetIndex = getModuleIndex(workflow, target);
+        if (targetIndex > this.furthestModuleIndex) {
+          this.furthestModuleIndex = targetIndex;
+        }
+        const targetHash = await computeHash(
+          getWorkflowSlice(workflow, targetIndex)
+        );
+        this.workflowSliceHashes.set(targetIndex, targetHash);
+        
+        return { status: "completed", response: serverResponse };
+      }
+
+      if (serverResponse.status === "awaiting_input") {
+        this.status = "awaiting_input";
+        return { status: "awaiting_input", response: serverResponse };
+      }
+
+      this.status = "error";
+      this.lastError = `Unexpected status: ${serverResponse.status}`;
+      return { status: "error", error: this.lastError };
     } catch (error) {
       this.status = "error";
       this.lastError = error instanceof Error ? error.message : String(error);
-      return {
-        status: "error",
-        error: this.lastError,
-      };
+      return { status: "error", error: this.lastError };
     }
   }
 
   /**
-   * Run workflow to a target module for state inspection only.
-   *
-   * This runs the workflow but opens the state panel instead of the preview panel.
-   * If we already have state covering this module, just opens the panel without re-running.
-   *
-   * @param workflow - The full workflow definition
-   * @param target - The module to run to
-   * @param selections - Pre-defined selections for prerequisite interactive modules
-   * @returns RunResult with status and optional response/error
-   */
-  async runToModuleForState(
-    workflow: WorkflowDefinition,
-    target: ModuleLocation,
-    selections: ModuleSelection[]
-  ): Promise<RunResult> {
-    console.log("[VirtualRuntime] runToModuleForState called with target:", target);
-    
-    // Set the filter for state display
-    this.stateUpToModule = target;
-
-    // Update hashes to check for stale checkpoints
-    await this.updateHashes(workflow);
-
-    // Check if we already have state covering this module
-    if (this.hasStateCovering(workflow, target) && this.lastResponse?.state) {
-      console.log("[VirtualRuntime] Already have state covering this module, skipping API call");
-      // Already have state - just open the panel
-      this.openStatePanel();
-      return {
-        status: this.status === "idle" ? "completed" : this.status,
-        response: this.lastResponse,
-      };
-    }
-
-    console.log("[VirtualRuntime] Need to run to get state, calling runToModule");
-    // Need to run to get state
-    return this.runToModule(workflow, target, selections, {
-      openPanel: "state",
-    });
-  }
-
-  /**
-   * Reset the runtime, clearing all checkpoints and state.
-   * Optionally close panels.
+   * Reset the runtime, clearing all state.
    */
   reset(closePanels: boolean = false): void {
-    this.checkpoints.clear();
-    this.moduleHashes.clear();
-    this.workflowHash = "";
+    this.virtualDb = null;
+    this.virtualRunId = null;
+    this.state = null;
+    this.interactionHistory.clear();
+    this.pendingInteraction = null;
+    this.furthestModuleIndex = -1;
+    this.workflowSliceHashes.clear();
     this.status = "idle";
     this.lastResponse = null;
     this.lastError = null;
     this.currentTarget = null;
+    this.stateUpToModule = null;
+
     if (closePanels) {
       this.closePanel();
       this.closeStatePanel();
@@ -541,130 +576,175 @@ export class VirtualRuntime {
   }
 
   /**
-   * Update workflow and module hashes, invalidating stale checkpoints.
+   * Check if workflow has changed before the target, requiring a reset.
    */
-  private async updateHashes(workflow: WorkflowDefinition): Promise<void> {
-    const newWorkflowHash = await hashWorkflow(workflow);
-
-    // If workflow hash changed, we need to check each module
-    if (newWorkflowHash !== this.workflowHash) {
-      this.workflowHash = newWorkflowHash;
-
-      const moduleOrder = getModuleOrder(workflow);
-      let invalidateRemaining = false;
-
-      for (const location of moduleOrder) {
-        const key = this.locationKey(location);
-        const newModuleHash = await hashModule(workflow, location);
-        const oldModuleHash = this.moduleHashes.get(key);
-
-        // If this module changed, invalidate it and all subsequent modules
-        if (newModuleHash !== oldModuleHash || invalidateRemaining) {
-          this.checkpoints.delete(key);
-          invalidateRemaining = true;
-        }
-
-        this.moduleHashes.set(key, newModuleHash);
-      }
-    }
-  }
-
-  /**
-   * Find the best (most recent) valid checkpoint before the target module.
-   */
-  private findBestCheckpoint(
+  private async checkNeedsReset(
     workflow: WorkflowDefinition,
-    target: ModuleLocation
-  ): ModuleCheckpoint | null {
-    const moduleOrder = getModuleOrder(workflow);
-    const targetIndex = getModuleIndex(workflow, target);
-
-    // Search backwards from target-1 to find a valid checkpoint
-    for (let i = targetIndex - 1; i >= 0; i--) {
-      const location = moduleOrder[i];
-      const key = this.locationKey(location);
-      const checkpoint = this.checkpoints.get(key);
-
-      if (checkpoint && checkpoint.workflow_hash === this.workflowHash) {
-        return checkpoint;
-      }
+    targetIndex: number
+  ): Promise<boolean> {
+    // If we haven't executed anything yet, no reset needed (will do fresh start)
+    if (this.furthestModuleIndex < 0) {
+      return false;
     }
 
-    return null;
-  }
-
-  /**
-   * Execute from a checkpoint (or start) to the target module.
-   */
-  private async executeToTarget(
-    workflow: WorkflowDefinition,
-    target: ModuleLocation,
-    checkpoint: ModuleCheckpoint | null,
-    selectionMap: Map<string, InteractionResponseData>
-  ): Promise<RunResult> {
-    console.log("[VirtualRuntime] executeToTarget - API call with:", {
-      target_step_id: target.step_id,
-      target_module_name: target.module_name,
-      hasCheckpoint: !!checkpoint,
-    });
+    // If target is within what we've already executed, check if that slice changed
+    const checkUpToIndex = Math.min(targetIndex, this.furthestModuleIndex);
     
-    // Start execution from checkpoint or fresh
-    let serverResponse = await virtualStart({
-      workflow,
-      virtual_db: checkpoint?.virtual_db ?? null,
-      target_step_id: target.step_id,
-      target_module_name: target.module_name,
-    });
+    // Find the stored hash for the checkUpToIndex or the closest index we have
+    const storedHash = this.workflowSliceHashes.get(checkUpToIndex);
     
-    console.log("[VirtualRuntime] API response status:", serverResponse.status, 
-      "progress:", serverResponse.progress);
-
-    // Process response and potentially auto-respond to prerequisite interactions
-    return this.processExecutionLoop(
-      workflow,
-      target,
-      serverResponse,
-      selectionMap
+    if (!storedHash) {
+      // We don't have a hash for this exact index, compute the current hash
+      // and compare against what we'd expect based on stored hashes
+      // If we have a hash for a larger index, we need to compute fresh
+      const currentSliceHash = await computeHash(
+        getWorkflowSlice(workflow, checkUpToIndex)
+      );
+      
+      // Store it for future comparisons
+      this.workflowSliceHashes.set(checkUpToIndex, currentSliceHash);
+      
+      // No stored hash means this is a new target in an already-executed range
+      // We trust the current workflow state since no previous hash to compare
+      return false;
+    }
+    
+    const currentSliceHash = await computeHash(
+      getWorkflowSlice(workflow, checkUpToIndex)
     );
+
+    // If slice hash changed, we need to reset
+    if (currentSliceHash !== storedHash) {
+      console.log("[VirtualRuntime] Workflow slice changed:", {
+        checkUpToIndex,
+        oldHash: storedHash.substring(0, 8),
+        newHash: currentSliceHash.substring(0, 8),
+      });
+      return true;
+    }
+
+    return false;
   }
 
   /**
-   * Process server response, auto-responding to prerequisite modules.
+   * Reset and start fresh.
    */
-  private async processExecutionLoop(
+  private async resetAndStart(
     workflow: WorkflowDefinition,
     target: ModuleLocation,
-    serverResponse: VirtualWorkflowResponse,
-    selectionMap: Map<string, InteractionResponseData>
-  ): Promise<RunResult> {
-    let response = serverResponse;
+    selections: ModuleSelection[]
+  ): Promise<void> {
+    // Clear previous state
+    this.virtualDb = null;
+    this.virtualRunId = null;
+    this.state = null;
+    this.interactionHistory.clear();
+    this.pendingInteraction = null;
+    this.furthestModuleIndex = -1;
+    this.workflowSliceHashes.clear();
+
+    // Start fresh
+    const response = await virtualStart({
+      workflow,
+      virtual_db: null,
+      target_step_id: target.step_id,
+      target_module_name: target.module_name,
+    });
+
+    console.log("[VirtualRuntime] resetAndStart - received response", {
+      status: response.status,
+      hasVirtualDb: !!response.virtual_db,
+      virtualDbLength: response.virtual_db?.length,
+      virtualRunId: response.virtual_run_id,
+    });
+
+    this.lastResponse = response;
+    this.virtualDb = response.virtual_db;
+    this.virtualRunId = response.virtual_run_id;
+
+    // Handle response
+    await this.processExecutionResponse(workflow, target, response, selections);
+  }
+
+  /**
+   * Execute forward from current position to target.
+   */
+  private async executeForward(
+    workflow: WorkflowDefinition,
+    target: ModuleLocation,
+    selections: ModuleSelection[]
+  ): Promise<void> {
+    if (!this.virtualDb) {
+      // No existing state, do fresh start
+      return this.resetAndStart(workflow, target, selections);
+    }
+
+    const requestPayload = {
+      workflow,
+      virtual_db: this.virtualDb,
+      target_step_id: target.step_id,
+      target_module_name: target.module_name,
+    };
+    
+    console.log("[VirtualRuntime] executeForward - calling /resume/confirm", {
+      hasVirtualDb: !!this.virtualDb,
+      virtualDbLength: this.virtualDb?.length,
+      virtualRunId: this.virtualRunId,
+      target,
+      payloadKeys: Object.keys(requestPayload),
+      workflowId: workflow.workflow_id,
+    });
+
+    const response = await virtualResumeConfirm(requestPayload);
+
+    this.lastResponse = response;
+    this.virtualDb = response.virtual_db;
+    this.virtualRunId = response.virtual_run_id;
+
+    await this.processExecutionResponse(workflow, target, response, selections);
+  }
+
+  /**
+   * Process execution response, handling auto-selection for prerequisite modules.
+   */
+  private async processExecutionResponse(
+    workflow: WorkflowDefinition,
+    target: ModuleLocation,
+    response: VirtualWorkflowResponse,
+    selections: ModuleSelection[]
+  ): Promise<void> {
+    // Build selection map
+    const selectionMap = new Map<string, InteractionResponseData>();
+    for (const sel of selections) {
+      selectionMap.set(this.locationKey(sel), sel.response);
+    }
+
+    let currentResponse = response;
 
     while (true) {
-      // Check response status
-      if (response.status === "error") {
+      if (currentResponse.status === "error") {
         this.status = "error";
-        this.lastError = response.error ?? "Unknown error";
-        this.lastResponse = response;
-        return { status: "error", error: this.lastError };
+        this.lastError = currentResponse.error ?? "Unknown error";
+        this.lastResponse = currentResponse;
+        return;
       }
 
-      if (response.status === "completed" || response.status === "target_reached") {
-        // Module completed - save checkpoint
-        this.saveCheckpoint(workflow, target, response);
+      if (
+        currentResponse.status === "completed" ||
+        currentResponse.status === "target_reached"
+      ) {
         this.status = "completed";
-        this.lastResponse = response;
-        return { status: "completed", response };
+        this.lastResponse = currentResponse;
+        return;
       }
 
-      if (response.status === "awaiting_input") {
-        // Check if this is the target module or a prerequisite
-        const interactionModule = this.getInteractionModule(response);
-        
+      if (currentResponse.status === "awaiting_input") {
+        const interactionModule = this.getInteractionModule(currentResponse);
+
         if (!interactionModule) {
-          // Can't determine module - return to user
           this.status = "awaiting_input";
-          this.lastResponse = response;
-          return { status: "awaiting_input", response };
+          this.lastResponse = currentResponse;
+          return;
         }
 
         const isTarget =
@@ -674,115 +754,111 @@ export class VirtualRuntime {
         if (isTarget) {
           // Target module needs input - return to user
           this.status = "awaiting_input";
-          this.lastResponse = response;
-          return { status: "awaiting_input", response };
+          this.lastResponse = currentResponse;
+          return;
         }
 
-        // Prerequisite module - check if we have a selection for it
+        // Prerequisite module - try to auto-select
         const selectionKey = this.locationKey(interactionModule);
         let selection = selectionMap.get(selectionKey);
 
         if (!selection) {
-          // No user-provided selection - try to auto-select
-          const interactionRequest = response.interaction_request as InteractionRequest | undefined;
+          // Try persisted selection
+          selection = this.getPersistedSelection(interactionModule);
+        }
+
+        if (!selection) {
+          // Try auto-select
+          const interactionRequest =
+            currentResponse.interaction_request as InteractionRequest | undefined;
           if (interactionRequest) {
             selection = buildAutoSelectionResponse(interactionRequest) ?? undefined;
-            console.log("[VirtualRuntime] Auto-select for prerequisite module:", {
-              module: interactionModule,
-              selection,
-              interactionRequest: interactionRequest,
-            });
+            if (selection) {
+              // Persist for future use
+              this.persistSelection(interactionModule, selection);
+            }
           }
         }
 
         if (!selection) {
-          // Can't auto-select (no selectable items) - return to user for input
-          console.log("[VirtualRuntime] Cannot auto-select, returning awaiting_input");
+          // Can't auto-select - return to user
+          console.log(
+            "[VirtualRuntime] Cannot auto-select, returning awaiting_input"
+          );
           this.status = "awaiting_input";
-          this.lastResponse = response;
-          return { status: "awaiting_input", response };
+          this.lastResponse = currentResponse;
+          return;
         }
 
-        // Auto-respond with provided or auto-generated selection
-        response = await virtualRespond({
+        // Auto-respond
+        console.log("[VirtualRuntime] Auto-responding for prerequisite:", {
+          module: interactionModule,
+        });
+
+        currentResponse = await virtualRespond({
           workflow,
-          virtual_db: response.virtual_db!,
-          virtual_run_id: response.virtual_run_id,
+          virtual_db: currentResponse.virtual_db!,
+          virtual_run_id: currentResponse.virtual_run_id,
           target_step_id: target.step_id,
           target_module_name: target.module_name,
-          interaction_id: response.interaction_request!.interaction_id,
+          interaction_id: currentResponse.interaction_request!.interaction_id,
           response: selection,
         });
 
-        // Save checkpoint for this prerequisite module
-        if (response.status !== "error") {
-          this.saveCheckpoint(workflow, interactionModule, response);
-        }
+        this.lastResponse = currentResponse;
+        this.virtualDb = currentResponse.virtual_db;
       } else {
         // Unexpected status
         this.status = "error";
-        this.lastError = `Unexpected status: ${response.status}`;
-        this.lastResponse = response;
-        return { status: "error", error: this.lastError };
+        this.lastError = `Unexpected status: ${currentResponse.status}`;
+        this.lastResponse = currentResponse;
+        return;
       }
     }
   }
 
   /**
-   * Handle server response and update state.
+   * Fetch state and interaction history from server.
    */
-  private handleServerResponse(
-    workflow: WorkflowDefinition,
-    target: ModuleLocation,
-    response: VirtualWorkflowResponse
-  ): RunResult {
-    this.lastResponse = response;
-
-    if (response.status === "error") {
-      this.status = "error";
-      this.lastError = response.error ?? "Unknown error";
-      return { status: "error", error: this.lastError };
-    }
-
-    if (response.status === "completed" || response.status === "target_reached") {
-      this.saveCheckpoint(workflow, target, response);
-      this.status = "completed";
-      return { status: "completed", response };
-    }
-
-    if (response.status === "awaiting_input") {
-      this.status = "awaiting_input";
-      return { status: "awaiting_input", response };
-    }
-
-    this.status = "error";
-    this.lastError = `Unexpected status: ${response.status}`;
-    return { status: "error", error: this.lastError };
-  }
-
-  /**
-   * Save a checkpoint for a module.
-   */
-  private saveCheckpoint(
-    _workflow: WorkflowDefinition,
-    location: ModuleLocation,
-    response: VirtualWorkflowResponse
-  ): void {
-    if (!response.virtual_db || !response.state) {
+  private async fetchStateAndHistory(): Promise<void> {
+    if (!this.virtualDb || !this.virtualRunId) {
       return;
     }
 
-    const key = this.locationKey(location);
-    const moduleHash = this.moduleHashes.get(key) ?? "";
+    try {
+      // Fetch both in parallel
+      const [stateResponse, historyResponse] = await Promise.all([
+        virtualGetState({
+          virtual_db: this.virtualDb,
+          virtual_run_id: this.virtualRunId,
+        }),
+        virtualGetInteractionHistory({
+          virtual_db: this.virtualDb,
+          virtual_run_id: this.virtualRunId,
+        }),
+      ]);
 
-    this.checkpoints.set(key, {
-      location,
-      workflow_hash: this.workflowHash,
-      module_hash: moduleHash,
-      virtual_db: response.virtual_db,
-      virtual_run_id: response.virtual_run_id,
-      state: response.state,
-    });
+      this.state = stateResponse;
+
+      // Update interaction history map
+      this.interactionHistory.clear();
+      for (const interaction of historyResponse.interactions) {
+        if (interaction.step_id && interaction.module_name) {
+          const key = `${interaction.step_id}/${interaction.module_name}`;
+          this.interactionHistory.set(key, interaction);
+        }
+      }
+
+      this.pendingInteraction = historyResponse.pending_interaction;
+
+      console.log("[VirtualRuntime] Fetched state and history:", {
+        stateKeys: Object.keys(stateResponse.state_mapped || {}),
+        interactionCount: historyResponse.interactions.length,
+        hasPending: !!historyResponse.pending_interaction,
+      });
+    } catch (error) {
+      console.error("[VirtualRuntime] Failed to fetch state/history:", error);
+    }
   }
 
   /**
@@ -791,7 +867,6 @@ export class VirtualRuntime {
   private getInteractionModule(
     response: VirtualWorkflowResponse
   ): ModuleLocation | null {
-    // Try to get from progress
     if (response.progress?.current_step && response.progress?.current_module) {
       return {
         step_id: response.progress.current_step,
@@ -799,5 +874,42 @@ export class VirtualRuntime {
       };
     }
     return null;
+  }
+
+  // ===========================================================================
+  // Selection Persistence (Session Storage)
+  // ===========================================================================
+
+  private getStorageKey(): string {
+    return `wfm_editor_selections_${this.sessionId}`;
+  }
+
+  private getPersistedSelections(): Record<string, InteractionResponseData> {
+    try {
+      const stored = sessionStorage.getItem(this.getStorageKey());
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  private persistSelection(
+    location: ModuleLocation,
+    response: InteractionResponseData
+  ): void {
+    try {
+      const selections = this.getPersistedSelections();
+      selections[this.locationKey(location)] = response;
+      sessionStorage.setItem(this.getStorageKey(), JSON.stringify(selections));
+    } catch (error) {
+      console.warn("[VirtualRuntime] Failed to persist selection:", error);
+    }
+  }
+
+  private getPersistedSelection(
+    location: ModuleLocation
+  ): InteractionResponseData | undefined {
+    const selections = this.getPersistedSelections();
+    return selections[this.locationKey(location)];
   }
 }

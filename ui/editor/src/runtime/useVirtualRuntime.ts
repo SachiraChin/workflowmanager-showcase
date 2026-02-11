@@ -12,8 +12,9 @@ import type {
   ModuleLocation,
   ModuleSelection,
   VirtualWorkflowResponse,
+  VirtualStateResponse,
+  CompletedInteraction,
   RuntimeStatus,
-  ModuleCheckpoint,
 } from "./types";
 
 // =============================================================================
@@ -29,8 +30,8 @@ export interface VirtualRuntimeState {
   lastResponse: VirtualWorkflowResponse | null;
   /** Last error message */
   error: string | null;
-  /** Current state (module outputs) */
-  state: Record<string, unknown> | null;
+  /** Current state from /virtual/state endpoint */
+  state: VirtualStateResponse | null;
   /** Whether the runtime panel is open */
   panelOpen: boolean;
   /** Whether the state panel is open */
@@ -80,9 +81,14 @@ export interface VirtualRuntimeActions {
   ) => Promise<void>;
 
   /**
-   * Get checkpoint for a module if it exists.
+   * Get interaction data for a specific module (for rendering preview).
    */
-  getCheckpoint: (location: ModuleLocation) => ModuleCheckpoint | null;
+  getInteractionForModule: (location: ModuleLocation) => CompletedInteraction | null;
+
+  /**
+   * Check if we have state covering a given module.
+   */
+  hasStateFor: (workflow: WorkflowDefinition, target: ModuleLocation) => boolean;
 
   /**
    * Reset the runtime, clearing all checkpoints and state.
@@ -171,7 +177,7 @@ export function useVirtualRuntime(): UseVirtualRuntimeReturn {
   const [lastResponse, setLastResponse] =
     useState<VirtualWorkflowResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [state, setState] = useState<Record<string, unknown> | null>(null);
+  const [state, setState] = useState<VirtualStateResponse | null>(null);
   const [panelOpen, setPanelOpenState] = useState(false);
   const [statePanelOpen, setStatePanelOpenState] = useState(false);
   const [currentTarget, setCurrentTarget] = useState<ModuleLocation | null>(null);
@@ -200,7 +206,7 @@ export function useVirtualRuntime(): UseVirtualRuntimeReturn {
     setStatus(runtime.getStatus());
     setLastResponse(runtime.getLastResponse());
     setError(runtime.getLastError());
-    setState(runtime.getLastResponse()?.state ?? null);
+    setState(runtime.getState());
     setPanelOpenState(runtime.isPanelOpen());
     setStatePanelOpenState(runtime.isStatePanelOpen());
     setCurrentTarget(runtime.getCurrentTarget());
@@ -271,9 +277,16 @@ export function useVirtualRuntime(): UseVirtualRuntimeReturn {
     [runtime, syncState]
   );
 
-  const getCheckpoint = useCallback(
+  const getInteractionForModule = useCallback(
     (location: ModuleLocation) => {
-      return runtime.getCheckpoint(location);
+      return runtime.getInteractionForModule(location);
+    },
+    [runtime]
+  );
+
+  const hasStateFor = useCallback(
+    (workflow: WorkflowDefinition, target: ModuleLocation) => {
+      return runtime.hasStateFor(workflow, target);
     },
     [runtime]
   );
@@ -328,7 +341,8 @@ export function useVirtualRuntime(): UseVirtualRuntimeReturn {
       runToModule,
       runToModuleForState,
       submitResponse,
-      getCheckpoint,
+      getInteractionForModule,
+      hasStateFor,
       reset,
       openPanel,
       closePanel,
@@ -342,7 +356,8 @@ export function useVirtualRuntime(): UseVirtualRuntimeReturn {
       runToModule,
       runToModuleForState,
       submitResponse,
-      getCheckpoint,
+      getInteractionForModule,
+      hasStateFor,
       reset,
       openPanel,
       closePanel,

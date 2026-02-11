@@ -349,6 +349,17 @@ export function WorkflowEditorPage() {
   );
 
   /**
+   * Get completed interaction for current target (for backward navigation).
+   * Only relevant when status is "completed" and we have a target.
+   */
+  const completedInteraction = useMemo(() => {
+    if (runtime.status !== "completed" || !runtime.currentTarget) {
+      return null;
+    }
+    return runtime.actions.getInteractionForModule(runtime.currentTarget);
+  }, [runtime.status, runtime.currentTarget, runtime.actions]);
+
+  /**
    * Handle clone confirmation - clone global template to user's template.
    */
   const handleCloneConfirm = useCallback(async () => {
@@ -842,6 +853,7 @@ export function WorkflowEditorPage() {
         response={runtime.lastResponse}
         error={runtime.error}
         onSubmit={handlePreviewSubmit}
+        completedInteraction={completedInteraction}
       />
 
       {/* State Panel (left drawer) */}
