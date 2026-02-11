@@ -28,7 +28,7 @@ import {
   getInputSummary,
   getOutputSchemaSummary,
   isContentRef,
-} from "@/modules/llm";
+} from "./types";
 import { PromptEditor, type StateVariable } from "@/components/prompt-editor";
 
 // =============================================================================

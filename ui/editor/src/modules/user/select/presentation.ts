@@ -1,4 +1,4 @@
-import { isJsonRef, type UserSelectModule } from "@/modules/user-select/types";
+import { isJsonRef, type UserSelectModule } from "./types";
 
 export type UserSelectPreviewCard = {
   id: string;

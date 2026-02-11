@@ -1,4 +1,4 @@
-import type { UserSelectModule } from "@/modules/user-select/types";
+import type { UserSelectModule } from "@/modules/user/select";
 
 export const ccStep1UserInputModules: UserSelectModule[] = [
   {

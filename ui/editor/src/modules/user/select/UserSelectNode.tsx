@@ -34,10 +34,7 @@ import {
   JsonSchemaEditor,
   type JsonSchemaObject,
 } from "@/components/JsonSchemaEditor";
-import {
-  type UserSelectModule,
-  isJsonRefObject,
-} from "@/modules/user-select/types";
+import { type UserSelectModule, isJsonRefObject } from "./types";
 
 // =============================================================================
 // Types

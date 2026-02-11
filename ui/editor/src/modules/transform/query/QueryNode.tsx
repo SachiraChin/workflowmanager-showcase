@@ -30,7 +30,7 @@ import {
 } from "@wfm/shared";
 import Editor from "@monaco-editor/react";
 import { PipelineEditor } from "@/components/PipelineEditor";
-import { type QueryModule, type PipelineStage } from "@/modules/query/types";
+import { type QueryModule, type PipelineStage } from "./types";
 import {
   getPipelineSummary,
   getDataSourceSummary,
@@ -38,7 +38,7 @@ import {
   parsePipelineString,
   formatDataForDisplay,
   parseDataString,
-} from "@/modules/query/presentation";
+} from "./presentation";
 
 // =============================================================================
 // Types

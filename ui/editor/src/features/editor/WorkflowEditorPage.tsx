@@ -31,15 +31,6 @@ import {
   type ModuleLocation,
 } from "@/runtime";
 import {
-  UserSelectNode,
-  type UserSelectNodeData,
-  MODULE_WIDTH,
-} from "@/components/nodes/UserSelectNode";
-import {
-  WeightedKeywordsNode,
-  type WeightedKeywordsNodeData,
-} from "@/components/nodes/WeightedKeywordsNode";
-import {
   StepNode,
   type StepNodeData,
 } from "@/components/nodes/StepNode";
@@ -53,17 +44,26 @@ import {
   type PlaceholderNodeData,
 } from "@/components/nodes/PlaceholderNode";
 import {
+  UserSelectNode,
+  type UserSelectNodeData,
+  type UserSelectModule,
+  MODULE_WIDTH,
+} from "@/modules/user/select";
+import {
+  WeightedKeywordsNode,
+  type WeightedKeywordsNodeData,
+  type WeightedKeywordsModule,
+} from "@/modules/io/weighted_keywords";
+import {
   LLMNode,
   type LLMNodeData,
-} from "@/components/nodes/LLMNode";
+  type LLMModule,
+} from "@/modules/api/llm";
 import {
   QueryNode,
   type QueryNodeData,
-} from "@/components/nodes/QueryNode";
-import { type UserSelectModule } from "@/modules/user-select/types";
-import { type WeightedKeywordsModule } from "@/modules/weighted-keywords/types";
-import { type LLMModule } from "@/modules/llm/types";
-import { type QueryModule } from "@/modules/query/types";
+  type QueryModule,
+} from "@/modules/transform/query";
 import {
   useNodeHeights,
   NodeHeightsProvider,

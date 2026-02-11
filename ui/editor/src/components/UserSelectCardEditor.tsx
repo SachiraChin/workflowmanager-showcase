@@ -24,7 +24,7 @@ import {
   type UserSelectModule,
   type JsonRef,
   isJsonRefObject,
-} from "@/modules/user-select/types";
+} from "@/modules/user/select";
 
 // =============================================================================
 // Types

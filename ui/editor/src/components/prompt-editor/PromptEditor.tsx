@@ -40,7 +40,7 @@ import {
   Label,
 } from "@wfm/shared";
 import Editor from "@monaco-editor/react";
-import type { SystemMessageItem, InputContent, ContentRef } from "@/modules/llm";
+import type { SystemMessageItem, InputContent, ContentRef } from "@/modules/api/llm";
 
 // =============================================================================
 // Types

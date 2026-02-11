@@ -1,7 +1,5 @@
-import { isJsonRef, type UserSelectModule } from "@/modules/user-select/types";
-import {
-  userSelectDataSourceSummary,
-} from "@/modules/user-select/presentation";
+import { isJsonRef, type UserSelectModule } from "./types";
+import { userSelectDataSourceSummary } from "./presentation";
 import type { ReactNode } from "react";
 
 type UserSelectModuleCardProps = {

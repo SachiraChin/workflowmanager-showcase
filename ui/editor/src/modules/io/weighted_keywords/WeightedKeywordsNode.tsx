@@ -40,13 +40,13 @@ import {
   type PipelineStage,
   isLoadMode,
   isSaveMode,
-} from "@/modules/weighted-keywords/types";
+} from "./types";
 import {
   getPipelineSummary,
   getKeywordsSourceSummary,
   formatPipelineForDisplay,
   parsePipelineString,
-} from "@/modules/weighted-keywords/presentation";
+} from "./presentation";
 
 // =============================================================================
 // Types

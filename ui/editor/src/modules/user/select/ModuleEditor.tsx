@@ -4,7 +4,7 @@ import {
   type JsonRef,
   type UserSelectModule,
   type UserSelectOption,
-} from "@/modules/user-select/types";
+} from "./types";
 
 type UserSelectModuleEditorProps = {
   value: UserSelectModule;
