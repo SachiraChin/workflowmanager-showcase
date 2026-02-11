@@ -4,6 +4,7 @@ Authentication API routes.
 Endpoints:
 - POST /auth/login    - Login with username/email + password
 - POST /auth/register - Create account using invitation code
+- POST /auth/guest-access - Create guest account using invitation code
 - GET  /auth/invitation/{invitation_code} - Check invitation status
 - POST /auth/logout   - Logout (clear cookies, revoke token)
 - POST /auth/refresh  - Refresh access token
@@ -83,6 +84,18 @@ class RegisterResponse(LoginResponse):
     """Register response (user info only, tokens in cookies)."""
 
     message: str = "Account created successfully"
+
+
+class GuestAccessRequest(BaseModel):
+    """Guest access request using invitation code."""
+
+    invitation_code: str
+
+
+class GuestAccessResponse(LoginResponse):
+    """Guest access response (user info only, tokens in cookies)."""
+
+    message: str = "Guest access granted"
 
 
 class UserResponse(BaseModel):
@@ -443,6 +456,89 @@ async def register(
         email=email,
         username=username,
         role=user_doc.get("role"),
+    )
+
+
+@router.post("/guest-access", response_model=GuestAccessResponse, status_code=201)
+async def guest_access(
+    request: Request,
+    response: Response,
+    body: GuestAccessRequest,
+):
+    """Create guest account with invitation code and start authenticated session.
+
+    Guest accounts:
+    - Have auto-generated username (user_xxxxxx)
+    - Have no password (cannot login from another device)
+    - Are marked with is_guest=True
+    - Have full access like normal users
+    """
+    if not db:
+        raise HTTPException(status_code=503, detail="Service not initialized")
+
+    invitation_code = body.invitation_code.strip()
+    if not invitation_code:
+        raise HTTPException(status_code=400, detail="Invitation code is required")
+
+    # Validate invite before creating user document.
+    if not get_valid_invitation(invitation_code):
+        raise HTTPException(
+            status_code=400,
+            detail="Invitation code is invalid, expired, or exhausted",
+        )
+
+    now = datetime.utcnow()
+    user_id = f"usr_{uuid.uuid4().hex[:12]}"
+    # Generate unique username: user_xxxxxx (6 hex chars)
+    username = f"user_{uuid.uuid4().hex[:6]}"
+
+    user_doc: Dict[str, Any] = {
+        "user_id": user_id,
+        "username": username,
+        "password_hash": None,  # No password - cannot login from another device
+        "is_active": True,
+        "is_guest": True,
+        "created_at": now,
+        "updated_at": now,
+        "auth_providers": [],
+        "invitation_code": invitation_code,
+    }
+
+    try:
+        db.users.insert_one(user_doc)
+    except DuplicateKeyError:
+        # Extremely unlikely with UUID-based username, but handle it
+        raise HTTPException(status_code=500, detail="Failed to create guest account")
+
+    _, ip_address = get_client_info(request)
+    if not consume_invitation_code(invitation_code, user_id, ip_address):
+        # Invitation became invalid or exhausted during race.
+        db.users.delete_one({"user_id": user_id})
+        raise HTTPException(
+            status_code=400,
+            detail="Invitation code is invalid, expired, or exhausted",
+        )
+
+    access_token = create_access_token(user_id, None)
+    refresh_token, token_id, expires_at = create_refresh_token(user_id)
+
+    user_agent, ip_address = get_client_info(request)
+    db.user_repo.store_refresh_token(
+        token_id=token_id,
+        user_id=user_id,
+        token_hash=hash_refresh_token(refresh_token),
+        expires_at=expires_at,
+        user_agent=user_agent,
+        ip_address=ip_address,
+    )
+
+    set_auth_cookies(response, access_token, refresh_token)
+
+    return GuestAccessResponse(
+        user_id=user_id,
+        email=None,
+        username=username,
+        role=None,
     )
 
 

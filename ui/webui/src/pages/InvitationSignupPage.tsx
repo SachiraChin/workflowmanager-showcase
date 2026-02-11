@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, UserPlus } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Loader2, UserPlus, UserRound } from "lucide-react";
 import { api } from "@/core/api";
 
 interface InvitationSignupPageProps {
@@ -59,9 +60,11 @@ export function InvitationSignupPage({ onLoginSuccess }: InvitationSignupPagePro
 
   const [isCheckingInvitation, setIsCheckingInvitation] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGuestSubmitting, setIsGuestSubmitting] = useState(false);
   const [remainingUses, setRemainingUses] = useState<number | null>(null);
   const [invitationError, setInvitationError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [guestError, setGuestError] = useState<string | null>(null);
 
   const passwordStrength = useMemo(() => getPasswordStrength(password), [password]);
 
@@ -123,6 +126,31 @@ export function InvitationSignupPage({ onLoginSuccess }: InvitationSignupPagePro
     [invitationCode, username, password, email, onLoginSuccess]
   );
 
+  const handleGuestAccess = useCallback(async () => {
+    if (!invitationCode) {
+      setGuestError("Invitation code is missing from URL");
+      return;
+    }
+
+    setIsGuestSubmitting(true);
+    setGuestError(null);
+
+    try {
+      const data = await api.guestAccess(invitationCode);
+
+      onLoginSuccess({
+        user_id: data.user_id,
+        email: data.email,
+        username: data.username,
+        role: data.role,
+      });
+    } catch (err) {
+      setGuestError((err as Error).message);
+    } finally {
+      setIsGuestSubmitting(false);
+    }
+  }, [invitationCode, onLoginSuccess]);
+
   if (isCheckingInvitation) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -135,9 +163,9 @@ export function InvitationSignupPage({ onLoginSuccess }: InvitationSignupPagePro
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">Create account</CardTitle>
+          <CardTitle className="text-2xl font-bold">Welcome</CardTitle>
           <CardDescription>
-            Create a new account using your invitation link
+            Continue as a guest or create an account using your invitation
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -151,7 +179,7 @@ export function InvitationSignupPage({ onLoginSuccess }: InvitationSignupPagePro
               </p>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-6">
               {typeof remainingUses === "number" && (
                 <Alert>
                   <AlertDescription>
@@ -160,78 +188,125 @@ export function InvitationSignupPage({ onLoginSuccess }: InvitationSignupPagePro
                 </Alert>
               )}
 
-              {submitError && (
-                <Alert variant="destructive">
-                  <AlertDescription>{submitError}</AlertDescription>
-                </Alert>
-              )}
+              {/* Guest Access Section */}
+              <div className="space-y-3">
+                {guestError && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{guestError}</AlertDescription>
+                  </Alert>
+                )}
 
-              <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
-                <Input
-                  id="username"
-                  type="text"
-                  placeholder="Choose a username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  disabled={isSubmitting}
-                  required
-                  autoFocus
-                  autoComplete="username"
-                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleGuestAccess}
+                  disabled={isGuestSubmitting || isSubmitting}
+                >
+                  {isGuestSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Continuing as guest...
+                    </>
+                  ) : (
+                    <>
+                      <UserRound className="mr-2 h-4 w-4" />
+                      Continue as Guest
+                    </>
+                  )}
+                </Button>
+
+                <p className="text-xs text-muted-foreground text-center">
+                  Guest access is limited to this browser session. Create an account to access from other devices.
+                </p>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="email">Email (optional)</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={isSubmitting}
-                  autoComplete="email"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Create a password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={isSubmitting}
-                  required
-                  autoComplete="new-password"
-                />
-                <div className="space-y-1">
-                  <Progress value={passwordStrength.score * 20} />
-                  <p className="text-xs text-muted-foreground">
-                    Password strength: {passwordStrength.label}
-                  </p>
+              {/* Separator */}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <Separator className="w-full" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">
+                    Or create an account
+                  </span>
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating account...
-                  </>
-                ) : (
-                  <>
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    Create account
-                  </>
+              {/* Create Account Form */}
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {submitError && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{submitError}</AlertDescription>
+                  </Alert>
                 )}
-              </Button>
 
-              <p className="text-xs text-muted-foreground text-center">
-                Already have an account? <Link to="/login" className="underline">Login</Link>
-              </p>
-            </form>
+                <div className="space-y-2">
+                  <Label htmlFor="username">Username</Label>
+                  <Input
+                    id="username"
+                    type="text"
+                    placeholder="Choose a username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    disabled={isSubmitting || isGuestSubmitting}
+                    required
+                    autoComplete="username"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email (optional)</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={isSubmitting || isGuestSubmitting}
+                    autoComplete="email"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Create a password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={isSubmitting || isGuestSubmitting}
+                    required
+                    autoComplete="new-password"
+                  />
+                  <div className="space-y-1">
+                    <Progress value={passwordStrength.score * 20} />
+                    <p className="text-xs text-muted-foreground">
+                      Password strength: {passwordStrength.label}
+                    </p>
+                  </div>
+                </div>
+
+                <Button type="submit" className="w-full" disabled={isSubmitting || isGuestSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating account...
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Create account
+                    </>
+                  )}
+                </Button>
+
+                <p className="text-xs text-muted-foreground text-center">
+                  Already have an account? <Link to="/login" className="underline">Login</Link>
+                </p>
+              </form>
+            </div>
           )}
         </CardContent>
       </Card>

@@ -591,6 +591,25 @@ class ApiClient {
     });
   }
 
+  async guestAccess(invitationCode: string): Promise<{
+    user_id: string;
+    email?: string | null;
+    username: string;
+    role?: string | null;
+    message: string;
+  }> {
+    return this.requestRaw<{
+      user_id: string;
+      email?: string | null;
+      username: string;
+      role?: string | null;
+      message: string;
+    }>("/auth/guest-access", {
+      method: "POST",
+      body: JSON.stringify({ invitation_code: invitationCode }),
+    });
+  }
+
   async logout(): Promise<{ message: string }> {
     return this.requestRaw<{ message: string }>("/auth/logout", {
       method: "POST",
