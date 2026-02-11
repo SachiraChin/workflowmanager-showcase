@@ -56,9 +56,14 @@ import {
   LLMNode,
   type LLMNodeData,
 } from "@/components/nodes/LLMNode";
+import {
+  QueryNode,
+  type QueryNodeData,
+} from "@/components/nodes/QueryNode";
 import { type UserSelectModule } from "@/modules/user-select/types";
 import { type WeightedKeywordsModule } from "@/modules/weighted-keywords/types";
 import { type LLMModule } from "@/modules/llm/types";
+import { type QueryModule } from "@/modules/query/types";
 import {
   useNodeHeights,
   NodeHeightsProvider,
@@ -84,6 +89,7 @@ const nodeTypes = {
   userSelect: UserSelectNode,
   weightedKeywords: WeightedKeywordsNode,
   llm: LLMNode,
+  query: QueryNode,
   placeholder: PlaceholderNode,
 };
 
@@ -92,6 +98,7 @@ const SUPPORTED_MODULES: Record<string, string> = {
   "user.select": "userSelect",
   "io.weighted_keywords": "weightedKeywords",
   "api.llm": "llm",
+  "transform.query": "query",
 };
 
 /**
@@ -269,6 +276,23 @@ export function WorkflowEditorPage() {
 
   const handleLLMModuleChange = useCallback(
     (stepId: string, moduleName: string, updatedModule: LLMModule) => {
+      setSteps((prev) =>
+        prev.map((step) => {
+          if (step.step_id !== stepId) return step;
+          return {
+            ...step,
+            modules: step.modules.map((mod) =>
+              mod.name === moduleName ? updatedModule : mod
+            ),
+          };
+        })
+      );
+    },
+    []
+  );
+
+  const handleQueryModuleChange = useCallback(
+    (stepId: string, moduleName: string, updatedModule: QueryModule) => {
       setSteps((prev) =>
         prev.map((step) => {
           if (step.step_id !== stepId) return step;
@@ -536,6 +560,25 @@ export function WorkflowEditorPage() {
                 handleModuleViewState({ step_id: step.step_id, module_name: module.name! }),
             } satisfies LLMNodeData,
           });
+        } else if (nodeType === "query") {
+          nodes.push({
+            id: moduleNodeId,
+            type: "query",
+            position: { x: moduleX, y: moduleY },
+            parentId: stepNodeId,
+            extent: "parent",
+            draggable: false,
+            data: {
+              module: module as QueryModule,
+              onModuleChange: (updated: QueryModule) =>
+                handleQueryModuleChange(step.step_id, module.name!, updated),
+              expanded: isExpanded,
+              onExpandedChange: (exp: boolean, height: number) =>
+                handleModuleExpandedChange(moduleNodeId, exp, height),
+              onViewState: () =>
+                handleModuleViewState({ step_id: step.step_id, module_name: module.name! }),
+            } satisfies QueryNodeData,
+          });
         } else {
           // Placeholder for unsupported module types
           nodes.push({
@@ -602,7 +645,7 @@ export function WorkflowEditorPage() {
     });
 
     return { nodes, edges };
-  }, [workflowInfo, steps, expandedModules, nodeHeights.heights, handleWorkflowChange, handleStepChange, handleModuleChange, handleWeightedKeywordsModuleChange, handleLLMModuleChange, handleModuleExpandedChange, handleModuleViewState, handleModulePreview]);
+  }, [workflowInfo, steps, expandedModules, nodeHeights.heights, handleWorkflowChange, handleStepChange, handleModuleChange, handleWeightedKeywordsModuleChange, handleLLMModuleChange, handleQueryModuleChange, handleModuleExpandedChange, handleModuleViewState, handleModulePreview]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initialEdges);

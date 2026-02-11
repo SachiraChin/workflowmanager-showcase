@@ -30,7 +30,7 @@ import {
   DialogTitle,
   Label,
 } from "@wfm/shared";
-import Editor from "@monaco-editor/react";
+import { PipelineEditor } from "@/components/PipelineEditor";
 import {
   type WeightedKeywordsModule,
   type WeightedKeywordsLoadInputs,
@@ -337,7 +337,7 @@ function ExpandedLoadView({
 
       {/* Pipeline Editor Dialog */}
       <Dialog open={isPipelineEditorOpen} onOpenChange={setIsPipelineEditorOpen}>
-        <DialogContent className="max-w-3xl h-[70vh] flex flex-col">
+        <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Edit Pipeline</DialogTitle>
             <DialogDescription>
@@ -345,23 +345,10 @@ function ExpandedLoadView({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 min-h-0 border rounded overflow-hidden">
-            <Editor
-              height="100%"
-              language="json"
-              theme="vs-dark"
-              value={draftPipeline}
-              onChange={(value) => setDraftPipeline(value ?? "")}
-              options={{
-                minimap: { enabled: false },
-                fontSize: 13,
-                lineNumbers: "on",
-                scrollBeyondLastLine: false,
-                automaticLayout: true,
-                tabSize: 2,
-              }}
-            />
-          </div>
+          <PipelineEditor
+            value={draftPipeline}
+            onChange={setDraftPipeline}
+          />
 
           <DialogFooter>
             <Button
