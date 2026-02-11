@@ -1,25 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Background,
-  Panel,
   ReactFlow,
   useEdgesState,
   useNodesState,
-  useReactFlow,
   type Edge,
   type Node,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
-import Editor from "@monaco-editor/react";
 import {
   Alert,
   AlertDescription,
   Button,
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
   type StepDefinition,
   type WorkflowDefinition,
 } from "@wfm/shared";
@@ -44,30 +37,18 @@ import {
   type PlaceholderNodeData,
 } from "@/components/nodes/PlaceholderNode";
 import {
-  UserSelectNode,
-  type UserSelectNodeData,
-  type UserSelectModule,
-  MODULE_WIDTH,
-} from "@/modules/user/select";
-import {
-  WeightedKeywordsNode,
-  type WeightedKeywordsNodeData,
-  type WeightedKeywordsModule,
-} from "@/modules/io/weighted_keywords";
-import {
-  LLMNode,
-  type LLMNodeData,
-  type LLMModule,
-} from "@/modules/api/llm";
-import {
-  QueryNode,
-  type QueryNodeData,
-  type QueryModule,
-} from "@/modules/transform/query";
-import {
   useNodeHeights,
   NodeHeightsProvider,
 } from "@/hooks/useNodeHeights";
+import { ZoomControls } from "@/components/ZoomControls";
+import { CloneTemplateDialog, type CloneInfo } from "@/components/CloneTemplateDialog";
+import { WorkflowJsonDialog } from "@/components/WorkflowJsonDialog";
+
+// Import module system - this triggers all module registrations
+import { buildNodeTypes, getModuleRegistration } from "@/modules";
+
+// Import MODULE_WIDTH constant (used for layout calculations)
+import { MODULE_WIDTH } from "@/modules/user/select";
 
 // =============================================================================
 // Types
@@ -83,89 +64,16 @@ type EditorLocationState = {
 // Node Types Registration
 // =============================================================================
 
-const nodeTypes = {
+// Build nodeTypes from registry + structural nodes
+const nodeTypes = buildNodeTypes({
   workflow: WorkflowNode,
   step: StepNode,
-  userSelect: UserSelectNode,
-  weightedKeywords: WeightedKeywordsNode,
-  llm: LLMNode,
-  query: QueryNode,
   placeholder: PlaceholderNode,
-};
-
-// Supported module types with their node type mappings
-const SUPPORTED_MODULES: Record<string, string> = {
-  "user.select": "userSelect",
-  "io.weighted_keywords": "weightedKeywords",
-  "api.llm": "llm",
-  "transform.query": "query",
-};
-
-/**
- * Get the node type for a module based on its module_id.
- * Returns "placeholder" for unsupported module types.
- */
-function getNodeTypeForModule(moduleId: string): string {
-  return SUPPORTED_MODULES[moduleId] || "placeholder";
-}
+});
 
 
 
 // =============================================================================
-// Zoom Controls Component
-// =============================================================================
-
-function ZoomControls() {
-  const { zoomIn, zoomOut, fitView, getZoom } = useReactFlow();
-  const [zoom, setZoom] = useState(1);
-
-  // Update zoom display when zoom changes
-  useEffect(() => {
-    const updateZoom = () => setZoom(getZoom());
-    updateZoom();
-    // Poll for zoom changes (ReactFlow doesn't have a zoom change event)
-    const interval = setInterval(updateZoom, 100);
-    return () => clearInterval(interval);
-  }, [getZoom]);
-
-  const zoomPercentage = Math.round(zoom * 100);
-
-  return (
-    <Panel position="bottom-right">
-      <div className="flex items-center gap-1 rounded-lg border bg-card/95 p-1 shadow-lg backdrop-blur-sm">
-        <button
-          type="button"
-          className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted transition-colors"
-          onClick={() => zoomOut()}
-          title="Zoom out"
-        >
-          <span className="text-lg font-medium">−</span>
-        </button>
-        <span className="min-w-[4rem] text-center text-xs font-medium tabular-nums">
-          {zoomPercentage}%
-        </span>
-        <button
-          type="button"
-          className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted transition-colors"
-          onClick={() => zoomIn()}
-          title="Zoom in"
-        >
-          <span className="text-lg font-medium">+</span>
-        </button>
-        <div className="mx-1 h-4 w-px bg-border" />
-        <button
-          type="button"
-          className="flex h-8 items-center justify-center rounded-md px-2 text-xs hover:bg-muted transition-colors"
-          onClick={() => fitView({ padding: 0.3 })}
-          title="Fit to view"
-        >
-          Fit
-        </button>
-      </div>
-    </Panel>
-  );
-}
-
 // =============================================================================
 // Main Component
 // =============================================================================
@@ -203,11 +111,7 @@ export function WorkflowEditorPage() {
 
   // Clone confirmation dialog state (for non-admin editing global templates)
   const [showCloneDialog, setShowCloneDialog] = useState(false);
-  const [cloneInfo, setCloneInfo] = useState<{
-    templateId: string;
-    versionId: string;
-    templateName: string;
-  } | null>(null);
+  const [cloneInfo, setCloneInfo] = useState<CloneInfo | null>(null);
   const [isCloning, setIsCloning] = useState(false);
 
   // =============================================================================
@@ -240,66 +144,19 @@ export function WorkflowEditorPage() {
     );
   }, []);
 
+  /**
+   * Generic module change handler - works for all module types.
+   * Type safety is ensured by the module node components themselves.
+   */
   const handleModuleChange = useCallback(
-    (stepId: string, moduleName: string, updatedModule: UserSelectModule) => {
+    (stepId: string, moduleName: string, updatedModule: unknown) => {
       setSteps((prev) =>
         prev.map((step) => {
           if (step.step_id !== stepId) return step;
           return {
             ...step,
             modules: step.modules.map((mod) =>
-              mod.name === moduleName ? updatedModule : mod
-            ),
-          };
-        })
-      );
-    },
-    []
-  );
-
-  const handleWeightedKeywordsModuleChange = useCallback(
-    (stepId: string, moduleName: string, updatedModule: WeightedKeywordsModule) => {
-      setSteps((prev) =>
-        prev.map((step) => {
-          if (step.step_id !== stepId) return step;
-          return {
-            ...step,
-            modules: step.modules.map((mod) =>
-              mod.name === moduleName ? updatedModule : mod
-            ),
-          };
-        })
-      );
-    },
-    []
-  );
-
-  const handleLLMModuleChange = useCallback(
-    (stepId: string, moduleName: string, updatedModule: LLMModule) => {
-      setSteps((prev) =>
-        prev.map((step) => {
-          if (step.step_id !== stepId) return step;
-          return {
-            ...step,
-            modules: step.modules.map((mod) =>
-              mod.name === moduleName ? updatedModule : mod
-            ),
-          };
-        })
-      );
-    },
-    []
-  );
-
-  const handleQueryModuleChange = useCallback(
-    (stepId: string, moduleName: string, updatedModule: QueryModule) => {
-      setSteps((prev) =>
-        prev.map((step) => {
-          if (step.step_id !== stepId) return step;
-          return {
-            ...step,
-            modules: step.modules.map((mod) =>
-              mod.name === moduleName ? updatedModule : mod
+              mod.name === moduleName ? (updatedModule as typeof mod) : mod
             ),
           };
         })
@@ -492,7 +349,7 @@ export function WorkflowEditorPage() {
       let currentModuleY = stepHeaderHeight + stepPadding;
       step.modules.forEach((module, moduleIndex) => {
         const moduleNodeId = `module_${step.step_id}_${module.name}`;
-        const nodeType = getNodeTypeForModule(module.module_id);
+        const registration = getModuleRegistration(module.module_id);
         const isExpanded = expandedModules[moduleNodeId] ?? false;
         const moduleHeight = getModuleHeight(moduleNodeId);
         
@@ -500,18 +357,18 @@ export function WorkflowEditorPage() {
         const moduleX = stepPadding;
         const moduleY = currentModuleY;
 
-        // Build node data based on module type
-        if (nodeType === "userSelect") {
+        // Build node using registry if module is supported
+        if (registration) {
           nodes.push({
             id: moduleNodeId,
-            type: "userSelect",
+            type: registration.nodeType,
             position: { x: moduleX, y: moduleY },
             parentId: stepNodeId,
             extent: "parent",
             draggable: false,
-            data: {
-              module: module as UserSelectModule,
-              onModuleChange: (updated: UserSelectModule) =>
+            data: registration.createNodeData({
+              module,
+              onModuleChange: (updated: unknown) =>
                 handleModuleChange(step.step_id, module.name!, updated),
               expanded: isExpanded,
               onExpandedChange: (exp: boolean, height: number) =>
@@ -520,64 +377,7 @@ export function WorkflowEditorPage() {
                 handleModuleViewState({ step_id: step.step_id, module_name: module.name! }),
               onPreview: () =>
                 handleModulePreview({ step_id: step.step_id, module_name: module.name! }),
-            } satisfies UserSelectNodeData,
-          });
-        } else if (nodeType === "weightedKeywords") {
-          nodes.push({
-            id: moduleNodeId,
-            type: "weightedKeywords",
-            position: { x: moduleX, y: moduleY },
-            parentId: stepNodeId,
-            extent: "parent",
-            draggable: false,
-            data: {
-              module: module as WeightedKeywordsModule,
-              onModuleChange: (updated: WeightedKeywordsModule) =>
-                handleWeightedKeywordsModuleChange(step.step_id, module.name!, updated),
-              expanded: isExpanded,
-              onExpandedChange: (exp: boolean, height: number) =>
-                handleModuleExpandedChange(moduleNodeId, exp, height),
-              onViewState: () =>
-                handleModuleViewState({ step_id: step.step_id, module_name: module.name! }),
-            } satisfies WeightedKeywordsNodeData,
-          });
-        } else if (nodeType === "llm") {
-          nodes.push({
-            id: moduleNodeId,
-            type: "llm",
-            position: { x: moduleX, y: moduleY },
-            parentId: stepNodeId,
-            extent: "parent",
-            draggable: false,
-            data: {
-              module: module as LLMModule,
-              onModuleChange: (updated: LLMModule) =>
-                handleLLMModuleChange(step.step_id, module.name!, updated),
-              expanded: isExpanded,
-              onExpandedChange: (exp: boolean, height: number) =>
-                handleModuleExpandedChange(moduleNodeId, exp, height),
-              onViewState: () =>
-                handleModuleViewState({ step_id: step.step_id, module_name: module.name! }),
-            } satisfies LLMNodeData,
-          });
-        } else if (nodeType === "query") {
-          nodes.push({
-            id: moduleNodeId,
-            type: "query",
-            position: { x: moduleX, y: moduleY },
-            parentId: stepNodeId,
-            extent: "parent",
-            draggable: false,
-            data: {
-              module: module as QueryModule,
-              onModuleChange: (updated: QueryModule) =>
-                handleQueryModuleChange(step.step_id, module.name!, updated),
-              expanded: isExpanded,
-              onExpandedChange: (exp: boolean, height: number) =>
-                handleModuleExpandedChange(moduleNodeId, exp, height),
-              onViewState: () =>
-                handleModuleViewState({ step_id: step.step_id, module_name: module.name! }),
-            } satisfies QueryNodeData,
+            }),
           });
         } else {
           // Placeholder for unsupported module types
@@ -645,7 +445,7 @@ export function WorkflowEditorPage() {
     });
 
     return { nodes, edges };
-  }, [workflowInfo, steps, expandedModules, nodeHeights.heights, handleWorkflowChange, handleStepChange, handleModuleChange, handleWeightedKeywordsModuleChange, handleLLMModuleChange, handleQueryModuleChange, handleModuleExpandedChange, handleModuleViewState, handleModulePreview]);
+  }, [workflowInfo, steps, expandedModules, nodeHeights.heights, handleWorkflowChange, handleStepChange, handleModuleChange, handleModuleExpandedChange, handleModuleViewState, handleModulePreview]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initialEdges);
@@ -807,85 +607,24 @@ export function WorkflowEditorPage() {
       </div>
 
       {/* Full Workflow JSON Dialog */}
-      <Dialog open={isWorkflowViewOpen} onOpenChange={setIsWorkflowViewOpen}>
-        <DialogContent
-          className="flex flex-col p-0"
-          style={{ width: "80vw", height: "80vh", maxWidth: "80vw", maxHeight: "80vh" }}
-        >
-          <DialogHeader className="px-6 pt-6 pb-2">
-            <DialogTitle>
-              Full Workflow Definition
-              {resolvedVersionId && (
-                <span className="ml-2 text-sm font-normal text-muted-foreground">
-                  (v: {resolvedVersionId.slice(0, 8)}...)
-                </span>
-              )}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 min-h-0 px-2 pb-2">
-            <Editor
-              height="100%"
-              defaultLanguage="json"
-              value={JSON.stringify(
-                {
-                  workflow_id: workflowInfo.workflow_id,
-                  name: workflowInfo.name,
-                  description: workflowInfo.description,
-                  steps,
-                },
-                null,
-                2
-              )}
-              options={{
-                readOnly: true,
-                minimap: { enabled: false },
-                fontSize: 12,
-                lineNumbers: "on",
-                scrollBeyondLastLine: false,
-                folding: true,
-                wordWrap: "on",
-                automaticLayout: true,
-              }}
-              theme="vs-dark"
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
+      <WorkflowJsonDialog
+        open={isWorkflowViewOpen}
+        onOpenChange={setIsWorkflowViewOpen}
+        workflowId={workflowInfo.workflow_id}
+        workflowName={workflowInfo.name ?? "Untitled"}
+        workflowDescription={workflowInfo.description}
+        steps={steps}
+        versionId={resolvedVersionId}
+      />
 
       {/* Clone Global Template Dialog */}
-      <Dialog open={showCloneDialog} onOpenChange={() => {}}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Clone Global Template?</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <p className="text-sm text-muted-foreground">
-              This is a global template that you cannot edit directly.
-              Would you like to create a personal copy that you can modify?
-            </p>
-            {cloneInfo && (
-              <div className="rounded-md bg-muted p-3 text-sm">
-                <p><strong>Template:</strong> {cloneInfo.templateName}</p>
-              </div>
-            )}
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              onClick={handleCloneCancel}
-              disabled={isCloning}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleCloneConfirm}
-              disabled={isCloning}
-            >
-              {isCloning ? "Cloning..." : "Clone & Edit"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <CloneTemplateDialog
+        open={showCloneDialog}
+        cloneInfo={cloneInfo}
+        isCloning={isCloning}
+        onConfirm={handleCloneConfirm}
+        onCancel={handleCloneCancel}
+      />
 
       {/* Virtual Runtime Preview Panel */}
       <VirtualRuntimePanel
