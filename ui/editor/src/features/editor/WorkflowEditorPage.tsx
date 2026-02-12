@@ -660,6 +660,10 @@ export function WorkflowEditorPage() {
         completedInteraction={completedInteraction}
         mockMode={runtime.mockMode}
         onReloadWithMockMode={handleReloadWithMockMode}
+        getVirtualDb={runtime.getVirtualDb}
+        getVirtualRunId={runtime.getVirtualRunId}
+        getWorkflow={buildWorkflowDefinition}
+        onVirtualDbUpdate={runtime.setVirtualDb}
       />
 
       {/* State Panel (left drawer) */}

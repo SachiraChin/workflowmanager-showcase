@@ -43,11 +43,15 @@ export const IS_PROD = import.meta.env.PROD;
  *
  * The server returns relative paths (e.g., /workflow/{id}/media/{content_id}.png)
  * for locally stored media. This function prepends API_URL to make them absolute.
- * External URLs (http/https) are returned unchanged.
+ * External URLs (http/https) and data URIs are returned unchanged.
  */
 export function toMediaUrl(urlOrPath: string): string {
-  // Already an absolute URL (external provider URL)
-  if (urlOrPath.startsWith("http://") || urlOrPath.startsWith("https://")) {
+  // Already an absolute URL (external provider URL) or data URI
+  if (
+    urlOrPath.startsWith("http://") ||
+    urlOrPath.startsWith("https://") ||
+    urlOrPath.startsWith("data:")
+  ) {
     return urlOrPath;
   }
 

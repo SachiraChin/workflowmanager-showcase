@@ -260,6 +260,14 @@ export class VirtualRuntime {
     return this.virtualDb;
   }
 
+  /**
+   * Update the virtualDb state.
+   * Called when a sub-action completes and returns updated state.
+   */
+  setVirtualDb(virtualDb: string): void {
+    this.virtualDb = virtualDb;
+  }
+
   getVirtualRunId(): string | null {
     return this.virtualRunId;
   }

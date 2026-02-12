@@ -4,11 +4,12 @@
  * This component:
  * - Opens automatically when execution starts (controlled by runtime)
  * - Shows loading state while request is in flight
- * - For UX requests: renders InteractionHost
+ * - For UX requests: renders InteractionHost with virtual API client
  * - For non-UX requests: shows API response (excluding virtual_db and state)
  * - Has a close button but state is managed by the runtime
  */
 
+import { useMemo } from "react";
 import {
   Sheet,
   SheetContent,
@@ -17,13 +18,16 @@ import {
   SheetBody,
   InteractionHost,
   RenderProvider,
+  ApiClientProvider,
   Button,
   Badge,
   type InteractionRequest,
   type InteractionResponseData,
+  type WorkflowDefinition,
 } from "@wfm/shared";
 import { Loader2, RefreshCw } from "lucide-react";
 import type { RuntimeStatus, VirtualWorkflowResponse, CompletedInteraction } from "./types";
+import { createVirtualApiClient } from "./virtualApiClient";
 
 // =============================================================================
 // Props
@@ -50,6 +54,14 @@ export interface VirtualRuntimePanelProps {
   mockMode?: boolean;
   /** Called when user wants to reload with different mock mode */
   onReloadWithMockMode?: (mockMode: boolean) => void;
+  /** Get current virtualDb state (for virtual API client) */
+  getVirtualDb?: () => string | null;
+  /** Get current virtual run ID (for virtual API client) */
+  getVirtualRunId?: () => string | null;
+  /** Get current workflow definition (for virtual API client) */
+  getWorkflow?: () => WorkflowDefinition | null;
+  /** Called when virtualDb is updated by a sub-action */
+  onVirtualDbUpdate?: (newVirtualDb: string) => void;
 }
 
 // =============================================================================
@@ -67,10 +79,29 @@ export function VirtualRuntimePanel({
   completedInteraction,
   mockMode = true,
   onReloadWithMockMode,
+  getVirtualDb,
+  getVirtualRunId,
+  getWorkflow,
+  onVirtualDbUpdate,
 }: VirtualRuntimePanelProps) {
   const interactionRequest = response?.interaction_request as
     | InteractionRequest
     | undefined;
+
+  // Create virtual API client for this panel
+  // Memoized to avoid recreating on every render
+  const virtualApiClient = useMemo(() => {
+    if (!getVirtualDb || !getVirtualRunId || !getWorkflow) {
+      return null;
+    }
+    return createVirtualApiClient({
+      getVirtualDb,
+      getVirtualRunId,
+      getWorkflow,
+      onVirtualDbUpdate,
+      getMockMode: () => mockMode,
+    });
+  }, [getVirtualDb, getVirtualRunId, getWorkflow, onVirtualDbUpdate, mockMode]);
 
   // Determine what type of content to show
   const hasUxContent = status === "awaiting_input" && interactionRequest;
@@ -155,6 +186,7 @@ export function VirtualRuntimePanel({
               busy={busy}
               onSubmit={handleSubmit}
               mockMode={mockMode}
+              virtualApiClient={virtualApiClient}
             />
           )}
 
@@ -203,14 +235,26 @@ interface UxContentProps {
   busy: boolean;
   onSubmit: (response: InteractionResponseData) => void;
   mockMode?: boolean;
+  virtualApiClient?: import("@wfm/shared").ApiClientInterface | null;
 }
 
-function UxContent({ request, busy, onSubmit, mockMode = true }: UxContentProps) {
-  return (
+function UxContent({ request, busy, onSubmit, mockMode = true, virtualApiClient }: UxContentProps) {
+  const content = (
     <RenderProvider value={{ debugMode: false, readonly: false, mockMode }}>
       <InteractionHost disabled={busy} onSubmit={onSubmit} request={request} mockMode={mockMode} />
     </RenderProvider>
   );
+
+  // Wrap with ApiClientProvider if virtual client is available
+  if (virtualApiClient) {
+    return (
+      <ApiClientProvider client={virtualApiClient}>
+        {content}
+      </ApiClientProvider>
+    );
+  }
+
+  return content;
 }
 
 /**

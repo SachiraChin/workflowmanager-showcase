@@ -18,7 +18,7 @@ import { SchemaBuilderMonacoPocPage } from "@/poc/monaco/SchemaBuilderMonacoPocP
 import { DndKitPocPage } from "@/poc/ux-schema-editor/DndKitPocPage";
 import { PragmaticDndPocPage } from "@/poc/ux-schema-editor/PragmaticDndPocPage";
 import { UxPalettePocPage } from "@/poc/ux-schema-editor/UxPalettePocPage";
-import { VirtualRuntimeTestPage } from "@/runtime/VirtualRuntimeTestPage";
+
 import { useTheme } from "@/components/theme-provider";
 
 function ThemeToggle() {
@@ -269,10 +269,7 @@ export default function App() {
             path="/poc/ux-schema/palette"
             element={<UxPalettePocPage />}
           />
-          <Route
-            path="/runtime/test"
-            element={<VirtualRuntimeTestPage />}
-          />
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

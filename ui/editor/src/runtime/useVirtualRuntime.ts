@@ -43,6 +43,12 @@ export interface VirtualRuntimeState {
   stateUpToModule: ModuleLocation | null;
   /** Whether mock mode is enabled (default: true) */
   mockMode: boolean;
+  /** Get current virtualDb state (for virtual API client) */
+  getVirtualDb: () => string | null;
+  /** Get current virtual run ID (for virtual API client) */
+  getVirtualRunId: () => string | null;
+  /** Set virtualDb state (called when sub-action updates state) */
+  setVirtualDb: (db: string) => void;
 }
 
 export interface VirtualRuntimeActions {
@@ -480,6 +486,12 @@ export function useVirtualRuntime(): UseVirtualRuntimeReturn {
     ]
   );
 
+  // Getter functions that delegate to runtime
+  // These are stable references that always return current values
+  const getVirtualDb = useCallback(() => runtime.getVirtualDb(), [runtime]);
+  const getVirtualRunId = useCallback(() => runtime.getVirtualRunId(), [runtime]);
+  const setVirtualDb = useCallback((db: string) => runtime.setVirtualDb(db), [runtime]);
+
   return {
     status,
     busy,
@@ -492,5 +504,9 @@ export function useVirtualRuntime(): UseVirtualRuntimeReturn {
     stateUpToModule,
     mockMode,
     actions,
+    // Getter/setter functions for virtual API client
+    getVirtualDb,
+    getVirtualRunId,
+    setVirtualDb,
   };
 }
