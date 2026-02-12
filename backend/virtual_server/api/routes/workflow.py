@@ -1,7 +1,7 @@
 """
 Virtual Workflow Execution API routes.
 
-Provides endpoints for running modules in virtual context using mongomock.
+Provides endpoints for running modules in virtual context using isolated MongoDB.
 These endpoints mirror the real workflow endpoints:
 
     Virtual Server              Production Server

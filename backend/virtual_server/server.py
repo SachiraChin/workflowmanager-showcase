@@ -3,21 +3,23 @@
 Virtual Workflow API Server - HTTP REST API for virtual workflow execution.
 
 Starts a FastAPI server that provides REST endpoints for virtual workflow
-execution using mongomock. This server runs separately from the main server
-to provide resource isolation and independent deployment.
+execution using a separate MongoDB instance (mongo-virtual). This server runs
+separately from the main server to provide resource isolation and independent
+deployment.
 
 Usage:
-    python -m backend.virtual-server.server --host HOST --port PORT --mongo URI --db DATABASE [options]
+    python -m backend.virtual_server.server --host HOST --port PORT --mongo URI --db DATABASE --mongo-virtual URI [options]
 
 Arguments:
-    --host          Server host (required, e.g., 0.0.0.0 or 127.0.0.1)
-    --port          Server port (required, e.g., 9001)
-    --mongo         MongoDB connection URI for auth (required)
-    --db            MongoDB database name for auth (required)
-    -v, --verbose   Enable verbose logging
+    --host           Server host (required, e.g., 0.0.0.0 or 127.0.0.1)
+    --port           Server port (required, e.g., 9001)
+    --mongo          MongoDB connection URI for auth (required)
+    --db             MongoDB database name for auth (required)
+    --mongo-virtual  MongoDB connection URI for virtual execution (required)
+    -v, --verbose    Enable verbose logging
 
-Note: The --mongo and --db arguments are used for user authentication only.
-      Virtual workflow execution uses mongomock (in-memory) databases.
+Note: --mongo and --db are used for user authentication (production database).
+      --mongo-virtual is used for virtual workflow execution (ephemeral data).
 
 Endpoints:
     POST /workflow/start          - Start virtual module execution
@@ -117,8 +119,8 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-    python -m backend.virtual-server.server --host 0.0.0.0 --port 9001 --mongo mongodb://localhost:27017 --db workflow_db
-    python -m backend.virtual-server.server --host 127.0.0.1 --port 9001 --mongo mongodb://localhost:27017 --db workflow_db -v
+    python -m backend.virtual_server.server --host 0.0.0.0 --port 9001 --mongo mongodb://localhost:27017 --db workflow_db --mongo-virtual mongodb://localhost:27018
+    python -m backend.virtual_server.server --host 127.0.0.1 --port 9001 --mongo mongodb://localhost:27017 --db workflow_db --mongo-virtual mongodb://localhost:27018 -v
         """
     )
 
@@ -145,6 +147,12 @@ Examples:
         required=True,
         type=validate_db_name,
         help="MongoDB database name for auth (e.g., workflow_db)"
+    )
+    parser.add_argument(
+        "--mongo-virtual",
+        required=True,
+        type=validate_mongo_uri,
+        help="MongoDB connection URI for virtual execution (e.g., mongodb://localhost:27018)"
     )
     parser.add_argument(
         "-v", "--verbose",
@@ -196,6 +204,7 @@ Examples:
     # Set environment variables for the API
     os.environ["MONGODB_URI"] = args.mongo
     os.environ["MONGODB_DATABASE"] = args.db
+    os.environ["MONGODB_VIRTUAL_URI"] = args.mongo_virtual
 
     # Import uvicorn
     import uvicorn
@@ -207,8 +216,7 @@ Examples:
     print(f"  Port: {args.port}")
     print(f"  Auth MongoDB: {args.mongo}")
     print(f"  Auth Database: {args.db}")
-    print()
-    print("Note: Virtual execution uses mongomock (in-memory)")
+    print(f"  Virtual MongoDB: {args.mongo_virtual}")
     print()
     print("Endpoints:")
     print(f"  POST http://{args.host}:{args.port}/workflow/start")

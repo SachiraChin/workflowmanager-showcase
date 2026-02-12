@@ -2,8 +2,8 @@
 Virtual Server FastAPI application setup.
 
 This module sets up the FastAPI application for virtual workflow execution.
-Virtual server uses mongomock for in-memory database operations and shares
-authentication with the main server (same user database).
+Virtual server uses a separate MongoDB instance (mongo-virtual) for workflow
+data isolation and shares authentication with the main server (same user database).
 
 Endpoints:
 - POST /workflow/start - Start virtual module execution
@@ -56,7 +56,7 @@ logger = logging.getLogger("workflow.virtual")
 
 app = FastAPI(
     title="Virtual Workflow API",
-    description="REST API for virtual workflow execution using mongomock",
+    description="REST API for virtual workflow execution using isolated MongoDB",
     version="1.0.0",
 )
 
