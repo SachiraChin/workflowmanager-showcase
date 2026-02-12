@@ -13,7 +13,7 @@ from fastapi import APIRouter, HTTPException, Query, Depends
 from sse_starlette.sse import EventSourceResponse
 
 from ..dependencies import get_db, get_processor, get_current_user_id, get_verified_workflow
-from utils import sanitize_error_message
+from backend.server.utils import sanitize_error_message
 
 # =============================================================================
 # Shared Stream State

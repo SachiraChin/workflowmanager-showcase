@@ -10,7 +10,7 @@ from pathlib import Path
 
 from fastapi import APIRouter
 
-from models.responses import ModelsResponse
+from backend.workflow_engine.models.responses import ModelsResponse
 
 logger = logging.getLogger('workflow.api.models')
 

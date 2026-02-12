@@ -14,7 +14,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from ..dependencies import get_db, get_current_user_id, get_verified_workflow
 from .streaming import active_state_streams
-from utils import sanitize_error_message
+from backend.server.utils import sanitize_error_message
 from backend.workflow_engine.models import SSEEventType
 
 logger = logging.getLogger('workflow.api')

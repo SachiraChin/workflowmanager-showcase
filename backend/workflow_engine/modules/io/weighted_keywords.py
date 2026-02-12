@@ -8,7 +8,7 @@ via stage whitelisting to prevent access to other collections or data.
 from datetime import datetime
 from typing import Dict, Any, List, Set
 from ...engine.module_interface import ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
-from utils import make_json_serializable
+from ...utils import make_json_serializable
 
 
 # Allowed MongoDB aggregation stages (safe for user input)

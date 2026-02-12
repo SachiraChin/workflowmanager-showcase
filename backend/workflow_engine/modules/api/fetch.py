@@ -16,7 +16,7 @@ from urllib.parse import urljoin
 from ...engine.module_interface import (
     ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
 )
-from utils.mock_generator import generate_lorem_sentence
+from ...utils.mock_generator import generate_lorem_sentence
 
 logger = logging.getLogger(__name__)
 

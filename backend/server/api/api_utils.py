@@ -14,11 +14,7 @@ import logging
 from typing import Dict, Any, Tuple, Optional
 
 # Import workflow resolver for $ref resolution
-import sys
-_engine_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if _engine_dir not in sys.path:
-    sys.path.insert(0, _engine_dir)
-from engine.workflow_resolver import WorkflowResolver
+from backend.workflow_engine.engine.workflow_resolver import WorkflowResolver
 
 logger = logging.getLogger('workflow.api')
 

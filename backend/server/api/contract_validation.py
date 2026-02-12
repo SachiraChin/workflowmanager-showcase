@@ -110,7 +110,7 @@ def validate_all_contracts() -> None:
     Call this at server startup.
     """
     # Import the models module
-    import models
+    from backend.workflow_engine import models
 
     # Discover all models with contract bindings
     contract_models = discover_contract_models(models)

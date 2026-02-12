@@ -32,7 +32,7 @@ from backend.workflow_engine.models import (
     WorkflowStatus,
 )
 from backend.workflow_engine.modules.media import MediaProviderRegistry
-from utils import sanitize_error_message
+from backend.workflow_engine.utils import sanitize_error_message
 from backend.workflow_engine import WorkflowProcessor
 
 from ..dependencies import get_current_user_id

@@ -21,7 +21,7 @@ import logging
 from typing import Dict, Any, List, Optional
 
 from typing import Optional as TypingOptional
-from utils import uuid7_str
+from ...utils import uuid7_str
 from backend.db import TaskQueue
 from backend.db.path_utils import resolve_local_path
 from backend.providers.media.registry import MediaProviderRegistry

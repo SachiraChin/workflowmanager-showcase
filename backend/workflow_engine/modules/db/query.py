@@ -8,7 +8,7 @@ data isolation between workflows through context_filters.
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Set
 from ...engine.module_interface import ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
-from utils.mock_generator import generate_lorem_sentence
+from ...utils.mock_generator import generate_lorem_sentence
 
 
 class DatabaseQueryModule(ExecutableModule):
