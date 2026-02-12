@@ -5,7 +5,7 @@ File Input Module - Prompt user for file path with validation and retry
 import os
 import uuid6
 from typing import Dict, Any, List, Optional
-from engine.module_interface import (
+from ...engine.module_interface import (
     InteractiveModule, ModuleInput, ModuleOutput, ModuleExecutionError,
     InteractionType, InteractionRequest, InteractionResponse, SelectOption
 )

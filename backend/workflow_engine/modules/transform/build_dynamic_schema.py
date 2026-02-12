@@ -3,7 +3,7 @@ Build Dynamic Schema Module - Dynamically builds JSON schema from selected group
 """
 
 from typing import Dict, Any, List
-from engine.module_interface import ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
+from ...engine.module_interface import ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
 import json
 
 

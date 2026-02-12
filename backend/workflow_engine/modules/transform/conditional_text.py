@@ -3,7 +3,7 @@ Conditional Text Transform Module - Returns different text based on whether a va
 """
 
 from typing import Dict, Any, List
-from engine.module_interface import ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
+from ...engine.module_interface import ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
 
 
 class ConditionalTextModule(ExecutableModule):

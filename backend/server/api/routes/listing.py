@@ -11,7 +11,7 @@ from fastapi import APIRouter, HTTPException, Query, Depends
 from jinja2 import Environment, BaseLoader
 
 from ..dependencies import get_db, get_current_user_id, get_verified_template, require_admin_user
-from models import PublishGlobalTemplateRequest
+from backend.workflow_engine.models import PublishGlobalTemplateRequest
 
 logger = logging.getLogger('workflow.api')
 

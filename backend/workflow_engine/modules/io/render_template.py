@@ -3,7 +3,7 @@ Render Template Module - Renders a Jinja2 template and returns the result
 """
 
 from typing import Dict, Any, List
-from engine.module_interface import ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
+from ...engine.module_interface import ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
 
 
 class RenderTemplateModule(ExecutableModule):

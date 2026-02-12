@@ -3,7 +3,7 @@ Concatenate Arrays Module - Concatenate multiple arrays into one
 """
 
 from typing import Dict, Any, List
-from engine.module_interface import ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
+from ...engine.module_interface import ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
 
 
 class ConcatArraysModule(ExecutableModule):

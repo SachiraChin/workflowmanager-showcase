@@ -27,7 +27,7 @@ active_streams: Dict[str, threading.Event] = {}
 # Active state streams - for state polling cancellation
 # Maps stream_key -> {last_state_hash, cancel_event}
 active_state_streams: Dict[str, Dict] = {}
-from models import (
+from backend.workflow_engine.models import (
     RespondRequest,
     SubActionRequest,
     CancelRequest,

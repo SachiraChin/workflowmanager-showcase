@@ -64,12 +64,10 @@ class Base64SanitizingFilter(logging.Filter):
         return True
 
 
-sys.path.insert(0, os.path.dirname(__file__))
+# Note: sys.path manipulation removed - all imports now use full package paths
+# (e.g., from backend.workflow_engine import WorkflowProcessor)
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
-server_path = os.path.join(script_dir, 'server')
-if server_path not in sys.path:
-    sys.path.insert(0, server_path)
 
 
 def validate_host(value: str) -> str:

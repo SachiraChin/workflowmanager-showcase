@@ -9,7 +9,7 @@ Uses contracts/validation.py for JSON Schema 2020-12 compliance.
 """
 
 from typing import Dict, Any, List
-from engine.module_interface import ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
+from ...engine.module_interface import ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
 from contracts.validation import (
     validate_against_schema,
     format_errors_for_display,

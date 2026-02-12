@@ -14,7 +14,7 @@ from backend.db import DbEventType
 from ..dependencies import get_db, get_processor, get_current_user_id, get_verified_workflow
 from ..api_utils import resolve_workflow_from_content, set_api_keys_from_config
 from ..workflow_diff_utils import compute_workflow_diff
-from models import (
+from backend.workflow_engine.models import (
     ResumeWorkflowRequest,
     ResetRequest,
     WorkflowResponse,
@@ -396,7 +396,7 @@ async def get_interaction_data(
     Returns:
         display_data dict with resolved data from current state
     """
-    from workflow.workflow_utils import get_workflow_def, rebuild_services
+    from backend.workflow_engine.workflow.workflow_utils import get_workflow_def, rebuild_services
 
     user_id = workflow.get("user_id")
 

@@ -13,7 +13,7 @@ import requests
 from typing import Dict, Any, List, Optional
 from urllib.parse import urljoin
 
-from engine.module_interface import (
+from ...engine.module_interface import (
     ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
 )
 from utils.mock_generator import generate_lorem_sentence

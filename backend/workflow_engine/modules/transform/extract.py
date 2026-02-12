@@ -6,7 +6,7 @@ Use with outputs_to_state to store computed Jinja2 expressions to workflow state
 """
 
 from typing import Dict, Any, List
-from engine.module_interface import ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
+from ...engine.module_interface import ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
 
 
 class ExtractModule(ExecutableModule):

@@ -5,7 +5,7 @@ Text Input Module - Get text input from user
 import re
 import uuid6
 from typing import Dict, Any, List, Optional
-from engine.module_interface import (
+from ...engine.module_interface import (
     InteractiveModule, ModuleInput, ModuleOutput, ModuleExecutionError,
     InteractionType, InteractionRequest, InteractionResponse, SelectOption
 )

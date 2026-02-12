@@ -6,7 +6,7 @@ A generic module for rendering a Jinja2 template for each item in an array.
 
 from typing import Dict, Any, List
 from jinja2 import Environment, BaseLoader, TemplateError
-from engine.module_interface import ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
+from ...engine.module_interface import ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
 
 
 class RenderTemplateArrayModule(ExecutableModule):

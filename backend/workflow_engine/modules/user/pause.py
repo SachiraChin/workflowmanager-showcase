@@ -5,7 +5,7 @@ Pause Module - Block execution until user presses Enter to continue
 from typing import Dict, Any, List, Optional
 import json
 import uuid6
-from engine.module_interface import (
+from ...engine.module_interface import (
     InteractiveModule, ModuleInput, ModuleOutput, ModuleExecutionError,
     InteractionType, InteractionRequest, InteractionResponse
 )

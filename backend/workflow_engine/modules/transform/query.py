@@ -20,7 +20,7 @@ import copy
 import uuid
 from typing import Dict, Any, List
 import mongomock
-from engine.module_interface import (
+from ...engine.module_interface import (
     ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
 )
 

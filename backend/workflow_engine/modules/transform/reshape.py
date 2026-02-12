@@ -7,7 +7,7 @@ Primary use case: Converting generic user.form output to workflow-specific forma
 
 from typing import Dict, Any, List
 from jinja2 import Environment, BaseLoader, Undefined
-from engine.module_interface import ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
+from ...engine.module_interface import ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
 
 
 class SilentUndefined(Undefined):

@@ -6,7 +6,7 @@ Stores JSON data in the workflow_files collection instead of filesystem.
 
 import json
 from typing import Dict, Any, List
-from engine.module_interface import ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
+from ...engine.module_interface import ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
 
 
 class SaveJSONModule(ExecutableModule):

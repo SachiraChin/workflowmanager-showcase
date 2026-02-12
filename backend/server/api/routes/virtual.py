@@ -24,16 +24,16 @@ from sse_starlette.sse import EventSourceResponse
 
 from backend.db.virtual import VIRTUAL_USER_ID, VirtualDatabase
 from backend.providers.media.base import GenerationError
-from models import (
+from backend.workflow_engine.models import (
     ExecutionTarget,
     InteractionResponseData,
     VirtualWorkflowResponse,
     WorkflowResponse,
     WorkflowStatus,
 )
-from modules.media import MediaProviderRegistry
+from backend.workflow_engine.modules.media import MediaProviderRegistry
 from utils import sanitize_error_message
-from workflow import WorkflowProcessor
+from backend.workflow_engine import WorkflowProcessor
 
 from ..dependencies import get_current_user_id
 

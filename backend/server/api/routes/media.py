@@ -10,8 +10,8 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
 from ..dependencies import get_db, get_current_user_id, get_verified_workflow
-from models import MediaPreviewRequest
-from modules.media import MediaProviderRegistry
+from backend.workflow_engine.models import MediaPreviewRequest
+from backend.workflow_engine.modules.media import MediaProviderRegistry
 from backend.providers.media.base import GenerationError
 
 logger = logging.getLogger('workflow.api')

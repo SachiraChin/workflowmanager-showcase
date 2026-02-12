@@ -28,7 +28,7 @@ See: issues/2026_01_08_form_output_format/r5.md for design details.
 
 import uuid6
 from typing import Dict, Any, List, Optional
-from engine.module_interface import (
+from ...engine.module_interface import (
     InteractiveModule, ModuleInput, ModuleOutput, ModuleExecutionError,
     InteractionType, InteractionRequest, InteractionResponse
 )

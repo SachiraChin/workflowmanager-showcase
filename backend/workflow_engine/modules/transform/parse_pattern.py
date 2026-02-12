@@ -7,7 +7,7 @@ A generic module for parsing text input with regex patterns, lookups, mappings, 
 import re
 import math
 from typing import Dict, Any, List, Optional, Union
-from engine.module_interface import ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
+from ...engine.module_interface import ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
 
 # Try to import simpleeval for safe expression evaluation
 try:

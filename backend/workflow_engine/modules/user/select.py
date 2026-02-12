@@ -23,11 +23,11 @@ Workflow uses indices to access original raw data.
 
 import uuid6
 from typing import Dict, Any, List, Optional
-from engine.module_interface import (
+from ...engine.module_interface import (
     InteractiveModule, ModuleInput, ModuleOutput, ModuleExecutionError,
     InteractionType, InteractionRequest, InteractionResponse, SelectOption
 )
-from modules.addons.processor import AddonProcessor
+from ..addons.processor import AddonProcessor
 
 
 class SelectModule(InteractiveModule):

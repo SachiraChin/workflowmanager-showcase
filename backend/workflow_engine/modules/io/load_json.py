@@ -6,7 +6,7 @@ Loads JSON data from the workflow_files collection.
 
 import json
 from typing import Dict, Any, List
-from engine.module_interface import ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
+from ...engine.module_interface import ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
 
 
 class LoadJSONModule(ExecutableModule):

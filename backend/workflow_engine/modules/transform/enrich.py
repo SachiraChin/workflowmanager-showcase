@@ -8,7 +8,7 @@ that mirrors the target document hierarchy.
 
 from typing import Dict, Any, List, Set
 from copy import deepcopy
-from engine.module_interface import ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
+from ...engine.module_interface import ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
 
 
 class EnrichModule(ExecutableModule):

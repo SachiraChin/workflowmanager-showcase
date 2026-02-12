@@ -24,7 +24,7 @@ from typing import Any, Dict, List, Optional
 from ...base import LLMProviderBase, Message, MessageContent, ContentType
 from ...registry import register
 from ...call_logger import get_api_call_logger
-from engine.context_utils import require_step_id, require_module_name, require_step_id_from_metadata
+from .....engine.context_utils import require_step_id, require_module_name, require_step_id_from_metadata
 
 
 @register("anthropic")

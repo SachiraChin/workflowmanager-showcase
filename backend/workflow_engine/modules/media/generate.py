@@ -53,7 +53,7 @@ def _get_task_queue() -> TaskQueue:
         _task_queue = TaskQueue()
     return _task_queue
 
-from engine.module_interface import (
+from ...engine.module_interface import (
     InteractiveModule, ModuleInput, ModuleOutput, ModuleExecutionError,
     InteractionType, InteractionRequest, InteractionResponse
 )

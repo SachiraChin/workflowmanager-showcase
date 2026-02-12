@@ -7,7 +7,7 @@ The provider is selected at runtime based on the 'provider' input parameter.
 
 import json
 from typing import Dict, Any, List, Optional
-from engine.module_interface import ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
+from ...engine.module_interface import ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
 from utils.mock_generator import generate_mock_from_schema, generate_lorem_text
 from .base import Message
 from .registry import ProviderRegistry
