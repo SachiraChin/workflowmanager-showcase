@@ -17,10 +17,12 @@ import {
   SheetBody,
   InteractionHost,
   RenderProvider,
+  Button,
+  Badge,
   type InteractionRequest,
   type InteractionResponseData,
 } from "@wfm/shared";
-import { Loader2 } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 import type { RuntimeStatus, VirtualWorkflowResponse, CompletedInteraction } from "./types";
 
 // =============================================================================
@@ -44,6 +46,10 @@ export interface VirtualRuntimePanelProps {
   onSubmit?: (response: InteractionResponseData) => void;
   /** Completed interaction data (for showing historical interactions in readonly mode) */
   completedInteraction?: CompletedInteraction | null;
+  /** Whether mock mode is enabled (default: true) */
+  mockMode?: boolean;
+  /** Called when user wants to reload with different mock mode */
+  onReloadWithMockMode?: (mockMode: boolean) => void;
 }
 
 // =============================================================================
@@ -59,6 +65,8 @@ export function VirtualRuntimePanel({
   error,
   onSubmit,
   completedInteraction,
+  mockMode = true,
+  onReloadWithMockMode,
 }: VirtualRuntimePanelProps) {
   const interactionRequest = response?.interaction_request as
     | InteractionRequest
@@ -86,6 +94,18 @@ export function VirtualRuntimePanel({
     return "Runtime Preview";
   };
 
+  // Handle reload with different mode
+  const handleReloadClick = () => {
+    if (onReloadWithMockMode && !busy && status !== "running") {
+      onReloadWithMockMode(!mockMode);
+    }
+  };
+
+  // Show reload button only when we have completed and can toggle
+  const canReload = onReloadWithMockMode && 
+    (status === "completed" || status === "awaiting_input") && 
+    !busy;
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[60vw]">
@@ -95,6 +115,27 @@ export function VirtualRuntimePanel({
               <Loader2 className="h-4 w-4 animate-spin" />
             )}
             {getTitle()}
+            {/* Mock/Real mode badge */}
+            {(status === "completed" || status === "awaiting_input") && (
+              <Badge 
+                variant={mockMode ? "secondary" : "default"}
+                className="ml-2 text-xs"
+              >
+                {mockMode ? "Mock Data" : "Real Data"}
+              </Badge>
+            )}
+            {/* Reload button to toggle mode */}
+            {canReload && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="ml-auto h-7 text-xs"
+                onClick={handleReloadClick}
+              >
+                <RefreshCw className="h-3 w-3 mr-1" />
+                {mockMode ? "Use Real Data" : "Use Mock Data"}
+              </Button>
+            )}
           </SheetTitle>
         </SheetHeader>
 
@@ -113,6 +154,7 @@ export function VirtualRuntimePanel({
               request={interactionRequest}
               busy={busy}
               onSubmit={handleSubmit}
+              mockMode={mockMode}
             />
           )}
 
@@ -160,12 +202,13 @@ interface UxContentProps {
   request: InteractionRequest;
   busy: boolean;
   onSubmit: (response: InteractionResponseData) => void;
+  mockMode?: boolean;
 }
 
-function UxContent({ request, busy, onSubmit }: UxContentProps) {
+function UxContent({ request, busy, onSubmit, mockMode = true }: UxContentProps) {
   return (
-    <RenderProvider value={{ debugMode: false, readonly: false }}>
-      <InteractionHost disabled={busy} onSubmit={onSubmit} request={request} />
+    <RenderProvider value={{ debugMode: false, readonly: false, mockMode }}>
+      <InteractionHost disabled={busy} onSubmit={onSubmit} request={request} mockMode={mockMode} />
     </RenderProvider>
   );
 }

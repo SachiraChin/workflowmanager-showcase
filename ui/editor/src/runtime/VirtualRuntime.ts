@@ -215,6 +215,15 @@ export class VirtualRuntime {
    */
   private stateUpToModule: ModuleLocation | null = null;
 
+  /**
+   * Whether to use mock mode (default: true).
+   * When true, modules return mock data instead of making real API calls.
+   */
+  private mockMode: boolean = true;
+
+  /** Callback when mock mode changes (for React integration) */
+  private onMockModeChange: ((mockMode: boolean) => void) | null = null;
+
   // ---------------------------------------------------------------------------
   // Constructor
   // ---------------------------------------------------------------------------
@@ -257,6 +266,21 @@ export class VirtualRuntime {
 
   getState(): VirtualStateResponse | null {
     return this.state;
+  }
+
+  getMockMode(): boolean {
+    return this.mockMode;
+  }
+
+  setMockMode(mockMode: boolean): void {
+    if (this.mockMode !== mockMode) {
+      this.mockMode = mockMode;
+      this.onMockModeChange?.(mockMode);
+    }
+  }
+
+  setOnMockModeChange(callback: ((mockMode: boolean) => void) | null): void {
+    this.onMockModeChange = callback;
   }
 
   /**
@@ -498,6 +522,7 @@ export class VirtualRuntime {
         target_module_name: target.module_name,
         interaction_id: this.lastResponse.interaction_request!.interaction_id,
         response,
+        mock: this.mockMode,
       });
 
       this.lastResponse = serverResponse;
@@ -565,6 +590,39 @@ export class VirtualRuntime {
       this.closePanel();
       this.closeStatePanel();
     }
+  }
+
+  /**
+   * Reload the current target with a different mock mode.
+   * Resets state and re-runs to the current target.
+   * @returns Promise that resolves when reload is complete
+   */
+  async reloadWithMockMode(
+    workflow: WorkflowDefinition,
+    mockMode: boolean,
+    selections: ModuleSelection[]
+  ): Promise<RunResult> {
+    const target = this.currentTarget;
+    if (!target) {
+      return { status: "error", error: "No current target to reload" };
+    }
+
+    // Update mock mode
+    this.setMockMode(mockMode);
+
+    // Reset state but keep panels open
+    this.virtualDb = null;
+    this.virtualRunId = null;
+    this.state = null;
+    this.interactionHistory.clear();
+    this.pendingInteraction = null;
+    this.furthestModuleIndex = -1;
+    this.workflowSliceHashes.clear();
+    this.lastResponse = null;
+    this.lastError = null;
+
+    // Re-run to target
+    return this.runToModule(workflow, target, selections, { openPanel: "preview" });
   }
 
   // ===========================================================================
@@ -649,6 +707,7 @@ export class VirtualRuntime {
       virtual_db: null,
       target_step_id: target.step_id,
       target_module_name: target.module_name,
+      mock: this.mockMode,
     });
 
     console.log("[VirtualRuntime] resetAndStart - received response", {
@@ -684,6 +743,7 @@ export class VirtualRuntime {
       virtual_db: this.virtualDb,
       target_step_id: target.step_id,
       target_module_name: target.module_name,
+      mock: this.mockMode,
     };
     
     console.log("[VirtualRuntime] executeForward - calling /resume/confirm", {
@@ -803,6 +863,7 @@ export class VirtualRuntime {
           target_module_name: target.module_name,
           interaction_id: currentResponse.interaction_request!.interaction_id,
           response: selection,
+          mock: this.mockMode,
         });
 
         this.lastResponse = currentResponse;

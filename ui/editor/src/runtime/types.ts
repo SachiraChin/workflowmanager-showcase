@@ -28,6 +28,8 @@ export interface VirtualStartRequest {
   target_step_id: string;
   /** Module name to execute */
   target_module_name: string;
+  /** If true, modules return mock data instead of making real API calls. Defaults to true. */
+  mock?: boolean;
 }
 
 /**
@@ -49,6 +51,8 @@ export interface VirtualRespondRequest {
   interaction_id: string;
   /** User's response to the interaction */
   response: InteractionResponseData;
+  /** If true, modules return mock data instead of making real API calls. Defaults to true. */
+  mock?: boolean;
 }
 
 /**
@@ -64,6 +68,8 @@ export interface VirtualResumeConfirmRequest {
   target_step_id: string;
   /** Module name to execute up to */
   target_module_name: string;
+  /** If true, modules return mock data instead of making real API calls. Defaults to true. */
+  mock?: boolean;
 }
 
 /**

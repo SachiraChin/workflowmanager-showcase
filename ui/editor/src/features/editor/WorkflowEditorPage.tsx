@@ -241,6 +241,18 @@ export function WorkflowEditorPage() {
   }, [runtime.status, runtime.currentTarget, runtime.actions]);
 
   /**
+   * Handle reload with different mock mode.
+   * Resets and re-runs to current target with specified mock mode.
+   */
+  const handleReloadWithMockMode = useCallback(
+    async (mockMode: boolean) => {
+      const workflow = buildWorkflowDefinition();
+      await runtime.actions.reloadWithMockMode(workflow, mockMode, []);
+    },
+    [buildWorkflowDefinition, runtime.actions]
+  );
+
+  /**
    * Handle clone confirmation - clone global template to user's template.
    */
   const handleCloneConfirm = useCallback(async () => {
@@ -377,6 +389,16 @@ export function WorkflowEditorPage() {
                 handleModuleViewState({ step_id: step.step_id, module_name: module.name! }),
               onPreview: () =>
                 handleModulePreview({ step_id: step.step_id, module_name: module.name! }),
+              onLoadPreviewData: moduleIndex > 0
+                ? async () => {
+                    // Run the previous module silently and return its state
+                    const prevModule = step.modules[moduleIndex - 1];
+                    const target = { step_id: step.step_id, module_name: prevModule.name! };
+                    const wf = buildWorkflowDefinition();
+                    const state = await runtime.actions.runToModuleSilent(wf, target, []);
+                    return state?.state_mapped || null;
+                  }
+                : undefined,
             }),
           });
         } else {
@@ -636,6 +658,8 @@ export function WorkflowEditorPage() {
         error={runtime.error}
         onSubmit={handlePreviewSubmit}
         completedInteraction={completedInteraction}
+        mockMode={runtime.mockMode}
+        onReloadWithMockMode={handleReloadWithMockMode}
       />
 
       {/* State Panel (left drawer) */}

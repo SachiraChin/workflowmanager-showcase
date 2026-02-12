@@ -167,7 +167,6 @@ export function WorkflowSidebar({
       <div className="flex gap-2 flex-wrap">
         {/* Exit button - always available */}
         <Button
-          data-guidance="exit-button"
           variant="outline"
           onClick={onCancel}
           size="sm"
@@ -193,6 +192,7 @@ export function WorkflowSidebar({
         {/* Edit in editor button */}
         {workflowTemplateId && workflowVersionId && (
           <Button
+            data-guidance="edit-button"
             variant="outline"
             size="sm"
             asChild

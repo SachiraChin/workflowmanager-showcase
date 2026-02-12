@@ -1,9 +1,9 @@
 """
 Mock Data Generator - Schema-aware mock data generation for preview mode.
 
-Uses the jsf (JSON Schema Faker) library with Faker for lorem ipsum style
-text generation. Provides deterministic output via seeding for consistent
-previews.
+Uses the jsf (JSON Schema Faker) library with lorem-text for traditional
+Lorem Ipsum text generation. Provides deterministic output via seeding
+for consistent previews.
 
 jsf automatically honors JSON Schema constraints including:
 - Arrays: minItems, maxItems, uniqueItems
@@ -13,7 +13,7 @@ jsf automatically honors JSON Schema constraints including:
 
 Libraries:
 - jsf: https://github.com/ghandic/jsf - JSON Schema to fake data
-- Faker: https://github.com/joke2k/faker - Fake data generation
+- lorem-text: https://pypi.org/project/lorem-text/ - Lorem ipsum generator
 """
 
 from typing import Any, Dict, Optional
@@ -21,15 +21,105 @@ import logging
 import random
 
 from jsf import JSF
-from faker import Faker
+from lorem_text import lorem
 
 logger = logging.getLogger(__name__)
 
-# Global Faker instance for lorem ipsum generation
-_faker = Faker()
-
 # Default seed for deterministic mock data
 DEFAULT_SEED = 42
+
+
+class LoremFaker:
+    """
+    Faker-compatible wrapper around lorem-text for JSF integration.
+    
+    JSF expects a Faker instance with methods like sentence(), paragraph(), etc.
+    This class provides those methods using lorem-text for real Lorem Ipsum.
+    """
+    
+    def __init__(self, seed: Optional[int] = None):
+        if seed is not None:
+            random.seed(seed)
+    
+    def seed(self, seed: int) -> None:
+        """Set random seed for reproducibility."""
+        random.seed(seed)
+    
+    def sentence(self, nb_words: int = 10, variable_nb_words: bool = True) -> str:
+        """Generate a lorem ipsum sentence."""
+        return lorem.sentence()
+    
+    def sentences(self, nb: int = 3) -> list:
+        """Generate multiple sentences."""
+        return [lorem.sentence() for _ in range(nb)]
+    
+    def paragraph(self, nb_sentences: int = 3, variable_nb_sentences: bool = True) -> str:
+        """Generate a lorem ipsum paragraph."""
+        return lorem.paragraphs(1)
+    
+    def paragraphs(self, nb: int = 3) -> list:
+        """Generate multiple paragraphs."""
+        return [lorem.paragraphs(1) for _ in range(nb)]
+    
+    def text(self, max_nb_chars: int = 200) -> str:
+        """Generate lorem ipsum text up to max_nb_chars."""
+        text = lorem.paragraphs(1)
+        if len(text) > max_nb_chars:
+            # Truncate at word boundary
+            text = text[:max_nb_chars].rsplit(' ', 1)[0]
+        return text
+    
+    def word(self) -> str:
+        """Generate a single lorem word."""
+        return lorem.words(1)
+    
+    def words(self, nb: int = 3, unique: bool = False) -> list:
+        """Generate multiple words."""
+        words_str = lorem.words(nb)
+        return words_str.split()
+    
+    # Additional methods JSF might call
+    def name(self) -> str:
+        """Generate a fake name (uses lorem words)."""
+        return lorem.words(2).title()
+    
+    def first_name(self) -> str:
+        """Generate a fake first name."""
+        return lorem.words(1).title()
+    
+    def last_name(self) -> str:
+        """Generate a fake last name."""
+        return lorem.words(1).title()
+    
+    def email(self) -> str:
+        """Generate a fake email."""
+        word = lorem.words(1).lower()
+        return f"{word}@example.com"
+    
+    def url(self) -> str:
+        """Generate a fake URL."""
+        word = lorem.words(1).lower()
+        return f"https://example.com/{word}"
+    
+    def pyint(self, min_value: int = 0, max_value: int = 100) -> int:
+        """Generate a random integer."""
+        return random.randint(min_value, max_value)
+    
+    def pyfloat(self, min_value: float = 0, max_value: float = 100) -> float:
+        """Generate a random float."""
+        return round(random.uniform(min_value, max_value), 2)
+    
+    def pybool(self) -> bool:
+        """Generate a random boolean."""
+        return random.choice([True, False])
+    
+    def date(self) -> str:
+        """Generate a fake date."""
+        return "2025-01-15"
+    
+    def date_time(self) -> str:
+        """Generate a fake datetime."""
+        return "2025-01-15T10:30:00Z"
 
 
 def generate_mock_from_schema(
@@ -74,11 +164,17 @@ def generate_mock_from_schema(
     try:
         # Seed for deterministic output
         if seed is not None:
-            Faker.seed(seed)
             random.seed(seed)
 
-        # Create JSF instance with the schema
-        faker = JSF(schema)
+        # Create custom context with LoremFaker instead of default Faker
+        lorem_faker = LoremFaker(seed=seed)
+        context = {
+            'faker': lorem_faker,
+            'random': random,
+        }
+
+        # Create JSF instance with custom context
+        faker = JSF(schema, context=context)
 
         return faker.generate()
     except Exception as e:
@@ -86,7 +182,6 @@ def generate_mock_from_schema(
         # Return a simple fallback that also honors constraints
         if seed is not None:
             random.seed(seed)
-            Faker.seed(seed)
         return _generate_fallback_from_schema(schema)
 
 
@@ -111,11 +206,11 @@ def _generate_fallback_from_schema(schema: Dict[str, Any]) -> Any:
         max_len = schema.get('maxLength', 200)
 
         # Generate sentence and trim/pad to fit constraints
-        text = generate_lorem_sentence(seed=None)
+        text = generate_lorem_sentence()
         if len(text) < min_len:
             # Pad with more text
             while len(text) < min_len:
-                text += ' ' + _faker.word()
+                text += ' ' + lorem.words(1)
         if len(text) > max_len:
             text = text[:max_len]
         return text
@@ -184,70 +279,49 @@ def _generate_fallback_from_schema(schema: Dict[str, Any]) -> Any:
     return 'mock_value'
 
 
-def generate_lorem_text(
-    sentences: int = 2,
-    seed: Optional[int] = DEFAULT_SEED
-) -> str:
+def generate_lorem_text(sentences: int = 2) -> str:
     """
-    Generate lorem ipsum text using Faker.
+    Generate lorem ipsum text.
 
     Args:
-        sentences: Number of sentences to generate
-        seed: Random seed for deterministic output
+        sentences: Number of sentences to generate (approximated via paragraphs)
 
     Returns:
         Lorem ipsum text string
     """
-    if seed is not None:
-        Faker.seed(seed)
+    if sentences <= 1:
+        return lorem.sentence()
+    return lorem.paragraphs(1)
 
-    return _faker.paragraph(nb_sentences=sentences)
 
-
-def generate_lorem_sentence(seed: Optional[int] = DEFAULT_SEED) -> str:
+def generate_lorem_sentence() -> str:
     """
-    Generate a single lorem ipsum sentence using Faker.
-
-    Args:
-        seed: Random seed for deterministic output
+    Generate a single lorem ipsum sentence.
 
     Returns:
         Single lorem ipsum sentence
     """
-    if seed is not None:
-        Faker.seed(seed)
-
-    return _faker.sentence()
+    return lorem.sentence()
 
 
-def generate_lorem_word(seed: Optional[int] = DEFAULT_SEED) -> str:
+def generate_lorem_word() -> str:
     """
-    Generate a single lorem ipsum word using Faker.
-
-    Args:
-        seed: Random seed for deterministic output
+    Generate a single lorem ipsum word.
 
     Returns:
         Single lorem ipsum word
     """
-    if seed is not None:
-        Faker.seed(seed)
-
-    return _faker.word()
+    return lorem.words(1)
 
 
-def generate_lorem_words(count: int = 3, seed: Optional[int] = DEFAULT_SEED) -> str:
+def generate_lorem_words(count: int = 3) -> str:
     """
     Generate multiple lorem ipsum words as a string.
 
     Args:
         count: Number of words to generate
-        seed: Random seed for deterministic output
 
     Returns:
         Space-separated lorem ipsum words
     """
-    if seed is not None:
-        Faker.seed(seed)
-
-    return ' '.join(_faker.words(nb=count))
+    return lorem.words(count)

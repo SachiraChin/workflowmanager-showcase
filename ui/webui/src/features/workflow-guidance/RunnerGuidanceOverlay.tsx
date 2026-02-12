@@ -26,7 +26,7 @@ interface GuidanceItem {
   title: string;
   description: string;
   /** Where the badge appears relative to target */
-  badgePosition: "top" | "bottom" | "left" | "right" | "custom-exit" | "custom-guide";
+  badgePosition: "top" | "bottom" | "left" | "right" | "custom-guide";
 }
 
 const GUIDANCE_ITEMS: GuidanceItem[] = [
@@ -65,17 +65,6 @@ Use the Guide button to reopen anytime.`,
     badgePosition: "right",
   },
   {
-    id: "exit-button",
-    targetSelector: '[data-guidance="exit-button"]',
-    title: "Exit",
-    description: `Leave the current workflow run.
-
-• Returns to the start page
-• Workflow state is automatically preserved
-• Resume anytime from the Runs tab`,
-    badgePosition: "custom-exit",
-  },
-  {
     id: "view-mode-toggle",
     targetSelector: '[data-guidance="view-mode-toggle"]',
     title: "View Mode",
@@ -88,6 +77,18 @@ Single (Recommended):
 Scroll (Experimental):
   All interactions in a scrollable timeline.
   Best for reviewing the full run history.`,
+    badgePosition: "bottom",
+  },
+  {
+    id: "edit-button",
+    targetSelector: '[data-guidance="edit-button"]',
+    title: "Edit (Experimental)",
+    description: `Highly experimental visual workflow editor.
+
+• Active development - expect changes
+• View and edit workflows in a flow-based visual interface
+• Configure modules and connections visually
+• Changes made in editor are NOT persisted yet`,
     badgePosition: "bottom",
   },
   {
@@ -232,11 +233,10 @@ function getBadgePosition(
 interface CollapsibleBadgeProps {
   item: GuidanceItem;
   targetRect: TargetRect | null;
-  viewModeRect?: TargetRect | null;
   debugToggleRect?: TargetRect | null;
 }
 
-function CollapsibleBadge({ item, targetRect, viewModeRect, debugToggleRect }: CollapsibleBadgeProps) {
+function CollapsibleBadge({ item, targetRect, debugToggleRect }: CollapsibleBadgeProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const badgeRef = useRef<HTMLDivElement>(null);
   const [connectorLine, setConnectorLine] = useState<ConnectorLine | null>(null);

@@ -35,6 +35,8 @@ export type NodeDataFactoryParams = {
   onViewState?: () => void;
   /** Callback to preview this module (optional, used by user.select) */
   onPreview?: () => void;
+  /** Callback to load preview data by running previous module (optional, used by media.generate) */
+  onLoadPreviewData?: () => Promise<Record<string, unknown> | null>;
 };
 
 /**

@@ -209,6 +209,7 @@ async def execute_sub_action(
                 sub_action_id=request.sub_action_id,
                 params=request.params,
                 ai_config=request.ai_config,
+                mock_mode=request.mock,
             ):
                 logger.info(f"[SubAction] Yielding event: {event.type.value}")
                 yield {"event": event.type.value, "data": json.dumps(event.data)}

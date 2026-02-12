@@ -40,12 +40,14 @@ class SubActionContext:
         interaction_id: str,
         db: Database,
         params: Dict[str, Any],
+        mock_mode: bool = False,
     ):
         self.workflow_run_id = workflow_run_id
         self.execution_id = execution_id
         self.interaction_id = interaction_id
         self.db = db
         self.params = params
+        self.mock_mode = mock_mode
 
 
 class SubActionHandler:
@@ -69,6 +71,7 @@ class SubActionHandler:
         sub_action_id: str,
         params: Dict[str, Any] = None,
         ai_config: Dict[str, Any] = None,
+        mock_mode: bool = False,
     ) -> AsyncIterator[SSEEvent]:
         """
         Execute sub-action and yield progress events.
@@ -79,6 +82,7 @@ class SubActionHandler:
             sub_action_id: Sub-action ID from schema (e.g., "image_generation")
             params: Optional parameters (e.g., feedback)
             ai_config: Optional runtime override for AI configuration (provider, model)
+            mock_mode: If True, return mock data instead of making real API calls
 
         Yields:
             SSEEvent objects for streaming
@@ -182,7 +186,8 @@ class SubActionHandler:
                 logger.info(f"[SubAction] Executing self_sub_action for {execution_id}")
                 child_state = None
                 async for event_type, event_data in self._execute_self_sub_action(
-                    workflow_run_id, execution_id, interaction, sub_action_def, params
+                    workflow_run_id, execution_id, interaction, sub_action_def, params,
+                    mock_mode=mock_mode,
                 ):
                     if event_type == "progress":
                         logger.info(f"[SubAction] Yielding self_sub_action PROGRESS for {execution_id}")
@@ -570,9 +575,18 @@ class SubActionHandler:
         interaction: Dict,
         sub_action_def: Dict,
         params: Dict,
+        mock_mode: bool = False,
     ) -> AsyncIterator[Tuple[str, Any]]:
         """
         Execute self_sub_action (module's own sub_action method).
+
+        Args:
+            workflow_run_id: Parent workflow run ID
+            execution_id: Unique execution ID for this sub-action
+            interaction: The interaction event data
+            sub_action_def: Sub-action definition from module config
+            params: Parameters for the sub-action
+            mock_mode: If True, return mock data instead of real API calls
 
         Yields:
             Tuples of (event_type, data) where:
@@ -594,6 +608,7 @@ class SubActionHandler:
             interaction_id=interaction.get("data", {}).get("interaction_id"),
             db=self.db,
             params={**action_params, **params},
+            mock_mode=mock_mode,
         )
 
         # Module's sub_action is an async generator yielding (event_type, data)

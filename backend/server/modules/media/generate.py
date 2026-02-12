@@ -28,6 +28,17 @@ from backend.providers.media.registry import MediaProviderRegistry
 
 logger = logging.getLogger("modules.media.generate")
 
+# SVG placeholder for mock media generation (512x512 gray with "MOCK" text)
+MOCK_PLACEHOLDER_SVG = '''<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#e0e0e0"/>
+  <text x="256" y="240" text-anchor="middle" font-family="Arial, sans-serif" font-size="48" fill="#666">MOCK</text>
+  <text x="256" y="290" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#888">Preview Image</text>
+</svg>'''
+
+# Base64-encoded data URL for the placeholder
+import base64
+MOCK_PLACEHOLDER_DATA_URL = f"data:image/svg+xml;base64,{base64.b64encode(MOCK_PLACEHOLDER_SVG.encode()).decode()}"
+
 # =============================================================================
 # Singleton TaskQueue (reuse connection to avoid connection pool exhaustion)
 # =============================================================================
@@ -436,12 +447,50 @@ class MediaGenerateModule(InteractiveModule):
             )
             return {}
 
+    async def _mock_sub_action(self, context):
+        """
+        Mock sub-action for preview mode.
+
+        Returns a placeholder image without creating real tasks or
+        calling external APIs.
+
+        Args:
+            context: SubActionContext with params
+
+        Yields:
+            Tuples of (event_type, data) mimicking real sub-action behavior
+        """
+        params = context.params
+        prompt_id = params.get("prompt_id")
+
+        # Simulate brief processing delay
+        yield ("progress", {
+            "status": "processing",
+            "progress": {"elapsed_ms": 200, "message": "Generating mock content..."}
+        })
+        await asyncio.sleep(0.3)
+
+        # Generate unique mock IDs
+        mock_content_id = f"mock-{uuid7_str()[:8]}"
+        mock_metadata_id = f"mock-meta-{uuid7_str()[:8]}"
+
+        # Return mock result with data URL placeholder
+        yield ("result", {
+            "metadata_id": mock_metadata_id,
+            "content_ids": [mock_content_id],
+            "urls": [MOCK_PLACEHOLDER_DATA_URL],
+            "prompt_id": prompt_id,
+            "mock": True,
+        })
+
     async def sub_action(self, context):
         """
         Execute media generation sub-action.
 
         Creates a task via TaskQueue, polls for completion while yielding
         progress events, and finally yields the result.
+
+        In mock mode, returns placeholder data without creating real tasks.
 
         Args:
             context: SubActionContext with params for generation
@@ -451,6 +500,12 @@ class MediaGenerateModule(InteractiveModule):
             - ("progress", {...}) for progress updates
             - ("result", {...}) for the final result
         """
+        # Check if running in mock mode
+        if getattr(context, 'mock_mode', False):
+            async for event in self._mock_sub_action(context):
+                yield event
+            return
+
         params = context.params
         workflow_run_id = context.workflow_run_id
         interaction_id = context.interaction_id

@@ -24,6 +24,12 @@ export interface RenderContextValue {
   readonly: boolean;
 
   /**
+   * Whether in mock/preview mode.
+   * When true, components should show mock data instead of calling real APIs.
+   */
+  mockMode?: boolean;
+
+  /**
    * Callback to update display data (debug mode only).
    * @param path - Path to the data being updated
    * @param data - New data value
@@ -43,6 +49,7 @@ export interface RenderContextValue {
 const defaultContext: RenderContextValue = {
   debugMode: false,
   readonly: false,
+  mockMode: false,
   onUpdateDisplayData: undefined,
 };
 

@@ -7,6 +7,7 @@
 
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import type { WorkflowDefinition, InteractionResponseData } from "@wfm/shared";
+import { useWorkflowStore } from "@wfm/shared";
 import { VirtualRuntime } from "./VirtualRuntime";
 import type {
   ModuleLocation,
@@ -40,6 +41,8 @@ export interface VirtualRuntimeState {
   currentTarget: ModuleLocation | null;
   /** Module to filter state display to (null for full state) */
   stateUpToModule: ModuleLocation | null;
+  /** Whether mock mode is enabled (default: true) */
+  mockMode: boolean;
 }
 
 export interface VirtualRuntimeActions {
@@ -67,6 +70,20 @@ export interface VirtualRuntimeActions {
     target: ModuleLocation,
     selections?: ModuleSelection[]
   ) => Promise<void>;
+
+  /**
+   * Run workflow to a target module silently (no panel opens).
+   * Used for loading data in the background.
+   * Returns the state after execution.
+   * @param workflow - The full workflow definition
+   * @param target - The module to run to
+   * @param selections - Pre-defined selections for prerequisite interactive modules
+   */
+  runToModuleSilent: (
+    workflow: WorkflowDefinition,
+    target: ModuleLocation,
+    selections?: ModuleSelection[]
+  ) => Promise<VirtualStateResponse | null>;
 
   /**
    * Submit a response to the current interaction.
@@ -130,6 +147,25 @@ export interface VirtualRuntimeActions {
    * Set the state panel open state directly (for controlled usage).
    */
   setStatePanelOpen: (open: boolean) => void;
+
+  /**
+   * Set mock mode.
+   * @param mockMode - Whether to use mock data (true) or real API calls (false)
+   */
+  setMockMode: (mockMode: boolean) => void;
+
+  /**
+   * Reload the current target with a different mock mode.
+   * Resets state and re-runs to the current target.
+   * @param workflow - The full workflow definition
+   * @param mockMode - Whether to use mock data (true) or real API calls (false)
+   * @param selections - Pre-defined selections for prerequisite interactive modules
+   */
+  reloadWithMockMode: (
+    workflow: WorkflowDefinition,
+    mockMode: boolean,
+    selections?: ModuleSelection[]
+  ) => Promise<void>;
 }
 
 export interface UseVirtualRuntimeReturn extends VirtualRuntimeState {
@@ -182,6 +218,7 @@ export function useVirtualRuntime(): UseVirtualRuntimeReturn {
   const [statePanelOpen, setStatePanelOpenState] = useState(false);
   const [currentTarget, setCurrentTarget] = useState<ModuleLocation | null>(null);
   const [stateUpToModule, setStateUpToModule] = useState<ModuleLocation | null>(null);
+  const [mockMode, setMockModeState] = useState<boolean>(true);
 
   // Register panel change callbacks on mount
   useEffect(() => {
@@ -191,15 +228,24 @@ export function useVirtualRuntime(): UseVirtualRuntimeReturn {
     runtime.setOnStatePanelChange((open) => {
       setStatePanelOpenState(open);
     });
+    runtime.setOnMockModeChange((mode) => {
+      setMockModeState(mode);
+    });
     // Sync initial state
     setPanelOpenState(runtime.isPanelOpen());
     setStatePanelOpenState(runtime.isStatePanelOpen());
+    setMockModeState(runtime.getMockMode());
 
     return () => {
       runtime.setOnPanelChange(null);
       runtime.setOnStatePanelChange(null);
+      runtime.setOnMockModeChange(null);
     };
   }, [runtime]);
+
+  // Get workflow store actions
+  const startWorkflow = useWorkflowStore((s) => s.startWorkflow);
+  const resetWorkflowStore = useWorkflowStore((s) => s.reset);
 
   // Sync state from runtime
   const syncState = useCallback(() => {
@@ -211,7 +257,14 @@ export function useVirtualRuntime(): UseVirtualRuntimeReturn {
     setStatePanelOpenState(runtime.isStatePanelOpen());
     setCurrentTarget(runtime.getCurrentTarget());
     setStateUpToModule(runtime.getStateUpToModule());
-  }, [runtime]);
+    setMockModeState(runtime.getMockMode());
+
+    // Sync virtualRunId to workflow store so sub-actions can use it
+    const virtualRunId = runtime.getVirtualRunId();
+    if (virtualRunId) {
+      startWorkflow(virtualRunId, "preview", "Preview");
+    }
+  }, [runtime, startWorkflow]);
 
   // Actions
   const runToModule = useCallback(
@@ -258,6 +311,28 @@ export function useVirtualRuntime(): UseVirtualRuntimeReturn {
     [runtime, syncState]
   );
 
+  const runToModuleSilent = useCallback(
+    async (
+      workflow: WorkflowDefinition,
+      target: ModuleLocation,
+      selections: ModuleSelection[] = []
+    ): Promise<VirtualStateResponse | null> => {
+      setBusy(true);
+      setError(null);
+
+      try {
+        // Run with openPanel: "none" to avoid opening any panels
+        await runtime.runToModule(workflow, target, selections, { openPanel: "none" });
+        // Return state directly from runtime (not React state which is async)
+        return runtime.getState();
+      } finally {
+        syncState();
+        setBusy(false);
+      }
+    },
+    [runtime, syncState]
+  );
+
   const submitResponse = useCallback(
     async (
       workflow: WorkflowDefinition,
@@ -294,9 +369,10 @@ export function useVirtualRuntime(): UseVirtualRuntimeReturn {
   const reset = useCallback(
     (closePanel?: boolean) => {
       runtime.reset(closePanel);
+      resetWorkflowStore();
       syncState();
     },
-    [runtime, syncState]
+    [runtime, resetWorkflowStore, syncState]
   );
 
   const openPanel = useCallback(() => {
@@ -335,11 +411,41 @@ export function useVirtualRuntime(): UseVirtualRuntimeReturn {
     [runtime]
   );
 
+  const setMockMode = useCallback(
+    (mode: boolean) => {
+      runtime.setMockMode(mode);
+      setMockModeState(mode);
+    },
+    [runtime]
+  );
+
+  const reloadWithMockMode = useCallback(
+    async (
+      workflow: WorkflowDefinition,
+      mode: boolean,
+      selections: ModuleSelection[] = []
+    ) => {
+      setBusy(true);
+      setError(null);
+      setLastResponse(null);
+      setState(null);
+
+      try {
+        await runtime.reloadWithMockMode(workflow, mode, selections);
+      } finally {
+        syncState();
+        setBusy(false);
+      }
+    },
+    [runtime, syncState]
+  );
+
   // Memoize actions object
   const actions = useMemo<VirtualRuntimeActions>(
     () => ({
       runToModule,
       runToModuleForState,
+      runToModuleSilent,
       submitResponse,
       getInteractionForModule,
       hasStateFor,
@@ -351,10 +457,13 @@ export function useVirtualRuntime(): UseVirtualRuntimeReturn {
       openFullStatePanel,
       closeStatePanel,
       setStatePanelOpen,
+      setMockMode,
+      reloadWithMockMode,
     }),
     [
       runToModule,
       runToModuleForState,
+      runToModuleSilent,
       submitResponse,
       getInteractionForModule,
       hasStateFor,
@@ -366,6 +475,8 @@ export function useVirtualRuntime(): UseVirtualRuntimeReturn {
       openFullStatePanel,
       closeStatePanel,
       setStatePanelOpen,
+      setMockMode,
+      reloadWithMockMode,
     ]
   );
 
@@ -379,6 +490,7 @@ export function useVirtualRuntime(): UseVirtualRuntimeReturn {
     statePanelOpen,
     currentTarget,
     stateUpToModule,
+    mockMode,
     actions,
   };
 }

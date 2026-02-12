@@ -31,4 +31,4 @@ deepdiff>=8.0.0
 
 # === Mock Data Generation ===
 jsf>=0.11.2
-Faker>=40.0.0
+lorem-text>=3.0

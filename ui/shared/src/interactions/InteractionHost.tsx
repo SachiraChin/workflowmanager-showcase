@@ -125,6 +125,11 @@ interface InteractionHostProps {
    * Parent should refresh interaction display data.
    */
   onSubActionComplete?: () => void;
+  /**
+   * If true, sub-actions return mock data instead of real API calls.
+   * Used for preview mode in the editor.
+   */
+  mockMode?: boolean;
 }
 
 // =============================================================================
@@ -142,6 +147,7 @@ export function InteractionHost({
   timestamp,
   subActionExecutor,
   onSubActionComplete,
+  mockMode = false,
 }: InteractionHostProps) {
   // Debug mode from RenderContext
   const { debugMode, onUpdateDisplayData } = useRenderContext();
@@ -172,6 +178,7 @@ export function InteractionHost({
         interactionId={request.interaction_id}
         executor={subActionExecutor}
         onComplete={onSubActionComplete}
+        mockMode={mockMode}
       >
         <InteractionHostContent
           request={request}

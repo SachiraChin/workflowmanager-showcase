@@ -464,6 +464,8 @@ export interface SubActionRequest {
     provider?: string;
     model?: string;
   };
+  /** If true, return mock data instead of making real API calls. Used for preview mode. */
+  mock?: boolean;
 }
 
 /**

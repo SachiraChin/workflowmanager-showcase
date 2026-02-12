@@ -112,6 +112,7 @@ class SubActionRequest(BaseWorkflowRequest):
     interaction_id: str  # ID of the current interaction
     sub_action_id: str  # References sub_action.id in module schema
     params: Dict[str, Any] = Field(default_factory=dict)  # Action-specific params
+    mock: bool = Field(default=False, description="If true, return mock data instead of real API calls")
 
 
 # =============================================================================

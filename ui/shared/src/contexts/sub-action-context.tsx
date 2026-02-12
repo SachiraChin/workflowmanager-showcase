@@ -124,6 +124,8 @@ interface SubActionProviderProps {
   executor?: SubActionExecutor;
   /** Called when a sub-action completes successfully */
   onComplete?: () => void;
+  /** If true, sub-actions return mock data instead of real API calls. Used for preview mode. */
+  mockMode?: boolean;
   children: ReactNode;
 }
 
@@ -132,6 +134,7 @@ export function SubActionProvider({
   interactionId,
   executor,
   onComplete,
+  mockMode = false,
   children,
 }: SubActionProviderProps) {
   // Get workflow state
@@ -210,6 +213,7 @@ export function SubActionProvider({
             model: selectedModel,
           },
         }),
+        ...(mockMode && { mock: true }),
       };
 
       // Handle SSE events
