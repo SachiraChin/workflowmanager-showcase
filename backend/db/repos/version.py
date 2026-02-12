@@ -571,7 +571,7 @@ class VersionRepository(BaseRepository):
         Returns:
             Tuple of (source_workflow_version_id, workflow_template_id, is_new)
         """
-        from engine.execution_groups import ExecutionGroupsProcessor
+        from backend.workflow_engine.engine.execution_groups import ExecutionGroupsProcessor
 
         # Get or create source version
         source_version_id, template_id, is_new = self.get_or_create_workflow_version(
