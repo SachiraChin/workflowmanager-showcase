@@ -8,6 +8,7 @@ The provider is selected at runtime based on the 'provider' input parameter.
 import json
 from typing import Dict, Any, List, Optional
 from engine.module_interface import ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
+from utils.mock_generator import generate_mock_from_schema, generate_lorem_text
 from .base import Message
 from .registry import ProviderRegistry
 
@@ -162,8 +163,49 @@ class LLMCallModule(ExecutableModule):
             )
         ]
 
+    def get_mock_output(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Generate mock output for preview mode.
+
+        If output_schema is provided, generates mock data conforming to that schema.
+        Otherwise returns lorem ipsum text.
+        """
+        output_schema = self.get_input_value(inputs, 'output_schema')
+
+        if output_schema:
+            # Generate mock data conforming to the schema
+            mock_response = generate_mock_from_schema(output_schema)
+        else:
+            # Return lorem ipsum text
+            mock_response = generate_lorem_text(sentences=3)
+
+        # Convert to string for response_text
+        if isinstance(mock_response, str):
+            response_text = mock_response
+        else:
+            response_text = json.dumps(mock_response, indent=2)
+
+        return {
+            "response": mock_response,
+            "response_text": response_text,
+            "model": "mock-preview",
+            "usage": {},
+            "token_usage": 0,
+            "token_usage_detailed": {
+                "model_used": "mock-preview",
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cached_tokens": 0
+            }
+        }
+
     def execute(self, inputs: Dict[str, Any], context) -> Dict[str, Any]:
         """Execute LLM API call via selected provider."""
+        # Check mock mode first - return mock data without calling API
+        if getattr(context, 'mock_mode', False):
+            return self.get_mock_output(inputs)
+
         try:
             # Build configuration from ai_config (runtime override takes precedence)
             global_ai_config = context.services.get('ai_config', {})

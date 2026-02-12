@@ -7,6 +7,7 @@ These endpoints mirror the real workflow endpoints for exact parity:
     Real                        Virtual
     POST /workflow/start    →   POST /workflow/virtual/start
     POST /workflow/respond  →   POST /workflow/virtual/respond
+    POST /workflow/{id}/sub-action → POST /workflow/virtual/sub-action
 
 The virtual database state is transferred as a gzip-compressed, base64-encoded
 string to minimize bandwidth usage.
@@ -17,10 +18,12 @@ import json
 import logging
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+from sse_starlette.sse import EventSourceResponse
 
 from backend.db.virtual import VIRTUAL_USER_ID, VirtualDatabase
+from backend.providers.media.base import GenerationError
 from models import (
     ExecutionTarget,
     InteractionResponseData,
@@ -28,6 +31,8 @@ from models import (
     WorkflowResponse,
     WorkflowStatus,
 )
+from modules.media import MediaProviderRegistry
+from utils import sanitize_error_message
 from workflow import WorkflowProcessor
 
 from ..dependencies import get_current_user_id
@@ -60,6 +65,11 @@ class VirtualStartRequest(BaseModel):
     target_module_name: str = Field(
         ..., description="Module name to execute"
     )
+    mock: bool = Field(
+        default=True,
+        description="If true, modules return mock data instead of making real API calls. "
+        "Used for preview mode in the editor."
+    )
 
 
 class VirtualRespondRequest(BaseModel):
@@ -84,6 +94,10 @@ class VirtualRespondRequest(BaseModel):
     )
     response: InteractionResponseData = Field(
         ..., description="User's response to the interaction"
+    )
+    mock: bool = Field(
+        default=True,
+        description="If true, modules return mock data instead of making real API calls."
     )
 
 
@@ -186,6 +200,7 @@ async def start_virtual_module(
             ai_config=VIRTUAL_AI_CONFIG,
             force_new=is_fresh_start,
             target=target,
+            mock_mode=request.mock,
         )
 
         virtual_run_id = result.workflow_run_id
@@ -268,6 +283,7 @@ async def respond_virtual_module(
             response=request.response,
             ai_config=VIRTUAL_AI_CONFIG,
             target=target,
+            mock_mode=request.mock,
         )
 
         return to_virtual_response(result, vdb, virtual_run_id)
@@ -308,6 +324,10 @@ class VirtualResumeConfirmRequest(BaseModel):
     )
     target_module_name: str = Field(
         ..., description="Module name to execute up to"
+    )
+    mock: bool = Field(
+        default=True,
+        description="If true, modules return mock data instead of making real API calls."
     )
 
 
@@ -408,6 +428,7 @@ async def resume_confirm_virtual(
             user_id=VIRTUAL_USER_ID,
             ai_config=VIRTUAL_AI_CONFIG,
             target=target,
+            mock_mode=request.mock,
         )
 
         return to_virtual_response(result, vdb, virtual_run_id)
@@ -592,3 +613,330 @@ async def get_virtual_interaction_history(
             interactions=[],
             pending_interaction=None,
         )
+
+
+# =============================================================================
+# Sub-Action Endpoint
+# =============================================================================
+
+
+class VirtualSubActionRequest(BaseModel):
+    """Request to execute a sub-action in virtual context."""
+
+    workflow: Dict[str, Any] = Field(
+        ..., description="Full resolved workflow JSON"
+    )
+    virtual_db: str = Field(
+        ...,
+        description="Base64-encoded gzip of virtual database JSON",
+    )
+    virtual_run_id: str = Field(
+        ..., description="Virtual workflow run ID"
+    )
+    interaction_id: str = Field(
+        ..., description="ID of the current interaction"
+    )
+    sub_action_id: str = Field(
+        ..., description="References sub_action.id in module schema"
+    )
+    params: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Action-specific params"
+    )
+    ai_config: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Runtime override for AI configuration"
+    )
+    mock: bool = Field(
+        default=True,
+        description="If true, return mock data instead of real API calls"
+    )
+
+
+@router.post("/sub-action")
+async def execute_virtual_sub_action(
+    request: VirtualSubActionRequest,
+    user_id: str = Depends(get_current_user_id),
+):
+    """
+    Execute a sub-action in virtual context via SSE streaming.
+
+    Mirrors POST /workflow/{id}/sub-action for real workflows.
+
+    The virtual_db in the final completion event contains the updated
+    database state that should be sent back in subsequent requests.
+    """
+    vdb: Optional[VirtualDatabase] = None
+    virtual_run_id = request.virtual_run_id
+
+    logger.info(
+        "Virtual sub-action - run_id=%s, sub_action_id=%s, interaction=%s",
+        virtual_run_id[:8] if virtual_run_id else "none",
+        request.sub_action_id,
+        request.interaction_id,
+    )
+
+    async def event_generator():
+        nonlocal vdb
+
+        try:
+            # Create virtual database from provided state
+            vdb = VirtualDatabase(request.virtual_db)
+
+            # Store (potentially updated) workflow as version
+            workflow_template_name = request.workflow.get("workflow_id", "virtual")
+            content_hash = compute_content_hash(request.workflow)
+
+            version_id, _, _ = vdb.version_repo.process_and_store_workflow_versions(
+                resolved_workflow=request.workflow,
+                content_hash=content_hash,
+                source_type="json",
+                workflow_template_name=workflow_template_name,
+                user_id=VIRTUAL_USER_ID,
+            )
+
+            # Update workflow run to use this version
+            vdb.workflow_runs.update_one(
+                {"workflow_run_id": virtual_run_id},
+                {"$set": {"current_workflow_version_id": version_id}},
+            )
+
+            # Create processor with virtual DB
+            processor = WorkflowProcessor(vdb)
+
+            # Merge ai_config: request override takes precedence
+            ai_config = {**VIRTUAL_AI_CONFIG}
+            if request.ai_config:
+                ai_config.update(request.ai_config)
+
+            # Execute sub-action and stream events
+            async for event in processor.sub_action_handler.execute_sub_action(
+                workflow_run_id=virtual_run_id,
+                interaction_id=request.interaction_id,
+                sub_action_id=request.sub_action_id,
+                params=request.params,
+                ai_config=ai_config,
+                mock_mode=request.mock,
+            ):
+                # For completion event, include virtual_db state
+                if event.type.value == "complete":
+                    event.data["virtual_db"] = vdb.export_state()
+                    event.data["state"] = vdb.state_repo.get_module_outputs(
+                        virtual_run_id
+                    )
+
+                yield {
+                    "event": event.type.value,
+                    "data": json.dumps(event.data)
+                }
+
+            logger.info(
+                "Virtual sub-action completed - run_id=%s",
+                virtual_run_id[:8] if virtual_run_id else "none",
+            )
+
+        except Exception as e:
+            logger.exception("Virtual sub-action failed: %s", e)
+            error_data = {"message": sanitize_error_message(str(e))}
+            if vdb:
+                error_data["virtual_db"] = vdb.export_state()
+            yield {
+                "event": "error",
+                "data": json.dumps(error_data)
+            }
+
+    return EventSourceResponse(
+        event_generator(),
+        send_timeout=5,
+        headers={"X-Accel-Buffering": "no"}
+    )
+
+
+# =============================================================================
+# Generations Endpoint
+# =============================================================================
+
+
+class VirtualGenerationsRequest(BaseModel):
+    """Request to get generations in virtual context."""
+
+    virtual_db: str = Field(
+        ...,
+        description="Base64-encoded gzip of virtual database JSON",
+    )
+    virtual_run_id: str = Field(
+        ..., description="Virtual workflow run ID"
+    )
+    interaction_id: str = Field(
+        ..., description="ID of the interaction"
+    )
+    content_type: str = Field(
+        ..., description="Content type to filter by (e.g., 'image', 'video')"
+    )
+
+
+class VirtualGenerationsResponse(BaseModel):
+    """Response containing generations for an interaction."""
+
+    generations: list = Field(
+        default_factory=list,
+        description="List of generation results"
+    )
+
+
+@router.post("/generations", response_model=VirtualGenerationsResponse)
+async def get_virtual_generations(
+    request: VirtualGenerationsRequest,
+    user_id: str = Depends(get_current_user_id),
+):
+    """
+    Get generations for an interaction in virtual context.
+
+    Mirrors GET /workflow/{id}/interaction/{id}/generations for real workflows.
+
+    In virtual/preview mode, this typically returns an empty list since
+    there are no persisted generations. Any generations during the current
+    session are handled by the frontend state.
+    """
+    try:
+        # Create virtual database from provided state
+        vdb = VirtualDatabase(request.virtual_db)
+
+        # Get generations from virtual content repository
+        generations = vdb.content_repo.get_generations_for_interaction(
+            request.interaction_id, content_type=request.content_type
+        )
+
+        # Transform to frontend format (same as real endpoint)
+        result = []
+        for gen in generations:
+            raw_content_items = gen.get("content_items", [])
+            if gen.get("status") == "completed" and raw_content_items:
+                urls = []
+                content_items = []
+
+                for item in raw_content_items:
+                    content_id = item.get("generated_content_id")
+                    # In virtual mode, we use provider URLs directly
+                    # (no local storage for virtual runs)
+                    url = item.get("provider_url", "")
+                    urls.append(url)
+                    content_items.append({
+                        "content_id": content_id,
+                        "url": url,
+                        "content_type": item.get("content_type"),
+                    })
+
+                result.append({
+                    "urls": urls,
+                    "metadata_id": gen.get("content_generation_metadata_id"),
+                    "content_ids": [
+                        item.get("generated_content_id")
+                        for item in raw_content_items
+                    ],
+                    "content_items": content_items,
+                    "prompt_id": gen.get("prompt_id"),
+                    "provider": gen.get("provider"),
+                    "request_params": gen.get("request_params", {}),
+                })
+
+        return VirtualGenerationsResponse(generations=result)
+
+    except Exception as e:
+        logger.exception("Virtual generations failed: %s", e)
+        return VirtualGenerationsResponse(generations=[])
+
+
+# =============================================================================
+# Media Preview Endpoint
+# =============================================================================
+
+
+class VirtualMediaPreviewRequest(BaseModel):
+    """Request for media preview in virtual context."""
+
+    provider: str = Field(
+        ..., description="Media provider name (e.g., 'ideogram')"
+    )
+    action_type: str = Field(
+        ..., description="Action type (e.g., 'txt2img')"
+    )
+    params: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Generation parameters for preview calculation"
+    )
+
+
+class VirtualResolutionResponse(BaseModel):
+    """Resolution information."""
+
+    width: int
+    height: int
+    megapixels: float
+
+
+class VirtualCreditsResponse(BaseModel):
+    """Credit information."""
+
+    credits: float
+    cost_per_credit: float
+    total_cost_usd: float
+    num_images: int
+    credits_per_image: float
+    cost_per_image_usd: float
+
+
+class VirtualMediaPreviewResponse(BaseModel):
+    """Response for media preview."""
+
+    resolution: VirtualResolutionResponse
+    credits: VirtualCreditsResponse
+
+
+@router.post("/media/preview", response_model=VirtualMediaPreviewResponse)
+async def get_virtual_media_preview(
+    request: VirtualMediaPreviewRequest,
+    user_id: str = Depends(get_current_user_id),
+):
+    """
+    Get preview information for a media generation in virtual context.
+
+    Mirrors POST /workflow/{id}/media/preview for real workflows.
+
+    This endpoint doesn't require virtual_db since it only calculates
+    resolution and credits based on the provider and params.
+    """
+    # Get provider
+    try:
+        provider = MediaProviderRegistry.get(request.provider)
+    except (ValueError, GenerationError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # Get preview info
+    try:
+        preview_info = provider.get_preview_info(
+            action_type=request.action_type,
+            params=request.params
+        )
+    except Exception as e:
+        logger.exception("Virtual media preview failed: %s", e)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to calculate preview: {str(e)}"
+        )
+
+    return VirtualMediaPreviewResponse(
+        resolution=VirtualResolutionResponse(
+            width=preview_info.resolution.width,
+            height=preview_info.resolution.height,
+            megapixels=preview_info.resolution.megapixels
+        ),
+        credits=VirtualCreditsResponse(
+            credits=preview_info.credits.credits,
+            cost_per_credit=preview_info.credits.cost_per_credit,
+            total_cost_usd=preview_info.credits.total_cost_usd,
+            num_images=preview_info.credits.num_images,
+            credits_per_image=preview_info.credits.credits_per_image,
+            cost_per_image_usd=preview_info.credits.cost_per_image_usd
+        )
+    )

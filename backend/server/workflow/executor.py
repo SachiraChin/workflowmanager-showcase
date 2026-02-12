@@ -303,6 +303,7 @@ class WorkflowExecutor:
         workflow_template_id = services.get('workflow_template_id')
         user_id = services.get('user_id')
         branch_id = services.get('branch_id')
+        mock_mode = services.get('mock_mode', False)
         context = WorkflowExecutionContext(
             workflow_run_id=workflow_run_id,
             db=self.db,
@@ -315,7 +316,8 @@ class WorkflowExecutor:
             workflow_template_id=workflow_template_id,
             user_id=user_id,
             branch_id=branch_id,
-            logger=self.logger
+            logger=self.logger,
+            mock_mode=mock_mode,
         )
         context.cancel_event = cancel_event
 

@@ -8,6 +8,7 @@ data isolation between workflows through context_filters.
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Set
 from engine.module_interface import ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
+from utils.mock_generator import generate_lorem_sentence
 
 
 class DatabaseQueryModule(ExecutableModule):
@@ -60,8 +61,27 @@ class DatabaseQueryModule(ExecutableModule):
             )
         ]
 
+    def get_mock_output(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Generate mock output for preview mode.
+
+        Returns mock query results without accessing the database.
+        Generates 2 mock records with lorem ipsum data.
+        """
+        return {
+            "results": [
+                {"_id": "mock-001", "title": generate_lorem_sentence()},
+                {"_id": "mock-002", "title": generate_lorem_sentence()}
+            ],
+            "count": 2
+        }
+
     def execute(self, inputs: Dict[str, Any], context) -> Dict[str, Any]:
         """Execute a validated database query"""
+        # Check mock mode first - return mock data without database access
+        if getattr(context, 'mock_mode', False):
+            return self.get_mock_output(inputs)
+
         table_schema_name = inputs.get("table_schema")
         query = inputs.get("query", {})
 

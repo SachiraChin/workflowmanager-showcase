@@ -89,6 +89,11 @@ class ModuleBase(ABC):
     Subclasses:
     - ExecutableModule: For non-interactive modules (API calls, IO, display, etc.)
     - InteractiveModule: For modules requiring user interaction (select, confirm, text input)
+
+    Mock Mode:
+    - Modules that make external API calls should override get_mock_output()
+    - In execute(), check context.mock_mode and call get_mock_output() if True
+    - Transform modules don't need mocking - they run normally with mock input data
     """
 
     @property
@@ -156,6 +161,37 @@ class ModuleBase(ABC):
         if input_def:
             return inputs.get(name, input_def.default)
         return inputs.get(name)
+
+    def get_mock_output(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Generate mock output data for preview mode.
+
+        Override this method in modules that make external API calls
+        (api.llm, api.fetch, db.query, etc.). The execute() method should
+        check context.mock_mode and call this method if True.
+
+        Transform modules don't need to override this - they execute normally
+        with mock input data from upstream modules.
+
+        Mock data should:
+        1. Match the module's output contract (self.outputs)
+        2. Honor any schema constraints from inputs (e.g., output_schema)
+        3. Use lorem ipsum style data - obviously fake but structurally correct
+        4. Be deterministic for consistent previews
+
+        Args:
+            inputs: Resolved inputs (may contain mock data from upstream)
+
+        Returns:
+            Dict matching the module's outputs contract
+
+        Raises:
+            NotImplementedError: If module needs mocking but hasn't implemented it
+        """
+        raise NotImplementedError(
+            f"Module '{self.module_id}' does not implement get_mock_output(). "
+            "Either implement it or ensure execute() doesn't call it."
+        )
 
 
 class ExecutableModule(ModuleBase):

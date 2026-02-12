@@ -74,6 +74,7 @@ class WorkflowProcessor(WorkflowStreamingMixin):
         force_new: bool = False,
         capabilities: List[str] = None,
         target: Optional[ExecutionTarget] = None,
+        mock_mode: bool = False,
     ) -> WorkflowResponse:
         """
         Start or resume a workflow.
@@ -224,6 +225,7 @@ class WorkflowProcessor(WorkflowStreamingMixin):
             'user_id': user_id,
             'branch_id': branch_id,
             'session_timestamp': datetime.now().strftime('%Y%m%d_%H%M%S'),
+            'mock_mode': mock_mode,
         }
 
         # Get current position
@@ -267,6 +269,7 @@ class WorkflowProcessor(WorkflowStreamingMixin):
         ai_config: Dict[str, Any] = None,
         capabilities: List[str] = None,
         target: Optional[ExecutionTarget] = None,
+        mock_mode: bool = False,
     ) -> WorkflowResponse:
         """
         Resume a workflow with an updated workflow definition.
@@ -280,6 +283,7 @@ class WorkflowProcessor(WorkflowStreamingMixin):
             ai_config: Optional runtime override for AI configuration
             capabilities: Client capabilities for version selection
             target: Optional execution target - stop after reaching this step/module
+            mock_mode: If True, modules return mock data instead of making real API calls
         """
         if capabilities is None:
             capabilities = []
@@ -359,6 +363,7 @@ class WorkflowProcessor(WorkflowStreamingMixin):
             'user_id': user_id,
             'branch_id': branch_id,
             'session_timestamp': datetime.now().strftime('%Y%m%d_%H%M%S'),
+            'mock_mode': mock_mode,
         }
 
         self.logger.debug(
@@ -381,6 +386,7 @@ class WorkflowProcessor(WorkflowStreamingMixin):
         response: InteractionResponseData,
         ai_config: Optional[Dict[str, Any]] = None,
         target: Optional[ExecutionTarget] = None,
+        mock_mode: bool = False,
     ) -> WorkflowResponse:
         """
         Process user response to an interaction.
@@ -391,6 +397,7 @@ class WorkflowProcessor(WorkflowStreamingMixin):
             response: The user's response data
             ai_config: Optional runtime override for AI configuration (provider, model)
             target: Optional execution target - stop after reaching this step/module
+            mock_mode: If True, modules return mock data instead of making real API calls
         """
         t0 = time.time()
 
@@ -455,6 +462,9 @@ class WorkflowProcessor(WorkflowStreamingMixin):
         if ai_config:
             self.logger.info(f"[RESPOND] Applying ai_config override: {ai_config}")
             services['ai_config'] = {**services.get('ai_config', {}), **ai_config}
+
+        # Set mock mode in services
+        services['mock_mode'] = mock_mode
 
         # Get module outputs
         t4 = time.time()

@@ -110,7 +110,8 @@ class WorkflowExecutionContext:
         workflow_template_id: str = None,
         user_id: str = None,
         branch_id: str = None,
-        logger: logging.Logger = None
+        logger: logging.Logger = None,
+        mock_mode: bool = False
     ):
         self.workflow_run_id = workflow_run_id
         self.db = db
@@ -131,6 +132,7 @@ class WorkflowExecutionContext:
         self.retryable = None  # Module's retryable config
         self.sub_actions = None  # Module's sub_actions config (for media.generate)
         self.cancel_event = None  # threading.Event for cancellation support
+        self.mock_mode = mock_mode  # When True, modules should return mock data instead of real API calls
 
         # Create state proxy - use workflow_path for option usage tracking
         self.state = StateProxy(module_outputs, workflow_run_id, workflow_path or workflow_dir)

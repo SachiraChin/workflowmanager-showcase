@@ -28,3 +28,7 @@ pytest-asyncio>=0.21.0
 python-dotenv>=1.0.0
 colorlog>=6.7.0
 deepdiff>=8.0.0
+
+# === Mock Data Generation ===
+jsf>=0.11.2
+Faker>=40.0.0

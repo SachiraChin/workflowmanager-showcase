@@ -16,6 +16,7 @@ from urllib.parse import urljoin
 from engine.module_interface import (
     ExecutableModule, ModuleInput, ModuleOutput, ModuleExecutionError
 )
+from utils.mock_generator import generate_lorem_sentence
 
 logger = logging.getLogger(__name__)
 
@@ -132,8 +133,27 @@ class APIFetchModule(ExecutableModule):
             )
         ]
 
+    def get_mock_output(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Generate mock output for preview mode.
+
+        Returns a mock successful response without making an HTTP request.
+        """
+        return {
+            "response": {
+                "mock": True,
+                "message": generate_lorem_sentence()
+            },
+            "status_code": 200,
+            "success": True
+        }
+
     def execute(self, inputs: Dict[str, Any], context) -> Dict[str, Any]:
         """Execute HTTP request and return response."""
+        # Check mock mode first - return mock data without making HTTP request
+        if getattr(context, 'mock_mode', False):
+            return self.get_mock_output(inputs)
+
         # Build URL
         url = self._build_url(inputs)
         method = self.get_input_value(inputs, 'method').upper()
