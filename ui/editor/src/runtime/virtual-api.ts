@@ -1,10 +1,16 @@
 /**
  * API client for virtual workflow execution.
  *
- * Communicates with the /workflow/virtual/* endpoints on the server.
+ * Communicates with the virtual-server which runs separately from the main
+ * server for resource isolation. Endpoints are:
+ * - POST /workflow/start
+ * - POST /workflow/respond
+ * - POST /workflow/resume/confirm
+ * - POST /workflow/state
+ * - POST /workflow/interaction-history
  */
 
-import { api } from "@wfm/shared";
+import { VIRTUAL_API_URL } from "@wfm/shared";
 import type {
   VirtualStartRequest,
   VirtualRespondRequest,
@@ -17,16 +23,26 @@ import type {
 } from "./types";
 
 /**
- * POST JSON to an endpoint and return typed response.
+ * POST JSON to a virtual server endpoint and return typed response.
  */
 async function postJson<T>(
   endpoint: string,
   body: Record<string, unknown>
 ): Promise<T> {
-  const response = await api.fetchResponse(endpoint, {
+  const response = await fetch(`${VIRTUAL_API_URL}${endpoint}`, {
     method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify(body),
   });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Virtual API error ${response.status}: ${errorText}`);
+  }
+
   return response.json();
 }
 
@@ -42,7 +58,7 @@ export async function virtualStart(
   request: VirtualStartRequest
 ): Promise<VirtualWorkflowResponse> {
   return postJson<VirtualWorkflowResponse>(
-    "/workflow/virtual/start",
+    "/workflow/start",
     request as unknown as Record<string, unknown>
   );
 }
@@ -59,7 +75,7 @@ export async function virtualRespond(
   request: VirtualRespondRequest
 ): Promise<VirtualWorkflowResponse> {
   return postJson<VirtualWorkflowResponse>(
-    "/workflow/virtual/respond",
+    "/workflow/respond",
     request as unknown as Record<string, unknown>
   );
 }
@@ -80,7 +96,7 @@ export async function virtualResumeConfirm(
   request: VirtualResumeConfirmRequest
 ): Promise<VirtualWorkflowResponse> {
   return postJson<VirtualWorkflowResponse>(
-    "/workflow/virtual/resume/confirm",
+    "/workflow/resume/confirm",
     request as unknown as Record<string, unknown>
   );
 }
@@ -95,7 +111,7 @@ export async function virtualGetState(
   request: VirtualStateRequest
 ): Promise<VirtualStateResponse> {
   return postJson<VirtualStateResponse>(
-    "/workflow/virtual/state",
+    "/workflow/state",
     request as unknown as Record<string, unknown>
   );
 }
@@ -111,7 +127,7 @@ export async function virtualGetInteractionHistory(
   request: VirtualInteractionHistoryRequest
 ): Promise<VirtualInteractionHistoryResponse> {
   return postJson<VirtualInteractionHistoryResponse>(
-    "/workflow/virtual/interaction-history",
+    "/workflow/interaction-history",
     request as unknown as Record<string, unknown>
   );
 }

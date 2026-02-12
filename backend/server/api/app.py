@@ -53,7 +53,6 @@ from .routes import (
     media_router,
     tasks_router,
     models_router,
-    virtual_router,
 )
 
 # Configure logger for API
@@ -166,10 +165,6 @@ async def shutdown():
 # =============================================================================
 
 app.include_router(execution_router)
-# Virtual router MUST be before streaming_router and management_router because:
-# - streaming has /{workflow_run_id}/sub-action which would match /virtual/sub-action
-# - management has /{workflow_run_id}/resume/confirm which would match /virtual/resume/confirm
-app.include_router(virtual_router)
 app.include_router(streaming_router)
 app.include_router(state_router)
 app.include_router(management_router)

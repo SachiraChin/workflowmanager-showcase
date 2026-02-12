@@ -13,7 +13,6 @@ from .listing import router as listing_router
 from .media import router as media_router
 from .tasks import router as tasks_router
 from .models import router as models_router
-from .virtual import router as virtual_router
 from . import auth
 
 __all__ = [
@@ -27,5 +26,4 @@ __all__ = [
     "media_router",
     "tasks_router",
     "models_router",
-    "virtual_router",
 ]

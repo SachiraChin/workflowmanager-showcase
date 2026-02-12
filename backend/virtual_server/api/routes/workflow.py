@@ -2,12 +2,12 @@
 Virtual Workflow Execution API routes.
 
 Provides endpoints for running modules in virtual context using mongomock.
-These endpoints mirror the real workflow endpoints for exact parity:
+These endpoints mirror the real workflow endpoints:
 
-    Real                        Virtual
-    POST /workflow/start    →   POST /workflow/virtual/start
-    POST /workflow/respond  →   POST /workflow/virtual/respond
-    POST /workflow/{id}/sub-action → POST /workflow/virtual/sub-action
+    Virtual Server              Production Server
+    POST /workflow/start    →   POST /workflow/start
+    POST /workflow/respond  →   POST /workflow/respond
+    POST /workflow/sub-action → POST /workflow/{id}/sub-action
 
 The virtual database state is transferred as a gzip-compressed, base64-encoded
 string to minimize bandwidth usage.
@@ -39,7 +39,8 @@ from ..dependencies import get_current_user_id
 
 logger = logging.getLogger("workflow.virtual")
 
-router = APIRouter(prefix="/workflow/virtual", tags=["virtual"])
+# Use /workflow prefix - mirrors production endpoint structure
+router = APIRouter(prefix="/workflow", tags=["workflow"])
 
 # Fixed AI config for virtual execution - always use OpenAI gpt-4o-mini
 VIRTUAL_AI_CONFIG = {

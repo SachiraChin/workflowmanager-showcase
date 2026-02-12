@@ -1,8 +1,11 @@
 /**
  * Virtual API Client for Editor Preview Mode
  *
- * Implements ApiClientInterface but calls virtual endpoints that work with
- * virtualDb instead of requiring a real workflow in the database.
+ * Implements ApiClientInterface but calls the virtual-server which runs
+ * separately from the main server for resource isolation.
+ *
+ * Uses VIRTUAL_API_URL (e.g., http://localhost:9001 in dev,
+ * virtual.{domain} in production) and calls /workflow/* endpoints.
  *
  * This client is injected via ApiClientProvider when rendering interactions
  * in the editor preview panel.
@@ -15,7 +18,7 @@ import type {
   MediaPreviewResponse,
 } from "@wfm/shared";
 import type { SubActionRequest, SSEEventType, WorkflowDefinition } from "@wfm/shared";
-import { API_URL } from "@wfm/shared";
+import { VIRTUAL_API_URL } from "@wfm/shared";
 
 // =============================================================================
 // Types
@@ -39,13 +42,13 @@ export interface VirtualApiClientConfig {
 // =============================================================================
 
 /**
- * Creates a virtual API client that calls virtual endpoints.
+ * Creates a virtual API client that calls the virtual-server.
  *
  * For methods that need virtualDb (generations, sub-actions), it calls
- * the /workflow/virtual/* endpoints with the virtualDb in the request body.
+ * the /workflow/* endpoints with the virtualDb in the request body.
  *
  * For methods that don't need virtualDb (media preview), it calls the
- * virtual endpoint directly.
+ * endpoint directly.
  *
  * Methods not supported in virtual mode throw errors.
  */
@@ -60,7 +63,7 @@ export function createVirtualApiClient(
     getMockMode = () => true,
   } = config;
 
-  const baseUrl = API_URL;
+  const baseUrl = VIRTUAL_API_URL;
 
   // Helper to make authenticated requests
   async function request<T>(
@@ -112,7 +115,7 @@ export function createVirtualApiClient(
         return { generations: [] };
       }
 
-      return request<GenerationsResponse>("/workflow/virtual/generations", {
+      return request<GenerationsResponse>("/workflow/generations", {
         method: "POST",
         body: JSON.stringify({
           virtual_db: virtualDb,
@@ -129,7 +132,7 @@ export function createVirtualApiClient(
     ): Promise<MediaPreviewResponse> {
       // Media preview doesn't need virtualDb - just calls the virtual endpoint
       // which bypasses workflow verification
-      return request<MediaPreviewResponse>("/workflow/virtual/media/preview", {
+      return request<MediaPreviewResponse>("/workflow/media/preview", {
         method: "POST",
         body: JSON.stringify(previewRequest),
       });
@@ -155,7 +158,7 @@ export function createVirtualApiClient(
       (async () => {
         try {
           const response = await fetch(
-            `${baseUrl}/workflow/virtual/sub-action`,
+            `${baseUrl}/workflow/sub-action`,
             {
               method: "POST",
               credentials: "include",

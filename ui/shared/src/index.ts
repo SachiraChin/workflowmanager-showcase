@@ -215,7 +215,7 @@ export type {
   MediaPreviewRequest,
   MediaPreviewResponse,
 } from "./core/api-types";
-export { API_URL, IS_DEV, IS_PROD, getApiUrl, toMediaUrl, EDITOR_URL, getEditorUrl, buildEditorWorkflowUrl } from "./core/config";
+export { API_URL, IS_DEV, IS_PROD, getApiUrl, toMediaUrl, EDITOR_URL, getEditorUrl, buildEditorWorkflowUrl, VIRTUAL_API_URL, getVirtualApiUrl } from "./core/config";
 export {
   validateAgainstSchema,
   validateSchema,

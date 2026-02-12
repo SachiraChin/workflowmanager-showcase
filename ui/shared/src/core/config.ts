@@ -29,6 +29,30 @@ export function getApiUrl(): string {
 export const API_URL = getApiUrl();
 
 /**
+ * Get the Virtual API URL for preview/virtual execution.
+ *
+ * Virtual server runs separately from the main server for resource isolation.
+ * - Development: VITE_VIRTUAL_API_LOCAL_URL or http://localhost:9001
+ * - Production: VITE_VIRTUAL_API_PROD_URL or virtual.{domain}
+ */
+export function getVirtualApiUrl(): string {
+  const { hostname, protocol } = window.location;
+
+  // Local development
+  if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "192.168.1.163" || hostname === "192.168.1.181" || hostname === "192.168.1.225") {
+    return import.meta.env.VITE_VIRTUAL_API_LOCAL_URL || "http://localhost:9001";
+  }
+
+  // Production: use configured URL or fallback to virtual.{domain}
+  return import.meta.env.VITE_VIRTUAL_API_PROD_URL || `${protocol}//virtual.${hostname}`;
+}
+
+/**
+ * Cached Virtual API URL (computed once on load).
+ */
+export const VIRTUAL_API_URL = getVirtualApiUrl();
+
+/**
  * Check if running in development mode.
  */
 export const IS_DEV = import.meta.env.DEV;
