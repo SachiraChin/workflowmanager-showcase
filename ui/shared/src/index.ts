@@ -208,6 +208,13 @@ export { MediaGenerationHost } from "./interactions/types/media-generation";
 
 // Core - API and config
 export { api, ApiClient, ApiError, setAccessDeniedHandler } from "./core/api";
+export { ApiClientProvider, useApiClient } from "./core/api-context";
+export type { ApiClientInterface } from "./core/api-types";
+export type {
+  GenerationsResponse,
+  MediaPreviewRequest,
+  MediaPreviewResponse,
+} from "./core/api-types";
 export { API_URL, IS_DEV, IS_PROD, getApiUrl, toMediaUrl, EDITOR_URL, getEditorUrl, buildEditorWorkflowUrl } from "./core/config";
 export {
   validateAgainstSchema,

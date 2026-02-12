@@ -345,69 +345,6 @@ function CollapsibleBadge({ item, targetRect, debugToggleRect }: CollapsibleBadg
     );
   }
 
-  // Special handling for exit button - position parallel to view mode badge but to the right
-  if (item.badgePosition === "custom-exit") {
-    if (!viewModeRect) return null;
-
-    // Same vertical level as View Mode badge (which is below the view mode button)
-    const badgeTop = viewModeRect.top + viewModeRect.height + GAP;
-    // Position to the right of View Mode badge
-    const badgeLeft = viewModeRect.left + viewModeRect.width + GAP;
-
-    // Exit button position - connect to TOP of exit button
-    const exitCenterX = targetRect.left + targetRect.width / 2;
-    const exitTop = targetRect.top;
-
-    // Horizontal line Y position - above both buttons
-    const horizontalLineY = Math.min(targetRect.top, viewModeRect.top) - 15;
-
-    // Badge top center (where line starts) - estimate badge width ~30px for collapsed state
-    const badgeWidth = 30;
-    const badgeStartX = badgeLeft + badgeWidth / 2;
-    const badgeStartY = badgeTop;
-
-    // Path: start at top center of badge, go up to horizontal line, go left to above exit button, go down to top of exit button
-    const path = `M ${badgeStartX} ${badgeStartY} 
-                  L ${badgeStartX} ${horizontalLineY} 
-                  L ${exitCenterX} ${horizontalLineY} 
-                  L ${exitCenterX} ${exitTop}`;
-
-    return (
-      <>
-        {/* L-shaped connector - rendered separately to avoid transform issues */}
-        <svg
-          className="pointer-events-none fixed inset-0 z-[69] h-full w-full"
-        >
-          <path
-            d={path}
-            fill="none"
-            stroke="rgb(251 191 36)"
-            strokeWidth="2"
-          />
-          {/* Arrow head pointing down at top of exit button */}
-          <polygon
-            points={`${exitCenterX - ARROW_HEAD_SIZE},${exitTop - 8} ${exitCenterX + ARROW_HEAD_SIZE},${exitTop - 8} ${exitCenterX},${exitTop}`}
-            fill="rgb(251 191 36)"
-          />
-        </svg>
-
-        {/* Badge */}
-        <div
-          className={`cursor-pointer ${isExpanded ? "z-[80]" : "z-[70]"}`}
-          style={{
-            position: "fixed",
-            top: badgeTop,
-            left: badgeLeft,
-          }}
-          onMouseEnter={() => setIsExpanded(true)}
-          onMouseLeave={() => setIsExpanded(false)}
-        >
-          {badgeContent}
-        </div>
-      </>
-    );
-  }
-
   // Standard badge positions (top, bottom, left, right)
   const positionStyle = getBadgePosition(targetRect, item.badgePosition as "top" | "bottom" | "left" | "right");
 
@@ -627,7 +564,6 @@ export function RunnerGuidanceOverlay() {
           key={`badge-${item.id}`}
           item={item}
           targetRect={targetRects[item.id] || null}
-          viewModeRect={targetRects["view-mode-toggle"]}
           debugToggleRect={targetRects["debug-toggle"]}
         />
       ))}

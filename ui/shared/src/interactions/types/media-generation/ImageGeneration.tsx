@@ -24,7 +24,7 @@ import {
 import { useMediaGeneration } from "./MediaGenerationContext";
 import { useGenerationQueue } from "./useGenerationQueue";
 import { MediaGrid } from "./MediaGrid";
-import { api } from "../../../core/api";
+import { useApiClient } from "../../../core/api-context";
 import { toMediaUrl } from "../../../core/config";
 import { useWorkflowStore } from "../../../state/workflow-store";
 import type { SchemaProperty, UxConfig } from "../../../types/schema";
@@ -76,6 +76,9 @@ export function ImageGeneration({
   const inputState = useInputSchemaStateOptional();
   const { request } = useInteraction();
   
+  // Get API client from context (supports virtual/preview mode)
+  const apiClient = useApiClient();
+  
   // Get workflow state directly from store
   const workflowRunId = useWorkflowStore((s) => s.workflowRunId);
   const selectedProvider = useWorkflowStore((s) => s.selectedProvider);
@@ -115,7 +118,7 @@ export function ImageGeneration({
 
     const loadGenerations = async () => {
       try {
-        const response = await api.getInteractionGenerations(
+        const response = await apiClient.getInteractionGenerations(
           workflowRunId,
           request.interaction_id,
           "image"
@@ -157,7 +160,7 @@ export function ImageGeneration({
 
     loadGenerations();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only run on mount, not on selection change
-  }, [workflowRunId, request.interaction_id, provider, promptId, promptKey, inputActions]);
+  }, [apiClient, workflowRunId, request.interaction_id, provider, promptId, promptKey, inputActions]);
 
   // Fetch preview when input values change (debounced)
   // Uses inputState?.values to trigger re-fetch when values change
@@ -174,7 +177,7 @@ export function ImageGeneration({
 
     const timeoutId = setTimeout(async () => {
       try {
-        const previewResult = await api.getMediaPreview(workflowRunId, {
+        const previewResult = await apiClient.getMediaPreview(workflowRunId, {
           provider,
           action_type: "txt2img",
           params,
@@ -189,7 +192,7 @@ export function ImageGeneration({
 
     return () => clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally exclude mediaContext to avoid re-fetch on selection change
-  }, [inputState?.values, readonly, workflowRunId, provider, promptId, inputActions]);
+  }, [apiClient, inputState?.values, readonly, workflowRunId, provider, promptId, inputActions]);
 
 
 
@@ -299,7 +302,7 @@ export function ImageGeneration({
       };
 
       // Start streaming - fire and forget, let it complete naturally
-      api.streamSubAction(
+      apiClient.streamSubAction(
         workflowRunId,
         subActionRequest,
         handleEvent,
@@ -307,6 +310,7 @@ export function ImageGeneration({
       );
     },
     [
+      apiClient,
       mediaContext,
       workflowRunId,
       request.interaction_id,

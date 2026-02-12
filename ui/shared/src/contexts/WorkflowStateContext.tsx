@@ -12,7 +12,7 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import { useWorkflowState as useWorkflowStateHook } from "../state/hooks/useWorkflowState";
-import { api } from "../core/api";
+import { useApiClient } from "../core/api-context";
 import type {
   ModuleConfig,
   WorkflowDefinition,
@@ -74,6 +74,9 @@ export function WorkflowStateProvider({
   children,
   workflowRunId,
 }: WorkflowStateProviderProps) {
+  // Get API client from context (supports virtual/preview mode)
+  const apiClient = useApiClient();
+  
   const { state, isConnected, error, getValue, fetchState, updateStateAtPath } = useWorkflowStateHook(workflowRunId, {
     autoConnect: true,
   });
@@ -91,18 +94,18 @@ export function WorkflowStateProvider({
   // Fetch workflow definition once
   useEffect(() => {
     if (workflowRunId) {
-      api.getWorkflowDefinition(workflowRunId)
+      apiClient.getWorkflowDefinition(workflowRunId)
         .then((response) => {
           setWorkflowDefinition(response.definition);
           // raw_definition is present when current version is "resolved" (from execution_groups)
           // If not present, raw and flattened are the same
           setRawWorkflowDefinition(response.raw_definition || response.definition);
         })
-        .catch((err) => {
+        .catch((err: unknown) => {
           console.error("Failed to fetch workflow definition", err);
         });
     }
-  }, [workflowRunId]);
+  }, [apiClient, workflowRunId]);
 
   // Get module config from flattened definition (for expanded modules)
   const getModuleConfig = useCallback((stepId: string, moduleName: string): ModuleConfig | null => {
@@ -129,12 +132,12 @@ export function WorkflowStateProvider({
   const fetchFileContent = useCallback(async (fileId: string): Promise<WorkflowFileContent | null> => {
     if (!workflowRunId) return null;
     try {
-      return await api.getWorkflowFile(workflowRunId, fileId);
+      return await apiClient.getWorkflowFile(workflowRunId, fileId);
     } catch (err) {
       console.error("Failed to fetch file content", err);
       return null;
     }
-  }, [workflowRunId]);
+  }, [apiClient, workflowRunId]);
 
   // Keep module-level state in sync for non-React access
   useEffect(() => {

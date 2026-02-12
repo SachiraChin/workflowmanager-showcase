@@ -24,7 +24,7 @@ import {
   type ReactNode,
 } from "react";
 import type { SubActionDef, SSEEventType } from "../types/index";
-import { api } from "../core/api";
+import { useApiClient } from "../core/api-context";
 import { useWorkflowStore } from "../state/workflow-store";
 
 // =============================================================================
@@ -137,6 +137,9 @@ export function SubActionProvider({
   mockMode = false,
   children,
 }: SubActionProviderProps) {
+  // Get API client from context (supports virtual/preview mode)
+  const apiClient = useApiClient();
+  
   // Get workflow state
   const workflowRunId = useWorkflowStore((s) => s.workflowRunId);
   const selectedProvider = useWorkflowStore((s) => s.selectedProvider);
@@ -243,14 +246,14 @@ export function SubActionProvider({
       };
 
       // Start streaming - fire and forget, let it complete naturally
-      api.streamSubAction(
+      apiClient.streamSubAction(
         workflowRunId,
         request,
         handleEvent,
         handleError
       );
     },
-    [executor, subActions, onComplete, workflowRunId, interactionId, selectedProvider, selectedModel]
+    [apiClient, executor, subActions, onComplete, workflowRunId, interactionId, selectedProvider, selectedModel]
   );
 
   // Build context value
