@@ -18,6 +18,8 @@ registerModule("media.generate", {
       onExpandedChange: params.onExpandedChange,
       onViewState: params.onViewState,
       onPreview: params.onPreview,
+      onPreviewWithOverride: params.onPreviewWithOverride,
+      runtimePreview: params.runtimePreview,
       onLoadPreviewData: params.onLoadPreviewData,
     }) satisfies MediaGenerateNodeData,
 });

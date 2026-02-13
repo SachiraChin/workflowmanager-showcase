@@ -29,6 +29,7 @@ import {
   DialogTitle,
   Label,
   Input,
+  type InteractionRequest,
 } from "@wfm/shared";
 import { Trash2, Settings, Layout } from "lucide-react";
 import Editor from "@monaco-editor/react";
@@ -50,6 +51,8 @@ import {
   getPromptsSummary,
   getSchemaSummary,
 } from "./presentation";
+import { EmbeddedRuntimePreview } from "@/runtime";
+import type { NodeDataFactoryParams } from "@/modules";
 
 // =============================================================================
 // Types
@@ -62,6 +65,8 @@ export type MediaGenerateNodeData = {
   onExpandedChange: (expanded: boolean, estimatedHeight: number) => void;
   onViewState?: () => void;
   onPreview?: () => void;
+  onPreviewWithOverride?: (moduleOverride: MediaGenerateModule) => Promise<void>;
+  runtimePreview?: NodeDataFactoryParams["runtimePreview"];
   /** Load preview data by running previous module */
   onLoadPreviewData?: () => Promise<Record<string, unknown> | null>;
 };
@@ -162,45 +167,40 @@ function ProviderTab({
 function ProviderSchemaEditorDialog({
   open,
   onOpenChange,
+  module,
   providers,
   onProvidersChange,
   actionType,
-  onLoadPreviewData,
+  onPreviewWithOverride,
+  runtimePreview,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  module: MediaGenerateModule;
   providers: ProviderInstance[];
   onProvidersChange: (providers: ProviderInstance[]) => void;
   actionType: ActionType;
-  onLoadPreviewData?: () => Promise<Record<string, unknown> | null>;
+  onPreviewWithOverride?: (moduleOverride: MediaGenerateModule) => Promise<void>;
+  runtimePreview?: NodeDataFactoryParams["runtimePreview"];
 }) {
   const [localProviders, setLocalProviders] = useState<ProviderInstance[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
-  const [previewData, setPreviewData] = useState<Record<string, unknown> | null>(null);
-  const [isLoadingData, setIsLoadingData] = useState(false);
+  const [autoRefreshPreview, setAutoRefreshPreview] = useState(true);
+  const [isPreviewRefreshing, setIsPreviewRefreshing] = useState(false);
+  const [hasEditedProviderSchema, setHasEditedProviderSchema] = useState(false);
+  const [didInitialPreview, setDidInitialPreview] = useState(false);
+  const [previewScale, setPreviewScale] = useState(0.7);
+  const previewRequestSeqRef = useRef(0);
 
   // Initialize local state when dialog opens
   useEffect(() => {
     if (open) {
       setLocalProviders(providers);
       setActiveTabId(providers[0]?.id || null);
-      setPreviewData(null); // Reset preview data when dialog opens
+      setHasEditedProviderSchema(false);
+      setDidInitialPreview(false);
     }
   }, [open, providers]);
-
-  const handleLoadData = async () => {
-    if (!onLoadPreviewData) return;
-    setIsLoadingData(true);
-    try {
-      const data = await onLoadPreviewData();
-      console.log("[MediaGenerate] Loaded preview data:", data);
-      setPreviewData(data);
-    } catch (error) {
-      console.error("Failed to load preview data:", error);
-    } finally {
-      setIsLoadingData(false);
-    }
-  };
 
   const activeProvider = localProviders.find((p) => p.id === activeTabId);
   const availableProviders = PROVIDERS_BY_ACTION[actionType];
@@ -209,6 +209,7 @@ function ProviderSchemaEditorDialog({
     const newInstance = createDefaultProviderInstance(providerId, actionType);
     setLocalProviders([...localProviders, newInstance]);
     setActiveTabId(newInstance.id);
+    setHasEditedProviderSchema(true);
   };
 
   const handleRemoveProvider = (id: string) => {
@@ -217,12 +218,14 @@ function ProviderSchemaEditorDialog({
     if (activeTabId === id) {
       setActiveTabId(newProviders[0]?.id || null);
     }
+    setHasEditedProviderSchema(true);
   };
 
   const handleLabelChange = (id: string, label: string) => {
     setLocalProviders(
       localProviders.map((p) => (p.id === id ? { ...p, tabLabel: label } : p))
     );
+    setHasEditedProviderSchema(true);
   };
 
   const handleSchemaChange = (id: string, schemaJson: string) => {
@@ -244,6 +247,7 @@ function ProviderSchemaEditorDialog({
             : p
         )
       );
+      setHasEditedProviderSchema(true);
     } catch {
       // Invalid JSON, ignore
     }
@@ -253,6 +257,82 @@ function ProviderSchemaEditorDialog({
     onProvidersChange(localProviders);
     onOpenChange(false);
   };
+
+  const buildModuleOverride = useCallback(
+    (currentProviders: ProviderInstance[]): MediaGenerateModule => {
+      const newSchema = buildSchemaFromProviders(
+        currentProviders,
+        !isJsonRefObject(module.inputs.schema)
+          ? (module.inputs.schema as Record<string, unknown>)
+          : undefined
+      );
+
+      return {
+        ...module,
+        inputs: {
+          ...module.inputs,
+          schema: newSchema,
+        },
+      };
+    },
+    [module]
+  );
+
+  const runRuntimePreview = useCallback(async (providersForPreview?: ProviderInstance[]) => {
+    if (!onPreviewWithOverride || isPreviewRefreshing) return;
+    const providersToUse = providersForPreview ?? localProviders;
+
+    const runId = ++previewRequestSeqRef.current;
+    setIsPreviewRefreshing(true);
+    try {
+      await onPreviewWithOverride(buildModuleOverride(providersToUse));
+    } finally {
+      if (runId === previewRequestSeqRef.current) {
+        setIsPreviewRefreshing(false);
+      }
+    }
+  }, [
+    onPreviewWithOverride,
+    isPreviewRefreshing,
+    buildModuleOverride,
+    localProviders,
+  ]);
+
+  useEffect(() => {
+    if (!open || didInitialPreview || !onPreviewWithOverride) {
+      return;
+    }
+
+    setDidInitialPreview(true);
+    void runRuntimePreview(providers);
+  }, [open, didInitialPreview, onPreviewWithOverride, runRuntimePreview, providers]);
+
+  useEffect(() => {
+    if (
+      !open ||
+      !autoRefreshPreview ||
+      !onPreviewWithOverride ||
+      !hasEditedProviderSchema
+    ) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      void runRuntimePreview();
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [
+    open,
+    autoRefreshPreview,
+    onPreviewWithOverride,
+    localProviders,
+    hasEditedProviderSchema,
+    runRuntimePreview,
+  ]);
+
+  const runtimeRequest =
+    (runtimePreview?.getPreviewRequest() as InteractionRequest | null) ?? null;
 
   const inputSchemaJson = activeProvider?.schema._ux?.input_schema
     ? JSON.stringify(activeProvider.schema._ux.input_schema, null, 2)
@@ -317,25 +397,62 @@ function ProviderSchemaEditorDialog({
               {/* Top: UX Preview - 50% */}
               <div className="flex-1 min-h-0 flex flex-col">
                 <div className="flex items-center justify-between mb-2">
-                  <Label className="text-sm font-medium">UX Preview</Label>
-                  {onLoadPreviewData && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 text-xs"
-                      onClick={handleLoadData}
-                      disabled={isLoadingData}
-                    >
-                      {isLoadingData ? "Loading..." : "Load Data"}
-                    </Button>
+                  <Label className="text-sm font-medium">Live Preview</Label>
+                  {onPreviewWithOverride && (
+                    <div className="flex items-center gap-2">
+                      <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <input
+                          type="checkbox"
+                          checked={autoRefreshPreview}
+                          onChange={(e) => setAutoRefreshPreview(e.target.checked)}
+                        />
+                        Auto-refresh
+                      </label>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-32"
+                        onClick={() => {
+                          void runRuntimePreview();
+                        }}
+                        disabled={isPreviewRefreshing}
+                      >
+                        {isPreviewRefreshing ? "Refreshing..." : "Refresh Preview"}
+                      </Button>
+                      <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                        Zoom
+                        <select
+                          className="h-8 rounded border bg-background px-2 text-xs"
+                          value={String(previewScale)}
+                          onChange={(e) => setPreviewScale(Number(e.target.value))}
+                        >
+                          <option value="0.6">60%</option>
+                          <option value="0.7">70%</option>
+                          <option value="0.85">85%</option>
+                          <option value="1">100%</option>
+                        </select>
+                      </label>
+                    </div>
                   )}
                 </div>
                 <div className="flex-1 min-h-0 border rounded bg-muted/30 p-4 overflow-auto">
-                  <SchemaPreview
-                    inputSchema={activeProvider.schema._ux?.input_schema}
-                    previewData={previewData}
-                    providerKey={activeProvider.provider}
-                  />
+                  {runtimePreview ? (
+                    <EmbeddedRuntimePreview
+                      request={runtimeRequest}
+                      busy={runtimePreview.busy || isPreviewRefreshing}
+                      error={runtimePreview.error}
+                      mockMode={runtimePreview.mockMode}
+                      scale={previewScale}
+                      getVirtualDb={runtimePreview.getVirtualDb}
+                      getVirtualRunId={runtimePreview.getVirtualRunId}
+                      getWorkflow={runtimePreview.getWorkflow}
+                      onVirtualDbUpdate={runtimePreview.onVirtualDbUpdate}
+                    />
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Runtime preview is unavailable for this module.
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -379,6 +496,7 @@ function ProviderSchemaEditorDialog({
         </div>
 
         <DialogFooter className="px-6 py-4 border-t">
+          <div className="mr-auto" />
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
@@ -386,147 +504,6 @@ function ProviderSchemaEditorDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-// =============================================================================
-// Schema Preview Component
-// =============================================================================
-
-function SchemaPreview({
-  inputSchema,
-  previewData,
-  providerKey,
-}: {
-  inputSchema?: Record<string, unknown>;
-  previewData?: Record<string, unknown> | null;
-  providerKey?: string;
-}) {
-  if (!inputSchema) {
-    return (
-      <p className="text-sm text-muted-foreground">No input schema defined</p>
-    );
-  }
-
-  const properties = inputSchema.properties as
-    | Record<string, Record<string, unknown>>
-    | undefined;
-
-  if (!properties || Object.keys(properties).length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        No fields in input schema
-      </p>
-    );
-  }
-
-  // Extract provider-specific data from previewData
-  // State structure varies - could be:
-  // 1. Direct: { prompts: { midjourney: {...} } } 
-  // 2. From state_mapped: { image_prompts: { prompts: { midjourney: {...} } } }
-  // We need to find the provider data by searching through the structure
-  let providerData: Record<string, unknown> | undefined;
-  
-  if (previewData && providerKey) {
-    // Try to find provider data in various locations
-    const findProviderData = (obj: Record<string, unknown>): Record<string, unknown> | undefined => {
-      // Check if this object has 'prompts' with our provider
-      if (obj.prompts && typeof obj.prompts === 'object') {
-        const prompts = obj.prompts as Record<string, unknown>;
-        if (prompts[providerKey] && typeof prompts[providerKey] === 'object') {
-          return prompts[providerKey] as Record<string, unknown>;
-        }
-      }
-      // Check direct provider key
-      if (obj[providerKey] && typeof obj[providerKey] === 'object') {
-        return obj[providerKey] as Record<string, unknown>;
-      }
-      // Search one level deep in state_mapped values
-      for (const value of Object.values(obj)) {
-        if (value && typeof value === 'object' && !Array.isArray(value)) {
-          const found = findProviderData(value as Record<string, unknown>);
-          if (found) return found;
-        }
-      }
-      return undefined;
-    };
-    
-    providerData = findProviderData(previewData);
-    console.log("[SchemaPreview] Provider data for", providerKey, ":", providerData);
-  }
-
-  return (
-    <div className="space-y-3">
-      {previewData && !providerData && (
-        <div className="text-xs text-amber-500 mb-2">
-          <p>No data found for provider "{providerKey}"</p>
-          <p className="text-muted-foreground mt-1">
-            Available keys: {Object.keys(previewData).join(", ")}
-          </p>
-        </div>
-      )}
-      {Object.entries(properties).map(([key, field]) => (
-        <PreviewField
-          key={key}
-          fieldKey={key}
-          field={field}
-          value={providerData?.[key]}
-        />
-      ))}
-    </div>
-  );
-}
-
-function PreviewField({
-  fieldKey,
-  field,
-  value,
-}: {
-  fieldKey: string;
-  field: Record<string, unknown>;
-  value?: unknown;
-}) {
-  const ux = field._ux as Record<string, unknown> | undefined;
-  const inputType = ux?.input_type || "text";
-  const title = (field.title as string) || fieldKey;
-  const colSpan = ux?.col_span;
-  const sourceField = ux?.source_field as string | undefined;
-
-  // Get display value - check source_field mapping
-  const displayValue = value !== undefined
-    ? String(value)
-    : sourceField
-      ? `[from ${sourceField}]`
-      : undefined;
-
-  const wrapperClass = colSpan === "full" ? "col-span-full" : "";
-
-  return (
-    <div className={`space-y-1 ${wrapperClass}`}>
-      <label className="text-xs font-medium text-muted-foreground">
-        {title}
-      </label>
-      {inputType === "textarea" ? (
-        <div className="w-full min-h-16 rounded border bg-background px-2 py-1 text-xs whitespace-pre-wrap">
-          {displayValue || <span className="text-muted-foreground">Textarea field</span>}
-        </div>
-      ) : inputType === "select" ? (
-        <div className="w-full h-8 rounded border bg-background px-2 py-1 text-xs flex items-center">
-          {displayValue || <span className="text-muted-foreground">Select dropdown</span>}
-        </div>
-      ) : inputType === "slider" ? (
-        <div className="w-full h-8 rounded border bg-background px-2 py-1 flex items-center gap-2">
-          <div className="flex-1 h-1 bg-muted rounded-full">
-            <div className="w-1/3 h-full bg-primary rounded-full" />
-          </div>
-          {displayValue && <span className="text-xs">{displayValue}</span>}
-        </div>
-      ) : (
-        <div className="w-full h-8 rounded border bg-background px-2 py-1 text-xs flex items-center">
-          {displayValue || <span className="text-muted-foreground">Text input</span>}
-        </div>
-      )}
-    </div>
   );
 }
 
@@ -630,14 +607,16 @@ function ExpandedView({
   onCollapse,
   onViewState,
   onPreview,
-  onLoadPreviewData,
+  onPreviewWithOverride,
+  runtimePreview,
 }: {
   module: MediaGenerateModule;
   onChange: (module: MediaGenerateModule) => void;
   onCollapse: () => void;
   onViewState?: () => void;
   onPreview?: () => void;
-  onLoadPreviewData?: () => Promise<Record<string, unknown> | null>;
+  onPreviewWithOverride?: (moduleOverride: MediaGenerateModule) => Promise<void>;
+  runtimePreview?: NodeDataFactoryParams["runtimePreview"];
 }) {
   const [isProviderEditorOpen, setIsProviderEditorOpen] = useState(false);
   const [isLayoutEditorOpen, setIsLayoutEditorOpen] = useState(false);
@@ -867,10 +846,12 @@ function ExpandedView({
       <ProviderSchemaEditorDialog
         open={isProviderEditorOpen}
         onOpenChange={setIsProviderEditorOpen}
+        module={module}
         providers={providers}
         onProvidersChange={handleProvidersChange}
         actionType={actionType}
-        onLoadPreviewData={onLoadPreviewData}
+        onPreviewWithOverride={onPreviewWithOverride}
+        runtimePreview={runtimePreview}
       />
 
       {/* Layout Editor Dialog (placeholder) */}
@@ -906,7 +887,8 @@ function MediaGenerateNodeComponent({ id, data }: NodeProps) {
     onExpandedChange,
     onViewState,
     onPreview,
-    onLoadPreviewData,
+    onPreviewWithOverride,
+    runtimePreview,
   } = data as unknown as MediaGenerateNodeData;
   const updateNodeInternals = useUpdateNodeInternals();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -944,7 +926,8 @@ function MediaGenerateNodeComponent({ id, data }: NodeProps) {
           onCollapse={handleCollapse}
           onViewState={onViewState}
           onPreview={onPreview}
-          onLoadPreviewData={onLoadPreviewData}
+          onPreviewWithOverride={onPreviewWithOverride}
+          runtimePreview={runtimePreview}
         />
       ) : (
         <CollapsedView

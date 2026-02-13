@@ -13,6 +13,7 @@
 
 import type { ComponentType } from "react";
 import type { NodeProps } from "@xyflow/react";
+import type { InteractionRequest, WorkflowDefinition } from "@wfm/shared";
 
 // =============================================================================
 // Types
@@ -35,6 +36,22 @@ export type NodeDataFactoryParams = {
   onViewState?: () => void;
   /** Callback to preview this module (optional, used by user.select) */
   onPreview?: () => void;
+  /**
+   * Callback to preview this module with a temporary draft override.
+   * Used by module editors to preview unsaved schema/config changes.
+   */
+  onPreviewWithOverride?: (moduleOverride: unknown) => Promise<void>;
+  /** Runtime-backed preview bindings for embedded editor previews. */
+  runtimePreview?: {
+    busy: boolean;
+    error: string | null;
+    mockMode: boolean;
+    getPreviewRequest: () => InteractionRequest | null;
+    getVirtualDb: () => string | null;
+    getVirtualRunId: () => string | null;
+    getWorkflow: () => WorkflowDefinition | null;
+    onVirtualDbUpdate: (newVirtualDb: string) => void;
+  };
   /** Callback to load preview data by running previous module (optional, used by media.generate) */
   onLoadPreviewData?: () => Promise<Record<string, unknown> | null>;
 };

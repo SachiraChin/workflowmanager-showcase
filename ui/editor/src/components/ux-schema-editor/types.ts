@@ -1,4 +1,5 @@
 import type { SchemaProperty, DisplayMode } from "@wfm/shared";
+import type { ReactNode } from "react";
 
 /**
  * Simplified data schema node for describing the structure of data.
@@ -92,4 +93,13 @@ export interface UxSchemaEditorProps {
    * Optional class name for the root container.
    */
   className?: string;
+
+  /**
+   * Optional custom runtime preview renderer.
+   * When provided, replaces the default static SchemaRenderer preview.
+   */
+  customPreview?: ReactNode;
+
+  /** Optional controls shown right-aligned in the preview header. */
+  previewControls?: ReactNode;
 }

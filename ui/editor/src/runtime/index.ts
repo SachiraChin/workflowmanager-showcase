@@ -50,3 +50,5 @@ export type { VirtualRuntimePanelProps } from "./VirtualRuntimePanel";
 
 export { StatePanel } from "./StatePanel";
 export type { StatePanelProps } from "./StatePanel";
+
+export { EmbeddedRuntimePreview } from "./EmbeddedRuntimePreview";

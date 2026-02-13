@@ -87,6 +87,9 @@ export function VirtualRuntimePanel({
   const interactionRequest = response?.interaction_request as
     | InteractionRequest
     | undefined;
+  const historicalInteractionRequest = completedInteraction?.request as
+    | InteractionRequest
+    | undefined;
 
   // Create virtual API client for this panel
   // Memoized to avoid recreating on every render
@@ -104,10 +107,11 @@ export function VirtualRuntimePanel({
   }, [getVirtualDb, getVirtualRunId, getWorkflow, onVirtualDbUpdate, mockMode]);
 
   // Determine what type of content to show
-  const hasUxContent = status === "awaiting_input" && interactionRequest;
-  const hasCompletedInteraction = status === "completed" && completedInteraction;
+  const previewRequest = interactionRequest ?? historicalInteractionRequest;
+  const hasUxContent = status !== "error" && !!previewRequest;
+  const isLiveInteraction = status === "awaiting_input" && !!interactionRequest;
   const hasNonUxResponse =
-    (status === "completed" || status === "error") && response && !hasCompletedInteraction;
+    (status === "completed" || status === "error") && response && !previewRequest;
 
   // Handle submit
   const handleSubmit = (responseData: InteractionResponseData) => {
@@ -182,17 +186,12 @@ export function VirtualRuntimePanel({
           {/* UX Interaction display (live, awaiting input) */}
           {hasUxContent && (
             <UxContent
-              request={interactionRequest}
-              busy={busy}
+              request={previewRequest}
+              busy={busy || !isLiveInteraction}
               onSubmit={handleSubmit}
               mockMode={mockMode}
               virtualApiClient={virtualApiClient}
             />
-          )}
-
-          {/* Completed interaction display (readonly, historical) */}
-          {hasCompletedInteraction && (
-            <CompletedInteractionContent interaction={completedInteraction} />
           )}
 
           {/* Non-UX Response display */}
@@ -256,34 +255,6 @@ function UxContent({ request, busy, onSubmit, mockMode = true, virtualApiClient 
 
   return content;
 }
-
-/**
- * Renders a completed interaction in readonly mode.
- * Shows the interaction form with the user's previous response pre-filled and disabled.
- */
-function CompletedInteractionContent({ interaction }: { interaction: CompletedInteraction }) {
-  // Cast the request to InteractionRequest type
-  const request = interaction.request as unknown as InteractionRequest;
-  const response = interaction.response as InteractionResponseData;
-  
-  return (
-    <div className="space-y-4">
-      <div className="rounded border bg-blue-50 p-3 text-sm text-blue-700 dark:bg-blue-950/20 dark:text-blue-400">
-        Previously completed interaction
-      </div>
-      <RenderProvider value={{ debugMode: false, readonly: true }}>
-        <InteractionHost 
-          disabled={true} 
-          onSubmit={() => {}} 
-          request={request}
-          mode={{ type: "readonly", response }}
-          timestamp={interaction.timestamp}
-        />
-      </RenderProvider>
-    </div>
-  );
-}
-
 function NonUxContent({ response }: { response: VirtualWorkflowResponse }) {
   // Filter out virtual_db and state from the response
   const displayResponse = filterResponse(response);

@@ -695,6 +695,8 @@ export function UxSchemaEditor({
   onChange,
   onSave,
   className,
+  customPreview,
+  previewControls,
 }: UxSchemaEditorProps) {
   const [activeItem, setActiveItem] = useState<UxItem | null>(null);
   const [justDropped, setJustDropped] = useState<DropInfo>(null);
@@ -899,21 +901,30 @@ export function UxSchemaEditor({
           <div className="min-h-0 flex flex-col gap-4">
             <Card className="flex-1 min-h-0 overflow-auto">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Live Preview</CardTitle>
+                <div className="flex items-center justify-between gap-3">
+                  <CardTitle className="text-sm">Live Preview</CardTitle>
+                  {previewControls && (
+                    <div className="flex items-center gap-2">{previewControls}</div>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
-                <RenderProvider value={{ debugMode: false, readonly: false }}>
-                  <SchemaRenderer data={data} schema={displaySchema} />
-                </RenderProvider>
-                {/* Debug: show raw data if nothing renders */}
-                <details className="mt-4 text-xs">
-                  <summary className="text-muted-foreground cursor-pointer">
-                    Debug: Raw Data
-                  </summary>
-                  <pre className="mt-2 p-2 bg-muted rounded text-xs overflow-auto max-h-40">
-                    {JSON.stringify(data, null, 2)}
-                  </pre>
-                </details>
+                {customPreview ?? (
+                  <>
+                    <RenderProvider value={{ debugMode: false, readonly: false }}>
+                      <SchemaRenderer data={data} schema={displaySchema} />
+                    </RenderProvider>
+                    {/* Debug: show raw data if nothing renders */}
+                    <details className="mt-4 text-xs">
+                      <summary className="text-muted-foreground cursor-pointer">
+                        Debug: Raw Data
+                      </summary>
+                      <pre className="mt-2 p-2 bg-muted rounded text-xs overflow-auto max-h-40">
+                        {JSON.stringify(data, null, 2)}
+                      </pre>
+                    </details>
+                  </>
+                )}
               </CardContent>
             </Card>
 

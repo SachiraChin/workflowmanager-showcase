@@ -18,6 +18,8 @@ registerModule("user.select", {
       onExpandedChange: params.onExpandedChange,
       onViewState: params.onViewState,
       onPreview: params.onPreview,
+      onPreviewWithOverride: params.onPreviewWithOverride,
+      runtimePreview: params.runtimePreview,
     }) satisfies UserSelectNodeData,
 });
 

@@ -24,6 +24,7 @@ import {
   DialogTitle,
   Label,
   Textarea,
+  type InteractionRequest,
   type SchemaProperty,
 } from "@wfm/shared";
 import {
@@ -34,7 +35,9 @@ import {
   JsonSchemaEditor,
   type JsonSchemaObject,
 } from "@/components/JsonSchemaEditor";
+import { EmbeddedRuntimePreview } from "@/runtime";
 import { type UserSelectModule, isJsonRefObject } from "./types";
+import type { NodeDataFactoryParams } from "@/modules";
 
 // =============================================================================
 // Types
@@ -51,6 +54,10 @@ export type UserSelectNodeData = {
   onViewState?: () => void;
   /** Callback to preview this module in virtual runtime */
   onPreview?: () => void;
+  /** Callback to preview this module with draft override in virtual runtime */
+  onPreviewWithOverride?: (moduleOverride: UserSelectModule) => Promise<void>;
+  /** Runtime preview bindings for embedded preview. */
+  runtimePreview?: NodeDataFactoryParams["runtimePreview"];
 };
 
 // =============================================================================
@@ -290,17 +297,27 @@ function ExpandedView({
   onCollapse,
   onViewState,
   onPreview,
+  onPreviewWithOverride,
+  runtimePreview,
 }: {
   module: UserSelectModule;
   onChange: (module: UserSelectModule) => void;
   onCollapse: () => void;
   onViewState?: () => void;
   onPreview?: () => void;
+  onPreviewWithOverride?: (moduleOverride: UserSelectModule) => Promise<void>;
+  runtimePreview?: NodeDataFactoryParams["runtimePreview"];
 }) {
   const [isUxEditorOpen, setIsUxEditorOpen] = useState(false);
   const [isDataSchemaEditorOpen, setIsDataSchemaEditorOpen] = useState(false);
   const [draftSchema, setDraftSchema] = useState<SchemaProperty | undefined>(undefined);
   const [draftDataSchema, setDraftDataSchema] = useState<JsonSchemaObject | null>(null);
+  const [autoRefreshPreview, setAutoRefreshPreview] = useState(true);
+  const [isPreviewRefreshing, setIsPreviewRefreshing] = useState(false);
+  const [hasEditedDraftSchema, setHasEditedDraftSchema] = useState(false);
+  const [didInitialPreview, setDidInitialPreview] = useState(false);
+  const [previewScale, setPreviewScale] = useState(0.7);
+  const previewRequestSeqRef = useRef(0);
 
   const hasInlineData = Array.isArray(module.inputs.data);
   const hasInlineSchema = !isJsonRefObject(module.inputs.schema);
@@ -333,6 +350,8 @@ function ExpandedView({
 
   const handleOpenUxEditor = () => {
     setDraftSchema(currentDisplaySchema);
+    setHasEditedDraftSchema(false);
+    setDidInitialPreview(false);
     setIsUxEditorOpen(true);
   };
 
@@ -342,6 +361,68 @@ function ExpandedView({
     }
     setIsUxEditorOpen(false);
   };
+
+  const runRuntimePreview = useCallback(async () => {
+    if (!onPreviewWithOverride || isPreviewRefreshing) return;
+
+    const moduleOverride: UserSelectModule = {
+      ...module,
+      inputs: {
+        ...module.inputs,
+        schema: draftSchema ?? module.inputs.schema,
+      },
+    };
+
+    const runId = ++previewRequestSeqRef.current;
+    setIsPreviewRefreshing(true);
+    try {
+      await onPreviewWithOverride(moduleOverride);
+    } finally {
+      if (runId === previewRequestSeqRef.current) {
+        setIsPreviewRefreshing(false);
+      }
+    }
+  }, [onPreviewWithOverride, isPreviewRefreshing, module, draftSchema]);
+
+  useEffect(() => {
+    if (!isUxEditorOpen || didInitialPreview || !onPreviewWithOverride) {
+      return;
+    }
+
+    setDidInitialPreview(true);
+    void runRuntimePreview();
+  }, [
+    isUxEditorOpen,
+    didInitialPreview,
+    onPreviewWithOverride,
+    runRuntimePreview,
+  ]);
+
+  useEffect(() => {
+    if (
+      !isUxEditorOpen ||
+      !autoRefreshPreview ||
+      !onPreviewWithOverride ||
+      !hasEditedDraftSchema
+    ) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      void runRuntimePreview();
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [
+    isUxEditorOpen,
+    autoRefreshPreview,
+    onPreviewWithOverride,
+    draftSchema,
+    hasEditedDraftSchema,
+    runRuntimePreview,
+  ]);
+
+  const runtimeRequest = runtimePreview?.getPreviewRequest() ?? null;
 
   return (
     <>
@@ -540,17 +621,71 @@ function ExpandedView({
               dataSchema={dataSchema}
               data={previewData}
               displaySchema={draftSchema}
-              onChange={setDraftSchema}
+              onChange={(next) => {
+                setDraftSchema(next);
+                setHasEditedDraftSchema(true);
+              }}
+              customPreview={
+                runtimePreview ? (
+                  <EmbeddedRuntimePreview
+                    request={runtimeRequest as InteractionRequest | null}
+                    busy={runtimePreview.busy || isPreviewRefreshing}
+                    error={runtimePreview.error}
+                    mockMode={runtimePreview.mockMode}
+                    scale={previewScale}
+                    getVirtualDb={runtimePreview.getVirtualDb}
+                    getVirtualRunId={runtimePreview.getVirtualRunId}
+                    getWorkflow={runtimePreview.getWorkflow}
+                    onVirtualDbUpdate={runtimePreview.onVirtualDbUpdate}
+                  />
+                ) : undefined
+              }
+              previewControls={
+                onPreviewWithOverride ? (
+                  <>
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Checkbox
+                        checked={autoRefreshPreview}
+                        onCheckedChange={(checked) =>
+                          setAutoRefreshPreview(checked === true)
+                        }
+                      />
+                      Auto-refresh
+                    </label>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-32"
+                      onClick={() => {
+                        void runRuntimePreview();
+                      }}
+                      disabled={isPreviewRefreshing}
+                    >
+                      {isPreviewRefreshing ? "Refreshing..." : "Refresh Preview"}
+                    </Button>
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                      Zoom
+                      <select
+                        className="h-8 rounded border bg-background px-2 text-xs"
+                        value={String(previewScale)}
+                        onChange={(e) => setPreviewScale(Number(e.target.value))}
+                      >
+                        <option value="0.6">60%</option>
+                        <option value="0.7">70%</option>
+                        <option value="0.85">85%</option>
+                        <option value="1">100%</option>
+                      </select>
+                    </label>
+                  </>
+                ) : undefined
+              }
             />
           </div>
 
           <DialogFooter className="px-6 py-4 border-t">
-            <div className="flex-1">
-              {onPreview && (
-                <Button
-                  variant="outline"
-                  onClick={onPreview}
-                >
+            <div className="flex-1 flex items-center gap-3">
+              {!onPreviewWithOverride && onPreview && (
+                <Button variant="outline" onClick={onPreview}>
                   Preview Module
                 </Button>
               )}
@@ -617,7 +752,16 @@ function ExpandedView({
 // =============================================================================
 
 function UserSelectNodeComponent({ id, data }: NodeProps) {
-  const { module, onModuleChange, expanded, onExpandedChange, onViewState, onPreview } = data as unknown as UserSelectNodeData;
+  const {
+    module,
+    onModuleChange,
+    expanded,
+    onExpandedChange,
+    onViewState,
+    onPreview,
+    onPreviewWithOverride,
+    runtimePreview,
+  } = data as unknown as UserSelectNodeData;
   const updateNodeInternals = useUpdateNodeInternals();
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -653,6 +797,8 @@ function UserSelectNodeComponent({ id, data }: NodeProps) {
           onCollapse={handleCollapse}
           onViewState={onViewState}
           onPreview={onPreview}
+          onPreviewWithOverride={onPreviewWithOverride}
+          runtimePreview={runtimePreview}
         />
       ) : (
         <CollapsedView

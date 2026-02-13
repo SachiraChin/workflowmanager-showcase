@@ -13,6 +13,7 @@ import {
   Alert,
   AlertDescription,
   Button,
+  type InteractionRequest,
   type StepDefinition,
   type WorkflowDefinition,
 } from "@wfm/shared";
@@ -192,6 +193,33 @@ export function WorkflowEditorPage() {
   }, [workflowInfo, steps]);
 
   /**
+   * Build workflow definition with one module temporarily overridden.
+   * Used for runtime preview of unsaved editor drafts.
+   */
+  const buildWorkflowDefinitionWithOverride = useCallback(
+    (
+      target: ModuleLocation,
+      moduleOverride: unknown
+    ): WorkflowDefinition => {
+      return {
+        workflow_id: workflowInfo.workflow_id,
+        name: workflowInfo.name,
+        description: workflowInfo.description,
+        steps: steps.map((step) => {
+          if (step.step_id !== target.step_id) return step;
+          return {
+            ...step,
+            modules: step.modules.map((mod) =>
+              mod.name === target.module_name ? (moduleOverride as typeof mod) : mod
+            ),
+          };
+        }),
+      };
+    },
+    [workflowInfo, steps]
+  );
+
+  /**
    * Handle module preview request.
    * Runs the virtual runtime to the target module.
    */
@@ -239,6 +267,13 @@ export function WorkflowEditorPage() {
     }
     return runtime.actions.getInteractionForModule(runtime.currentTarget);
   }, [runtime.status, runtime.currentTarget, runtime.actions]);
+
+  const isSameModuleTarget = useCallback(
+    (a: ModuleLocation | null, b: ModuleLocation) => {
+      return !!a && a.step_id === b.step_id && a.module_name === b.module_name;
+    },
+    []
+  );
 
   /**
    * Handle reload with different mock mode.
@@ -389,6 +424,48 @@ export function WorkflowEditorPage() {
                 handleModuleViewState({ step_id: step.step_id, module_name: module.name! }),
               onPreview: () =>
                 handleModulePreview({ step_id: step.step_id, module_name: module.name! }),
+              onPreviewWithOverride: async (moduleOverride: unknown) => {
+                const target = { step_id: step.step_id, module_name: module.name! };
+                const wf = buildWorkflowDefinitionWithOverride(target, moduleOverride);
+                await runtime.actions.runToModuleSilent(wf, target, []);
+              },
+              runtimePreview: {
+                busy: isSameModuleTarget(runtime.currentTarget, {
+                  step_id: step.step_id,
+                  module_name: module.name!,
+                })
+                  ? runtime.busy
+                  : false,
+                error: isSameModuleTarget(runtime.currentTarget, {
+                  step_id: step.step_id,
+                  module_name: module.name!,
+                })
+                  ? runtime.error
+                  : null,
+                mockMode: runtime.mockMode,
+                getPreviewRequest: () => {
+                  const target = {
+                    step_id: step.step_id,
+                    module_name: module.name!,
+                  };
+
+                  const isCurrentTarget = isSameModuleTarget(
+                    runtime.currentTarget,
+                    target
+                  );
+
+                  if (isCurrentTarget && runtime.lastResponse?.interaction_request) {
+                    return runtime.lastResponse.interaction_request as InteractionRequest;
+                  }
+
+                  const historical = runtime.actions.getInteractionForModule(target);
+                  return (historical?.request as InteractionRequest | undefined) ?? null;
+                },
+                getVirtualDb: runtime.getVirtualDb,
+                getVirtualRunId: runtime.getVirtualRunId,
+                getWorkflow: () => buildWorkflowDefinition(),
+                onVirtualDbUpdate: runtime.setVirtualDb,
+              },
               onLoadPreviewData: moduleIndex > 0
                 ? async () => {
                     // Run the previous module silently and return its state
@@ -467,7 +544,7 @@ export function WorkflowEditorPage() {
     });
 
     return { nodes, edges };
-  }, [workflowInfo, steps, expandedModules, nodeHeights.heights, handleWorkflowChange, handleStepChange, handleModuleChange, handleModuleExpandedChange, handleModuleViewState, handleModulePreview]);
+  }, [workflowInfo, steps, expandedModules, nodeHeights.heights, handleWorkflowChange, handleStepChange, handleModuleChange, handleModuleExpandedChange, handleModuleViewState, handleModulePreview, buildWorkflowDefinitionWithOverride, runtime.currentTarget, runtime.busy, runtime.error, runtime.mockMode, runtime.lastResponse, runtime.actions, runtime.getVirtualDb, runtime.getVirtualRunId, runtime.setVirtualDb, buildWorkflowDefinition, isSameModuleTarget]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initialEdges);
