@@ -30,3 +30,4 @@ build/
 dist/
 logs/
 **/node_modules
+deploy/.deploy-backup/
