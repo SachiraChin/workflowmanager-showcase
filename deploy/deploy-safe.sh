@@ -264,7 +264,7 @@ confirm_deployment() {
     echo "  WebUI:          https://arandomsitein.space"
     echo "  Editor:         https://arandomsitein.space/editor/"
     echo "  API:            https://api.arandomsitein.space/health"
-    echo "  Virtual API:    https://virtual.api.arandomsitein.space/health"
+    echo "  Virtual API:    https://vapi.arandomsitein.space/health"
     echo ""
     echo "Local ports (if testing locally):"
     echo "  WebUI:          http://localhost:8080"
