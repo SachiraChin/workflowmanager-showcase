@@ -262,6 +262,7 @@ services:
       dockerfile: deploy/Dockerfile.webui
       args:
         VITE_API_PROD_URL: ${VITE_API_PROD_URL:-https://api.arandomsitein.space}
+        VITE_VIRTUAL_API_PROD_URL: ${VITE_VIRTUAL_API_PROD_URL:-https://virtual.api.arandomsitein.space}
     container_name: wfm-webui
     restart: unless-stopped
     ports:

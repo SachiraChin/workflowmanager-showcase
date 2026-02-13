@@ -27,6 +27,7 @@ COPY ui/editor/ ./ui/editor/
 
 # Build arguments for environment variables
 ARG VITE_API_PROD_URL=https://api.arandomsitein.space
+ARG VITE_VIRTUAL_API_PROD_URL=https://virtual.api.arandomsitein.space
 ARG VITE_EDITOR_URL=/editor
 
 # -----------------------------------------------------------------------------
@@ -45,6 +46,8 @@ RUN npm run build
 WORKDIR /app/ui/editor
 RUN echo "VITE_API_LOCAL_URL=${VITE_API_PROD_URL}" > .env && \
     echo "VITE_API_PROD_URL=${VITE_API_PROD_URL}" >> .env && \
+    echo "VITE_VIRTUAL_API_LOCAL_URL=${VITE_VIRTUAL_API_PROD_URL}" >> .env && \
+    echo "VITE_VIRTUAL_API_PROD_URL=${VITE_VIRTUAL_API_PROD_URL}" >> .env && \
     echo "VITE_EDITOR_URL=${VITE_EDITOR_URL}" >> .env
 
 RUN npm run build
