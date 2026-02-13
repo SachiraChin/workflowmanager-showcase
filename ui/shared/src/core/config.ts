@@ -33,7 +33,7 @@ export const API_URL = getApiUrl();
  *
  * Virtual server runs separately from the main server for resource isolation.
  * - Development: VITE_VIRTUAL_API_LOCAL_URL or http://localhost:9001
- * - Production: VITE_VIRTUAL_API_PROD_URL or virtual.{domain}
+ * - Production: VITE_VIRTUAL_API_PROD_URL or virtual.api.{domain}
  */
 export function getVirtualApiUrl(): string {
   const { hostname, protocol } = window.location;
@@ -43,8 +43,8 @@ export function getVirtualApiUrl(): string {
     return import.meta.env.VITE_VIRTUAL_API_LOCAL_URL || "http://localhost:9001";
   }
 
-  // Production: use configured URL or fallback to virtual.{domain}
-  return import.meta.env.VITE_VIRTUAL_API_PROD_URL || `${protocol}//virtual.${hostname}`;
+  // Production: use configured URL or fallback to virtual.api.{domain}
+  return import.meta.env.VITE_VIRTUAL_API_PROD_URL || `${protocol}//virtual.api.${hostname}`;
 }
 
 /**
