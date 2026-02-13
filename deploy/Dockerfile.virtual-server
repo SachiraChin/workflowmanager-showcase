@@ -1,0 +1,73 @@
+# Virtual Server Dockerfile
+# Multi-stage build for smaller final image
+
+# =============================================================================
+# Stage 1: Build stage
+# =============================================================================
+FROM python:3.11-slim as builder
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better caching
+COPY requirements.txt .
+COPY backend/server/requirements.txt ./server-requirements.txt
+
+# Install Python dependencies
+RUN pip install --no-cache-dir --user -r requirements.txt && \
+    pip install --no-cache-dir --user -r server-requirements.txt
+
+# =============================================================================
+# Stage 2: Runtime stage
+# =============================================================================
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install runtime dependencies only
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy installed packages from builder
+COPY --from=builder /root/.local /root/.local
+
+# Make sure scripts in .local are usable
+ENV PATH=/root/.local/bin:$PATH
+
+# Copy application code
+COPY backend/ ./backend/
+COPY contracts/ ./contracts/
+COPY workflows/ ./workflows/
+COPY pyproject.toml ./
+
+# Install project in editable mode (makes contracts and backend importable)
+RUN pip install --no-cache-dir -e .
+
+# Copy entrypoint script
+COPY deploy/entrypoint.virtual-server.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Create logs directory
+RUN mkdir -p /app/logs
+
+# Environment variables with defaults
+ENV PYTHONUNBUFFERED=1
+ENV MONGODB_URI=mongodb://mongo:27017
+ENV MONGODB_DATABASE=workflow_db
+ENV MONGODB_VIRTUAL_URI=mongodb://mongo-virtual:27017
+ENV LOG_DIR=/app/logs
+
+# Expose port
+EXPOSE 9001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:9001/health || exit 1
+
+# Run the server via entrypoint
+ENTRYPOINT ["/entrypoint.sh"]

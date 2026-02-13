@@ -2,7 +2,9 @@
 # 
 # Services:
 #   - mongo: MongoDB database (accessible from host on port 27017)
+#   - mongo-virtual: MongoDB for virtual execution (ephemeral, port 27018)
 #   - server: Backend API server
+#   - virtual-server: Virtual workflow execution server
 #   - worker: Background task worker
 #   - webui: Frontend static files served by nginx
 #
@@ -140,6 +142,61 @@ services:
       TZ: ${TZ:-UTC}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - wfm-network
+
+  # ===========================================================================
+  # Virtual Workflow Server
+  # Handles workflow preview/virtual execution from the editor.
+  # Uses mongo-virtual for isolated workflow data, mongo for authentication.
+  # ===========================================================================
+  virtual-server:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.virtual-server
+    container_name: wfm-virtual-server
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+      mongo-virtual:
+        condition: service_healthy
+    ports:
+      # Exposed on 9091, for editor virtual execution
+      - "9091:9001"
+    environment:
+      # Auth database (production - for user authentication)
+      MONGODB_URI: mongodb://mongo:27017
+      MONGODB_DATABASE: ${MONGODB_DATABASE:-workflow_db}
+      # Virtual execution database (ephemeral - for workflow data)
+      MONGODB_VIRTUAL_URI: mongodb://mongo-virtual:27017
+      
+      # Authentication (must match main server)
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY is required}
+      
+      # CORS - your frontend domain
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://arandomsitein.space}
+      
+      # API Keys - LLM (for non-mock execution)
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      
+      # API Keys - Media providers (for non-mock execution)
+      LEONARDO_API_KEY: ${LEONARDO_API_KEY:-}
+      MIDAPI_API_KEY: ${MIDAPI_API_KEY:-}
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
+      
+      # SD Forge (local Stable Diffusion)
+      SD_FORGE_API_URL: ${SD_FORGE_API_URL:-}
+      
+      # Timezone
+      TZ: ${TZ:-UTC}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9001/health"]
       interval: 30s
       timeout: 10s
       retries: 3

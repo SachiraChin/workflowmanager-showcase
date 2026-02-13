@@ -8,6 +8,7 @@
 #   ./deploy.sh              # Build and deploy all
 #   ./deploy.sh --build      # Force rebuild all images
 #   ./deploy.sh --server     # Deploy server only
+#   ./deploy.sh --virtual    # Deploy virtual-server only
 #   ./deploy.sh --webui      # Deploy webui only
 #   ./deploy.sh --restart    # Restart without rebuild
 #   ./deploy.sh --down       # Stop all containers
@@ -76,6 +77,12 @@ build_worker() {
     log_success "Worker build complete"
 }
 
+build_virtual_server() {
+    log_info "Building virtual-server image..."
+    docker-compose build virtual-server
+    log_success "Virtual-server build complete"
+}
+
 # Deploy services
 deploy_all() {
     log_info "Deploying all services..."
@@ -100,6 +107,12 @@ deploy_worker() {
     log_info "Deploying worker..."
     docker-compose up -d worker
     log_success "Worker deployed"
+}
+
+deploy_virtual_server() {
+    log_info "Deploying virtual-server..."
+    docker-compose up -d virtual-server
+    log_success "Virtual-server deployed"
 }
 
 # Restart services
@@ -136,6 +149,7 @@ show_status() {
     echo ""
     echo "  Backend:"
     echo "    API Server:        localhost:9090"
+    echo "    Virtual Server:    localhost:9091"
     echo "    Worker:            (no port - background service)"
     echo ""
     echo "  Frontend:"
@@ -189,6 +203,13 @@ health_check() {
         log_error "Editor: unhealthy"
     fi
     
+    # Check Virtual Server
+    if curl -sf http://localhost:9091/health &>/dev/null; then
+        log_success "Virtual Server: healthy"
+    else
+        log_error "Virtual Server: unhealthy"
+    fi
+    
     # Check Worker (check if container is running)
     if docker-compose ps worker 2>/dev/null | grep -q "running"; then
         log_success "Worker: running"
@@ -220,6 +241,11 @@ main() {
             build_worker
             deploy_worker
             ;;
+        --virtual|--virtual-server)
+            check_env
+            build_virtual_server
+            deploy_virtual_server
+            ;;
         --restart)
             restart_all
             ;;
@@ -242,6 +268,7 @@ main() {
             echo "  (none)      Build and deploy all services"
             echo "  --build     Force rebuild all images"
             echo "  --server    Build and deploy server only"
+            echo "  --virtual   Build and deploy virtual-server only"
             echo "  --worker    Build and deploy worker only"
             echo "  --webui     Build and deploy webui only"
             echo "  --restart   Restart without rebuild"
