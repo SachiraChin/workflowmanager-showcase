@@ -168,3 +168,9 @@
   color: var(--foreground);
   border-radius: var(--radius-md);
 }
+
+.ux-poc-json-selection {
+  background: var(--ux-poc-selection-fill, color-mix(in oklch, var(--accent) 45%, transparent));
+  border: 1px solid var(--ux-poc-selection-border, color-mix(in oklch, var(--ring) 55%, transparent));
+  border-radius: 4px;
+}

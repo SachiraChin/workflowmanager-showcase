@@ -18,6 +18,7 @@ import { SchemaBuilderMonacoPocPage } from "@/poc/monaco/SchemaBuilderMonacoPocP
 import { DndKitPocPage } from "@/poc/ux-schema-editor/DndKitPocPage";
 import { PragmaticDndPocPage } from "@/poc/ux-schema-editor/PragmaticDndPocPage";
 import { UxPalettePocPage } from "@/poc/ux-schema-editor/UxPalettePocPage";
+import { TreeModesPocPage } from "@/poc/ux-schema-editor/TreeModesPocPage";
 
 import { useTheme } from "@/components/theme-provider";
 
@@ -186,6 +187,13 @@ function HeaderNav() {
                     >
                       UX Schema Editor (Palette) ★
                     </Link>
+                    <Link
+                      className="block rounded px-3 py-2 hover:bg-muted"
+                      onClick={closeMenus}
+                      to="/poc/ux-schema/tree-modes"
+                    >
+                      UX Tree Modes PoC
+                    </Link>
                   </div>
                 ) : null}
               </div>
@@ -268,6 +276,10 @@ export default function App() {
           <Route
             path="/poc/ux-schema/palette"
             element={<UxPalettePocPage />}
+          />
+          <Route
+            path="/poc/ux-schema/tree-modes"
+            element={<TreeModesPocPage />}
           />
 
           <Route path="*" element={<Navigate to="/" replace />} />

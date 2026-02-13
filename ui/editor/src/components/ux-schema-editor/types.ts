@@ -19,6 +19,7 @@ export type DataSchemaNode = {
 export type NodeUxConfig = {
   render_as?: string;
   display?: DisplayMode | boolean;
+  display_format?: string;
   nudges?: string[];
   selectable?: boolean;
   highlight?: boolean;
