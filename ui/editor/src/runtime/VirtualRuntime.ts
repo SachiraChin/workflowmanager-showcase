@@ -399,9 +399,13 @@ export class VirtualRuntime {
     workflow: WorkflowDefinition,
     target: ModuleLocation,
     selections: ModuleSelection[],
-    options?: { openPanel?: "preview" | "state" | "none" }
+    options?: {
+      openPanel?: "preview" | "state" | "none";
+      mockModeOverride?: boolean;
+    }
   ): Promise<RunResult> {
-    const { openPanel = "preview" } = options ?? {};
+    const { openPanel = "preview", mockModeOverride } = options ?? {};
+    const executionMockMode = mockModeOverride ?? this.mockMode;
 
     console.log("[VirtualRuntime] runToModule:", {
       target,
@@ -434,7 +438,7 @@ export class VirtualRuntime {
 
       if (needsReset) {
         console.log("[VirtualRuntime] Workflow changed, resetting...");
-        await this.resetAndStart(workflow, target, selections);
+        await this.resetAndStart(workflow, target, selections, executionMockMode);
       } else if (targetIndex <= this.furthestModuleIndex) {
         // Already have state for this target - no API call needed
         console.log("[VirtualRuntime] Already have state, using cache");
@@ -443,7 +447,7 @@ export class VirtualRuntime {
       } else {
         // Need to execute forward
         console.log("[VirtualRuntime] Executing forward to target...");
-        await this.executeForward(workflow, target, selections);
+        await this.executeForward(workflow, target, selections, executionMockMode);
       }
 
       // Fetch state and interaction history after execution
@@ -698,7 +702,8 @@ export class VirtualRuntime {
   private async resetAndStart(
     workflow: WorkflowDefinition,
     target: ModuleLocation,
-    selections: ModuleSelection[]
+    selections: ModuleSelection[],
+    executionMockMode: boolean
   ): Promise<void> {
     // Clear previous state
     this.virtualDb = null;
@@ -715,7 +720,7 @@ export class VirtualRuntime {
       virtual_db: null,
       target_step_id: target.step_id,
       target_module_name: target.module_name,
-      mock: this.mockMode,
+      mock: executionMockMode,
     });
 
     console.log("[VirtualRuntime] resetAndStart - received response", {
@@ -730,7 +735,13 @@ export class VirtualRuntime {
     this.virtualRunId = response.virtual_run_id;
 
     // Handle response
-    await this.processExecutionResponse(workflow, target, response, selections);
+    await this.processExecutionResponse(
+      workflow,
+      target,
+      response,
+      selections,
+      executionMockMode
+    );
   }
 
   /**
@@ -739,11 +750,12 @@ export class VirtualRuntime {
   private async executeForward(
     workflow: WorkflowDefinition,
     target: ModuleLocation,
-    selections: ModuleSelection[]
+    selections: ModuleSelection[],
+    executionMockMode: boolean
   ): Promise<void> {
     if (!this.virtualDb) {
       // No existing state, do fresh start
-      return this.resetAndStart(workflow, target, selections);
+      return this.resetAndStart(workflow, target, selections, executionMockMode);
     }
 
     const requestPayload = {
@@ -751,7 +763,7 @@ export class VirtualRuntime {
       virtual_db: this.virtualDb,
       target_step_id: target.step_id,
       target_module_name: target.module_name,
-      mock: this.mockMode,
+      mock: executionMockMode,
     };
     
     console.log("[VirtualRuntime] executeForward - calling /resume/confirm", {
@@ -769,7 +781,13 @@ export class VirtualRuntime {
     this.virtualDb = response.virtual_db;
     this.virtualRunId = response.virtual_run_id;
 
-    await this.processExecutionResponse(workflow, target, response, selections);
+    await this.processExecutionResponse(
+      workflow,
+      target,
+      response,
+      selections,
+      executionMockMode
+    );
   }
 
   /**
@@ -779,7 +797,8 @@ export class VirtualRuntime {
     workflow: WorkflowDefinition,
     target: ModuleLocation,
     response: VirtualWorkflowResponse,
-    selections: ModuleSelection[]
+    selections: ModuleSelection[],
+    executionMockMode: boolean
   ): Promise<void> {
     // Build selection map
     const selectionMap = new Map<string, InteractionResponseData>();
@@ -871,7 +890,7 @@ export class VirtualRuntime {
           target_module_name: target.module_name,
           interaction_id: currentResponse.interaction_request!.interaction_id,
           response: selection,
-          mock: this.mockMode,
+          mock: executionMockMode,
         });
 
         this.lastResponse = currentResponse;

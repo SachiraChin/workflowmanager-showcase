@@ -61,7 +61,8 @@ export interface VirtualRuntimeActions {
   runToModule: (
     workflow: WorkflowDefinition,
     target: ModuleLocation,
-    selections?: ModuleSelection[]
+    selections?: ModuleSelection[],
+    options?: { mockModeOverride?: boolean }
   ) => Promise<void>;
 
   /**
@@ -88,7 +89,8 @@ export interface VirtualRuntimeActions {
   runToModuleSilent: (
     workflow: WorkflowDefinition,
     target: ModuleLocation,
-    selections?: ModuleSelection[]
+    selections?: ModuleSelection[],
+    options?: { mockModeOverride?: boolean }
   ) => Promise<VirtualStateResponse | null>;
 
   /**
@@ -277,7 +279,8 @@ export function useVirtualRuntime(): UseVirtualRuntimeReturn {
     async (
       workflow: WorkflowDefinition,
       target: ModuleLocation,
-      selections: ModuleSelection[] = []
+      selections: ModuleSelection[] = [],
+      options?: { mockModeOverride?: boolean }
     ) => {
       setBusy(true);
       setError(null);
@@ -286,7 +289,9 @@ export function useVirtualRuntime(): UseVirtualRuntimeReturn {
       setState(null);
 
       try {
-        await runtime.runToModule(workflow, target, selections);
+        await runtime.runToModule(workflow, target, selections, {
+          mockModeOverride: options?.mockModeOverride,
+        });
       } finally {
         syncState();
         setBusy(false);
@@ -321,14 +326,18 @@ export function useVirtualRuntime(): UseVirtualRuntimeReturn {
     async (
       workflow: WorkflowDefinition,
       target: ModuleLocation,
-      selections: ModuleSelection[] = []
+      selections: ModuleSelection[] = [],
+      options?: { mockModeOverride?: boolean }
     ): Promise<VirtualStateResponse | null> => {
       setBusy(true);
       setError(null);
 
       try {
         // Run with openPanel: "none" to avoid opening any panels
-        await runtime.runToModule(workflow, target, selections, { openPanel: "none" });
+        await runtime.runToModule(workflow, target, selections, {
+          openPanel: "none",
+          mockModeOverride: options?.mockModeOverride,
+        });
         // Return state directly from runtime (not React state which is async)
         return runtime.getState();
       } finally {

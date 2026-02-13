@@ -427,7 +427,9 @@ export function WorkflowEditorPage() {
               onPreviewWithOverride: async (moduleOverride: unknown) => {
                 const target = { step_id: step.step_id, module_name: module.name! };
                 const wf = buildWorkflowDefinitionWithOverride(target, moduleOverride);
-                await runtime.actions.runToModuleSilent(wf, target, []);
+                await runtime.actions.runToModuleSilent(wf, target, [], {
+                  mockModeOverride: true,
+                });
               },
               runtimePreview: {
                 busy: isSameModuleTarget(runtime.currentTarget, {
@@ -442,7 +444,7 @@ export function WorkflowEditorPage() {
                 })
                   ? runtime.error
                   : null,
-                mockMode: runtime.mockMode,
+                mockMode: true,
                 getPreviewRequest: () => {
                   const target = {
                     step_id: step.step_id,
@@ -454,7 +456,15 @@ export function WorkflowEditorPage() {
                     target
                   );
 
-                  if (isCurrentTarget && runtime.lastResponse?.interaction_request) {
+                  const isLastResponseForTarget =
+                    runtime.lastResponse?.progress?.current_step === target.step_id &&
+                    runtime.lastResponse?.progress?.current_module === target.module_name;
+
+                  if (
+                    isCurrentTarget &&
+                    isLastResponseForTarget &&
+                    runtime.lastResponse?.interaction_request
+                  ) {
                     return runtime.lastResponse.interaction_request as InteractionRequest;
                   }
 
@@ -472,7 +482,9 @@ export function WorkflowEditorPage() {
                     const prevModule = step.modules[moduleIndex - 1];
                     const target = { step_id: step.step_id, module_name: prevModule.name! };
                     const wf = buildWorkflowDefinition();
-                    const state = await runtime.actions.runToModuleSilent(wf, target, []);
+                    const state = await runtime.actions.runToModuleSilent(wf, target, [], {
+                      mockModeOverride: true,
+                    });
                     return state?.state_mapped || null;
                   }
                 : undefined,
