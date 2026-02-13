@@ -27,7 +27,7 @@ COPY ui/editor/ ./ui/editor/
 
 # Build arguments for environment variables
 ARG VITE_API_PROD_URL=https://api.arandomsitein.space
-ARG VITE_VIRTUAL_API_PROD_URL=https://virtual.api.arandomsitein.space
+ARG VITE_VIRTUAL_API_PROD_URL=https://vapi.arandomsitein.space
 ARG VITE_EDITOR_URL=/editor
 
 # -----------------------------------------------------------------------------
