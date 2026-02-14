@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional
 from ...engine.module_interface import InteractionRequest, ModuleInput, ModuleOutput
 from ..api.llm_call import LLMCallModule
 from .generate import MediaGenerateModule
+from backend.providers.media.registry import MediaProviderRegistry
 
 
 SHARED_PROMPT_REF_TOKEN = "{{shared_prompt_ref}}"
@@ -51,7 +52,12 @@ class MediaGenerateV2Module(MediaGenerateModule):
         providers = self._normalize_providers(inputs.get("providers"))
         self._validate_provider_constraints(action_type, providers)
 
-        generated_prompts = self._generate_prompts(inputs, providers, context)
+        generated_prompts = self._generate_prompts(
+            inputs,
+            providers,
+            action_type,
+            context,
+        )
         display_schema = inputs.get("display_schema")
         if not isinstance(display_schema, dict):
             display_schema = self._build_default_display_schema(providers, action_type)
@@ -88,13 +94,18 @@ class MediaGenerateV2Module(MediaGenerateModule):
         self,
         inputs: Dict[str, Any],
         providers: List[str],
+        action_type: str,
         context,
     ) -> Dict[str, Any]:
         prompt_config = inputs.get("prompt_config")
         if not isinstance(prompt_config, dict):
             raise ValueError("prompt_config must be an object")
 
-        shared_user = prompt_config.get("shared_user") or ""
+        user_prompt = prompt_config.get("user")
+        if not isinstance(user_prompt, str) or not user_prompt.strip():
+            raise ValueError("prompt_config.user must be a non-empty string")
+
+        shared_prompt = prompt_config.get("shared_prompt") or ""
         provider_prompts = prompt_config.get("provider_prompts")
         if not isinstance(provider_prompts, dict):
             provider_prompts = {}
@@ -104,11 +115,6 @@ class MediaGenerateV2Module(MediaGenerateModule):
             body = provider_prompts.get(provider)
             if not isinstance(body, str) or not body.strip():
                 body = f"Use {SHARED_PROMPT_REF_TOKEN}."
-
-            body = body.replace(
-                SHARED_PROMPT_REF_TOKEN,
-                "refer to shared instructions above",
-            )
 
             provider_blocks.append(
                 "\n".join(
@@ -120,22 +126,40 @@ class MediaGenerateV2Module(MediaGenerateModule):
                 )
             )
 
-        user_prompt = "\n\n".join(
+        stitched_prompt_instructions = "\n\n".join(
             [
-                "## Shared Instructions",
-                str(shared_user),
+                "## Shared Provider Instructions",
+                str(shared_prompt),
+                "Reference: {{shared_prompt_ref}} means 'shared instructions above'.",
                 *provider_blocks,
-                "Return valid JSON only.",
             ]
+        )
+
+        system_input = prompt_config.get("system")
+        if isinstance(system_input, list):
+            llm_system: List[Any] = [*system_input]
+        elif system_input is None:
+            llm_system = []
+        else:
+            llm_system = [system_input]
+
+        llm_system.append(
+            {
+                "type": "text",
+                "content": stitched_prompt_instructions,
+                "cache_ttl": 10800,
+            }
         )
 
         llm_inputs: Dict[str, Any] = {
             "provider": prompt_config.get("provider") or "openai",
             "model": prompt_config.get("model"),
-            "system": prompt_config.get("system"),
+            "system": llm_system,
             "input": user_prompt,
             "ai_config": prompt_config.get("ai_config") or {},
-            "output_schema": self._build_prompt_output_schema(providers),
+            "output_schema": self._build_prompt_output_schema(providers, action_type),
+            "metadata": prompt_config.get("metadata")
+            or {"step_id": getattr(context, "step_id", None)},
         }
 
         llm_result = LLMCallModule().execute(llm_inputs, context)
@@ -147,96 +171,54 @@ class MediaGenerateV2Module(MediaGenerateModule):
             raise ValueError("V2 LLM response must include prompts object")
         return parsed
 
-    def _build_prompt_output_schema(self, providers: List[str]) -> Dict[str, Any]:
-        provider_schema_map = {
-            "midjourney": {
-                "type": "object",
-                "properties": {
-                    "prompt": {"type": "string"},
-                    "style_notes": {"type": "string"},
-                },
-                "required": ["prompt", "style_notes"],
-                "additionalProperties": False,
-            },
-            "leonardo": {
-                "type": "object",
-                "properties": {
-                    "prompt": {"type": "string"},
-                    "style_notes": {"type": "string"},
-                },
-                "required": ["prompt", "style_notes"],
-                "additionalProperties": False,
-            },
-            "openai": {
-                "type": "object",
-                "properties": {
-                    "prompt": {"type": "string"},
-                    "camera_notes": {"type": "string"},
-                },
-                "required": ["prompt", "camera_notes"],
-                "additionalProperties": False,
-            },
-            "stable_diffusion": {
-                "type": "object",
-                "properties": {
-                    "tag_prompt": {"type": "string"},
-                    "natural_prompt": {"type": "string"},
-                    "negative_prompt": {"type": "string"},
-                    "style_notes": {"type": "string"},
-                },
-                "required": [
-                    "tag_prompt",
-                    "natural_prompt",
-                    "negative_prompt",
-                    "style_notes",
-                ],
-                "additionalProperties": False,
-            },
-            "sora": {
-                "type": "object",
-                "properties": {
-                    "prompt": {"type": "string"},
-                    "motion_notes": {"type": "string"},
-                },
-                "required": ["prompt", "motion_notes"],
-                "additionalProperties": False,
-            },
-            "elevenlabs": {
-                "type": "object",
-                "properties": {
-                    "script": {"type": "string"},
-                    "style_notes": {"type": "string"},
-                },
-                "required": ["script", "style_notes"],
-                "additionalProperties": False,
-            },
-        }
-
+    def _build_prompt_output_schema(
+        self,
+        providers: List[str],
+        action_type: str,
+    ) -> Dict[str, Any]:
         prompt_props: Dict[str, Any] = {}
-        for provider in providers:
-            prompt_props[provider] = deepcopy(
-                provider_schema_map.get(
-                    provider,
-                    {
-                        "type": "object",
-                        "properties": {"prompt": {"type": "string"}},
-                        "required": ["prompt"],
-                        "additionalProperties": False,
-                    },
+        for provider_name in providers:
+            provider_class = MediaProviderRegistry.get_class(provider_name)
+            provider_schema = provider_class.get_data_schema_for_action(action_type)
+            if not isinstance(provider_schema, dict) or not provider_schema:
+                raise ValueError(
+                    f"Provider '{provider_name}' does not expose data schema for action_type '{action_type}'"
                 )
-            )
+            prompt_props[provider_name] = deepcopy(provider_schema)
+
+        top_level_properties: Dict[str, Any] = {"prompts": {
+            "type": "object",
+            "properties": prompt_props,
+            "required": providers,
+            "additionalProperties": False,
+        }}
+
+        required_top: List[str] = ["prompts"]
+        if action_type == "txt2img":
+            top_level_properties["scene_title"] = {
+                "type": "string",
+                "description": "The title of the scene these prompts are for",
+            }
+            top_level_properties["key_moment"] = {
+                "type": "string",
+                "description": "Brief description of the key visual moment being captured",
+            }
+            required_top = ["scene_title", "key_moment", "prompts"]
+        elif action_type == "img2vid":
+            top_level_properties["scene_title"] = {
+                "type": "string",
+                "description": "The scene this video prompt is for",
+            }
+            top_level_properties["motion_summary"] = {
+                "type": "string",
+                "description": "Brief description of the primary motion/movement in this video",
+            }
+            required_top = ["scene_title", "motion_summary", "prompts"]
 
         return {
             "type": "object",
-            "properties": {
-                "prompts": {
-                    "type": "object",
-                    "properties": prompt_props,
-                    "required": providers,
-                    "additionalProperties": False,
-                }
-            },
-            "required": ["prompts"],
+            "properties": top_level_properties,
+            "required": required_top,
             "additionalProperties": False,
         }
 
@@ -306,8 +288,9 @@ class MediaGenerateV2Module(MediaGenerateModule):
         for item in providers:
             if not isinstance(item, str) or not item:
                 raise ValueError("provider ids must be non-empty strings")
-            if item not in out:
-                out.append(item)
+            if item in out:
+                raise ValueError(f"duplicate provider not allowed: {item}")
+            out.append(item)
         if not out:
             raise ValueError("providers cannot be empty")
         return out
@@ -315,7 +298,7 @@ class MediaGenerateV2Module(MediaGenerateModule):
     def _validate_provider_constraints(self, action_type: str, providers: List[str]) -> None:
         allowed = {
             "txt2img": {"midjourney", "leonardo", "openai", "stable_diffusion"},
-            "img2vid": {"sora", "leonardo"},
+            "img2vid": {"openai", "leonardo"},
             "txt2audio": {"elevenlabs"},
         }
         valid = allowed.get(action_type)

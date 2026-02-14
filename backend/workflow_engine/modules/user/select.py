@@ -190,7 +190,7 @@ class SelectModule(InteractiveModule):
             interaction_type = InteractionType.REVIEW_GROUPED
         else:
             interaction_type = InteractionType.SELECT_FROM_STRUCTURED
-
+ 
         # Determine effective max_selections (-1 means unlimited)
         effective_max = max_selections
         if effective_max is None:

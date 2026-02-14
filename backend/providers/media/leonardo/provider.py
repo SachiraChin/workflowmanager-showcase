@@ -1502,3 +1502,58 @@ class LeonardoProvider(MediaProviderBase):
             credits_per_image=round(credits_per_image, 2),
             cost_per_image_usd=round(cost_per_image, 4)
         )
+
+    def get_data_schema(self, action_type: str) -> Dict[str, Any]:
+        return self.__class__.get_data_schema_for_action(action_type)
+
+    @classmethod
+    def get_data_schema_for_action(cls, action_type: str) -> Dict[str, Any]:
+        if action_type == "txt2img":
+            return {
+                "type": "object",
+                "properties": {
+                    "prompt": {
+                        "type": "string",
+                        "description": "Leonardo Phoenix optimized prompt",
+                    },
+                    "style_notes": {
+                        "type": "string",
+                        "description": "Brief note on the style/quality targeted",
+                    },
+                },
+                "required": ["prompt", "style_notes"],
+                "additionalProperties": False,
+            }
+
+        if action_type == "img2vid":
+            return {
+                "type": "object",
+                "properties": {
+                    "positive_prompt": {
+                        "type": "string",
+                        "description": "Main motion prompt describing what should happen",
+                    },
+                    "negative_prompt": {
+                        "type": "string",
+                        "description": "Artifacts and unwanted elements to avoid",
+                    },
+                    "motion_strength": {
+                        "type": "string",
+                        "enum": ["subtle", "moderate", "dynamic"],
+                        "description": "Recommended motion intensity level",
+                    },
+                    "motion_notes": {
+                        "type": "string",
+                        "description": "Brief notes on motion emphasis",
+                    },
+                },
+                "required": [
+                    "positive_prompt",
+                    "negative_prompt",
+                    "motion_strength",
+                    "motion_notes",
+                ],
+                "additionalProperties": False,
+            }
+
+        return {}

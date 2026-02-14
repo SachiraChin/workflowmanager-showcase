@@ -730,3 +730,26 @@ class MidAPIProvider(MediaProviderBase):
             credits_per_image=round(credits_per_image, 2),
             cost_per_image_usd=round(cost_per_image, 4)
         )
+
+    def get_data_schema(self, action_type: str) -> Dict[str, Any]:
+        return self.__class__.get_data_schema_for_action(action_type)
+
+    @classmethod
+    def get_data_schema_for_action(cls, action_type: str) -> Dict[str, Any]:
+        if action_type != "txt2img":
+            return {}
+        return {
+            "type": "object",
+            "properties": {
+                "prompt": {
+                    "type": "string",
+                    "description": "Midjourney prompt text only (no inline parameters or metadata fields)",
+                },
+                "style_notes": {
+                    "type": "string",
+                    "description": "Brief note on the artistic style/mood targeted",
+                },
+            },
+            "required": ["prompt", "style_notes"],
+            "additionalProperties": False,
+        }

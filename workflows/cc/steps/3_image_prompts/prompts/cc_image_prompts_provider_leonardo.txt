@@ -1,0 +1,13 @@
+Provider target: Leonardo.
+
+Return fields:
+- prompt
+- style_notes
+
+Constraints:
+- Balance artistic and photorealistic description.
+- Specify style clearly (photorealistic, cinematic, warm lighting).
+- Include quality and mood descriptors.
+- Suggested structure: [style/quality], [subject with specific details],
+  [setting], [lighting and mood].
+- Keep style_notes focused on style/quality intent.

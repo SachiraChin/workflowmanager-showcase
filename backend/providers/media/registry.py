@@ -96,6 +96,22 @@ class MediaProviderRegistry:
         return cls._providers[provider_id].provider_class()
 
     @classmethod
+    def get_class(cls, provider_id: str) -> Type[MediaProviderBase]:
+        """
+        Get registered provider class without instantiation.
+
+        Useful for static metadata/schema access when provider construction may
+        require environment credentials that are not available.
+        """
+        if provider_id not in cls._providers:
+            available = list(cls._providers.keys())
+            raise ValueError(
+                f"Unknown media provider: '{provider_id}'. "
+                f"Available providers: {available}"
+            )
+        return cls._providers[provider_id].provider_class
+
+    @classmethod
     def get_concurrency(cls, provider_id: str) -> int:
         """
         Get the maximum concurrency for a provider.

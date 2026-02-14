@@ -1123,3 +1123,44 @@ class OpenAIProvider(MediaProviderBase):
         )
 
         return PreviewInfo(resolution=resolution, credits=credits)
+
+    def get_data_schema(self, action_type: str) -> Dict[str, Any]:
+        return self.__class__.get_data_schema_for_action(action_type)
+
+    @classmethod
+    def get_data_schema_for_action(cls, action_type: str) -> Dict[str, Any]:
+        if action_type == "txt2img":
+            return {
+                "type": "object",
+                "properties": {
+                    "prompt": {
+                        "type": "string",
+                        "description": "OpenAI GPT Image prompt optimized for photorealistic and artistic generation",
+                    },
+                    "camera_notes": {
+                        "type": "string",
+                        "description": "Camera angle/framing suggestions for the image",
+                    },
+                },
+                "required": ["prompt", "camera_notes"],
+                "additionalProperties": False,
+            }
+
+        if action_type == "img2vid":
+            return {
+                "type": "object",
+                "properties": {
+                    "prompt": {
+                        "type": "string",
+                        "description": "Natural language description with motion focus for Sora 2",
+                    },
+                    "style_notes": {
+                        "type": "string",
+                        "description": "Visual consistency and motion intensity notes",
+                    },
+                },
+                "required": ["prompt", "style_notes"],
+                "additionalProperties": False,
+            }
+
+        return {}

@@ -1,0 +1,32 @@
+Provider target: Stable Diffusion.
+
+Return fields:
+- tag_prompt
+- natural_prompt
+- negative_prompt
+- style_notes
+
+Constraints:
+- Generate both prompt styles because SD models differ by training style.
+
+Tag prompt (tag_prompt):
+- Token-based, comma-separated, optional weighting.
+- Suggested structure: [subject with weight], [secondary weighted elements],
+  [attributes], [setting], [lighting], [style], [quality tags].
+- Weighting hierarchy:
+  - primary subject(s): 1.4-1.5
+  - secondary environment: 1.1-1.2
+- Put most important elements first.
+
+Natural prompt (natural_prompt):
+- Fluent descriptive prose with scene detail, mood, and atmosphere.
+- Include technical hints naturally (lighting/style/quality).
+
+Negative prompt (negative_prompt):
+- Always tag-style.
+- Include quality, anatomy, and composition artifact guards.
+- Typical categories: lowres/blurry, extra limbs, bad anatomy, watermark,
+  text/signature, duplicate/cropped artifacts.
+
+Style notes:
+- Keep concise and focused on style/quality target.

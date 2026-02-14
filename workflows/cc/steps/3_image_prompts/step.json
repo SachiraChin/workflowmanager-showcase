@@ -4,69 +4,92 @@
   "description": "Generate optimized prompts for Midjourney, Leonardo Phoenix, OpenAI, and Stable Diffusion",
   "modules": [
     {
-      "module_id": "api.llm",
+      "module_id": "media.generateV2",
       "inputs": {
         "resolver_schema": {
           "type": "object",
           "properties": {
-            "input": {
+            "prompt_config": {
               "resolver": "server"
             },
-            "system": {
-              "resolver": "server"
-            },
-            "metadata": {
+            "display_schema": {
               "resolver": "server"
             }
           }
         },
-        "ai_config": {},
-        "input": {
-          "$ref": "prompts/cc_image_prompts_user.txt",
-          "type": "jinja2"
-        },
-        "output_schema": {
-          "$ref": "schemas/cc_image_prompts_schema.json",
-          "type": "json"
-        },
-        "metadata": {
-          "step_id": "{{ step.step_id }}"
-        },
-        "system": [
-          {
-            "$ref": "prompts/cc_role_prompt_engineer.txt",
-            "type": "text",
-            "cache_ttl": 10800
-          },
-          {
-            "$ref": "prompts/cc_image_prompts_system.txt",
-            "type": "text",
-            "cache_ttl": 10800
-          }
+        "action_type": "txt2img",
+        "providers": [
+          "midjourney",
+          "leonardo",
+          "openai",
+          "stable_diffusion"
         ],
-        "provider": "openai"
-      },
-      "outputs_to_state": {
-        "response": "image_prompts"
-      },
-      "name": "generate_image_prompts"
-    },
-    {
-      "module_id": "media.generate",
-      "inputs": {
-        "resolver_schema": {
-          "type": "object",
-          "properties": {
-            "prompts": {
-              "resolver": "server"
+        "prompt_config": {
+          "resolver_schema": {
+            "type": "object",
+            "properties": {
+              "system": {
+                "resolver": "server"
+              },
+              "user": {
+                "resolver": "server"
+              },
+              "shared_prompt": {
+                "resolver": "server"
+              },
+              "provider_prompts": {
+                "resolver": "server"
+              },
+              "metadata": {
+                "resolver": "server"
+              }
+            }
+          },
+          "provider": "openai",
+          "ai_config": {},
+          "metadata": {
+            "step_id": "{{ step.step_id }}"
+          },
+          "system": [
+            {
+              "$ref": "prompts/cc_role_prompt_engineer.txt",
+              "type": "text",
+              "cache_ttl": 10800
             },
-            "schema": {
-              "resolver": "server"
+            {
+              "$ref": "prompts/cc_image_prompts_system.txt",
+              "type": "text",
+              "cache_ttl": 10800
+            }
+          ],
+          "user": {
+            "$ref": "prompts/cc_image_prompts_user.txt",
+            "type": "jinja2"
+          },
+          "shared_prompt": {
+            "$ref": "prompts/cc_image_prompts_shared.txt",
+            "type": "text"
+          },
+          "provider_prompts": {
+            "midjourney": {
+              "$ref": "prompts/cc_image_prompts_provider_midjourney.txt",
+              "type": "text"
+            },
+            "leonardo": {
+              "$ref": "prompts/cc_image_prompts_provider_leonardo.txt",
+              "type": "text"
+            },
+            "openai": {
+              "$ref": "prompts/cc_image_prompts_provider_openai.txt",
+              "type": "text"
+            },
+            "stable_diffusion": {
+              "$ref": "prompts/cc_image_prompts_provider_stable_diffusion.txt",
+              "type": "text"
             }
           }
         },
-        "prompts": "{{ state.image_prompts }}",
-        "schema": {
+        "display_schema": {
           "$ref": "schemas/cc_image_prompts_display_schema.json",
           "type": "json"
         },
@@ -75,7 +98,8 @@
       "outputs_to_state": {
         "selected_content_id": "selected_image_id",
         "selected_content": "selected_image_data",
-        "generations": "image_generations"
+        "generations": "image_generations",
+        "generated_prompts": "image_prompts"
       },
       "sub_actions": [
         {
@@ -113,7 +137,7 @@
             "mode": "retry",
             "label": "Regenerate prompts",
             "shortcut": "r",
-            "target_module": "generate_image_prompts",
+            "target_module": "generate_and_select_images_v2",
             "hidden": true,
             "feedback": {
               "enabled": true,
@@ -131,7 +155,7 @@
           }
         ]
       },
-      "name": "generate_and_select_images"
+      "name": "generate_and_select_images_v2"
     }
   ]
 }

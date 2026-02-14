@@ -324,6 +324,33 @@ class MediaProviderBase(ABC):
         """
         return {}
 
+    def get_data_schema(self, action_type: str) -> Dict[str, Any]:
+        """
+        Get provider prompt data schema for a given action type.
+
+        Returns a schema object describing only this provider's prompt payload,
+        not the full top-level module schema.
+
+        Args:
+            action_type: One of txt2img, img2img, img2vid, txt2audio.
+
+        Returns:
+            Provider-specific schema dict. Default implementation returns empty
+            dict meaning schema is not provided for this action type.
+        """
+        return {}
+
+    @classmethod
+    def get_data_schema_for_action(cls, action_type: str) -> Dict[str, Any]:
+        """
+        Class-level schema accessor used when provider instance creation is not
+        possible (e.g., missing runtime credentials in mock/editor contexts).
+
+        Providers should override this when schemas are static and independent
+        of runtime credentials.
+        """
+        return {}
+
     def format_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
         Format/transform generation parameters before execution.

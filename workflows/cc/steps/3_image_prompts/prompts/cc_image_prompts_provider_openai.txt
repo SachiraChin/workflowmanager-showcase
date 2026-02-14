@@ -1,0 +1,12 @@
+Provider target: OpenAI GPT Image.
+
+Return fields:
+- prompt
+- camera_notes
+
+Constraints:
+- Use clear, descriptive natural language with precise visual details.
+- Include camera angle and framing suggestions in camera_notes.
+- Explicitly capture lighting, mood, and artistic style.
+- Suggested structure: [camera/framing], [subject with details],
+  [action/expression], [setting], [lighting], [style].

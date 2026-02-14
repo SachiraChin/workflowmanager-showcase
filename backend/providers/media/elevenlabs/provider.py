@@ -430,3 +430,60 @@ class ElevenLabsProvider(MediaProviderBase):
         )
 
         return PreviewInfo(resolution=resolution, credits=credits)
+
+    def get_data_schema(self, action_type: str) -> Dict[str, Any]:
+        return self.__class__.get_data_schema_for_action(action_type)
+
+    @classmethod
+    def get_data_schema_for_action(cls, action_type: str) -> Dict[str, Any]:
+        if action_type != "txt2audio":
+            return {}
+
+        return {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "minItems": 3,
+                    "maxItems": 3,
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {"type": "string"},
+                            "description": {"type": "string"},
+                            "prompt": {"type": "string"},
+                            "suggested_bpm": {
+                                "type": "integer",
+                                "minimum": 50,
+                                "maximum": 120,
+                            },
+                            "instruments": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "minItems": 2,
+                                "maxItems": 4,
+                            },
+                            "mood": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "minItems": 2,
+                                "maxItems": 3,
+                            },
+                            "energy": {"type": "string"},
+                        },
+                        "required": [
+                            "name",
+                            "description",
+                            "prompt",
+                            "suggested_bpm",
+                            "instruments",
+                            "mood",
+                            "energy",
+                        ],
+                        "additionalProperties": False,
+                    },
+                }
+            },
+            "required": ["data"],
+            "additionalProperties": False,
+        }

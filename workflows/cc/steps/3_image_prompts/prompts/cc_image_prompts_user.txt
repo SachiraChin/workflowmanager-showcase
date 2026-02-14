@@ -41,4 +41,4 @@ Generate image prompts based on this scene concept:
 - Use these: {{ state.aesthetic_selection.prompting_keywords.positive | join(', ') }}
 - Avoid these: {{ state.aesthetic_selection.prompting_keywords.negative | join(', ') }}
 
-Generate prompts for each of the following models. Focus on capturing the most impactful visual moment from this scene.
+Generate prompts for selected providers.

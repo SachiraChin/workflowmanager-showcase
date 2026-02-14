@@ -1,0 +1,15 @@
+Provider target: Midjourney.
+
+Return fields:
+- prompt
+- style_notes
+
+Constraints:
+- Use evocative, artistic language.
+- Include style references (cinematic, photography style, etc.).
+- Suggested structure: [subject] [action/expression] [setting] [lighting]
+  [style].
+- Prompt must be pure visual prompt text only.
+- Never include command flags such as --ar, --v, --stylize, --chaos,
+  --weird, --quality, --seed, --raw.
+- Keep style_notes concise and specific.

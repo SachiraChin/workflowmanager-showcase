@@ -7,12 +7,11 @@ export type ProviderId =
   | "leonardo"
   | "openai"
   | "stable_diffusion"
-  | "sora"
   | "elevenlabs";
 
 export const PROVIDERS_BY_ACTION: Record<ActionType, ProviderId[]> = {
   txt2img: ["midjourney", "leonardo", "openai", "stable_diffusion"],
-  img2vid: ["sora", "leonardo"],
+  img2vid: ["openai", "leonardo"],
   txt2audio: ["elevenlabs"],
 };
 
@@ -27,7 +26,6 @@ export const PROVIDER_LABELS: Record<ProviderId, string> = {
   leonardo: "Leonardo",
   openai: "OpenAI",
   stable_diffusion: "Stable Diffusion",
-  sora: "Sora",
   elevenlabs: "ElevenLabs",
 };
 

@@ -930,3 +930,40 @@ class StableDiffusionProvider(MediaProviderBase):
         )
 
         return PreviewInfo(resolution=resolution, credits=credits)
+
+    def get_data_schema(self, action_type: str) -> Dict[str, Any]:
+        return self.__class__.get_data_schema_for_action(action_type)
+
+    @classmethod
+    def get_data_schema_for_action(cls, action_type: str) -> Dict[str, Any]:
+        if action_type != "txt2img":
+            return {}
+
+        return {
+            "type": "object",
+            "properties": {
+                "tag_prompt": {
+                    "type": "string",
+                    "description": "Token-based SD prompt with comma-separated keywords and optional weights",
+                },
+                "natural_prompt": {
+                    "type": "string",
+                    "description": "Natural language SD prompt with flowing descriptive sentences",
+                },
+                "negative_prompt": {
+                    "type": "string",
+                    "description": "Token-based negative prompt to avoid artifacts and quality problems",
+                },
+                "style_notes": {
+                    "type": "string",
+                    "description": "Brief note on the visual style and quality targeted",
+                },
+            },
+            "required": [
+                "tag_prompt",
+                "natural_prompt",
+                "negative_prompt",
+                "style_notes",
+            ],
+            "additionalProperties": False,
+        }
