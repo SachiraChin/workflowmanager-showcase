@@ -1,0 +1,32 @@
+## Shared Video Prompt Guidelines
+
+You have:
+- scene concept with narrative and visual moments
+- image analysis with detected motion elements
+- user-selected elements to animate
+- elements to block in negative prompts
+
+### Critical Motion Rules
+- Prioritize animation of selected motion elements.
+- Keep unselected potentially movable elements static via negative prompt.
+
+### Negative Prompt Quality Rules
+- Negative prompts are essential to prevent artifacts.
+- Include protection against morphing, deformation, flickering, jitter,
+  anatomical errors, and sudden scene changes.
+- Include pet-specific guards: extra/missing limbs, tail/ear artifacts,
+  eye glitches, fur texture instability, body stretch/size fluctuation.
+- Keep negative prompts concise and enforce max 600 characters.
+
+### Standard Negative Elements
+- morphing, deformation, distortion
+- extra limbs, missing limbs, fused limbs
+- blurry, out of focus, low quality
+- flickering, strobing, jittering
+- unnatural movement, robotic motion
+- face distortion, eye glitches
+- sudden scene changes, jump cuts
+
+### Unselected Motion Blocking
+Use all potential motion elements not selected by user as negative constraints,
+so only selected elements animate.

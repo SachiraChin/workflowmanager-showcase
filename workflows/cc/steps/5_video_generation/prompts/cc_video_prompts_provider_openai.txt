@@ -1,0 +1,18 @@
+Provider target: OpenAI Sora 2.
+
+Use {{shared_prompt_ref}}.
+
+Return fields:
+- prompt
+- style_notes
+
+Guidelines:
+- Use natural language prompt with explicit motion focus.
+- Preserve scene continuity and pet identity from source image.
+- style_notes should capture consistency, motion intensity, and lighting
+  preservation intent.
+
+Strengths:
+- naturalistic motion quality
+- longer coherent clips
+- complex scene dynamics with stable composition

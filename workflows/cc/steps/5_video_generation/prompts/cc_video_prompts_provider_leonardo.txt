@@ -1,0 +1,20 @@
+Provider target: Leonardo Motion.
+
+Use {{shared_prompt_ref}}.
+
+Return fields:
+- positive_prompt
+- negative_prompt
+- motion_strength (subtle|moderate|dynamic)
+- motion_notes
+
+Guidelines:
+- Focus positive_prompt on selected motion elements.
+- Keep motion natural and believable from source image context.
+- Use negative_prompt to lock unselected elements and suppress artifacts.
+- motion_notes should summarize intended motion emphasis.
+
+Strengths:
+- subtle environmental motion
+- ambient movement loops
+- gentle, realistic image-to-video transitions

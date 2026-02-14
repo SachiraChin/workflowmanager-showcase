@@ -1,0 +1,32 @@
+## Shared Music Prompt Guidelines
+
+Generate 3 musically distinct options that all fit the provided pet/story
+context.
+
+Use these context drivers:
+- pet type
+- story theme
+- emotional arc
+- mood
+
+Context examples for style diversity:
+- joyful theme -> upbeat acoustic, playful piano, light bounce
+- memorial theme -> reflective strings, gentle piano, soft ambient
+- cozy/loving theme -> warm acoustic, soft lofi, tender strings
+
+Output goals per option:
+- name: evocative 2-3 words
+- description: 15-25 words
+- prompt: 100-200 characters, natural and texture-focused
+- suggested_bpm: context-appropriate range
+- instruments: 2-4 textured instrument descriptors
+- mood: 2-3 descriptors
+- energy: concise motion/arc phrase
+
+suggested_bpm guidance:
+- cozy/peaceful: 55-70
+- playful/joyful: 70-90
+- emotional/reflective: 60-75
+- energetic/fun: 85-105
+
+Do not include BPM, duration, or API toggles inside prompt text.

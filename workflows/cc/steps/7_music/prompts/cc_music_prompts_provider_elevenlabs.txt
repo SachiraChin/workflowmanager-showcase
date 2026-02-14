@@ -1,0 +1,13 @@
+Provider target: ElevenLabs Music.
+
+Use {{shared_prompt_ref}}.
+
+Return fields:
+- data (array of exactly 3 options)
+
+Per-item constraints:
+- name, description, prompt, suggested_bpm, instruments, mood, energy
+- prompt should be 100-200 chars and focused on sonic texture/feel
+- instruments must be concrete with texture descriptors
+- mood must align with story emotional tone
+- all 3 options must be musically distinct but context-appropriate

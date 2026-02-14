@@ -204,7 +204,7 @@
             }
           }
         },
-        "sora": {
+        "openai": {
           "type": "object",
           "_ux": {
             "display": "visible",
