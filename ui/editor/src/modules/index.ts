@@ -16,6 +16,7 @@ import "./api/llm";
 import "./transform/query";
 import "./transform/extract";
 import "./media/generate";
+import "./media/generateV2";
 import "./io/weighted_keywords";
 
 // Re-export registry utilities for convenience

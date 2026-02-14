@@ -38,10 +38,12 @@ from backend.providers.media import (
 
 # Server-specific modules
 from .generate import MediaGenerateModule
+from .generate_v2 import MediaGenerateV2Module
 
 __all__ = [
     # Server module
     'MediaGenerateModule',
+    'MediaGenerateV2Module',
     # Re-exports from providers.media
     'MidAPIProvider',
     'LeonardoProvider',
