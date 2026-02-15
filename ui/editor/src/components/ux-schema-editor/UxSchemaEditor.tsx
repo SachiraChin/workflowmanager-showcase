@@ -409,6 +409,7 @@ export function UxSchemaEditor({
   const monacoEditorRef = useRef<import("monaco-editor").editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof import("monaco-editor") | null>(null);
   const decorationIdsRef = useRef<string[]>([]);
+  const lastCenteredPathRef = useRef<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -476,14 +477,16 @@ export function UxSchemaEditor({
       return;
     }
 
+    const selectedRange = new monaco.Range(
+      range.startLine,
+      range.startColumn,
+      range.endLine,
+      range.endColumn
+    );
+
     decorationIdsRef.current = editor.deltaDecorations(decorationIdsRef.current, [
       {
-        range: new monaco.Range(
-          range.startLine,
-          range.startColumn,
-          range.endLine,
-          range.endColumn
-        ),
+        range: selectedRange,
         options: {
           className: "ux-poc-json-selection",
           minimap: { color: selectedColor?.border || "#60a5fa", position: 1 },
@@ -491,6 +494,12 @@ export function UxSchemaEditor({
         },
       },
     ]);
+
+    const selectedPathKey = selectedNode.path.join(".");
+    if (lastCenteredPathRef.current !== selectedPathKey) {
+      editor.revealRangeInCenter(selectedRange, monaco.editor.ScrollType.Smooth);
+      lastCenteredPathRef.current = selectedPathKey;
+    }
   }, [selectedNode.path, editorText, selectedColor]);
 
   const updateSelectedUx = useCallback(
