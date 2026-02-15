@@ -23,51 +23,6 @@ const WorkflowEditorPage = lazy(() =>
     default: module.WorkflowEditorPage,
   }))
 );
-const ReactFlowStressPocPage = lazy(() =>
-  import("@/poc/reactflow/StressPocPage").then((module) => ({
-    default: module.ReactFlowStressPocPage,
-  }))
-);
-const SchemaBuilderMonacoPocPage = lazy(() =>
-  import("@/poc/monaco/SchemaBuilderMonacoPocPage").then((module) => ({
-    default: module.SchemaBuilderMonacoPocPage,
-  }))
-);
-const DndKitPocPage = lazy(() =>
-  import("@/poc/ux-schema-editor/DndKitPocPage").then((module) => ({
-    default: module.DndKitPocPage,
-  }))
-);
-const PragmaticDndPocPage = lazy(() =>
-  import("@/poc/ux-schema-editor/PragmaticDndPocPage").then((module) => ({
-    default: module.PragmaticDndPocPage,
-  }))
-);
-const UxPalettePocPage = lazy(() =>
-  import("@/poc/ux-schema-editor/UxPalettePocPage").then((module) => ({
-    default: module.UxPalettePocPage,
-  }))
-);
-const TreeModesPocPage = lazy(() =>
-  import("@/poc/ux-schema-editor/TreeModesPocPage").then((module) => ({
-    default: module.TreeModesPocPage,
-  }))
-);
-const CustomTreeSchemaPocPage = lazy(() =>
-  import("@/poc/json-schema-editor/CustomTreeSchemaPocPage").then((module) => ({
-    default: module.CustomTreeSchemaPocPage,
-  }))
-);
-const TemplateFlowSchemaPocPage = lazy(() =>
-  import("@/poc/json-schema-editor/TemplateFlowSchemaPocPage").then((module) => ({
-    default: module.TemplateFlowSchemaPocPage,
-  }))
-);
-const GridSchemaPocPage = lazy(() =>
-  import("@/poc/json-schema-editor/GridSchemaPocPage").then((module) => ({
-    default: module.GridSchemaPocPage,
-  }))
-);
 
 function LazyRoute({ children }: { children: ReactNode }) {
   return (
@@ -151,11 +106,11 @@ function HeaderNav() {
   const location = useLocation();
   const navigate = useNavigate();
   const isWorkflowRoute = location.pathname.startsWith("/workflow/");
-  const [openMenu, setOpenMenu] = useState<"poc" | "runtime" | null>(null);
+  const [openMenu, setOpenMenu] = useState<"runtime" | null>(null);
 
   const closeMenus = () => setOpenMenu(null);
 
-  const toggleMenu = (menu: "poc" | "runtime") => {
+  const toggleMenu = (menu: "runtime") => {
     setOpenMenu((current) => (current === menu ? null : menu));
   };
 
@@ -195,84 +150,6 @@ function HeaderNav() {
             <nav className="flex items-center gap-2 text-sm">
               <UserMenu />
               <ThemeToggle />
-              <div className="relative">
-                <button
-                  className="cursor-pointer rounded-md border bg-card px-3 py-1.5 hover:bg-muted/40"
-                  onClick={() => toggleMenu("poc")}
-                  type="button"
-                >
-                  PoCs
-                </button>
-                {openMenu === "poc" ? (
-                  <div className="absolute right-0 z-20 mt-2 w-56 rounded-md border bg-card p-1 shadow-md">
-                    <Link
-                      className="block rounded px-3 py-2 hover:bg-muted"
-                      onClick={closeMenus}
-                      to="/poc/reactflow/stress"
-                    >
-                      Stress PoC
-                    </Link>
-
-                    <Link
-                      className="block rounded px-3 py-2 hover:bg-muted"
-                      onClick={closeMenus}
-                      to="/poc/monaco/schema-builder"
-                    >
-                      Monaco Schema PoC
-                    </Link>
-                    <Link
-                      className="block rounded px-3 py-2 hover:bg-muted font-medium text-primary"
-                      onClick={closeMenus}
-                      to="/poc/json-schema/custom-tree"
-                    >
-                      JSON Schema (Custom Tree) ★
-                    </Link>
-                    <Link
-                      className="block rounded px-3 py-2 hover:bg-muted"
-                      onClick={closeMenus}
-                      to="/poc/json-schema/template-flow"
-                    >
-                      JSON Schema (Template Flow)
-                    </Link>
-                    <Link
-                      className="block rounded px-3 py-2 hover:bg-muted"
-                      onClick={closeMenus}
-                      to="/poc/json-schema/grid"
-                    >
-                      JSON Schema (Grid Library)
-                    </Link>
-                    <div className="my-1 border-t" />
-                    <Link
-                      className="block rounded px-3 py-2 hover:bg-muted"
-                      onClick={closeMenus}
-                      to="/poc/ux-schema/dnd-kit"
-                    >
-                      UX Schema Editor (dnd-kit)
-                    </Link>
-                    <Link
-                      className="block rounded px-3 py-2 hover:bg-muted"
-                      onClick={closeMenus}
-                      to="/poc/ux-schema/pragmatic"
-                    >
-                      UX Schema Editor (Pragmatic)
-                    </Link>
-                    <Link
-                      className="block rounded px-3 py-2 hover:bg-muted font-medium text-primary"
-                      onClick={closeMenus}
-                      to="/poc/ux-schema/palette"
-                    >
-                      UX Schema Editor (Palette) ★
-                    </Link>
-                    <Link
-                      className="block rounded px-3 py-2 hover:bg-muted"
-                      onClick={closeMenus}
-                      to="/poc/ux-schema/tree-modes"
-                    >
-                      UX Tree Modes PoC
-                    </Link>
-                  </div>
-                ) : null}
-              </div>
               <div className="relative">
                 <button
                   className="cursor-pointer rounded-md border bg-card px-3 py-1.5 hover:bg-muted/40"
@@ -332,41 +209,6 @@ export default function App() {
             path="/workflow/:workflowTemplateId/:workflowVersionId"
             element={<LazyRoute><WorkflowEditorPage /></LazyRoute>}
           />
-          <Route
-            path="/poc/reactflow/stress"
-            element={<LazyRoute><ReactFlowStressPocPage /></LazyRoute>}
-          />
-
-          <Route
-            path="/poc/monaco/schema-builder"
-            element={<LazyRoute><SchemaBuilderMonacoPocPage /></LazyRoute>}
-          />
-          <Route
-            path="/poc/json-schema/custom-tree"
-            element={<LazyRoute><CustomTreeSchemaPocPage /></LazyRoute>}
-          />
-          <Route
-            path="/poc/json-schema/template-flow"
-            element={<LazyRoute><TemplateFlowSchemaPocPage /></LazyRoute>}
-          />
-          <Route path="/poc/json-schema/grid" element={<LazyRoute><GridSchemaPocPage /></LazyRoute>} />
-          <Route
-            path="/poc/ux-schema/dnd-kit"
-            element={<LazyRoute><DndKitPocPage /></LazyRoute>}
-          />
-          <Route
-            path="/poc/ux-schema/pragmatic"
-            element={<LazyRoute><PragmaticDndPocPage /></LazyRoute>}
-          />
-          <Route
-            path="/poc/ux-schema/palette"
-            element={<LazyRoute><UxPalettePocPage /></LazyRoute>}
-          />
-          <Route
-            path="/poc/ux-schema/tree-modes"
-            element={<LazyRoute><TreeModesPocPage /></LazyRoute>}
-          />
-
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
