@@ -232,6 +232,11 @@ export interface RespondRequest {
   };
 }
 
+export interface JumpToInteractionRequest {
+  workflow_run_id: string;
+  interaction_id: string;
+}
+
 // =============================================================================
 // Models Configuration
 // =============================================================================

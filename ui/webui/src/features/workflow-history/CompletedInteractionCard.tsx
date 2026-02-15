@@ -18,6 +18,8 @@ import { WebUIRenderProvider } from "@/adapters";
 
 interface CompletedInteractionCardProps {
   interaction: CompletedInteraction;
+  onRestartFromHere?: (interactionId: string) => void;
+  restartDisabled?: boolean;
   /** @deprecated No longer used - cards are always expanded */
   defaultExpanded?: boolean;
   /** @deprecated No longer used - step separators removed */
@@ -31,6 +33,8 @@ function formatTimestamp(timestamp: string): string {
 
 export function CompletedInteractionCard({
   interaction,
+  onRestartFromHere,
+  restartDisabled = false,
   defaultExpanded: _defaultExpanded,
   stepName: _stepName,
 }: CompletedInteractionCardProps) {
@@ -99,6 +103,12 @@ export function CompletedInteractionCard({
             onSubmit={() => Promise.resolve()}
             disabled={true}
             timestamp={timestamp}
+            onRestartFromHere={
+              onRestartFromHere
+                ? () => onRestartFromHere(interaction.interaction_id)
+                : undefined
+            }
+            restartDisabled={restartDisabled}
           />
         </WebUIRenderProvider>
       </CardContent>

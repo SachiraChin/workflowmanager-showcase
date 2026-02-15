@@ -22,6 +22,7 @@ export type {
   WorkflowTemplatesResponse,
   InteractionResponseData,
   RespondRequest,
+  JumpToInteractionRequest,
   ModelInfo,
   ProviderConfig,
   ModelsResponse,

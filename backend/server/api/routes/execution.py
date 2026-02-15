@@ -20,6 +20,7 @@ from backend.workflow_engine.models import (
     StartWorkflowByVersionRequest,
     RespondRequest,
     RetryRequest,
+    JumpToInteractionRequest,
     WorkflowResponse,
     WorkflowStatus,
 )
@@ -406,4 +407,46 @@ async def retry_module(
     elapsed_ms = (time.time() - start_time) * 1000
     logger.info(f"[API RESPONSE] POST /workflow/retry - status={result.status}, elapsed={elapsed_ms:.0f}ms")
 
+    return result
+
+
+@router.post("/jump-to-interaction", response_model=WorkflowResponse)
+async def jump_to_interaction(
+    request: JumpToInteractionRequest,
+    db = Depends(get_db),
+    processor = Depends(get_processor),
+    user_id: str = Depends(get_current_user_id)
+):
+    """
+    Jump a workflow back to a specific historical interaction request.
+
+    Creates a new branch cut at the selected INTERACTION_REQUESTED event and
+    returns that interaction as the current pending state.
+    """
+    start_time = time.time()
+    logger.info(
+        "[API REQUEST] POST /workflow/jump-to-interaction - "
+        f"workflow={request.workflow_run_id[:8]}..., interaction={request.interaction_id}"
+    )
+
+    user_owns, exists = db.workflow_repo.workflow_run_exists(
+        user_id,
+        request.workflow_run_id,
+    )
+    if not exists:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+    if not user_owns:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    result = await asyncio.to_thread(
+        processor.jump_to_interaction,
+        workflow_run_id=request.workflow_run_id,
+        interaction_id=request.interaction_id,
+    )
+
+    elapsed_ms = (time.time() - start_time) * 1000
+    logger.info(
+        "[API RESPONSE] POST /workflow/jump-to-interaction - "
+        f"status={result.status}, elapsed={elapsed_ms:.0f}ms"
+    )
     return result

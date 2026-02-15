@@ -247,6 +247,7 @@ export function createVirtualApiClient(
     startWorkflowByVersion: () => notSupported("startWorkflowByVersion"),
     getStatus: () => notSupported("getStatus"),
     respond: () => notSupported("respond"),
+    jumpToInteraction: () => notSupported("jumpToInteraction"),
     cancel: () => notSupported("cancel"),
     resume: () => notSupported("resume"),
     resumeWithContent: () => notSupported("resumeWithContent"),

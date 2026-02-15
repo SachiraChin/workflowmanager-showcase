@@ -12,6 +12,7 @@ import type {
   StartWorkflowByVersionRequest,
   WorkflowResponse,
   RespondRequest,
+  JumpToInteractionRequest,
   WorkflowStatusResponse,
   SSEEventType,
   WorkflowDefinition,
@@ -245,6 +246,13 @@ class ApiClient {
 
   async respond(request: RespondRequest): Promise<WorkflowResponse> {
     return this.request<WorkflowResponse>("/workflow/respond", {
+      method: "POST",
+      body: JSON.stringify(request),
+    });
+  }
+
+  async jumpToInteraction(request: JumpToInteractionRequest): Promise<WorkflowResponse> {
+    return this.request<WorkflowResponse>("/workflow/jump-to-interaction", {
       method: "POST",
       body: JSON.stringify(request),
     });

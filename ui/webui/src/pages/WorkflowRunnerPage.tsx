@@ -78,6 +78,7 @@ export function WorkflowRunnerPage({ onRestart }: WorkflowRunnerPageProps) {
     elapsedMs,
     lastMessage,
     respond,
+    jumpToInteraction,
     disconnect,
     reset,
     refreshInteractionDisplayData,
@@ -222,6 +223,17 @@ export function WorkflowRunnerPage({ onRestart }: WorkflowRunnerPageProps) {
     onRestart?.();
   }, [reset, onRestart]);
 
+  const handleRestartFromInteraction = useCallback(
+    async (interactionId: string) => {
+      try {
+        await jumpToInteraction(interactionId);
+      } catch (e) {
+        console.error("Failed to jump to interaction", e);
+      }
+    },
+    [jumpToInteraction]
+  );
+
   // Handle version confirmation
   const handleConfirmVersion = useCallback(async () => {
     setIsConfirmingVersion(true);
@@ -329,6 +341,8 @@ export function WorkflowRunnerPage({ onRestart }: WorkflowRunnerPageProps) {
                   >
                     <CompletedInteractionCard
                       interaction={interaction}
+                      onRestartFromHere={handleRestartFromInteraction}
+                      restartDisabled={isProcessing}
                       stepName={interaction.isFirstInStep ? (interaction.step_id || "unknown") : undefined}
                       defaultExpanded={true}
                     />
@@ -420,6 +434,8 @@ export function WorkflowRunnerPage({ onRestart }: WorkflowRunnerPageProps) {
                   >
                     <CompletedInteractionCard
                       interaction={interactionsWithSteps[currentViewIndex]}
+                      onRestartFromHere={handleRestartFromInteraction}
+                      restartDisabled={isProcessing}
                       stepName={interactionsWithSteps[currentViewIndex].isFirstInStep
                         ? (interactionsWithSteps[currentViewIndex].step_id || "unknown")
                         : undefined}

@@ -130,6 +130,10 @@ interface InteractionHostProps {
    * Used for preview mode in the editor.
    */
   mockMode?: boolean;
+  /** Optional action for readonly cards to restart from this interaction */
+  onRestartFromHere?: () => void;
+  /** Disable restart action */
+  restartDisabled?: boolean;
 }
 
 // =============================================================================
@@ -148,6 +152,8 @@ export function InteractionHost({
   subActionExecutor,
   onSubActionComplete,
   mockMode = false,
+  onRestartFromHere,
+  restartDisabled = false,
 }: InteractionHostProps) {
   // Debug mode from RenderContext
   const { debugMode, onUpdateDisplayData } = useRenderContext();
@@ -189,6 +195,8 @@ export function InteractionHost({
           setIsEditOpen={setIsEditOpen}
           handleSaveDisplayData={handleSaveDisplayData}
           onCancel={onCancel}
+          onRestartFromHere={onRestartFromHere}
+          restartDisabled={restartDisabled}
         />
       </SubActionProvider>
     </InteractionProvider>
@@ -208,6 +216,8 @@ interface InteractionHostContentProps {
   setIsEditOpen: (open: boolean) => void;
   handleSaveDisplayData: (value: unknown) => void;
   onCancel?: () => void;
+  onRestartFromHere?: () => void;
+  restartDisabled: boolean;
 }
 
 function InteractionHostContent({
@@ -219,9 +229,18 @@ function InteractionHostContent({
   setIsEditOpen,
   handleSaveDisplayData,
   onCancel,
+  onRestartFromHere,
+  restartDisabled,
 }: InteractionHostContentProps) {
+  const [isRestartConfirmOpen, setIsRestartConfirmOpen] = useState(false);
+
   // Get providerState from InteractionContext for ValidationProvider
   const { providerState } = useInteractionHostInternal();
+
+  const handleConfirmRestart = useCallback(() => {
+    setIsRestartConfirmOpen(false);
+    onRestartFromHere?.();
+  }, [onRestartFromHere]);
 
   // Extract retryable config
   const retryable = request.display_data?.retryable as
@@ -254,12 +273,26 @@ function InteractionHostContent({
                 </Button>
               )}
             </div>
-            {timestamp && (
-              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <Clock className="h-3.5 w-3.5" />
-                <span>{timestamp}</span>
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              {onRestartFromHere && mode.type === "readonly" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsRestartConfirmOpen(true)}
+                  disabled={restartDisabled}
+                  className="h-7 px-2"
+                  title="Restart workflow from this step"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                </Button>
+              )}
+              {timestamp && (
+                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>{timestamp}</span>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -291,6 +324,35 @@ function InteractionHostContent({
 
         {/* Validation Warning Popup */}
         <ValidationWarningPopup />
+
+        {/* Restart Confirmation Dialog */}
+        {onRestartFromHere && mode.type === "readonly" && (
+          <Dialog open={isRestartConfirmOpen} onOpenChange={setIsRestartConfirmOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Restart from this step?</DialogTitle>
+                <DialogDescription>
+                  This will branch the workflow from this interaction and make it
+                  the active step.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsRestartConfirmOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleConfirmRestart}
+                  disabled={restartDisabled}
+                >
+                  Restart Here
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
     </ValidationProviderWithRequest>
   );

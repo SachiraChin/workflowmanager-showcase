@@ -541,6 +541,53 @@ export function useWorkflowExecution() {
   );
 
   /**
+   * Jump back to a historical interaction by switching workflow branch.
+   */
+  const jumpToInteraction = useCallback(
+    async (interactionId: string) => {
+      const currentWorkflowRunId = workflowRunIdRef.current;
+      if (!currentWorkflowRunId) {
+        throw new Error("No active workflow");
+      }
+
+      try {
+        const data = await api.jumpToInteraction({
+          workflow_run_id: currentWorkflowRunId,
+          interaction_id: interactionId,
+        });
+
+        actions.setStatus(data.status);
+        actions.setProcessing(false);
+
+        if (data.progress) {
+          actions.setProgress(data.progress);
+        }
+
+        if (data.interaction_request) {
+          actions.setCurrentInteraction(data.interaction_request);
+          await refreshInteractionDisplayData(
+            currentWorkflowRunId,
+            data.interaction_request.interaction_id
+          );
+        }
+
+        // Refresh completed interaction list to match active branch lineage
+        const historyResponse = await api.getInteractionHistory(currentWorkflowRunId);
+        actions.setCompletedInteractions(historyResponse.interactions);
+
+        return data;
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 403) {
+          return;
+        }
+        actions.setError((error as Error).message);
+        throw error;
+      }
+    },
+    [actions, refreshInteractionDisplayData]
+  );
+
+  /**
    * Cancel current workflow execution
    */
   const cancel = useCallback(async () => {
@@ -770,6 +817,7 @@ export function useWorkflowExecution() {
     resumeWorkflow,
     resumeWithUpdate,
     respond,
+    jumpToInteraction,
     cancel,
     disconnect,
     reset: actions.reset,

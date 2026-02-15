@@ -95,6 +95,12 @@ class RetryRequest(BaseWorkflowRequest):
     feedback: Optional[str] = None
 
 
+class JumpToInteractionRequest(BaseWorkflowRequest):
+    """Request to jump to a historical interaction request."""
+    workflow_run_id: str
+    interaction_id: str
+
+
 class SubActionRequest(BaseWorkflowRequest):
     """
     Request to execute a sub-action within an interaction.

@@ -11,6 +11,7 @@ import type {
   StartWorkflowByVersionRequest,
   WorkflowResponse,
   RespondRequest,
+  JumpToInteractionRequest,
   WorkflowStatusResponse,
   SSEEventType,
   WorkflowDefinition,
@@ -157,6 +158,8 @@ export interface ApiClientInterface {
   getStatus(workflowRunId: string): Promise<WorkflowStatusResponse>;
 
   respond(request: RespondRequest): Promise<WorkflowResponse>;
+
+  jumpToInteraction(request: JumpToInteractionRequest): Promise<WorkflowResponse>;
 
   cancel(workflowRunId: string): Promise<void>;
 

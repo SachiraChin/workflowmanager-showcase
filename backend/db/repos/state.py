@@ -911,3 +911,105 @@ class StateRepository(BaseRepository):
 
         logger.info(f"[DB] jump_to_module: created new branch={new_branch_id}")
         return new_branch_id
+
+    def branch_from_interaction_request(
+        self, workflow_run_id: str, interaction_id: str
+    ) -> str:
+        """
+        Create a new branch that ends at a specific interaction request event.
+
+        The new branch includes events up to and including the target
+        INTERACTION_REQUESTED event, allowing the workflow to re-enter that
+        exact interaction state without re-executing upstream modules.
+
+        Args:
+            workflow_run_id: Workflow ID
+            interaction_id: Target interaction_id from INTERACTION_REQUESTED
+
+        Returns:
+            New branch ID
+
+        Raises:
+            ValueError: If target interaction is not found in current lineage
+        """
+        from ..utils import uuid7_str
+
+        current_branch_id = self.get_current_branch_id(workflow_run_id)
+        if not current_branch_id:
+            raise ValueError(f"Workflow '{workflow_run_id}' has no current branch")
+        logger.info(
+            "[DB] branch_from_interaction_request: "
+            f"workflow={workflow_run_id}, interaction={interaction_id}, "
+            f"current_branch={current_branch_id}"
+        )
+
+        lineage_events = self.get_lineage_events(workflow_run_id, current_branch_id)
+
+        target_event = None
+        for event in lineage_events:
+            if (
+                event.get("event_type") == "interaction_requested"
+                and event.get("data", {}).get("interaction_id") == interaction_id
+            ):
+                target_event = event
+                break
+
+        if not target_event:
+            raise ValueError(
+                f"Interaction '{interaction_id}' not found in branch lineage"
+            )
+
+        parent_branch_id = target_event["branch_id"]
+        parent_event_id = target_event["event_id"]
+
+        new_branch_id = f"br_{uuid7_str()}"
+
+        parent_branch = self.branches.find_one({"branch_id": parent_branch_id})
+
+        new_lineage = []
+        if parent_branch and "lineage" in parent_branch:
+            for entry in parent_branch["lineage"]:
+                if entry["branch_id"] == parent_branch_id:
+                    new_lineage.append(
+                        {
+                            "branch_id": entry["branch_id"],
+                            "cutoff_event_id": parent_event_id,
+                        }
+                    )
+                else:
+                    new_lineage.append(entry.copy())
+        else:
+            new_lineage.append(
+                {
+                    "branch_id": parent_branch_id,
+                    "cutoff_event_id": parent_event_id,
+                }
+            )
+
+        new_lineage.append({"branch_id": new_branch_id, "cutoff_event_id": None})
+
+        self.branches.insert_one(
+            {
+                "branch_id": new_branch_id,
+                "workflow_run_id": workflow_run_id,
+                "lineage": new_lineage,
+                "created_at": datetime.utcnow(),
+            }
+        )
+
+        self.workflow_runs.update_one(
+            {"workflow_run_id": workflow_run_id},
+            {
+                "$set": {
+                    "current_branch_id": new_branch_id,
+                    "updated_at": datetime.utcnow(),
+                }
+            },
+        )
+
+        logger.info(
+            "[DB] branch_from_interaction_request: "
+            f"created new branch={new_branch_id}, "
+            f"parent_branch={parent_branch_id}, cutoff={parent_event_id}"
+        )
+        return new_branch_id
