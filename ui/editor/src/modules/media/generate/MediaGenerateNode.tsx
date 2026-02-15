@@ -17,9 +17,6 @@ import {
 import { useReportNodeHeight } from "@/hooks/useNodeHeights";
 import {
   Button,
-  Card,
-  CardContent,
-  CardHeader,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -30,6 +27,7 @@ import {
   Input,
   type InteractionRequest,
 } from "@wfm/shared";
+import { ModuleNodeShell } from "@/components/module-node/ModuleNodeShell";
 import { Trash2, Settings, Layout } from "lucide-react";
 import Editor from "@monaco-editor/react";
 import {
@@ -522,24 +520,15 @@ function CollapsedView({
   const summary = getModuleSummary(module);
 
   return (
-    <div className="relative w-[340px] rounded-lg border-2 border-pink-500/50 bg-card shadow-sm">
-      {/* Module Type Badge */}
-      <div
-        className="absolute -top-2 -right-2 px-1.5 py-0.5 rounded text-[9px]
-                    font-medium bg-pink-500 text-white shadow-sm"
-      >
-        Media
-      </div>
-
-      {/* Header */}
-      <div className="flex items-start justify-between gap-2 p-3 pb-2">
-        <div className="flex-1 min-w-0">
-          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-            media.generate
-          </p>
-          <h3 className="text-sm font-semibold truncate">{module.name}</h3>
-        </div>
-        <div className="flex items-center gap-1">
+    <ModuleNodeShell
+      expanded={false}
+      borderClass="border-pink-500/50"
+      badgeText="Media"
+      badgeClass="bg-pink-500"
+      moduleId="media.generate"
+      title={<h3 className="truncate text-sm font-semibold">{module.name}</h3>}
+      actions={
+        <>
           {onViewState && (
             <Button
               size="sm"
@@ -577,20 +566,18 @@ function CollapsedView({
           >
             Expand
           </Button>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div
-        className="px-3 pb-3 cursor-pointer hover:bg-muted/30 transition-colors"
-        onClick={onExpand}
-      >
+        </>
+      }
+      onBodyClick={onExpand}
+      bodyClassName="hover:bg-muted/30 transition-colors"
+    >
+      <div>
         <p className="text-xs text-muted-foreground">{summary}</p>
         <div className="mt-2 flex items-center gap-3 text-[11px] text-muted-foreground">
           <span>Prompts: {getPromptsSummary(module)}</span>
         </div>
       </div>
-    </div>
+    </ModuleNodeShell>
   );
 }
 
@@ -670,30 +657,22 @@ function ExpandedView({
 
   return (
     <>
-      <Card className="relative w-[340px] shadow-lg border-2 border-pink-500/50">
-        {/* Module Type Badge */}
-        <div
-          className="absolute -top-2 -right-2 px-1.5 py-0.5 rounded text-[9px]
-                      font-medium bg-pink-500 text-white shadow-sm z-10"
-        >
-          Media
-        </div>
-
-        <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
-          <div>
-            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-              media.generate
-            </p>
-            <input
-              className="text-sm font-semibold bg-transparent border-b
-                         border-transparent hover:border-border focus:border-primary
-                         focus:outline-none w-full"
-              value={module.name}
-              onChange={(e) => onChange({ ...module, name: e.target.value })}
-              onClick={(e) => e.stopPropagation()}
-            />
-          </div>
-          <div className="flex items-center gap-1">
+      <ModuleNodeShell
+        expanded
+        borderClass="border-pink-500/50"
+        badgeText="Media"
+        badgeClass="bg-pink-500"
+        moduleId="media.generate"
+        title={
+          <input
+            className="w-full border-b border-transparent bg-transparent text-sm font-semibold hover:border-border focus:border-primary focus:outline-none"
+            value={module.name}
+            onChange={(e) => onChange({ ...module, name: e.target.value })}
+            onClick={(e) => e.stopPropagation()}
+          />
+        }
+        actions={
+          <>
             {onViewState && (
               <Button
                 size="sm"
@@ -722,10 +701,11 @@ function ExpandedView({
             >
               Collapse
             </Button>
-          </div>
-        </CardHeader>
-
-        <CardContent className="space-y-3" onClick={(e) => e.stopPropagation()}>
+          </>
+        }
+        bodyClassName="space-y-3"
+      >
+        <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
           {/* Action Type */}
           <div className="rounded-md border p-2 space-y-1">
             <Label className="text-xs">Action Type</Label>
@@ -836,8 +816,8 @@ function ExpandedView({
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </ModuleNodeShell>
 
       {/* Provider Schema Editor Dialog */}
       <ProviderSchemaEditorDialog

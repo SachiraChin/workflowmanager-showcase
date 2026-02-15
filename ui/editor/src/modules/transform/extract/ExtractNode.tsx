@@ -12,12 +12,10 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { useReportNodeHeight } from "@/hooks/useNodeHeights";
 import {
   Button,
-  Card,
-  CardContent,
-  CardHeader,
   Input,
   Label,
 } from "@wfm/shared";
+import { ModuleNodeShell } from "@/components/module-node/ModuleNodeShell";
 import { Plus, Trash2 } from "lucide-react";
 import {
   type ExtractModule,
@@ -134,24 +132,15 @@ function CollapsedView({
   const summary = getExtractSummary(module);
 
   return (
-    <div className="relative w-[340px] rounded-lg border-2 border-emerald-500/50 bg-card shadow-sm">
-      {/* Module Type Badge */}
-      <div
-        className="absolute -top-2 -right-2 px-1.5 py-0.5 rounded text-[9px]
-                    font-medium bg-emerald-500 text-white shadow-sm"
-      >
-        Extract
-      </div>
-
-      {/* Header */}
-      <div className="flex items-start justify-between gap-2 p-3 pb-2">
-        <div className="flex-1 min-w-0">
-          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-            transform.extract
-          </p>
-          <h3 className="text-sm font-semibold truncate">{module.name}</h3>
-        </div>
-        <div className="flex items-center gap-1">
+    <ModuleNodeShell
+      expanded={false}
+      borderClass="border-emerald-500/50"
+      badgeText="Extract"
+      badgeClass="bg-emerald-500"
+      moduleId="transform.extract"
+      title={<h3 className="truncate text-sm font-semibold">{module.name}</h3>}
+      actions={
+        <>
           {onViewState && (
             <Button
               size="sm"
@@ -176,17 +165,15 @@ function CollapsedView({
           >
             Expand
           </Button>
-        </div>
-      </div>
-
-      {/* Content - clickable to expand */}
-      <div
-        className="px-3 pb-3 cursor-pointer hover:bg-muted/30 transition-colors"
-        onClick={onExpand}
-      >
+        </>
+      }
+      onBodyClick={onExpand}
+      bodyClassName="hover:bg-muted/30 transition-colors"
+    >
+      <div>
         <p className="text-xs text-muted-foreground">{summary}</p>
       </div>
-    </div>
+    </ModuleNodeShell>
   );
 }
 
@@ -257,30 +244,22 @@ function ExpandedView({
   );
 
   return (
-    <Card className="relative w-[340px] shadow-lg border-2 border-emerald-500/50">
-      {/* Module Type Badge */}
-      <div
-        className="absolute -top-2 -right-2 px-1.5 py-0.5 rounded text-[9px]
-                    font-medium bg-emerald-500 text-white shadow-sm z-10"
-      >
-        Extract
-      </div>
-
-      <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
-        <div>
-          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-            transform.extract
-          </p>
-          <input
-            className="text-sm font-semibold bg-transparent border-b
-                       border-transparent hover:border-border focus:border-primary
-                       focus:outline-none w-full"
-            value={module.name}
-            onChange={(e) => onChange({ ...module, name: e.target.value })}
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
-        <div className="flex items-center gap-1">
+    <ModuleNodeShell
+      expanded
+      borderClass="border-emerald-500/50"
+      badgeText="Extract"
+      badgeClass="bg-emerald-500"
+      moduleId="transform.extract"
+      title={
+        <input
+          className="w-full border-b border-transparent bg-transparent text-sm font-semibold hover:border-border focus:border-primary focus:outline-none"
+          value={module.name}
+          onChange={(e) => onChange({ ...module, name: e.target.value })}
+          onClick={(e) => e.stopPropagation()}
+        />
+      }
+      actions={
+        <>
           {onViewState && (
             <Button
               size="sm"
@@ -299,10 +278,11 @@ function ExpandedView({
           >
             Collapse
           </Button>
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-2" onClick={(e) => e.stopPropagation()}>
+        </>
+      }
+      bodyClassName="space-y-2"
+    >
+      <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
         {/* Entries list with scroll */}
         <div className="max-h-[320px] overflow-y-auto space-y-2 pr-1">
           {entries.length === 0 ? (
@@ -332,8 +312,8 @@ function ExpandedView({
           <Plus className="h-3.5 w-3.5 mr-1" />
           Add Extraction
         </Button>
-      </CardContent>
-    </Card>
+      </div>
+    </ModuleNodeShell>
   );
 }
 

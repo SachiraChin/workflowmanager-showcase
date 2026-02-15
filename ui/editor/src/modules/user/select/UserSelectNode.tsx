@@ -12,9 +12,6 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { useReportNodeHeight } from "@/hooks/useNodeHeights";
 import {
   Button,
-  Card,
-  CardContent,
-  CardHeader,
   Checkbox,
   Dialog,
   DialogContent,
@@ -27,6 +24,7 @@ import {
   type InteractionRequest,
   type SchemaProperty,
 } from "@wfm/shared";
+import { ModuleNodeShell } from "@/components/module-node/ModuleNodeShell";
 import {
   UxSchemaEditor,
   type DataSchemaNode,
@@ -122,21 +120,15 @@ function CollapsedView({
   onPreview?: () => void;
 }) {
   return (
-    <div className="relative w-[340px] rounded-lg border-2 border-amber-500/50 bg-card shadow-sm">
-      {/* User Interaction Badge */}
-      <div className="absolute -top-2 -right-2 px-1.5 py-0.5 rounded text-[9px] font-medium bg-amber-500 text-white shadow-sm">
-        User Input
-      </div>
-
-      {/* Header - matches expanded CardHeader layout */}
-      <div className="flex items-start justify-between gap-2 p-3 pb-2">
-        <div className="flex-1 min-w-0">
-          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-            user.select
-          </p>
-          <h3 className="text-sm font-semibold truncate">{module.name}</h3>
-        </div>
-        <div className="flex items-center gap-1">
+    <ModuleNodeShell
+      expanded={false}
+      borderClass="border-amber-500/50"
+      badgeText="User Input"
+      badgeClass="bg-amber-500"
+      moduleId="user.select"
+      title={<h3 className="truncate text-sm font-semibold">{module.name}</h3>}
+      actions={
+        <>
           {onViewState && (
             <Button
               size="sm"
@@ -174,14 +166,12 @@ function CollapsedView({
           >
             Expand
           </Button>
-        </div>
-      </div>
-
-      {/* Content - clickable area to expand */}
-      <div
-        className="px-3 pb-3 cursor-pointer hover:bg-muted/30 transition-colors"
-        onClick={onExpand}
-      >
+        </>
+      }
+      onBodyClick={onExpand}
+      bodyClassName="hover:bg-muted/30 transition-colors"
+    >
+      <div>
         <p className="text-xs text-muted-foreground line-clamp-2">
           {module.inputs.prompt}
         </p>
@@ -194,7 +184,7 @@ function CollapsedView({
           <span>{module.inputs.mode}</span>
         </div>
       </div>
-    </div>
+    </ModuleNodeShell>
   );
 }
 
@@ -422,25 +412,22 @@ function ExpandedView({
 
   return (
     <>
-      <Card className="relative w-[340px] shadow-lg border-2 border-amber-500/50">
-        {/* User Interaction Badge */}
-        <div className="absolute -top-2 -right-2 px-1.5 py-0.5 rounded text-[9px] font-medium bg-amber-500 text-white shadow-sm z-10">
-          User Input
-        </div>
-
-        <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
-          <div>
-            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-              user.select
-            </p>
-            <input
-              className="text-sm font-semibold bg-transparent border-b border-transparent hover:border-border focus:border-primary focus:outline-none w-full"
-              value={module.name}
-              onChange={(e) => onChange({ ...module, name: e.target.value })}
-              onClick={(e) => e.stopPropagation()}
-            />
-          </div>
-          <div className="flex items-center gap-1">
+      <ModuleNodeShell
+        expanded
+        borderClass="border-amber-500/50"
+        badgeText="User Input"
+        badgeClass="bg-amber-500"
+        moduleId="user.select"
+        title={
+          <input
+            className="w-full border-b border-transparent bg-transparent text-sm font-semibold hover:border-border focus:border-primary focus:outline-none"
+            value={module.name}
+            onChange={(e) => onChange({ ...module, name: e.target.value })}
+            onClick={(e) => e.stopPropagation()}
+          />
+        }
+        actions={
+          <>
             {onViewState && (
               <Button
                 size="sm"
@@ -469,10 +456,11 @@ function ExpandedView({
             >
               Collapse
             </Button>
-          </div>
-        </CardHeader>
-
-        <CardContent className="space-y-4" onClick={(e) => e.stopPropagation()}>
+          </>
+        }
+        bodyClassName="space-y-4"
+      >
+        <div className="space-y-4" onClick={(e) => e.stopPropagation()}>
           {/* Prompt */}
           <div className="space-y-1">
             <Label className="text-xs">Prompt</Label>
@@ -599,8 +587,8 @@ function ExpandedView({
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </ModuleNodeShell>
 
       {/* UX Editor Dialog */}
       <Dialog open={isUxEditorOpen} onOpenChange={setIsUxEditorOpen}>

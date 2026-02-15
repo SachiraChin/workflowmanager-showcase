@@ -12,9 +12,6 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { useReportNodeHeight } from "@/hooks/useNodeHeights";
 import {
   Button,
-  Card,
-  CardContent,
-  CardHeader,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -23,6 +20,7 @@ import {
   DialogTitle,
   Label,
 } from "@wfm/shared";
+import { ModuleNodeShell } from "@/components/module-node/ModuleNodeShell";
 import Editor from "@monaco-editor/react";
 import { PipelineEditor } from "@/components/PipelineEditor";
 import { type QueryModule, type PipelineStage } from "./types";
@@ -74,24 +72,15 @@ function CollapsedView({
   const pipelineSummary = getPipelineSummary(module.inputs.pipeline);
 
   return (
-    <div className="relative w-[340px] rounded-lg border-2 border-cyan-500/50 bg-card shadow-sm">
-      {/* Module Type Badge */}
-      <div
-        className="absolute -top-2 -right-2 px-1.5 py-0.5 rounded text-[9px]
-                    font-medium bg-cyan-500 text-white shadow-sm"
-      >
-        Query
-      </div>
-
-      {/* Header */}
-      <div className="flex items-start justify-between gap-2 p-3 pb-2">
-        <div className="flex-1 min-w-0">
-          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-            transform.query
-          </p>
-          <h3 className="text-sm font-semibold truncate">{module.name}</h3>
-        </div>
-        <div className="flex items-center gap-1">
+    <ModuleNodeShell
+      expanded={false}
+      borderClass="border-cyan-500/50"
+      badgeText="Query"
+      badgeClass="bg-cyan-500"
+      moduleId="transform.query"
+      title={<h3 className="truncate text-sm font-semibold">{module.name}</h3>}
+      actions={
+        <>
           {onViewState && (
             <Button
               size="sm"
@@ -116,14 +105,12 @@ function CollapsedView({
           >
             Expand
           </Button>
-        </div>
-      </div>
-
-      {/* Content - clickable to expand */}
-      <div
-        className="px-3 pb-3 cursor-pointer hover:bg-muted/30 transition-colors"
-        onClick={onExpand}
-      >
+        </>
+      }
+      onBodyClick={onExpand}
+      bodyClassName="hover:bg-muted/30 transition-colors"
+    >
+      <div>
         <p className="text-xs text-muted-foreground truncate">
           <span className="font-medium">Data:</span> {dataSummary}
         </p>
@@ -131,7 +118,7 @@ function CollapsedView({
           <span className="font-medium">Pipeline:</span> {pipelineSummary}
         </p>
       </div>
-    </div>
+    </ModuleNodeShell>
   );
 }
 
@@ -201,30 +188,22 @@ function ExpandedView({
 
   return (
     <>
-      <Card className="relative w-[340px] shadow-lg border-2 border-cyan-500/50">
-        {/* Module Type Badge */}
-        <div
-          className="absolute -top-2 -right-2 px-1.5 py-0.5 rounded text-[9px]
-                      font-medium bg-cyan-500 text-white shadow-sm z-10"
-        >
-          Query
-        </div>
-
-        <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
-          <div>
-            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-              transform.query
-            </p>
-            <input
-              className="text-sm font-semibold bg-transparent border-b
-                         border-transparent hover:border-border focus:border-primary
-                         focus:outline-none w-full"
-              value={module.name}
-              onChange={(e) => onChange({ ...module, name: e.target.value })}
-              onClick={(e) => e.stopPropagation()}
-            />
-          </div>
-          <div className="flex items-center gap-1">
+      <ModuleNodeShell
+        expanded
+        borderClass="border-cyan-500/50"
+        badgeText="Query"
+        badgeClass="bg-cyan-500"
+        moduleId="transform.query"
+        title={
+          <input
+            className="w-full border-b border-transparent bg-transparent text-sm font-semibold hover:border-border focus:border-primary focus:outline-none"
+            value={module.name}
+            onChange={(e) => onChange({ ...module, name: e.target.value })}
+            onClick={(e) => e.stopPropagation()}
+          />
+        }
+        actions={
+          <>
             {onViewState && (
               <Button
                 size="sm"
@@ -243,10 +222,11 @@ function ExpandedView({
             >
               Collapse
             </Button>
-          </div>
-        </CardHeader>
-
-        <CardContent className="space-y-3" onClick={(e) => e.stopPropagation()}>
+          </>
+        }
+        bodyClassName="space-y-3"
+      >
+        <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
           {/* Data Source */}
           <div className="rounded-md border p-2 space-y-1">
             <div className="flex items-center justify-between">
@@ -296,8 +276,8 @@ function ExpandedView({
               />
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </ModuleNodeShell>
 
       {/* Data Source Editor Dialog */}
       <Dialog open={isDataEditorOpen} onOpenChange={setIsDataEditorOpen}>

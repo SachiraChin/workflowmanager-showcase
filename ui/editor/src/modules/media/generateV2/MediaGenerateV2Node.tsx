@@ -8,12 +8,10 @@ import {
 } from "@/components/prompt-editor";
 import {
   Button,
-  Card,
-  CardContent,
-  CardHeader,
   Input,
   Label,
 } from "@wfm/shared";
+import { ModuleNodeShell } from "@/components/module-node/ModuleNodeShell";
 import {
   ACTION_TYPE_LABELS,
   PROVIDERS_BY_ACTION,
@@ -83,13 +81,15 @@ function CollapsedView({
   onPreview?: () => void;
 }) {
   return (
-    <Card className="w-[340px] shadow-lg border-2 border-rose-500/50 cursor-pointer" onClick={onExpand}>
-      <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
-        <div className="flex-1 min-w-0 pr-1">
-          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">media.generateV2</p>
-          <p className="text-sm font-semibold truncate">{module.name}</p>
-        </div>
-        <div className="flex items-center gap-1 shrink-0">
+    <ModuleNodeShell
+      expanded={false}
+      borderClass="border-rose-500/50"
+      badgeText="Media"
+      badgeClass="bg-rose-500"
+      moduleId="media.generateV2"
+      title={<p className="truncate text-sm font-semibold">{module.name}</p>}
+      actions={
+        <>
           {onViewState && (
             <Button
               size="sm"
@@ -127,13 +127,17 @@ function CollapsedView({
           >
             Expand
           </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-1 text-xs text-muted-foreground cursor-pointer">
+        </>
+      }
+      onContainerClick={onExpand}
+      onBodyClick={onExpand}
+      bodyClassName="space-y-1 text-xs text-muted-foreground"
+    >
+      <div>
         <p>{ACTION_TYPE_LABELS[module.inputs.action_type]}</p>
         <p>{module.inputs.providers.length} provider(s)</p>
-      </CardContent>
-    </Card>
+      </div>
+    </ModuleNodeShell>
   );
 }
 
@@ -244,23 +248,54 @@ function ExpandedView({
 
   return (
     <>
-      <Card className="w-[340px] shadow-lg border-2 border-rose-500/50">
-        <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
-          <div className="flex-1 min-w-0 pr-1">
-            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">media.generateV2</p>
-            <Input
-              className="h-7 w-full text-sm font-semibold border-0 px-0"
-              value={module.name}
-              onChange={(e) => onChange({ ...module, name: e.target.value })}
-            />
-          </div>
-          <div className="flex items-center gap-1 shrink-0">
-            {onViewState && <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={onViewState}>State</Button>}
-            {onPreview && <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={onPreview}>Preview</Button>}
-            <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={onCollapse}>Collapse</Button>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      <ModuleNodeShell
+        expanded
+        borderClass="border-rose-500/50"
+        badgeText="Media"
+        badgeClass="bg-rose-500"
+        moduleId="media.generateV2"
+        title={
+          <Input
+            className="h-7 w-full border-0 px-0 text-sm font-semibold"
+            value={module.name}
+            onChange={(e) => onChange({ ...module, name: e.target.value })}
+          />
+        }
+        actions={
+          <>
+            {onViewState && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 px-2 text-xs"
+                onClick={onViewState}
+              >
+                State
+              </Button>
+            )}
+            {onPreview && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 px-2 text-xs"
+                onClick={onPreview}
+              >
+                Preview
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2 text-xs"
+              onClick={onCollapse}
+            >
+              Collapse
+            </Button>
+          </>
+        }
+        bodyClassName="space-y-3"
+      >
+        <div className="space-y-3">
           <div className="rounded-md border p-2 space-y-1">
             <Label className="text-xs">Action Type</Label>
             <div className="flex rounded border bg-background p-0.5 text-xs">
@@ -326,8 +361,8 @@ function ExpandedView({
             <Input className="h-7 text-xs" value={module.outputs_to_state.generations} onChange={(e) => updateOutputs("generations", e.target.value)} />
             <Input className="h-7 text-xs" value={module.outputs_to_state.generated_prompts} onChange={(e) => updateOutputs("generated_prompts", e.target.value)} />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </ModuleNodeShell>
 
       <PromptEditor
         open={isPromptEditorOpen}
