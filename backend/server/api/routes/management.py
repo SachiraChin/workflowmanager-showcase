@@ -438,7 +438,8 @@ async def get_interaction_data(
 
     try:
         # Use executor helper to resolve display_data
-        display_data = processor.executor.resolve_interaction_display_data(
+        display_data = await asyncio.to_thread(
+            processor.executor.resolve_interaction_display_data,
             workflow_run_id=workflow_run_id,
             step_id=step_id,
             module_name=module_name,
