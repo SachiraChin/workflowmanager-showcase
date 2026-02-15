@@ -6,7 +6,7 @@ Endpoints for retrieving available LLM models configuration.
 
 import json
 import logging
-from pathlib import Path
+from importlib import resources
 
 from fastapi import APIRouter
 
@@ -24,13 +24,15 @@ def _load_models_config() -> dict:
     Returns:
         Dict containing providers, models, and defaults
     """
-    config_path = Path(__file__).parent.parent.parent / "modules" / "api" / "models_config.json"
-    
     try:
-        with open(config_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        logger.error(f"Models config not found at {config_path}")
+        config_text = resources.files("backend.workflow_engine.modules.api").joinpath(
+            "models_config.json"
+        ).read_text(encoding="utf-8")
+        return json.loads(config_text)
+    except (FileNotFoundError, ModuleNotFoundError):
+        logger.error(
+            "Models config not found in backend.workflow_engine.modules.api"
+        )
         # Return minimal fallback
         return {
             "default_provider": "openai",

@@ -227,6 +227,18 @@ export function useWorkflowExecution() {
           actions.setProcessing(false);
           disconnect();
           break;
+
+        case "validation_failed": {
+          const errors = (data.errors as Array<{ message?: string }>) || [];
+          const firstMessage = errors[0]?.message;
+          actions.setStatus("validation_failed");
+          actions.setProcessing(false);
+          if (firstMessage) {
+            actions.setError(firstMessage);
+          }
+          disconnect();
+          break;
+        }
       }
     },
     [actions, disconnect]
@@ -252,6 +264,7 @@ export function useWorkflowExecution() {
         "complete",
         "error",
         "cancelled",
+        "validation_failed",
       ];
 
       eventTypes.forEach((eventType) => {
@@ -513,6 +526,10 @@ export function useWorkflowExecution() {
               try {
                 const data = JSON.parse(line.slice(6));
                 handleSSEEvent(currentEventType, data);
+                if (currentEventType === "validation_failed") {
+                  // Validation failures keep user on the same interaction.
+                  actions.setCurrentInteraction(previousInteraction);
+                }
               } catch (e) {
                 console.error("Failed to parse SSE data", e);
               }
@@ -565,10 +582,6 @@ export function useWorkflowExecution() {
 
         if (data.interaction_request) {
           actions.setCurrentInteraction(data.interaction_request);
-          await refreshInteractionDisplayData(
-            currentWorkflowRunId,
-            data.interaction_request.interaction_id
-          );
         }
 
         // Refresh completed interaction list to match active branch lineage
@@ -584,7 +597,7 @@ export function useWorkflowExecution() {
         throw error;
       }
     },
-    [actions, refreshInteractionDisplayData]
+    [actions]
   );
 
   /**

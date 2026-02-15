@@ -97,10 +97,14 @@ export function InputSchemaComposer({
       const schemaRecord = fieldSchema as Record<string, unknown>;
       const fieldUx = (schemaRecord._ux || {}) as Record<string, unknown>;
       const sourceField = fieldUx.source_field as string | undefined;
-      const sourceData = fieldUx.source_data as string | undefined;
+      const sourceData = fieldUx.source_data;
 
       // Value priority: source_data > source_field > data[key] > schema.default
-      if (sourceData) {
+      if (sourceData !== undefined && sourceData !== null) {
+        if (typeof sourceData !== "string") {
+          initial[key] = sourceData;
+          continue;
+        }
         // Check if it's a Jinja2-style template ({{ }}) or simple placeholder ({})
         if (sourceData.includes("{{")) {
           // Use renderTemplate for Jinja2-style expressions with state access
@@ -158,13 +162,26 @@ export function InputSchemaComposer({
       const schemaRecord = fieldSchema as Record<string, unknown>;
       const fieldUx = (schemaRecord._ux || {}) as Record<string, unknown>;
       const sourceField = fieldUx.source_field as string | undefined;
-      const sourceData = fieldUx.source_data as string | undefined;
+      const sourceData = fieldUx.source_data;
 
-      if (sourceData) {
-        newValues[key] = sourceData.replace(/\{(\w+)\}/g, (_, field) => {
-          const value = dataRecord[field];
-          return value !== undefined ? String(value) : "";
-        });
+      if (sourceData !== undefined && sourceData !== null) {
+        if (typeof sourceData !== "string") {
+          newValues[key] = sourceData;
+        } else if (sourceData.includes("{{")) {
+          const rendered = renderTemplate(sourceData, dataRecord, templateState);
+          const schemaType = schemaRecord.type as string;
+          if ((schemaType === "integer" || schemaType === "number") && rendered) {
+            const parsed = Number(rendered);
+            newValues[key] = isNaN(parsed) ? schemaRecord.default : parsed;
+          } else {
+            newValues[key] = rendered || schemaRecord.default;
+          }
+        } else {
+          newValues[key] = sourceData.replace(/\{(\w+)\}/g, (_, field) => {
+            const value = dataRecord[field];
+            return value !== undefined ? String(value) : "";
+          });
+        }
       } else if (sourceField) {
         // Support dot-notated paths (e.g., "nested.field.path")
         const nestedValue = getNestedValue(dataRecord, sourceField);
@@ -179,7 +196,7 @@ export function InputSchemaComposer({
     }
 
     setValues(newValues);
-  }, [data, inputSchema, debugMode, getNestedValue]);
+  }, [data, inputSchema, debugMode, getNestedValue, templateState]);
 
   // Dynamic options for controlled select fields
   const [dynamicOptions, setDynamicOptionsState] = useState<Record<string, DynamicOption[]>>({});

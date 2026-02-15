@@ -20,6 +20,11 @@ def get_cancel_check_interval() -> float:
     return float(os.environ.get("CANCEL_CHECK_INTERVAL", "0.1"))
 
 
+def get_stream_chunk_timeout() -> float:
+    """Max seconds to wait for next streaming chunk before timing out."""
+    return float(os.environ.get("LLM_STREAM_CHUNK_TIMEOUT", "180"))
+
+
 class ContentType(Enum):
     """Types of content that can appear in messages"""
     TEXT = "text"
@@ -430,10 +435,21 @@ class LLMProviderBase(ABC):
 
             chunk_thread = threading.Thread(target=get_next_chunk, daemon=True)
             chunk_thread.start()
+            chunk_wait_start = time.time()
 
             # Wait for chunk with periodic cancel checks
             while chunk_thread.is_alive():
                 chunk_thread.join(timeout=get_cancel_check_interval())
+
+                # Guard against provider streams that never yield/finish
+                if time.time() - chunk_wait_start > get_stream_chunk_timeout():
+                    if close_stream:
+                        close_stream()
+                    raise TimeoutError(
+                        f"{provider_name} streaming stalled while waiting "
+                        "for next chunk"
+                    )
+
                 if cancel_event and cancel_event.is_set():
                     context.logger.info(f"[AI STREAMING] {provider_name} request cancelled while waiting")
                     if close_stream:
