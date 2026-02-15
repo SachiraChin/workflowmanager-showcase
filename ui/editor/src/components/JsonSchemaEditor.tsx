@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Editor from "@monaco-editor/react";
 import {
   TabulatorFull as Tabulator,
@@ -163,7 +163,7 @@ export function JsonSchemaEditor({ value, onChange }: JsonSchemaEditorProps) {
 
   const schemaFromRows = useMemo(() => rowsToSchema(rows), [rows]);
 
-  const setRowsAndEmit = (updater: (current: FieldRow[]) => FieldRow[]) => {
+  const setRowsAndEmit = useCallback((updater: (current: FieldRow[]) => FieldRow[]) => {
     setRows((current) => {
       const next = updater(current);
       const nextSchema = rowsToSchema(next);
@@ -172,9 +172,9 @@ export function JsonSchemaEditor({ value, onChange }: JsonSchemaEditorProps) {
       onChange(nextSchema);
       return next;
     });
-  };
+  }, [onChange]);
 
-  const updateRow = (rowId: string, patch: Partial<FieldRow>) => {
+  const updateRow = useCallback((rowId: string, patch: Partial<FieldRow>) => {
     setRowsAndEmit((current) =>
       mapRows(current, rowId, (row) => {
         const nextType = (patch.type ?? row.type) as JsonSchemaType;
@@ -203,20 +203,20 @@ export function JsonSchemaEditor({ value, onChange }: JsonSchemaEditorProps) {
         return { ...baseRow, children: undefined };
       })
     );
-  };
+  }, [setRowsAndEmit]);
 
-  const removeRow = (rowId: string) => {
+  const removeRow = useCallback((rowId: string) => {
     setRowsAndEmit((current) => removeRowById(current, rowId));
-  };
+  }, [setRowsAndEmit]);
 
-  const addRoot = () => {
+  const addRoot = useCallback(() => {
     setRowsAndEmit((current) => [
       ...current,
       { id: nextFieldId(), key: `field_${current.length + 1}`, type: "string", required: false },
     ]);
-  };
+  }, [setRowsAndEmit]);
 
-  const addChild = (rowId: string) => {
+  const addChild = useCallback((rowId: string) => {
     setRowsAndEmit((current) =>
       mapRows(current, rowId, (row) => {
         if (row.type === "array") {
@@ -235,8 +235,9 @@ export function JsonSchemaEditor({ value, onChange }: JsonSchemaEditorProps) {
         };
       })
     );
-  };
+  }, [setRowsAndEmit]);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const serialized = JSON.stringify(value);
     if (serialized === lastSentSchemaRef.current) return;
@@ -244,11 +245,14 @@ export function JsonSchemaEditor({ value, onChange }: JsonSchemaEditorProps) {
     setJsonText(JSON.stringify(value, null, 2));
     setJsonError(null);
   }, [value]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setJsonText(JSON.stringify(schemaFromRows, null, 2));
     setJsonError(null);
   }, [schemaFromRows]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (!tableHostEl || tableRef.current) return;
@@ -395,13 +399,13 @@ export function JsonSchemaEditor({ value, onChange }: JsonSchemaEditorProps) {
       });
     };
 
-    tableRef.current = createNestedTable(tableHostEl, rows);
+    tableRef.current = createNestedTable(tableHostEl, []);
 
     return () => {
       tableRef.current?.destroy();
       tableRef.current = null;
     };
-  }, [tableHostEl]);
+  }, [tableHostEl, addChild, removeRow, updateRow]);
 
   useEffect(() => {
     if (!tableRef.current) return;

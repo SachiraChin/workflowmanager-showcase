@@ -188,11 +188,13 @@ export function SchemaBuilderMonacoPocPage() {
   const [jsonText, setJsonText] = useState(() => JSON.stringify(generatedSchema, null, 2));
   const nestedParentRows = useMemo(() => rows, [rows]);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (lastEditSource !== "grid") return;
     setJsonText(JSON.stringify(generatedSchema, null, 2));
     setJsonError(null);
   }, [generatedSchema, lastEditSource]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const updateRow = (rowId: string, patch: Partial<FieldRow>) => {
     setLastEditSource("grid");

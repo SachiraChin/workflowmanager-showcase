@@ -197,19 +197,15 @@ function ExpandedView({
     moduleToEntries(module)
   );
 
-  // Keep a ref to the original module for entriesToModule conversion
-  const moduleRef = useRef(module);
-  moduleRef.current = module;
-
   // Find duplicate keys for validation display
   const duplicateKeys = findDuplicateKeys(entries);
 
-  // Sync entries back to module on change - use ref to avoid dependency on module
+  // Sync entries back to module on change
   const syncToModule = useCallback(
     (newEntries: ExtractionEntry[]) => {
-      onChange(entriesToModule(newEntries, moduleRef.current));
+      onChange(entriesToModule(newEntries, module));
     },
-    [onChange]
+    [module, onChange]
   );
 
   const handleEntryChange = useCallback(

@@ -13,6 +13,7 @@ import {
   Alert,
   AlertDescription,
   Button,
+  type InteractionResponseData,
   type InteractionRequest,
   type StepDefinition,
   type WorkflowDefinition,
@@ -244,7 +245,7 @@ export function WorkflowEditorPage() {
    * Handle interaction response in preview panel.
    */
   const handlePreviewSubmit = useCallback(
-    async (response: Parameters<typeof runtime.actions.submitResponse>[2]) => {
+    async (response: InteractionResponseData) => {
       const workflow = buildWorkflowDefinition();
       const target = runtime.currentTarget;
       if (target) {
@@ -552,7 +553,7 @@ export function WorkflowEditorPage() {
     });
 
     return { nodes, edges };
-  }, [workflowInfo, steps, expandedModules, nodeHeights.heights, handleWorkflowChange, handleStepChange, handleModuleChange, handleModuleExpandedChange, handleModuleViewState, handleModulePreview, buildWorkflowDefinitionWithOverride, runtime.currentTarget, runtime.busy, runtime.error, runtime.mockMode, runtime.lastResponse, runtime.actions, runtime.getVirtualDb, runtime.getVirtualRunId, runtime.setVirtualDb, buildWorkflowDefinition, isSameModuleTarget]);
+  }, [workflowInfo, steps, expandedModules, nodeHeights.heights, handleWorkflowChange, handleStepChange, handleModuleChange, handleModuleExpandedChange, handleModuleViewState, handleModulePreview, buildWorkflowDefinitionWithOverride, runtime.currentTarget, runtime.busy, runtime.error, runtime.lastResponse, runtime.actions, runtime.getVirtualDb, runtime.getVirtualRunId, runtime.setVirtualDb, buildWorkflowDefinition, isSameModuleTarget]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initialEdges);
@@ -647,7 +648,7 @@ export function WorkflowEditorPage() {
     return () => {
       alive = false;
     };
-  }, [isCreateMode, requestedVersionId, workflowTemplateId]);
+  }, [isCreateMode, requestedVersionId, workflowTemplateId, navigate]);
 
   // =============================================================================
   // Render

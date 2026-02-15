@@ -295,6 +295,8 @@ function IdleContent() {
 function filterResponse(
   response: VirtualWorkflowResponse
 ): Record<string, unknown> {
-  const { virtual_db: _vdb, state: _state, ...rest } = response;
+  const rest = { ...response } as Record<string, unknown>;
+  delete rest.virtual_db;
+  delete rest.state;
   return rest;
 }

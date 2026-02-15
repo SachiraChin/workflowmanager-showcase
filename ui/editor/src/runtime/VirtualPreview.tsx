@@ -51,7 +51,6 @@ export function VirtualPreview({
   response,
   error,
   onSubmit,
-  onCancel: _onCancel,
   showState = false,
   readonly = false,
 }: VirtualPreviewProps) {

@@ -490,9 +490,11 @@ export function TreeModesPocPage() {
     };
   }, []);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     triggerJsonFlash();
   }, [selectedId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const dataPathTypes = useMemo(() => collectDataPaths(active.schema), [active.schema]);
 

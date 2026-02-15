@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Button,
   Card,
@@ -146,12 +146,10 @@ export function UserSelectCardEditor({ value, onChange }: UserSelectCardEditorPr
     return undefined;
   }, [value.schema, hasInlineSchema]);
 
-  // Reset draft when dialog opens
-  useEffect(() => {
-    if (isUxEditorOpen) {
-      setDraftSchema(currentDisplaySchema);
-    }
-  }, [isUxEditorOpen, currentDisplaySchema]);
+  const handleOpenUxEditor = () => {
+    setDraftSchema(currentDisplaySchema);
+    setIsUxEditorOpen(true);
+  };
 
   const handleSaveUxSchema = () => {
     if (draftSchema) {
@@ -237,7 +235,7 @@ export function UserSelectCardEditor({ value, onChange }: UserSelectCardEditorPr
                 size="sm"
                 type="button"
                 variant="outline"
-                onClick={() => setIsUxEditorOpen(true)}
+                onClick={handleOpenUxEditor}
                 disabled={!canEditUx}
                 title={canEditUx ? undefined : "UX editing requires inline data"}
               >

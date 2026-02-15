@@ -664,6 +664,7 @@ export function PromptEditor({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [structuredValues, setStructuredValues] = useState<Record<string, string>>({});
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!open) return;
     if (!structuredConfig) {
@@ -677,6 +678,7 @@ export function PromptEditor({
     }
     setStructuredValues(initialValues);
   }, [open, structuredConfig]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Separate system and user prompts for display
   const systemPrompts = useMemo(

@@ -409,6 +409,7 @@ export function UxSchemaEditor({
   const decorationIdsRef = useRef<string[]>([]);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     // Only rehydrate from props when editor is not locally dirty.
     // This prevents selection/focus jumps when parent echoes onChange updates.
@@ -418,6 +419,7 @@ export function UxSchemaEditor({
     setSelectedNodeId("(root)");
     setEditorError(null);
   }, [initialDisplaySchema, dataSchema, isDirty]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const displaySchema = useMemo(() => generateDisplaySchema(configuredTree), [configuredTree]);
 
@@ -428,18 +430,22 @@ export function UxSchemaEditor({
   const selectedDepth = selected.depth;
   const selectedColor = getSelectionColor(selectedDepth, levelColorMode);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!flatNodes.some((x) => x.node.id === selectedNodeId)) {
       setSelectedNodeId("(root)");
     }
   }, [flatNodes, selectedNodeId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!isEditorFocused) {
       setEditorText(JSON.stringify(displaySchema, null, 2));
       setEditorError(null);
     }
   }, [displaySchema, isEditorFocused]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (isDirty) onChange?.(displaySchema);
