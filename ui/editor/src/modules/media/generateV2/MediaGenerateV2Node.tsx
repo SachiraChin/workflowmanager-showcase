@@ -1,7 +1,11 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { Handle, Position, useUpdateNodeInternals, type NodeProps } from "@xyflow/react";
 import { useReportNodeHeight } from "@/hooks/useNodeHeights";
-import { PromptEditor, type StateVariable } from "@/components/prompt-editor";
+import {
+  PromptEditor,
+  type PromptEditorStructuredConfig,
+  type StateVariable,
+} from "@/components/prompt-editor";
 import {
   Button,
   Card,
@@ -19,6 +23,11 @@ import {
   type MediaGenerateV2Module,
   type ProviderId,
 } from "./types";
+import type {
+  ContentRef,
+  InputContent,
+  SystemMessageItem,
+} from "@/modules/api/llm";
 
 export const MODULE_HEIGHT_COLLAPSED = 120;
 export const MODULE_HEIGHT_EXPANDED = 460;
@@ -32,20 +41,98 @@ export type MediaGenerateV2NodeData = {
   onPreview?: () => void;
 };
 
+function getSharedPrompt(module: MediaGenerateV2Module): string {
+  return getPromptText(module.inputs.prompt_config.shared_prompt);
+}
+
+function getPromptText(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "object" && value !== null) {
+    if ("$ref" in value && typeof (value as { $ref?: unknown }).$ref === "string") {
+      return (value as { $ref: string }).$ref;
+    }
+    if (
+      "content" in value &&
+      typeof (value as { content?: unknown }).content === "string"
+    ) {
+      return (value as { content: string }).content;
+    }
+  }
+  return "";
+}
+
+function getUserInputContent(value: unknown): InputContent {
+  if (typeof value === "string") return value;
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "$ref" in value &&
+    typeof (value as { $ref?: unknown }).$ref === "string"
+  ) {
+    return value as ContentRef;
+  }
+  return getPromptText(value);
+}
+
 function CollapsedView({
   module,
   onExpand,
+  onViewState,
+  onPreview,
 }: {
   module: MediaGenerateV2Module;
   onExpand: () => void;
+  onViewState?: () => void;
+  onPreview?: () => void;
 }) {
   return (
     <Card className="w-[340px] shadow-lg border-2 border-rose-500/50 cursor-pointer" onClick={onExpand}>
-      <CardHeader className="pb-2">
-        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">media.generateV2</p>
-        <p className="text-sm font-semibold">{module.name}</p>
+      <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
+        <div className="flex-1 min-w-0 pr-1">
+          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">media.generateV2</p>
+          <p className="text-sm font-semibold truncate">{module.name}</p>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          {onViewState && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2 text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                onViewState();
+              }}
+            >
+              State
+            </Button>
+          )}
+          {onPreview && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2 text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                onPreview();
+              }}
+            >
+              Preview
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-6 px-2 text-xs"
+            onClick={(e) => {
+              e.stopPropagation();
+              onExpand();
+            }}
+          >
+            Expand
+          </Button>
+        </div>
       </CardHeader>
-      <CardContent className="space-y-1 text-xs text-muted-foreground">
+      <CardContent className="space-y-1 text-xs text-muted-foreground cursor-pointer">
         <p>{ACTION_TYPE_LABELS[module.inputs.action_type]}</p>
         <p>{module.inputs.providers.length} provider(s)</p>
       </CardContent>
@@ -67,15 +154,9 @@ function ExpandedView({
   onPreview?: () => void;
 }) {
   const [isPromptEditorOpen, setIsPromptEditorOpen] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<ProviderId | null>(
-    module.inputs.providers[0] ?? null
-  );
 
   const actionType = module.inputs.action_type;
   const availableProviders = PROVIDERS_BY_ACTION[actionType];
-  const selected = selectedProvider && module.inputs.providers.includes(selectedProvider)
-    ? selectedProvider
-    : module.inputs.providers[0] ?? null;
 
   const updateInputs = (patch: Partial<MediaGenerateV2Module["inputs"]>) => {
     onChange({ ...module, inputs: { ...module.inputs, ...patch } });
@@ -110,7 +191,6 @@ function ExpandedView({
         provider_prompts: nextPromptMap,
       },
     });
-    setSelectedProvider(nextProviders[0]);
   };
 
   const handleProviderToggle = (provider: ProviderId) => {
@@ -138,37 +218,46 @@ function ExpandedView({
         provider_prompts: nextPromptMap,
       },
     });
-    setSelectedProvider(nextProviders[0] ?? null);
   };
 
-  const handleProviderPromptChange = (provider: ProviderId, value: string) => {
-    const map = { ...(module.inputs.prompt_config.provider_prompts || {}) };
-    if (!value.trim()) {
-      map[provider] = `Use ${SHARED_PROMPT_REF_TOKEN}.`;
-    } else {
-      map[provider] = value;
-    }
-    updateInputs({
-      prompt_config: {
-        ...module.inputs.prompt_config,
-        provider_prompts: map,
+  const structuredConfig: PromptEditorStructuredConfig = {
+    title: "Suggested Prompt Structure",
+    description:
+      "These fields guide media.generateV2 prompt config. You can still add any normal prompts below.",
+    fields: [
+      {
+        key: "shared_prompt",
+        label: "Shared Prompt",
+        value: getSharedPrompt(module),
+        inputType: "textarea",
+        description:
+          "Common instructions shared by all selected providers.",
       },
-    });
+      ...module.inputs.providers.map((provider) => ({
+        key: `provider:${provider}`,
+        label: `${PROVIDER_LABELS[provider]} Prompt`,
+        value: getPromptText(module.inputs.prompt_config.provider_prompts?.[provider]),
+        inputType: "textarea" as const,
+        defaultValue: `Use ${SHARED_PROMPT_REF_TOKEN}.`,
+        description:
+          "Optional provider-specific instructions. Leave empty to omit this provider block.",
+      })),
+    ],
   };
 
   return (
     <>
       <Card className="w-[340px] shadow-lg border-2 border-rose-500/50">
         <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
-          <div>
+          <div className="flex-1 min-w-0 pr-1">
             <p className="text-[10px] uppercase tracking-wide text-muted-foreground">media.generateV2</p>
             <Input
-              className="h-7 text-sm font-semibold border-0 px-0"
+              className="h-7 w-full text-sm font-semibold border-0 px-0"
               value={module.name}
               onChange={(e) => onChange({ ...module, name: e.target.value })}
             />
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
             {onViewState && <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={onViewState}>State</Button>}
             {onPreview && <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={onPreview}>Preview</Button>}
             <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={onCollapse}>Collapse</Button>
@@ -212,43 +301,25 @@ function ExpandedView({
 
           <div className="rounded-md border p-2 space-y-2">
             <div className="flex items-center justify-between">
-              <Label className="text-xs">Shared Prompt</Label>
-              <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => setIsPromptEditorOpen(true)}>
-                Edit System
+              <Label className="text-xs">Prompt Configuration</Label>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-6 px-2 text-xs"
+                onClick={() => setIsPromptEditorOpen(true)}
+              >
+                Edit Prompts
               </Button>
             </div>
-            <textarea
-              className="w-full rounded border bg-background px-2 py-1 text-xs min-h-20"
-              value={module.inputs.prompt_config.shared_user || ""}
-              onChange={(e) =>
-                updateInputs({
-                  prompt_config: {
-                    ...module.inputs.prompt_config,
-                    shared_user: e.target.value,
-                  },
-                })
-              }
-            />
-          </div>
-
-          <div className="rounded-md border p-2 space-y-2">
-            <Label className="text-xs">Provider Prompt</Label>
-            <select
-              className="w-full rounded border bg-background px-2 py-1 text-xs"
-              value={selected || ""}
-              onChange={(e) => setSelectedProvider(e.target.value as ProviderId)}
-            >
-              {(module.inputs.providers || []).map((p) => (
-                <option key={p} value={p}>{PROVIDER_LABELS[p]}</option>
-              ))}
-            </select>
-            {selected ? (
-              <textarea
-                className="w-full rounded border bg-background px-2 py-1 text-xs min-h-20"
-                value={module.inputs.prompt_config.provider_prompts?.[selected] || `Use ${SHARED_PROMPT_REF_TOKEN}.`}
-                onChange={(e) => handleProviderPromptChange(selected, e.target.value)}
-              />
-            ) : null}
+            <div className="space-y-1 text-[11px] text-muted-foreground">
+              <p>{module.inputs.prompt_config.system ? "System configured" : "No system prompt"}</p>
+              <p>{module.inputs.prompt_config.user ? "User prompt configured" : "No user prompt"}</p>
+              <p>
+                {Object.values(module.inputs.prompt_config.provider_prompts || {}).filter(
+                  (v) => getPromptText(v).trim().length > 0
+                ).length} provider-specific prompt(s)
+              </p>
+            </div>
           </div>
 
           <div className="rounded-md border p-2 space-y-1">
@@ -265,14 +336,51 @@ function ExpandedView({
         open={isPromptEditorOpen}
         onOpenChange={setIsPromptEditorOpen}
         system={module.inputs.prompt_config.system}
-        input={module.inputs.prompt_config.shared_user}
+        input={getUserInputContent(module.inputs.prompt_config.user)}
         stateVariables={[] as StateVariable[]}
+        structuredConfig={structuredConfig}
         onSave={(system, input) => {
           updateInputs({
             prompt_config: {
               ...module.inputs.prompt_config,
               system,
-              shared_user: typeof input === "string" ? input : module.inputs.prompt_config.shared_user,
+              user: input,
+            },
+          });
+        }}
+        onStructuredSave={(values) => {
+          const nextProviderPrompts: Partial<Record<ProviderId, SystemMessageItem>> = {};
+
+          const currentProviderPrompts =
+            module.inputs.prompt_config.provider_prompts || {};
+
+          for (const provider of module.inputs.providers) {
+            const value = values[`provider:${provider}`];
+            const currentRaw = currentProviderPrompts[provider];
+            const currentText = getPromptText(currentRaw);
+            if (typeof value !== "string" || value.trim().length === 0) {
+              continue;
+            }
+
+            if (currentRaw && value === currentText) {
+              nextProviderPrompts[provider] = currentRaw;
+            } else {
+              nextProviderPrompts[provider] = value;
+            }
+          }
+
+          const currentSharedRaw = module.inputs.prompt_config.shared_prompt;
+          const currentSharedText = getPromptText(currentSharedRaw);
+          const nextSharedValue = values.shared_prompt || "";
+
+          updateInputs({
+            prompt_config: {
+              ...module.inputs.prompt_config,
+              shared_prompt:
+                currentSharedRaw && nextSharedValue === currentSharedText
+                  ? currentSharedRaw
+                  : nextSharedValue,
+              provider_prompts: nextProviderPrompts,
             },
           });
         }}
@@ -320,7 +428,12 @@ function MediaGenerateV2NodeComponent({ id, data }: NodeProps) {
           onPreview={onPreview}
         />
       ) : (
-        <CollapsedView module={module} onExpand={handleExpand} />
+        <CollapsedView
+          module={module}
+          onExpand={handleExpand}
+          onViewState={onViewState}
+          onPreview={onPreview}
+        />
       )}
       <Handle type="source" position={Position.Bottom} id="out" className="!bg-primary" />
     </div>

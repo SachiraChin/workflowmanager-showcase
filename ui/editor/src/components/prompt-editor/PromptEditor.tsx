@@ -48,14 +48,31 @@ import type { SystemMessageItem, InputContent, ContentRef } from "@/modules/api/
 
 export type PromptItem = {
   id: string;
-  type: "system" | "user";
+  type: "system" | "user" | "suggested";
   content: SystemMessageItem;
+  label?: string;
 };
 
 export type StateVariable = {
   key: string;
   path: string;
   type: "string" | "number" | "boolean" | "array" | "object" | "unknown";
+};
+
+export type PromptEditorStructuredField = {
+  key: string;
+  label: string;
+  value: string;
+  placeholder?: string;
+  description?: string;
+  inputType?: "text" | "textarea";
+  defaultValue?: string;
+};
+
+export type PromptEditorStructuredConfig = {
+  title?: string;
+  description?: string;
+  fields: PromptEditorStructuredField[];
 };
 
 export type PromptEditorProps = {
@@ -67,8 +84,12 @@ export type PromptEditorProps = {
   input: InputContent;
   /** Available state variables */
   stateVariables: StateVariable[];
+  /** Optional structured fields shown above the generic prompt list */
+  structuredConfig?: PromptEditorStructuredConfig;
   /** Callback when prompts are saved */
   onSave: (system: SystemMessageItem[], input: InputContent) => void;
+  /** Callback for structured fields save (if structuredConfig is provided) */
+  onStructuredSave?: (values: Record<string, string>) => void;
 };
 
 // =============================================================================
@@ -104,6 +125,14 @@ function normalizeInputToArray(value: InputContent): SystemMessageItem[] {
   return [];
 }
 
+function getSuggestedItemId(key: string): string {
+  return `suggested:${key}`;
+}
+
+function getSuggestedKeyFromId(id: string): string | null {
+  return id.startsWith("suggested:") ? id.slice("suggested:".length) : null;
+}
+
 function getPromptSummary(content: SystemMessageItem): string {
   if (typeof content === "string") {
     if (content.includes("{{")) {
@@ -123,6 +152,15 @@ function getPromptSummary(content: SystemMessageItem): string {
     }
   }
   return "Unknown prompt";
+}
+
+function contentToPlainText(content: SystemMessageItem): string {
+  if (typeof content === "string") return content;
+  if (isContentRef(content)) return content.$ref;
+  if (typeof content === "object" && content !== null) {
+    return (content as { content?: string }).content ?? "";
+  }
+  return "";
 }
 
 
@@ -155,7 +193,18 @@ function SortablePromptItem({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const typeColor = item.type === "system" ? "bg-blue-500" : "bg-green-500";
+  const typeColor =
+    item.type === "system"
+      ? "bg-blue-500"
+      : item.type === "user"
+        ? "bg-green-500"
+        : "bg-amber-500";
+  const typeLabel =
+    item.type === "system"
+      ? "System"
+      : item.type === "user"
+        ? "User"
+        : "Suggested";
 
   return (
     <div
@@ -195,11 +244,12 @@ function SortablePromptItem({
         <span
           className={`px-1.5 py-0.5 rounded text-[10px] font-medium text-white ${typeColor}`}
         >
-          {item.type === "system" ? "System" : "User"}
+          {typeLabel}
         </span>
 
         {/* Summary */}
         <span className="flex-1 text-xs text-muted-foreground truncate">
+          {item.label ? `${item.label}: ` : ""}
           {getPromptSummary(item.content)}
         </span>
 
@@ -280,7 +330,18 @@ function FullHeightPromptEditor({
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const decorationsRef = useRef<Monaco.editor.IEditorDecorationsCollection | null>(null);
 
-  const typeColor = item.type === "system" ? "bg-blue-500" : "bg-green-500";
+  const typeColor =
+    item.type === "system"
+      ? "bg-blue-500"
+      : item.type === "user"
+        ? "bg-green-500"
+        : "bg-amber-500";
+  const typeLabel =
+    item.type === "system"
+      ? "System"
+      : item.type === "user"
+        ? "User"
+        : "Suggested";
 
   const handleSave = () => {
     let newContent: SystemMessageItem;
@@ -434,7 +495,7 @@ function FullHeightPromptEditor({
         <span
           className={`px-1.5 py-0.5 rounded text-[10px] font-medium text-white ${typeColor}`}
         >
-          {item.type === "system" ? "System" : "User"}
+          {typeLabel}
         </span>
 
         {/* Type selector */}
@@ -576,7 +637,9 @@ export function PromptEditor({
   system,
   input,
   stateVariables,
+  structuredConfig,
   onSave,
+  onStructuredSave,
 }: PromptEditorProps) {
   // Convert inputs to prompt items
   const [prompts, setPrompts] = useState<PromptItem[]>(() => {
@@ -599,6 +662,21 @@ export function PromptEditor({
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [structuredValues, setStructuredValues] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!open) return;
+    if (!structuredConfig) {
+      setStructuredValues({});
+      return;
+    }
+
+    const initialValues: Record<string, string> = {};
+    for (const field of structuredConfig.fields) {
+      initialValues[field.key] = field.value ?? "";
+    }
+    setStructuredValues(initialValues);
+  }, [open, structuredConfig]);
 
   // Separate system and user prompts for display
   const systemPrompts = useMemo(
@@ -609,6 +687,17 @@ export function PromptEditor({
     () => prompts.filter((p) => p.type === "user"),
     [prompts]
   );
+  const suggestedPrompts = useMemo<PromptItem[]>(() => {
+    if (!structuredConfig || structuredConfig.fields.length === 0) {
+      return [];
+    }
+    return structuredConfig.fields.map((field) => ({
+      id: getSuggestedItemId(field.key),
+      type: "suggested",
+      content: structuredValues[field.key] ?? "",
+      label: field.label,
+    }));
+  }, [structuredConfig, structuredValues]);
 
   // DnD sensors
   const sensors = useSensors(
@@ -628,8 +717,9 @@ export function PromptEditor({
 
     if (!over || active.id === over.id) return;
 
-    const activeItem = prompts.find((p) => p.id === active.id);
-    const overItem = prompts.find((p) => p.id === over.id);
+    const allItems = [...prompts, ...suggestedPrompts];
+    const activeItem = allItems.find((p) => p.id === active.id);
+    const overItem = allItems.find((p) => p.id === over.id);
 
     if (!activeItem || !overItem) return;
 
@@ -639,9 +729,10 @@ export function PromptEditor({
     setPrompts((prev) => {
       const oldIndex = prev.findIndex((p) => p.id === active.id);
       const newIndex = prev.findIndex((p) => p.id === over.id);
+      if (oldIndex < 0 || newIndex < 0) return prev;
       return arrayMove(prev, oldIndex, newIndex);
     });
-  }, [prompts]);
+  }, [prompts, suggestedPrompts]);
 
   const handleAddPrompt = useCallback((type: "system" | "user") => {
     const newItem: PromptItem = {
@@ -663,11 +754,29 @@ export function PromptEditor({
   }, []);
 
   const handleRemovePrompt = useCallback((id: string) => {
+    const suggestedKey = getSuggestedKeyFromId(id);
+    if (suggestedKey) {
+      setStructuredValues((prev) => ({
+        ...prev,
+        [suggestedKey]: "",
+      }));
+      if (editingId === id) setEditingId(null);
+      return;
+    }
     setPrompts((prev) => prev.filter((p) => p.id !== id));
     if (editingId === id) setEditingId(null);
   }, [editingId]);
 
   const handleUpdatePrompt = useCallback((updated: PromptItem) => {
+    const suggestedKey = getSuggestedKeyFromId(updated.id);
+    if (suggestedKey) {
+      setStructuredValues((prev) => ({
+        ...prev,
+        [suggestedKey]: contentToPlainText(updated.content),
+      }));
+      setEditingId(null);
+      return;
+    }
     setPrompts((prev) =>
       prev.map((p) => (p.id === updated.id ? updated : p))
     );
@@ -707,16 +816,19 @@ export function PromptEditor({
     }
 
     onSave(systemItems, newInput);
+    if (onStructuredSave) {
+      onStructuredSave(structuredValues);
+    }
     onOpenChange(false);
-  }, [prompts, onSave, onOpenChange]);
+  }, [prompts, onSave, onOpenChange, onStructuredSave, structuredValues]);
 
   const activeItem = activeId
-    ? prompts.find((p) => p.id === activeId)
+    ? [...prompts, ...suggestedPrompts].find((p) => p.id === activeId)
     : null;
 
   // Find the item being edited
   const editingItem = editingId
-    ? prompts.find((p) => p.id === editingId)
+    ? [...prompts, ...suggestedPrompts].find((p) => p.id === editingId)
     : null;
 
   const handleEditorSave = (updated: PromptItem) => {
@@ -753,6 +865,36 @@ export function PromptEditor({
           ) : (
             /* Prompt list mode */
             <div className="flex-1 overflow-auto p-4 space-y-6">
+              {structuredConfig && structuredConfig.fields.length > 0 && (
+                <div className="rounded-md border bg-muted/20 p-3 space-y-3">
+                  <div>
+                    <Label className="text-sm font-medium">
+                      {structuredConfig.title || "Suggested Prompt Structure"}
+                    </Label>
+                    {structuredConfig.description && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {structuredConfig.description}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2 min-h-[60px] rounded-md border border-dashed p-2">
+                    <SortableContext
+                      items={suggestedPrompts.map((p) => p.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {suggestedPrompts.map((item) => (
+                        <SortablePromptItem
+                          key={item.id}
+                          item={item}
+                          onEdit={setEditingId}
+                          onRemove={handleRemovePrompt}
+                        />
+                      ))}
+                    </SortableContext>
+                  </div>
+                </div>
+              )}
+
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
@@ -839,10 +981,16 @@ export function PromptEditor({
                           className={`px-1.5 py-0.5 rounded text-[10px] font-medium text-white ${
                             activeItem.type === "system"
                               ? "bg-blue-500"
-                              : "bg-green-500"
+                              : activeItem.type === "user"
+                                ? "bg-green-500"
+                                : "bg-amber-500"
                           }`}
                         >
-                          {activeItem.type === "system" ? "System" : "User"}
+                          {activeItem.type === "system"
+                            ? "System"
+                            : activeItem.type === "user"
+                              ? "User"
+                              : "Suggested"}
                         </span>
                         <span className="text-xs text-muted-foreground truncate">
                           {getPromptSummary(activeItem.content)}

@@ -1,1 +1,7 @@
-export { PromptEditor, type PromptEditorProps, type StateVariable } from "./PromptEditor";
+export {
+  PromptEditor,
+  type PromptEditorProps,
+  type PromptEditorStructuredConfig,
+  type PromptEditorStructuredField,
+  type StateVariable,
+} from "./PromptEditor";

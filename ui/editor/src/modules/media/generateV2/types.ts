@@ -1,4 +1,4 @@
-import type { AIConfig, SystemMessageItem } from "@/modules/api/llm";
+import type { AIConfig, InputContent, SystemMessageItem } from "@/modules/api/llm";
 
 export type ActionType = "txt2img" | "img2vid" | "txt2audio";
 
@@ -35,9 +35,11 @@ export type PromptConfig = {
   provider?: string;
   model?: string;
   system?: string | SystemMessageItem[];
-  shared_user: string;
-  provider_prompts?: Partial<Record<ProviderId, string>>;
+  user?: InputContent;
+  shared_prompt?: SystemMessageItem;
+  provider_prompts?: Partial<Record<ProviderId, SystemMessageItem>>;
   ai_config?: AIConfig;
+  metadata?: Record<string, unknown>;
 };
 
 export type MediaGenerateV2Inputs = {
