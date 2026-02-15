@@ -8,13 +8,8 @@
  * - Jinja2 reference input for keywords source (save mode)
  */
 
-import { useState, memo, useEffect, useRef, useCallback } from "react";
-import {
-  Handle,
-  Position,
-  useUpdateNodeInternals,
-  type NodeProps,
-} from "@xyflow/react";
+import { useState, memo, useRef, useCallback } from "react";
+import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { useReportNodeHeight } from "@/hooks/useNodeHeights";
 import {
   Button,
@@ -57,8 +52,8 @@ export type WeightedKeywordsNodeData = {
   onModuleChange: (module: WeightedKeywordsModule) => void;
   /** Whether this module is expanded */
   expanded: boolean;
-  /** Callback when expanded state changes (includes estimated height for layout) */
-  onExpandedChange: (expanded: boolean, estimatedHeight: number) => void;
+  /** Callback when expanded state changes */
+  onExpandedChange: (expanded: boolean) => void;
   /** Callback to view state up to this module (runs module, opens state panel) */
   onViewState?: () => void;
 };
@@ -67,12 +62,6 @@ export type WeightedKeywordsNodeData = {
 // Constants
 // =============================================================================
 
-/** Height of module when collapsed */
-export const MODULE_HEIGHT_COLLAPSED = 100;
-/** Height of module when expanded (load mode) */
-export const MODULE_HEIGHT_EXPANDED_LOAD = 340;
-/** Height of module when expanded (save mode) */
-export const MODULE_HEIGHT_EXPANDED_SAVE = 320;
 /** Width of module (same for collapsed and expanded) */
 export const MODULE_WIDTH = 340;
 
@@ -538,30 +527,17 @@ function ExpandedSaveView({
 function WeightedKeywordsNodeComponent({ id, data }: NodeProps) {
   const { module, onModuleChange, expanded, onExpandedChange, onViewState } =
     data as unknown as WeightedKeywordsNodeData;
-  const updateNodeInternals = useUpdateNodeInternals();
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Report height changes to parent for layout calculations
-  useReportNodeHeight(id, containerRef);
+  // Report height changes and force immediate measurement when expanded flips.
+  useReportNodeHeight(id, containerRef, expanded);
 
-  // Notify ReactFlow when node size changes (expand/collapse)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      updateNodeInternals(id);
-    }, 50);
-    return () => clearTimeout(timer);
-  }, [expanded, id, updateNodeInternals]);
-
-  // Handlers that include estimated height for synchronous layout update
   const handleExpand = useCallback(() => {
-    const height = isLoadMode(module.inputs)
-      ? MODULE_HEIGHT_EXPANDED_LOAD
-      : MODULE_HEIGHT_EXPANDED_SAVE;
-    onExpandedChange(true, height);
-  }, [module.inputs, onExpandedChange]);
+    onExpandedChange(true);
+  }, [onExpandedChange]);
 
   const handleCollapse = useCallback(() => {
-    onExpandedChange(false, MODULE_HEIGHT_COLLAPSED);
+    onExpandedChange(false);
   }, [onExpandedChange]);
 
   return (

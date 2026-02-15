@@ -7,13 +7,8 @@
  * - Each row: key (input name), value (Jinja2 expression), stateKey (output)
  */
 
-import { useState, memo, useEffect, useRef, useCallback } from "react";
-import {
-  Handle,
-  Position,
-  useUpdateNodeInternals,
-  type NodeProps,
-} from "@xyflow/react";
+import { useState, memo, useRef, useCallback } from "react";
+import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { useReportNodeHeight } from "@/hooks/useNodeHeights";
 import {
   Button,
@@ -45,8 +40,8 @@ export type ExtractNodeData = {
   onModuleChange: (module: ExtractModule) => void;
   /** Whether this module is expanded */
   expanded: boolean;
-  /** Callback when expanded state changes (includes estimated height for layout) */
-  onExpandedChange: (expanded: boolean, estimatedHeight: number) => void;
+  /** Callback when expanded state changes */
+  onExpandedChange: (expanded: boolean) => void;
   /** Callback to view state up to this module */
   onViewState?: () => void;
 };
@@ -54,21 +49,6 @@ export type ExtractNodeData = {
 // =============================================================================
 // Constants
 // =============================================================================
-
-/** Height of module when collapsed */
-export const MODULE_HEIGHT_COLLAPSED = 100;
-/** Base height when expanded (header + padding) */
-const EXPANDED_BASE_HEIGHT = 140;
-/** Height per extraction entry row */
-const ENTRY_ROW_HEIGHT = 80;
-/** Maximum height when expanded */
-const MAX_EXPANDED_HEIGHT = 500;
-
-/** Calculate expanded height based on entry count */
-function getExpandedHeight(entryCount: number): number {
-  const calculated = EXPANDED_BASE_HEIGHT + Math.max(1, entryCount) * ENTRY_ROW_HEIGHT;
-  return Math.min(calculated, MAX_EXPANDED_HEIGHT);
-}
 
 /** Width of module (same for collapsed and expanded) */
 export const MODULE_WIDTH = 340;
@@ -364,32 +344,17 @@ function ExpandedView({
 function ExtractNodeComponent({ id, data }: NodeProps) {
   const { module, onModuleChange, expanded, onExpandedChange, onViewState } =
     data as unknown as ExtractNodeData;
-  const updateNodeInternals = useUpdateNodeInternals();
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Report height changes to parent for layout calculations
-  useReportNodeHeight(id, containerRef);
+  // Report height changes and force immediate measurement when expanded flips.
+  useReportNodeHeight(id, containerRef, expanded);
 
-  // Calculate entry count for height estimation
-  const entryCount = Object.keys(module.inputs || {}).filter(
-    (k) => k !== "resolver_schema"
-  ).length;
-
-  // Notify ReactFlow when node size changes (expand/collapse)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      updateNodeInternals(id);
-    }, 50);
-    return () => clearTimeout(timer);
-  }, [expanded, id, updateNodeInternals]);
-
-  // Handlers that include estimated height for synchronous layout update
   const handleExpand = useCallback(() => {
-    onExpandedChange(true, getExpandedHeight(entryCount));
-  }, [onExpandedChange, entryCount]);
+    onExpandedChange(true);
+  }, [onExpandedChange]);
 
   const handleCollapse = useCallback(() => {
-    onExpandedChange(false, MODULE_HEIGHT_COLLAPSED);
+    onExpandedChange(false);
   }, [onExpandedChange]);
 
   return (

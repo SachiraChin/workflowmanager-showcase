@@ -30,8 +30,8 @@ export type NodeDataFactoryParams = {
   onModuleChange: (updated: unknown) => void;
   /** Whether this module node is expanded */
   expanded: boolean;
-  /** Callback when expanded state changes (includes estimated height for layout) */
-  onExpandedChange: (expanded: boolean, estimatedHeight: number) => void;
+  /** Callback when expanded state changes */
+  onExpandedChange: (expanded: boolean) => void;
   /** Callback to view state up to this module */
   onViewState?: () => void;
   /** Callback to preview this module (optional, used by user.select) */

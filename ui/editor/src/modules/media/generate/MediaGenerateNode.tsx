@@ -12,7 +12,6 @@ import { useState, memo, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   Handle,
   Position,
-  useUpdateNodeInternals,
   type NodeProps,
 } from "@xyflow/react";
 import { useReportNodeHeight } from "@/hooks/useNodeHeights";
@@ -62,7 +61,7 @@ export type MediaGenerateNodeData = {
   module: MediaGenerateModule;
   onModuleChange: (module: MediaGenerateModule) => void;
   expanded: boolean;
-  onExpandedChange: (expanded: boolean, estimatedHeight: number) => void;
+  onExpandedChange: (expanded: boolean) => void;
   onViewState?: () => void;
   onPreview?: () => void;
   onPreviewWithOverride?: (moduleOverride: MediaGenerateModule) => Promise<void>;
@@ -75,8 +74,6 @@ export type MediaGenerateNodeData = {
 // Constants
 // =============================================================================
 
-export const MODULE_HEIGHT_COLLAPSED = 120;
-export const MODULE_HEIGHT_EXPANDED = 380;
 export const MODULE_WIDTH = 340;
 
 // =============================================================================
@@ -890,24 +887,16 @@ function MediaGenerateNodeComponent({ id, data }: NodeProps) {
     onPreviewWithOverride,
     runtimePreview,
   } = data as unknown as MediaGenerateNodeData;
-  const updateNodeInternals = useUpdateNodeInternals();
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useReportNodeHeight(id, containerRef);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      updateNodeInternals(id);
-    }, 50);
-    return () => clearTimeout(timer);
-  }, [expanded, id, updateNodeInternals]);
+  useReportNodeHeight(id, containerRef, expanded);
 
   const handleExpand = useCallback(() => {
-    onExpandedChange(true, MODULE_HEIGHT_EXPANDED);
+    onExpandedChange(true);
   }, [onExpandedChange]);
 
   const handleCollapse = useCallback(() => {
-    onExpandedChange(false, MODULE_HEIGHT_COLLAPSED);
+    onExpandedChange(false);
   }, [onExpandedChange]);
 
   return (

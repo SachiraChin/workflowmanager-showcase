@@ -6,13 +6,8 @@
  * - Expanded state: Shows configuration details with prompt editor
  */
 
-import { memo, useEffect, useRef, useCallback, useState } from "react";
-import {
-  Handle,
-  Position,
-  useUpdateNodeInternals,
-  type NodeProps,
-} from "@xyflow/react";
+import { memo, useRef, useCallback, useState } from "react";
+import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { useReportNodeHeight } from "@/hooks/useNodeHeights";
 import {
   Button,
@@ -40,8 +35,8 @@ export type LLMNodeData = {
   onModuleChange: (module: LLMModule) => void;
   /** Whether this module is expanded */
   expanded: boolean;
-  /** Callback when expanded state changes (includes estimated height for layout) */
-  onExpandedChange: (expanded: boolean, estimatedHeight: number) => void;
+  /** Callback when expanded state changes */
+  onExpandedChange: (expanded: boolean) => void;
   /** Callback to view state up to this module (runs module, opens state panel) */
   onViewState?: () => void;
 };
@@ -50,10 +45,6 @@ export type LLMNodeData = {
 // Constants
 // =============================================================================
 
-/** Height of module when collapsed */
-export const MODULE_HEIGHT_COLLAPSED = 110;
-/** Height of module when expanded */
-export const MODULE_HEIGHT_EXPANDED = 380;
 /** Width of module (same for collapsed and expanded) */
 export const MODULE_WIDTH = 340;
 
@@ -368,27 +359,17 @@ function ExpandedView({
 function LLMNodeComponent({ id, data }: NodeProps) {
   const { module, onModuleChange, expanded, onExpandedChange, onViewState } =
     data as unknown as LLMNodeData;
-  const updateNodeInternals = useUpdateNodeInternals();
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Report height changes to parent for layout calculations
-  useReportNodeHeight(id, containerRef);
+  // Report height changes and force immediate measurement when expanded flips.
+  useReportNodeHeight(id, containerRef, expanded);
 
-  // Notify ReactFlow when node size changes (expand/collapse)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      updateNodeInternals(id);
-    }, 50);
-    return () => clearTimeout(timer);
-  }, [expanded, id, updateNodeInternals]);
-
-  // Handlers that include estimated height for synchronous layout update
   const handleExpand = useCallback(() => {
-    onExpandedChange(true, MODULE_HEIGHT_EXPANDED);
+    onExpandedChange(true);
   }, [onExpandedChange]);
 
   const handleCollapse = useCallback(() => {
-    onExpandedChange(false, MODULE_HEIGHT_COLLAPSED);
+    onExpandedChange(false);
   }, [onExpandedChange]);
 
   return (

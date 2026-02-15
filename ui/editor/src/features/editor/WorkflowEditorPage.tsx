@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import {
   Background,
   ReactFlow,
@@ -167,16 +167,13 @@ export function WorkflowEditorPage() {
   );
 
   const handleModuleExpandedChange = useCallback(
-    (moduleId: string, expanded: boolean, estimatedHeight: number) => {
-      // Set estimated height synchronously with expanded state change
-      // This ensures the step container resizes in the same render cycle
-      nodeHeights.setEstimatedHeight(moduleId, estimatedHeight);
+    (moduleId: string, expanded: boolean) => {
       setExpandedModules((prev) => ({
         ...prev,
         [moduleId]: expanded,
       }));
     },
-    [nodeHeights]
+    []
   );
 
   /**
@@ -352,12 +349,9 @@ export function WorkflowEditorPage() {
     // Step width sized for expanded modules so padding stays ~40px on expand
     const stepWidth = MODULE_WIDTH + stepPadding * 2;
 
-    // Default height used before actual measurement is available
-    const DEFAULT_MODULE_HEIGHT = 100;
-
-    // Helper to get module height - uses measured height if available, falls back to default
+    // Helper to get module height from measurements.
     const getModuleHeight = (moduleNodeId: string) => {
-      return nodeHeights.heights[moduleNodeId] ?? DEFAULT_MODULE_HEIGHT;
+      return nodeHeights.heights[moduleNodeId] ?? 0;
     };
 
     let currentStepX = stepStartX;
@@ -389,6 +383,8 @@ export function WorkflowEditorPage() {
           width: stepWidth,
           height: stepHeight,
         } satisfies StepNodeData,
+        width: stepWidth,
+        height: stepHeight,
         style: { width: stepWidth, height: stepHeight },
       });
 
@@ -418,8 +414,8 @@ export function WorkflowEditorPage() {
               onModuleChange: (updated: unknown) =>
                 handleModuleChange(step.step_id, module.name!, updated),
               expanded: isExpanded,
-              onExpandedChange: (exp: boolean, height: number) =>
-                handleModuleExpandedChange(moduleNodeId, exp, height),
+              onExpandedChange: (exp: boolean) =>
+                handleModuleExpandedChange(moduleNodeId, exp),
               onViewState: () =>
                 handleModuleViewState({ step_id: step.step_id, module_name: module.name! }),
               onPreview: () =>
@@ -561,24 +557,12 @@ export function WorkflowEditorPage() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initialEdges);
 
-  // Sync when computed values change
-  useEffect(() => {
-    console.log("[WorkflowEditor] Syncing nodes:", initialNodes.length);
+  // Sync layout graph before paint to avoid transient parent/child mismatch.
+  useLayoutEffect(() => {
     setNodes(initialNodes);
   }, [initialNodes, setNodes]);
 
-  useEffect(() => {
-    console.log("[WorkflowEditor] Syncing edges:", initialEdges.length);
-    // Log first few edges in detail
-    initialEdges.slice(0, 3).forEach((e, i) => {
-      console.log(`  Edge ${i}:`, {
-        id: e.id,
-        source: e.source,
-        sourceHandle: e.sourceHandle,
-        target: e.target,
-        targetHandle: e.targetHandle,
-      });
-    });
+  useLayoutEffect(() => {
     setEdges(initialEdges);
   }, [initialEdges, setEdges]);
 
