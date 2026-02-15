@@ -14,7 +14,6 @@ import { Upload, Archive, FileJson, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import JSZip from "jszip";
 
 // =============================================================================
 // Types
@@ -76,6 +75,7 @@ export function WorkflowUploader({
         } else if (file.name.endsWith(".zip")) {
           // ZIP file - read and find root .json files
           const arrayBuffer = await file.arrayBuffer();
+          const { default: JSZip } = await import("jszip");
           const zip = await JSZip.loadAsync(arrayBuffer);
 
           // Collect all file paths (normalize to forward slashes)

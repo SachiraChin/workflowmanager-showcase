@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Moon, Sun } from "lucide-react";
-import { useTheme } from "@/components/theme-provider";
+import { useTheme } from "@/components/use-theme";
 
 /**
  * Header component for landing page

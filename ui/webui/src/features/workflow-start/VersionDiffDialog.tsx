@@ -3,7 +3,7 @@
  * Shows a diff of changes as a tree structure for easier reading.
  */
 
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -244,16 +244,19 @@ export function VersionDiffDialog({
   // Build tree from changes
   const { root: tree, allPaths } = useMemo(() => buildTree(diff.changes), [diff.changes]);
 
-  // Expand all paths by default
-  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() => new Set(allPaths));
+  // Track collapsed paths; everything else remains expanded by default.
+  const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(() => new Set());
 
-  // Update expanded paths when diff changes
-  useMemo(() => {
-    setExpandedPaths(new Set(allPaths));
-  }, [allPaths]);
+  const expandedPaths = useMemo(() => {
+    const expanded = new Set(allPaths);
+    for (const path of collapsedPaths) {
+      expanded.delete(path);
+    }
+    return expanded;
+  }, [allPaths, collapsedPaths]);
 
   const togglePath = (path: string) => {
-    setExpandedPaths((prev) => {
+    setCollapsedPaths((prev) => {
       const next = new Set(prev);
       if (next.has(path)) {
         next.delete(path);

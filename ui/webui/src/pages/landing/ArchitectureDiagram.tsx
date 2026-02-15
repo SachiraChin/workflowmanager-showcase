@@ -1,5 +1,4 @@
 import { useEffect, useRef, useCallback, useState } from "react";
-import mermaid from "mermaid";
 
 // =============================================================================
 // Mermaid Diagram Definition (matches README.md)
@@ -218,6 +217,7 @@ export function ArchitectureDiagram() {
 
   const renderDiagram = useCallback(async () => {
     if (!svgContainerRef.current) return;
+    const { default: mermaid } = await import("mermaid");
 
     // Detect dark mode
     const isDark = document.documentElement.classList.contains("dark");

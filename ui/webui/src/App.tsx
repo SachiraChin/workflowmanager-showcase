@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, type ReactNode } from "react";
+import { lazy, Suspense, useState, useEffect, useCallback, type ReactNode } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -11,22 +11,55 @@ import {
 } from "react-router-dom";
 import { Header } from "@/components/layout/header";
 import { Loader2 } from "lucide-react";
-import { WorkflowStartPage } from "@/pages/WorkflowStartPage";
-import { WorkflowRunnerPage } from "@/pages/WorkflowRunnerPage";
-import { LoginPage } from "@/pages/LoginPage";
-import { InvitationSignupPage } from "@/pages/InvitationSignupPage";
-import { LandingPage } from "@/pages/landing/LandingPage";
-import { RunnerGuideButton } from "@/features/workflow-guidance";
 import { api, setAccessDeniedHandler } from "@/core/api";
 import { useWorkflowExecution, setCapabilities } from "@/state/hooks/useWorkflowExecution";
 import { useWorkflowStore } from "@/state/workflow-store";
 import { WEBUI_CAPABILITIES } from "@/lib/capabilities";
+
+const WorkflowStartPage = lazy(() =>
+  import("@/pages/WorkflowStartPage").then((module) => ({
+    default: module.WorkflowStartPage,
+  }))
+);
+const WorkflowRunnerPage = lazy(() =>
+  import("@/pages/WorkflowRunnerPage").then((module) => ({
+    default: module.WorkflowRunnerPage,
+  }))
+);
+const LoginPage = lazy(() =>
+  import("@/pages/LoginPage").then((module) => ({
+    default: module.LoginPage,
+  }))
+);
+const InvitationSignupPage = lazy(() =>
+  import("@/pages/InvitationSignupPage").then((module) => ({
+    default: module.InvitationSignupPage,
+  }))
+);
+const LandingPage = lazy(() =>
+  import("@/pages/landing/LandingPage").then((module) => ({
+    default: module.LandingPage,
+  }))
+);
+const RunnerGuideButton = lazy(() =>
+  import("@/features/workflow-guidance").then((module) => ({
+    default: module.RunnerGuideButton,
+  }))
+);
 
 interface User {
   user_id: string;
   email?: string | null;
   username: string;
   role?: string | null;
+}
+
+function RouteLoadingFallback() {
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+    </div>
+  );
 }
 
 // =============================================================================
@@ -51,6 +84,9 @@ function RunnerPageRoute() {
   const { runId } = useParams<{ runId: string }>();
   const { workflowRunId, resumeWorkflow } = useWorkflowExecution();
   const accessDenied = useWorkflowStore((s) => s.accessDenied);
+  const handleRestart = useCallback(() => {
+    navigate("/workflows");
+  }, [navigate]);
 
   // If we have a runId in URL but not in store, try to resume
   // Skip if access was denied (prevents infinite loop on 403)
@@ -66,10 +102,6 @@ function RunnerPageRoute() {
   if (!runId) {
     return <Navigate to="/workflows" replace />;
   }
-
-  const handleRestart = useCallback(() => {
-    navigate("/workflows");
-  }, [navigate]);
 
   return <WorkflowRunnerPage onRestart={handleRestart} />;
 }
@@ -98,7 +130,11 @@ function AuthenticatedLayout({ user, onLogout }: { user: User; onLogout: () => v
         onLogout={onLogout}
         onDebugModeChange={handleDebugModeChange}
         showGuideButton={isRunnerPage}
-        guideButton={<RunnerGuideButton />}
+        guideButton={(
+          <Suspense fallback={null}>
+            <RunnerGuideButton />
+          </Suspense>
+        )}
       />
       <main key={refreshKey} className="flex-1 min-h-0 overflow-hidden">
         <Outlet />
@@ -184,27 +220,29 @@ function AppRoutes() {
   }, []);
 
   return (
-    <Routes>
-      <Route path="/" element={<LandingPage />} />
-      <Route
-        path="/login"
-        element={user ? <Navigate to="/workflows" replace /> : <LoginPage onLoginSuccess={handleLoginSuccess} />}
-      />
-      <Route path="/invite" element={<InvitationSignupPage onLoginSuccess={handleLoginSuccess} />} />
-      <Route path="/invite/:invitationCode" element={<InvitationSignupPage onLoginSuccess={handleLoginSuccess} />} />
-      <Route path="/invite/*" element={<InvitationSignupPage onLoginSuccess={handleLoginSuccess} />} />
-      <Route
-        element={(
-          <RequireAuth user={user} isCheckingAuth={isCheckingAuth}>
-            <AuthenticatedLayout user={user as User} onLogout={handleLogout} />
-          </RequireAuth>
-        )}
-      >
-        <Route path="/workflows" element={<StartPageRoute user={user as User} />} />
-        <Route path="/run/:runId" element={<RunnerPageRoute />} />
-      </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <Suspense fallback={<RouteLoadingFallback />}>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route
+          path="/login"
+          element={user ? <Navigate to="/workflows" replace /> : <LoginPage onLoginSuccess={handleLoginSuccess} />}
+        />
+        <Route path="/invite" element={<InvitationSignupPage onLoginSuccess={handleLoginSuccess} />} />
+        <Route path="/invite/:invitationCode" element={<InvitationSignupPage onLoginSuccess={handleLoginSuccess} />} />
+        <Route path="/invite/*" element={<InvitationSignupPage onLoginSuccess={handleLoginSuccess} />} />
+        <Route
+          element={(
+            <RequireAuth user={user} isCheckingAuth={isCheckingAuth}>
+              <AuthenticatedLayout user={user as User} onLogout={handleLogout} />
+            </RequireAuth>
+          )}
+        >
+          <Route path="/workflows" element={<StartPageRoute user={user as User} />} />
+          <Route path="/run/:runId" element={<RunnerPageRoute />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
   );
 }
 

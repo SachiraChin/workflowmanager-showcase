@@ -1,6 +1,12 @@
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { LandingHeader } from "./LandingHeader";
-import { ArchitectureDiagram } from "./ArchitectureDiagram";
+
+const ArchitectureDiagram = lazy(() =>
+  import("./ArchitectureDiagram").then((module) => ({
+    default: module.ArchitectureDiagram,
+  }))
+);
 
 /**
  * Landing Page
@@ -10,6 +16,27 @@ import { ArchitectureDiagram } from "./ArchitectureDiagram";
  * Visual: Cards on muted background, no high-contrast inversions
  */
 export function LandingPage() {
+  const architectureSectionRef = useRef<HTMLElement | null>(null);
+  const [shouldLoadArchitecture, setShouldLoadArchitecture] = useState(false);
+
+  useEffect(() => {
+    const section = architectureSectionRef.current;
+    if (!section || shouldLoadArchitecture) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setShouldLoadArchitecture(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "200px 0px" }
+    );
+
+    observer.observe(section);
+    return () => observer.disconnect();
+  }, [shouldLoadArchitecture]);
+
   return (
     <div className="min-h-screen bg-muted text-foreground">
       <LandingHeader />
@@ -61,7 +88,7 @@ export function LandingPage() {
         </section>
 
         {/* Architecture Diagram */}
-        <section id="architecture" className="mt-4">
+        <section id="architecture" ref={architectureSectionRef} className="mt-4">
           <div className="rounded-xl border border-border bg-card p-6">
             <h2 className="font-landing-display text-lg font-semibold">
               System Architecture
@@ -70,7 +97,17 @@ export function LandingPage() {
               Layered architecture with event-sourced state management. Hover nodes for details.
             </p>
             <div className="mt-3">
-              <ArchitectureDiagram />
+              {shouldLoadArchitecture ? (
+                <Suspense
+                  fallback={
+                    <div className="min-h-[500px] rounded-lg border border-border bg-muted/30" />
+                  }
+                >
+                  <ArchitectureDiagram />
+                </Suspense>
+              ) : (
+                <div className="min-h-[500px] rounded-lg border border-border bg-muted/30" />
+              )}
             </div>
           </div>
         </section>

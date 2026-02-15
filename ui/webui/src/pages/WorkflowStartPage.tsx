@@ -92,7 +92,7 @@ export function WorkflowStartPage({ onWorkflowStarted, user }: WorkflowStartPage
         if (response.workflows.length > 0) {
           setLastProjectName(response.workflows[0].project_name);
         }
-      } catch (e) {
+      } catch {
         // Silently ignore - this is just a hint
       }
     };
@@ -206,6 +206,7 @@ export function WorkflowStartPage({ onWorkflowStarted, user }: WorkflowStartPage
     selectedVersionId,
     uploadedWorkflow,
     startWorkflow,
+    startWorkflowByVersion,
     onWorkflowStarted,
   ]);
 

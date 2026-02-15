@@ -36,7 +36,7 @@ export function WebUIRenderProvider({ children }: WebUIRenderProviderProps) {
 
   // Handler for updating display data (debug mode) - memoized to prevent re-renders
   const handleUpdateDisplayData = useCallback(
-    (path: string[], data: unknown, _schema: unknown) => {
+    (path: string[], data: unknown) => {
       const interaction = useWorkflowStore.getState().currentInteraction;
       if (!interaction) return;
 
