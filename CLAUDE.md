@@ -56,6 +56,19 @@ Behavior rules:
 
 If no contradiction is detected, proceed normally.
 
+## Commit Rule
+
+All commit messages must clearly describe what the change entailed.
+
+Required:
+- Short imperative title (`feat:`, `fix:`, `refactor:`, etc.)
+- What changed (technical details, not vague summary)
+- Why the change was made
+- Impact (breaking changes, migrations, behavior/perf changes if any)
+
+Commit messages must be detailed enough that someone can understand the change
+and its consequences without reading the diff.
+
 ## Architecture and Issues Document Rules
 
 Both `architecture/` and `issues/` folders follow the same structure and
