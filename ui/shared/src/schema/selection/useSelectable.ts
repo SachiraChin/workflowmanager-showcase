@@ -64,12 +64,20 @@ export function useSelectable(
   const selection = useSelectionOptional();
   const { readonly: isReadonly } = useRenderContext();
 
+  const handleClick = useCallback(() => {
+    if (!selection || !ux.selectable) return;
+    if (selection.mode === "review") return;
+    if (isReadonly) return;
+    if (!selection.canSelect(path) && !selection.isSelected(path)) return;
+    selection.toggleSelection(path, data);
+  }, [selection, ux.selectable, isReadonly, path, data]);
+
   // Not in a selection context or not selectable
   if (!selection || !ux.selectable) {
     return null;
   }
 
-  const { variant, isSelected, toggleSelection, canSelect, mode } = selection;
+  const { variant, isSelected, canSelect, mode } = selection;
 
   const selected = isSelected(path);
   const canSelectThis = canSelect(path);
@@ -80,14 +88,6 @@ export function useSelectable(
     ? data as Record<string, unknown>
     : { value: data };
   const decorators = getDecorators(itemData);
-
-  // Click handler
-  const handleClick = useCallback(() => {
-    if (mode === "review") return;
-    if (isReadonly) return;
-    if (disabled) return;
-    toggleSelection(path, data);
-  }, [mode, isReadonly, disabled, toggleSelection, path, data]);
 
   return {
     selected,

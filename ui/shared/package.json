@@ -2,8 +2,13 @@
   "name": "@wfm/shared",
   "version": "0.0.1",
   "type": "module",
+  "sideEffects": false,
   "main": "./src/index.ts",
   "types": "./src/index.ts",
+  "scripts": {
+    "build": "npm run lint && tsc -p tsconfig.json --noEmit",
+    "lint": "eslint ."
+  },
   "exports": {
     ".": "./src/index.ts",
     "./components/*": "./src/components/*",
@@ -46,9 +51,16 @@
     "zustand": "^5.0.5"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.1",
     "@types/nunjucks": "^3.2.6",
     "@types/react": "^19.2.5",
+    "@types/react-dom": "^19.2.3",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.5.0",
     "typescript": "~5.9.3",
+    "typescript-eslint": "^8.46.4",
     "vite": "^6.0.11"
   }
 }

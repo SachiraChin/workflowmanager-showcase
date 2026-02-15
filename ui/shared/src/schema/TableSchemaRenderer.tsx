@@ -15,7 +15,6 @@
  * - Computed fields are evaluated via display_format template
  */
 
-import { useMemo } from "react";
 import { Check } from "lucide-react";
 import { cn } from "../utils/cn";
 import type { SchemaProperty, ComputedField, UxConfig } from "../types/schema";
@@ -250,10 +249,7 @@ export function TableSchemaRenderer({
   const computed = itemUx.computed || {};
 
   // Discover columns from schema
-  const discoveryResult = useMemo(
-    () => discoverColumns(properties, computed),
-    [properties, computed]
-  );
+  const discoveryResult = discoverColumns(properties, computed);
 
   if (discoveryResult.error) {
     return (
@@ -266,11 +262,9 @@ export function TableSchemaRenderer({
   }
 
   // Sort columns by display_order
-  const columns = useMemo(() => {
-    return [...discoveryResult.columns].sort(
-      (a, b) => a.displayOrder - b.displayOrder
-    );
-  }, [discoveryResult.columns]);
+  const columns = [...discoveryResult.columns].sort(
+    (a, b) => a.displayOrder - b.displayOrder
+  );
 
   if (columns.length === 0) {
     return (
