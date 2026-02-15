@@ -9,6 +9,7 @@
  */
 
 import Editor from "@monaco-editor/react";
+import { useMonacoTheme } from "@/hooks/useMonacoTheme";
 
 // =============================================================================
 // Constants
@@ -55,6 +56,7 @@ export type PipelineEditorProps = {
  * Use inside a Dialog or any container - this component fills its parent.
  */
 export function PipelineEditor({ value, onChange }: PipelineEditorProps) {
+  const monacoTheme = useMonacoTheme();
   return (
     <div className="flex gap-4 flex-1 min-h-0">
       {/* Editor */}
@@ -62,7 +64,7 @@ export function PipelineEditor({ value, onChange }: PipelineEditorProps) {
         <Editor
           height="100%"
           language="json"
-          theme="vs-dark"
+          theme={monacoTheme}
           value={value}
           onChange={(v) => onChange(v ?? "")}
           options={{

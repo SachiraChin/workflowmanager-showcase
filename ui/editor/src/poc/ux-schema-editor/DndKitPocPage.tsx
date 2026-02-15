@@ -21,6 +21,7 @@ import {
 } from "@dnd-kit/core";
 import Editor from "@monaco-editor/react";
 import { Card, CardContent, CardHeader, CardTitle, Badge } from "@wfm/shared";
+import { useMonacoTheme } from "@/hooks/useMonacoTheme";
 import {
   petTypeDataSchema,
   scenesDataSchema,
@@ -426,6 +427,7 @@ const datasets: Record<DatasetOption, { data: unknown; schema: DataSchemaNode; l
 };
 
 export function DndKitPocPage() {
+  const monacoTheme = useMonacoTheme();
   const [selectedDataset, setSelectedDataset] = useState<DatasetOption>("petTypes");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [slots, setSlots] = useState<Record<string, SchemaTreeNode | null>>({});
@@ -552,7 +554,7 @@ export function DndKitPocPage() {
                     folding: true,
                     wordWrap: "on",
                   }}
-                  theme="vs-dark"
+                  theme={monacoTheme}
                 />
               </CardContent>
             </Card>
@@ -603,7 +605,7 @@ export function DndKitPocPage() {
                     folding: true,
                     wordWrap: "on",
                   }}
-                  theme="vs-dark"
+                  theme={monacoTheme}
                 />
               </CardContent>
             </Card>

@@ -14,6 +14,7 @@ import {
   type DisplayMode,
   type SchemaProperty,
 } from "@wfm/shared";
+import { useMonacoTheme } from "@/hooks/useMonacoTheme";
 import type {
   ConfiguredNode,
   DataSchemaNode,
@@ -390,6 +391,7 @@ export function UxSchemaEditor({
   customPreview,
   previewControls,
 }: UxSchemaEditorProps) {
+  const monacoTheme = useMonacoTheme();
   const [levelColorMode, setLevelColorMode] = useState<LevelColorMode>("generated");
   const [isDirty, setIsDirty] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState("(root)");
@@ -819,7 +821,7 @@ export function UxSchemaEditor({
                 wordWrap: "on",
                 automaticLayout: true,
               }}
-              theme="vs-dark"
+                theme={monacoTheme}
             />
           </CardContent>
         </Card>

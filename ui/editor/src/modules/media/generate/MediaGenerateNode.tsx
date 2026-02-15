@@ -28,6 +28,7 @@ import {
   type InteractionRequest,
 } from "@wfm/shared";
 import { ModuleNodeShell } from "@/components/module-node/ModuleNodeShell";
+import { useMonacoTheme } from "@/hooks/useMonacoTheme";
 import { Trash2, Settings, Layout } from "lucide-react";
 import Editor from "@monaco-editor/react";
 import {
@@ -178,6 +179,7 @@ function ProviderSchemaEditorDialog({
   onPreviewWithOverride?: (moduleOverride: MediaGenerateModule) => Promise<void>;
   runtimePreview?: NodeDataFactoryParams["runtimePreview"];
 }) {
+  const monacoTheme = useMonacoTheme();
   const [localProviders, setLocalProviders] = useState<ProviderInstance[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const [autoRefreshPreview, setAutoRefreshPreview] = useState(true);
@@ -460,7 +462,7 @@ function ProviderSchemaEditorDialog({
                   <Editor
                     height="100%"
                     language="json"
-                    theme="vs-dark"
+                    theme={monacoTheme}
                     value={inputSchemaJson}
                     onChange={(value) =>
                       handleSchemaChange(activeProvider.id, value ?? "{}")

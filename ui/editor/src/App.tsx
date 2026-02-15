@@ -19,6 +19,9 @@ import { DndKitPocPage } from "@/poc/ux-schema-editor/DndKitPocPage";
 import { PragmaticDndPocPage } from "@/poc/ux-schema-editor/PragmaticDndPocPage";
 import { UxPalettePocPage } from "@/poc/ux-schema-editor/UxPalettePocPage";
 import { TreeModesPocPage } from "@/poc/ux-schema-editor/TreeModesPocPage";
+import { CustomTreeSchemaPocPage } from "@/poc/json-schema-editor/CustomTreeSchemaPocPage";
+import { TemplateFlowSchemaPocPage } from "@/poc/json-schema-editor/TemplateFlowSchemaPocPage";
+import { GridSchemaPocPage } from "@/poc/json-schema-editor/GridSchemaPocPage";
 
 import { useTheme } from "@/components/theme-provider";
 
@@ -165,6 +168,27 @@ function HeaderNav() {
                     >
                       Monaco Schema PoC
                     </Link>
+                    <Link
+                      className="block rounded px-3 py-2 hover:bg-muted font-medium text-primary"
+                      onClick={closeMenus}
+                      to="/poc/json-schema/custom-tree"
+                    >
+                      JSON Schema (Custom Tree) ★
+                    </Link>
+                    <Link
+                      className="block rounded px-3 py-2 hover:bg-muted"
+                      onClick={closeMenus}
+                      to="/poc/json-schema/template-flow"
+                    >
+                      JSON Schema (Template Flow)
+                    </Link>
+                    <Link
+                      className="block rounded px-3 py-2 hover:bg-muted"
+                      onClick={closeMenus}
+                      to="/poc/json-schema/grid"
+                    >
+                      JSON Schema (Grid Library)
+                    </Link>
                     <div className="my-1 border-t" />
                     <Link
                       className="block rounded px-3 py-2 hover:bg-muted"
@@ -265,6 +289,15 @@ export default function App() {
             path="/poc/monaco/schema-builder"
             element={<SchemaBuilderMonacoPocPage />}
           />
+          <Route
+            path="/poc/json-schema/custom-tree"
+            element={<CustomTreeSchemaPocPage />}
+          />
+          <Route
+            path="/poc/json-schema/template-flow"
+            element={<TemplateFlowSchemaPocPage />}
+          />
+          <Route path="/poc/json-schema/grid" element={<GridSchemaPocPage />} />
           <Route
             path="/poc/ux-schema/dnd-kit"
             element={<DndKitPocPage />}

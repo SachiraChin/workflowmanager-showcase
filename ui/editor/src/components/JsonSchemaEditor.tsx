@@ -1,17 +1,22 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Editor from "@monaco-editor/react";
 import {
-  TabulatorFull as Tabulator,
-  type CellComponent,
-  type RowComponent,
-} from "tabulator-tables";
-import "tabulator-tables/dist/css/tabulator.min.css";
-import { Alert, AlertDescription, Button, Card, CardContent, CardHeader, CardTitle } from "@wfm/shared";
+  Alert,
+  AlertDescription,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@wfm/shared";
+import { useMonacoTheme } from "@/hooks/useMonacoTheme";
 
 export type JsonSchemaType = "string" | "number" | "boolean" | "object" | "array";
 
 export type JsonSchemaNode = {
   type: JsonSchemaType;
+  description?: string;
   properties?: Record<string, JsonSchemaNode>;
   items?: JsonSchemaNode;
   required?: string[];
@@ -30,57 +35,135 @@ type JsonSchemaEditorProps = {
   onChange: (next: JsonSchemaObject) => void;
 };
 
-type FieldRow = {
+type SchemaField = {
   id: string;
   key: string;
   type: JsonSchemaType;
   required: boolean;
-  children?: FieldRow[];
+  description: string;
+  children?: SchemaField[];
 };
 
+const FIELD_TYPES: JsonSchemaType[] = ["string", "number", "boolean", "object", "array"];
+
 function nextFieldId(): string {
-  return `field_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  return `schema_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function rowToSchemaNode(row: FieldRow): JsonSchemaNode {
-  if (row.type === "object") {
+function createField(
+  type: JsonSchemaType = "string",
+  key = "",
+  required = false
+): SchemaField {
+  if (type === "object") {
+    return {
+      id: nextFieldId(),
+      key,
+      type,
+      required,
+      description: "",
+      children: [createField("string", "field")],
+    };
+  }
+
+  if (type === "array") {
+    return {
+      id: nextFieldId(),
+      key,
+      type,
+      required,
+      description: "",
+      children: [createField("string", "item")],
+    };
+  }
+
+  return { id: nextFieldId(), key, type, required, description: "" };
+}
+
+function schemaNodeToField(key: string, node: JsonSchemaNode, required: boolean): SchemaField {
+  if (node.type === "object") {
+    const requiredSet = new Set(node.required ?? []);
+    const children = Object.entries(node.properties ?? {}).map(([childKey, childNode]) =>
+      schemaNodeToField(childKey, childNode, requiredSet.has(childKey))
+    );
+    return {
+      id: nextFieldId(),
+      key,
+      type: "object",
+      required,
+      description: node.description ?? "",
+      children,
+    };
+  }
+
+  if (node.type === "array") {
+    return {
+      id: nextFieldId(),
+      key,
+      type: "array",
+      required,
+      description: node.description ?? "",
+      children: [schemaNodeToField("item", node.items ?? { type: "string" }, false)],
+    };
+  }
+
+  return {
+    id: nextFieldId(),
+    key,
+    type: node.type,
+    required,
+    description: node.description ?? "",
+  };
+}
+
+function schemaToFields(schema: JsonSchemaObject): SchemaField[] {
+  const requiredSet = new Set(schema.required ?? []);
+  return Object.entries(schema.properties ?? {}).map(([key, node]) =>
+    schemaNodeToField(key, node, requiredSet.has(key))
+  );
+}
+
+function fieldToSchemaNode(field: SchemaField): JsonSchemaNode {
+  if (field.type === "object") {
     const properties: Record<string, JsonSchemaNode> = {};
     const required: string[] = [];
-
-    for (const child of row.children ?? []) {
+    for (const child of field.children ?? []) {
       const key = child.key.trim();
       if (!key) continue;
-      properties[key] = rowToSchemaNode(child);
+      properties[key] = fieldToSchemaNode(child);
       if (child.required) required.push(key);
     }
-
     return {
       type: "object",
+      description: field.description || undefined,
       properties,
       required: required.length ? required : undefined,
       additionalProperties: false,
     };
   }
 
-  if (row.type === "array") {
+  if (field.type === "array") {
     return {
       type: "array",
-      items: row.children?.[0] ? rowToSchemaNode(row.children[0]) : { type: "string" },
+      description: field.description || undefined,
+      items: field.children?.[0] ? fieldToSchemaNode(field.children[0]) : { type: "string" },
     };
   }
 
-  return { type: row.type };
+  return {
+    type: field.type,
+    description: field.description || undefined,
+  };
 }
 
-function rowsToSchema(rows: FieldRow[]): JsonSchemaObject {
+function fieldsToSchema(fields: SchemaField[]): JsonSchemaObject {
   const properties: Record<string, JsonSchemaNode> = {};
   const required: string[] = [];
-
-  for (const row of rows) {
-    const key = row.key.trim();
+  for (const field of fields) {
+    const key = field.key.trim();
     if (!key) continue;
-    properties[key] = rowToSchemaNode(row);
-    if (row.required) required.push(key);
+    properties[key] = fieldToSchemaNode(field);
+    if (field.required) required.push(key);
   }
 
   return {
@@ -91,337 +174,313 @@ function rowsToSchema(rows: FieldRow[]): JsonSchemaObject {
   };
 }
 
-function schemaNodeToRow(key: string, node: JsonSchemaNode, required: boolean): FieldRow {
-  if (node.type === "object") {
-    const requiredSet = new Set(node.required ?? []);
-    const children = Object.entries(node.properties ?? {}).map(([childKey, childNode]) =>
-      schemaNodeToRow(childKey, childNode, requiredSet.has(childKey))
-    );
-
-    return { id: nextFieldId(), key, type: "object", required, children };
-  }
-
-  if (node.type === "array") {
-    return {
-      id: nextFieldId(),
-      key,
-      type: "array",
-      required,
-      children: [schemaNodeToRow("item", node.items ?? { type: "string" }, false)],
-    };
-  }
-
-  return { id: nextFieldId(), key, type: node.type, required };
-}
-
-function schemaToRows(schema: JsonSchemaObject): FieldRow[] {
-  const requiredSet = new Set(schema.required ?? []);
-  return Object.entries(schema.properties ?? {}).map(([key, node]) =>
-    schemaNodeToRow(key, node, requiredSet.has(key))
-  );
-}
-
-function mapRows(rows: FieldRow[], rowId: string, update: (row: FieldRow) => FieldRow): FieldRow[] {
-  return rows.map((row) => {
-    if (row.id === rowId) return update(row);
-    if (!row.children?.length) return row;
-    return { ...row, children: mapRows(row.children, rowId, update) };
+function mapFields(
+  fields: SchemaField[],
+  id: string,
+  updater: (field: SchemaField) => SchemaField
+): SchemaField[] {
+  return fields.map((field) => {
+    if (field.id === id) return updater(field);
+    if (!field.children?.length) return field;
+    return { ...field, children: mapFields(field.children, id, updater) };
   });
 }
 
-function removeRowById(rows: FieldRow[], rowId: string): FieldRow[] {
-  return rows
-    .filter((row) => row.id !== rowId)
-    .map((row) =>
-      row.children?.length ? { ...row, children: removeRowById(row.children, rowId) } : row
+function removeFieldById(fields: SchemaField[], id: string): SchemaField[] {
+  return fields
+    .filter((field) => field.id !== id)
+    .map((field) =>
+      field.children?.length
+        ? { ...field, children: removeFieldById(field.children, id) }
+        : field
     );
+}
+
+function collectExpandableIds(fields: SchemaField[]): Set<string> {
+  const ids = new Set<string>();
+  const walk = (nodes: SchemaField[]) => {
+    for (const node of nodes) {
+      if (node.type === "object" || node.type === "array") {
+        ids.add(node.id);
+      }
+      if (node.children?.length) walk(node.children);
+    }
+  };
+  walk(fields);
+  return ids;
 }
 
 function isValidSchemaNode(node: unknown): node is JsonSchemaNode {
   if (!node || typeof node !== "object") return false;
   const candidate = node as JsonSchemaNode;
-  if (!["string", "number", "boolean", "object", "array"].includes(candidate.type)) {
-    return false;
-  }
+  if (!FIELD_TYPES.includes(candidate.type)) return false;
+
   if (candidate.type === "object") {
     if (!candidate.properties || typeof candidate.properties !== "object") return false;
     return Object.values(candidate.properties).every((child) => isValidSchemaNode(child));
   }
+
   if (candidate.type === "array") {
     return candidate.items ? isValidSchemaNode(candidate.items) : true;
   }
+
   return true;
 }
 
+function loremWords(count: number): string {
+  const words = [
+    "lorem",
+    "ipsum",
+    "dolor",
+    "sit",
+    "amet",
+    "consectetur",
+    "adipiscing",
+    "elit",
+    "sed",
+    "do",
+    "eiusmod",
+    "tempor",
+  ];
+  return Array.from({ length: count }, (_, index) => words[index % words.length]).join(" ");
+}
+
+function exampleFromNode(node: JsonSchemaNode): unknown {
+  if (node.type === "string") return loremWords(3);
+  if (node.type === "number") return 42;
+  if (node.type === "boolean") return true;
+  if (node.type === "array") {
+    const item = node.items ?? { type: "string" as const };
+    return [exampleFromNode(item), exampleFromNode(item)];
+  }
+
+  const output: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(node.properties ?? {})) {
+    output[key] = exampleFromNode(child);
+  }
+  return output;
+}
+
+function generateExampleData(schema: JsonSchemaObject): Record<string, unknown> {
+  const output: Record<string, unknown> = {};
+  for (const [key, node] of Object.entries(schema.properties)) {
+    output[key] = exampleFromNode(node);
+  }
+  return output;
+}
+
+function FieldTreeRow({
+  field,
+  depth,
+  expandedIds,
+  onToggle,
+  onUpdate,
+  onAddChild,
+  onRemove,
+}: {
+  field: SchemaField;
+  depth: number;
+  expandedIds: Set<string>;
+  onToggle: (id: string) => void;
+  onUpdate: (id: string, patch: Partial<SchemaField>) => void;
+  onAddChild: (id: string) => void;
+  onRemove: (id: string) => void;
+}) {
+  const expanded = expandedIds.has(field.id);
+  const canNest = field.type === "object" || field.type === "array";
+  const hasChildren = (field.children?.length ?? 0) > 0;
+
+  return (
+    <div className="space-y-2">
+      <div
+        className="rounded border border-border/80 bg-card p-2"
+        style={{ marginLeft: `${depth * 18}px` }}
+      >
+        <div className="grid grid-cols-[28px_1fr_120px_95px] items-center gap-2">
+          <button
+            className={[
+              "h-7 w-7 rounded-md border text-xs font-semibold transition-colors",
+              canNest
+                ? "border-border bg-card text-foreground hover:bg-muted"
+                : "border-border bg-card text-muted-foreground opacity-60",
+            ].join(" ")}
+            disabled={!canNest}
+            onClick={() => onToggle(field.id)}
+            type="button"
+          >
+            {canNest ? (expanded ? "-" : "+") : "-"}
+          </button>
+
+          <input
+            className="h-8 rounded-md border border-border bg-card px-2 text-sm text-foreground"
+            onChange={(event) => onUpdate(field.id, { key: event.target.value })}
+            placeholder="field_name"
+            value={field.key}
+          />
+
+          <select
+            className="h-8 rounded-md border border-border bg-card px-2 text-sm text-foreground"
+            onChange={(event) => {
+              const nextType = event.target.value as JsonSchemaType;
+              onUpdate(field.id, {
+                type: nextType,
+                children:
+                  nextType === "object"
+                    ? field.children && field.children.length > 0
+                      ? field.children
+                      : [createField("string", "field")]
+                    : nextType === "array"
+                      ? [field.children?.[0] ?? createField("string", "item")]
+                      : undefined,
+              });
+            }}
+            value={field.type}
+          >
+            {FIELD_TYPES.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </select>
+
+          <label className="flex items-center justify-end gap-2 text-xs text-muted-foreground">
+            req
+            <input
+              checked={field.required}
+              onChange={(event) => onUpdate(field.id, { required: event.target.checked })}
+              type="checkbox"
+            />
+          </label>
+        </div>
+
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <input
+            className="h-8 w-full rounded-md border border-border bg-card px-2 text-xs text-foreground"
+            onChange={(event) => onUpdate(field.id, { description: event.target.value })}
+            placeholder="description (optional)"
+            value={field.description}
+          />
+          <div className="flex items-center gap-1">
+            <Button
+              disabled={!canNest}
+              onClick={() => onAddChild(field.id)}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              Add Child
+            </Button>
+            <Button
+              onClick={() => onRemove(field.id)}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              Remove
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {expanded && hasChildren
+        ? field.children!.map((child) => (
+            <FieldTreeRow
+              depth={depth + 1}
+              expandedIds={expandedIds}
+              field={child}
+              key={child.id}
+              onAddChild={onAddChild}
+              onRemove={onRemove}
+              onToggle={onToggle}
+              onUpdate={onUpdate}
+            />
+          ))
+        : null}
+    </div>
+  );
+}
+
 export function JsonSchemaEditor({ value, onChange }: JsonSchemaEditorProps) {
-  const [rows, setRows] = useState<FieldRow[]>(() => schemaToRows(value));
+  const monacoTheme = useMonacoTheme();
+  const initialFields = useMemo(() => schemaToFields(value), [value]);
+  const [fields, setFields] = useState<SchemaField[]>(initialFields);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() =>
+    collectExpandableIds(initialFields)
+  );
   const [jsonText, setJsonText] = useState(() => JSON.stringify(value, null, 2));
   const [jsonError, setJsonError] = useState<string | null>(null);
-  const [tableHostEl, setTableHostEl] = useState<HTMLDivElement | null>(null);
-  const tableRef = useRef<Tabulator | null>(null);
   const lastSentSchemaRef = useRef<string>(JSON.stringify(value));
 
-  const schemaFromRows = useMemo(() => rowsToSchema(rows), [rows]);
+  const schema = useMemo(() => fieldsToSchema(fields), [fields]);
+  const exampleData = useMemo(() => generateExampleData(schema), [schema]);
 
-  const setRowsAndEmit = useCallback((updater: (current: FieldRow[]) => FieldRow[]) => {
-    setRows((current) => {
-      const next = updater(current);
-      const nextSchema = rowsToSchema(next);
-      const serialized = JSON.stringify(nextSchema);
-      lastSentSchemaRef.current = serialized;
+  const updateFields = (next: SchemaField[], emit = true) => {
+    setFields(next);
+    setExpandedIds(collectExpandableIds(next));
+    const nextSchema = fieldsToSchema(next);
+    const serialized = JSON.stringify(nextSchema);
+    lastSentSchemaRef.current = serialized;
+    setJsonText(JSON.stringify(nextSchema, null, 2));
+    setJsonError(null);
+    if (emit) {
       onChange(nextSchema);
-      return next;
-    });
-  }, [onChange]);
-
-  const updateRow = useCallback((rowId: string, patch: Partial<FieldRow>) => {
-    setRowsAndEmit((current) =>
-      mapRows(current, rowId, (row) => {
-        const nextType = (patch.type ?? row.type) as JsonSchemaType;
-        const baseRow: FieldRow = { ...row, ...patch, type: nextType };
-
-        if (nextType === "object") {
-          return {
-            ...baseRow,
-            children:
-              row.children && row.children.length
-                ? row.children
-                : [{ id: nextFieldId(), key: "child", type: "string", required: false }],
-          };
-        }
-
-        if (nextType === "array") {
-          const first = row.children?.[0];
-          return {
-            ...baseRow,
-            children: [
-              first ?? { id: nextFieldId(), key: "item", type: "string", required: false },
-            ],
-          };
-        }
-
-        return { ...baseRow, children: undefined };
-      })
-    );
-  }, [setRowsAndEmit]);
-
-  const removeRow = useCallback((rowId: string) => {
-    setRowsAndEmit((current) => removeRowById(current, rowId));
-  }, [setRowsAndEmit]);
-
-  const addRoot = useCallback(() => {
-    setRowsAndEmit((current) => [
-      ...current,
-      { id: nextFieldId(), key: `field_${current.length + 1}`, type: "string", required: false },
-    ]);
-  }, [setRowsAndEmit]);
-
-  const addChild = useCallback((rowId: string) => {
-    setRowsAndEmit((current) =>
-      mapRows(current, rowId, (row) => {
-        if (row.type === "array") {
-          return {
-            ...row,
-            children: [{ id: nextFieldId(), key: "item", type: "string", required: false }],
-          };
-        }
-
-        return {
-          ...row,
-          children: [
-            ...(row.children ?? []),
-            { id: nextFieldId(), key: "", type: "string", required: false },
-          ],
-        };
-      })
-    );
-  }, [setRowsAndEmit]);
+    }
+  };
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const serialized = JSON.stringify(value);
     if (serialized === lastSentSchemaRef.current) return;
-    setRows(schemaToRows(value));
+    const next = schemaToFields(value);
+    setFields(next);
+    setExpandedIds(collectExpandableIds(next));
     setJsonText(JSON.stringify(value, null, 2));
     setJsonError(null);
   }, [value]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    setJsonText(JSON.stringify(schemaFromRows, null, 2));
-    setJsonError(null);
-  }, [schemaFromRows]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  const handleUpdate = (id: string, patch: Partial<SchemaField>) => {
+    updateFields(mapFields(fields, id, (field) => ({ ...field, ...patch })));
+  };
 
-  useEffect(() => {
-    if (!tableHostEl || tableRef.current) return;
+  const handleAddChild = (id: string) => {
+    updateFields(
+      mapFields(fields, id, (field) => {
+        if (field.type === "array") {
+          return { ...field, children: [createField("string", "item")] };
+        }
+        if (field.type !== "object") return field;
+        return {
+          ...field,
+          children: [...(field.children ?? []), createField("string", "field")],
+        };
+      })
+    );
+  };
 
-    const createNestedTable = (
-      host: HTMLElement,
-      data: FieldRow[],
-      level = 0,
-      parentName?: string
-    ): Tabulator => {
-      return new Tabulator(host, {
-        data,
-        layout: "fitColumns",
-        columns: [
-          {
-            title: level === 0 ? "Field" : `${parentName || "field"}'s child field`,
-            field: "key",
-            editor: "input",
-            cellEdited: (cell: CellComponent) => {
-              const row = cell.getRow().getData() as FieldRow;
-              updateRow(row.id, { key: String(cell.getValue() ?? "") });
-            },
-          },
-          {
-            title: "Type",
-            field: "type",
-            editor: (
-              cell: CellComponent,
-              onRendered: (callback: () => void) => void,
-              success: (...args: unknown[]) => void,
-              cancel: (...args: unknown[]) => void
-            ) => {
-              const select = document.createElement("select");
-              const options: JsonSchemaType[] = [
-                "string",
-                "number",
-                "boolean",
-                "object",
-                "array",
-              ];
-              const currentValue = String(cell.getValue() ?? "string");
+  const handleRemove = (id: string) => {
+    updateFields(removeFieldById(fields, id));
+  };
 
-              for (const optionValue of options) {
-                const option = document.createElement("option");
-                option.value = optionValue;
-                option.text = optionValue;
-                if (optionValue === currentValue) option.selected = true;
-                select.appendChild(option);
-              }
+  const handleToggle = (id: string) => {
+    setExpandedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
-              select.style.width = "100%";
-              select.style.height = "28px";
-              select.style.border = "1px solid var(--border)";
-              select.style.borderRadius = "6px";
-              select.style.background = "var(--background)";
-              select.style.color = "var(--foreground)";
-
-              select.addEventListener("change", () => success(select.value));
-              select.addEventListener("blur", () => success(select.value));
-              select.addEventListener("keydown", (event) => {
-                if (event.key === "Escape") cancel(false);
-              });
-
-              onRendered(() => {
-                select.focus();
-              });
-
-              return select;
-            },
-            formatter: (cell: CellComponent) => String(cell.getValue() ?? "string"),
-            cellClick: (_event: UIEvent, cell: CellComponent) => {
-              void cell.edit(true);
-            },
-            cellEdited: (cell: CellComponent) => {
-              const row = cell.getRow().getData() as FieldRow;
-              updateRow(row.id, { type: cell.getValue() as JsonSchemaType });
-            },
-          },
-          {
-            title: "Required",
-            field: "required",
-            width: 110,
-            formatter: "tickCross",
-            editor: true,
-            cellEdited: (cell: CellComponent) => {
-              const row = cell.getRow().getData() as FieldRow;
-              updateRow(row.id, { required: Boolean(cell.getValue()) });
-            },
-          },
-          {
-            title: "Actions",
-            field: "id",
-            width: 120,
-            hozAlign: "center",
-            headerSort: false,
-            formatter: (cell: CellComponent) => {
-              const row = cell.getRow().getData() as FieldRow;
-              const canNest = row.type === "object" || row.type === "array";
-              return `<div style="display:flex;justify-content:center;gap:8px;">${
-                canNest ? '<button class="u-add" type="button">+</button>' : ""
-              }<button class="u-remove" type="button">x</button></div>`;
-            },
-            cellClick: (event: UIEvent, cell: CellComponent) => {
-              const target = event.target as HTMLElement;
-              const row = cell.getRow().getData() as FieldRow;
-              if (target.closest(".u-remove")) removeRow(row.id);
-              if (target.closest(".u-add")) addChild(row.id);
-            },
-          },
-        ],
-        rowFormatter: (row: RowComponent) => {
-          const rowData = row.getData() as FieldRow;
-          const rowElement = row.getElement();
-          let subHolder = rowElement.querySelector<HTMLDivElement>(".nested-subtable-host");
-          const existing = (subHolder as unknown as { _tabulator?: Tabulator } | null)
-            ?._tabulator;
-          const canNest = rowData.type === "object" || rowData.type === "array";
-
-          if (!canNest) {
-            if (existing) existing.destroy();
-            if (subHolder) subHolder.remove();
-            return;
-          }
-
-          if (!subHolder) {
-            subHolder = document.createElement("div");
-            subHolder.className = "nested-subtable-host";
-            subHolder.style.boxSizing = "border-box";
-            subHolder.style.padding = "8px 16px 12px 16px";
-            subHolder.style.borderTop = "1px solid var(--border)";
-            rowElement.appendChild(subHolder);
-          }
-
-          if (existing) existing.destroy();
-
-          const detailTable = createNestedTable(
-            subHolder,
-            rowData.children ?? [],
-            level + 1,
-            rowData.key || "field"
-          );
-          (subHolder as unknown as { _tabulator?: Tabulator })._tabulator = detailTable;
-        },
-      });
-    };
-
-    tableRef.current = createNestedTable(tableHostEl, []);
-
-    return () => {
-      tableRef.current?.destroy();
-      tableRef.current = null;
-    };
-  }, [tableHostEl, addChild, removeRow, updateRow]);
-
-  useEffect(() => {
-    if (!tableRef.current) return;
-    tableRef.current.setData(rows);
-  }, [rows]);
-
-  const applyRawJson = (nextText: string) => {
+  const applyRawJson = () => {
     try {
-      const parsed = JSON.parse(nextText) as Partial<JsonSchemaObject>;
+      const parsed = JSON.parse(jsonText) as Partial<JsonSchemaObject>;
       if (parsed.type !== "object" || !parsed.properties) {
         setJsonError("Schema must be an object with properties.");
         return;
       }
 
-      for (const value of Object.values(parsed.properties)) {
-        if (!isValidSchemaNode(value)) {
+      for (const node of Object.values(parsed.properties)) {
+        if (!isValidSchemaNode(node)) {
           setJsonError(
             "Unsupported node found. Allowed: string, number, boolean, object, array."
           );
@@ -429,60 +488,93 @@ export function JsonSchemaEditor({ value, onChange }: JsonSchemaEditorProps) {
         }
       }
 
-      const nextSchema = parsed as JsonSchemaObject;
-      const nextRows = schemaToRows(nextSchema);
-      setRows(nextRows);
-      lastSentSchemaRef.current = JSON.stringify(nextSchema);
-      onChange(nextSchema);
-      setJsonError(null);
+      const nextSchema: JsonSchemaObject = {
+        type: "object",
+        additionalProperties: false,
+        properties: parsed.properties,
+        required: parsed.required,
+      };
+      updateFields(schemaToFields(nextSchema));
     } catch {
       setJsonError("Invalid JSON syntax.");
     }
   };
 
   return (
-    <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[2fr_1fr]">
-      <Card className="min-h-0 overflow-hidden">
+    <div className="grid h-full min-h-0 flex-1 gap-4 overflow-hidden lg:grid-cols-[1.25fr_1fr]">
+      <Card className="h-full min-h-0 overflow-hidden">
         <CardHeader className="border-b pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Nested Tables</CardTitle>
-            <Button type="button" variant="outline" onClick={addRoot}>
+            <CardTitle className="text-base">Schema Tree</CardTitle>
+            <Button
+              onClick={() => updateFields([...fields, createField("string", "new_field")])}
+              type="button"
+              variant="outline"
+            >
               Add Root Field
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="h-[calc(100%-5.25rem)] p-0">
-          <div
-            className="h-full min-h-[420px] w-full [&_.tabulator]:h-full [&_.tabulator-cell]:text-sm [&_.tabulator-header]:text-sm"
-            ref={setTableHostEl}
-          />
+        <CardContent className="h-[calc(100%-5.25rem)] space-y-3 overflow-y-auto p-3">
+          {fields.map((field) => (
+            <FieldTreeRow
+              depth={0}
+              expandedIds={expandedIds}
+              field={field}
+              key={field.id}
+              onAddChild={handleAddChild}
+              onRemove={handleRemove}
+              onToggle={handleToggle}
+              onUpdate={handleUpdate}
+            />
+          ))}
         </CardContent>
       </Card>
 
-      <Card className="min-h-0 overflow-hidden">
-        <CardHeader className="border-b pb-3">
-          <CardTitle className="text-base">JSON Schema (Monaco)</CardTitle>
-        </CardHeader>
-        <CardContent className="h-[calc(100%-5.25rem)] p-0">
-          <Editor
-            defaultLanguage="json"
-            options={{
-              minimap: { enabled: false },
-              fontSize: 13,
-              formatOnPaste: true,
-              formatOnType: true,
-              scrollBeyondLastLine: false,
-            }}
-            theme="vs-dark"
-            value={jsonText}
-            onChange={(nextValue) => {
-              const nextText = nextValue ?? "";
-              setJsonText(nextText);
-              applyRawJson(nextText);
-            }}
-          />
-        </CardContent>
-      </Card>
+      <div className="grid h-full min-h-0 gap-4" style={{ gridTemplateRows: "3fr 2fr" }}>
+        <Card className="min-h-0 overflow-hidden">
+          <CardHeader className="border-b pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">JSON Schema (Monaco)</CardTitle>
+              <Button onClick={applyRawJson} type="button" variant="outline">
+                Apply JSON
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="h-[calc(100%-5.25rem)] p-0">
+            <Editor
+              defaultLanguage="json"
+              options={{
+                minimap: { enabled: false },
+                fontSize: 13,
+                formatOnPaste: true,
+                formatOnType: true,
+                scrollBeyondLastLine: false,
+              }}
+              theme={monacoTheme}
+              value={jsonText}
+              onChange={(nextValue) => {
+                setJsonText(nextValue ?? "");
+                setJsonError(null);
+              }}
+            />
+          </CardContent>
+        </Card>
+
+        <Card className="min-h-0 overflow-hidden">
+          <CardHeader className="border-b pb-3">
+            <CardTitle className="text-base">Generated Example Data</CardTitle>
+            <CardDescription>
+              Auto-generated sample payload for quick schema sanity checks.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="h-[calc(100%-5.25rem)] overflow-auto p-0">
+            <pre className="h-full overflow-auto bg-muted/50 p-3 text-xs">
+              {JSON.stringify(exampleData, null, 2)}
+            </pre>
+          </CardContent>
+        </Card>
+      </div>
 
       {jsonError ? (
         <Alert className="lg:col-span-2" variant="destructive">

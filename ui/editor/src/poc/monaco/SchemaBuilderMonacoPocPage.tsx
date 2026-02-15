@@ -16,6 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@wfm/shared";
+import { useMonacoTheme } from "@/hooks/useMonacoTheme";
 
 type FieldType = "string" | "number" | "boolean" | "object" | "array";
 
@@ -151,6 +152,7 @@ function isValidSchemaNode(node: unknown): node is SchemaNode {
 }
 
 export function SchemaBuilderMonacoPocPage() {
+  const monacoTheme = useMonacoTheme();
   const [rows, setRows] = useState<FieldRow[]>([
     { id: "id", key: "id", type: "string", required: true },
     { id: "label", key: "label", type: "string", required: true },
@@ -459,7 +461,7 @@ export function SchemaBuilderMonacoPocPage() {
                 formatOnType: true,
                 scrollBeyondLastLine: false,
               }}
-              theme="vs-dark"
+              theme={monacoTheme}
               value={jsonText}
               onChange={(value) => {
                 const nextText = value ?? "";

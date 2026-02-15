@@ -14,6 +14,7 @@ import {
 } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import Editor from "@monaco-editor/react";
 import { Card, CardContent, CardHeader, CardTitle, Badge } from "@wfm/shared";
+import { useMonacoTheme } from "@/hooks/useMonacoTheme";
 import {
   petTypeDataSchema,
   scenesDataSchema,
@@ -444,6 +445,7 @@ const datasets: Record<DatasetOption, { data: unknown; schema: DataSchemaNode; l
 };
 
 export function PragmaticDndPocPage() {
+  const monacoTheme = useMonacoTheme();
   const [selectedDataset, setSelectedDataset] = useState<DatasetOption>("petTypes");
   const [slots, setSlots] = useState<Record<string, SchemaTreeNode | null>>({});
   const [configurations, setConfigurations] = useState<Record<string, UxConfig>>({});
@@ -536,7 +538,7 @@ export function PragmaticDndPocPage() {
                   folding: true,
                   wordWrap: "on",
                 }}
-                theme="vs-dark"
+                theme={monacoTheme}
               />
             </CardContent>
           </Card>
@@ -587,7 +589,7 @@ export function PragmaticDndPocPage() {
                   folding: true,
                   wordWrap: "on",
                 }}
-                theme="vs-dark"
+                theme={monacoTheme}
               />
             </CardContent>
           </Card>

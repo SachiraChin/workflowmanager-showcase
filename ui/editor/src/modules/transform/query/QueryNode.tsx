@@ -21,6 +21,7 @@ import {
   Label,
 } from "@wfm/shared";
 import { ModuleNodeShell } from "@/components/module-node/ModuleNodeShell";
+import { useMonacoTheme } from "@/hooks/useMonacoTheme";
 import Editor from "@monaco-editor/react";
 import { PipelineEditor } from "@/components/PipelineEditor";
 import { type QueryModule, type PipelineStage } from "./types";
@@ -137,6 +138,7 @@ function ExpandedView({
   onCollapse: () => void;
   onViewState?: () => void;
 }) {
+  const monacoTheme = useMonacoTheme();
   // Dialog states
   const [isDataEditorOpen, setIsDataEditorOpen] = useState(false);
   const [isPipelineEditorOpen, setIsPipelineEditorOpen] = useState(false);
@@ -293,7 +295,7 @@ function ExpandedView({
             <Editor
               height="100%"
               language="json"
-              theme="vs-dark"
+              theme={monacoTheme}
               value={draftData}
               onChange={(value) => setDraftData(value ?? "")}
               options={{

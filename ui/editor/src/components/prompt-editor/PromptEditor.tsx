@@ -41,6 +41,7 @@ import {
 } from "@wfm/shared";
 import Editor from "@monaco-editor/react";
 import type { SystemMessageItem, InputContent, ContentRef } from "@/modules/api/llm";
+import { useMonacoTheme } from "@/hooks/useMonacoTheme";
 
 // =============================================================================
 // Types
@@ -312,6 +313,7 @@ function FullHeightPromptEditor({
   item: PromptItem;
   onSave: (item: PromptItem) => void;
 }) {
+  const monacoTheme = useMonacoTheme();
   const [content, setContent] = useState(() => {
     if (typeof item.content === "string") return item.content;
     if (isContentRef(item.content)) return item.content.$ref;
@@ -550,7 +552,7 @@ function FullHeightPromptEditor({
           <Editor
             height="100%"
             language="plaintext"
-            theme="vs-dark"
+            theme={monacoTheme}
             value={content}
             onChange={(value) => setContent(value ?? "")}
             onMount={handleEditorMount}

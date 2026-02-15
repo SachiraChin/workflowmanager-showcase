@@ -12,6 +12,7 @@ import {
   DialogTitle,
   type StepDefinition,
 } from "@wfm/shared";
+import { useMonacoTheme } from "@/hooks/useMonacoTheme";
 
 export type WorkflowJsonDialogProps = {
   open: boolean;
@@ -32,6 +33,7 @@ export function WorkflowJsonDialog({
   steps,
   versionId,
 }: WorkflowJsonDialogProps) {
+  const monacoTheme = useMonacoTheme();
   const workflowJson = JSON.stringify(
     {
       workflow_id: workflowId,
@@ -74,7 +76,7 @@ export function WorkflowJsonDialog({
               wordWrap: "on",
               automaticLayout: true,
             }}
-            theme="vs-dark"
+            theme={monacoTheme}
           />
         </div>
       </DialogContent>

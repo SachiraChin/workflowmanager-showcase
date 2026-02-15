@@ -22,6 +22,7 @@ import {
   NUDGES,
   type DataSchemaNode,
 } from "./sample-data";
+import { useMonacoTheme } from "@/hooks/useMonacoTheme";
 
 type DatasetOption = "petTypes" | "scenes";
 type LevelColorMode = "none" | "generated" | "fixed";
@@ -456,6 +457,7 @@ function OutlineTree({
 }
 
 export function TreeModesPocPage() {
+  const monacoTheme = useMonacoTheme();
   const [dataset, setDataset] = useState<DatasetOption>("petTypes");
   const [levelColorMode, setLevelColorMode] = useState<LevelColorMode>("generated");
 
@@ -824,7 +826,7 @@ export function TreeModesPocPage() {
                   wordWrap: "on",
                   automaticLayout: true,
                 }}
-                theme="vs-dark"
+                theme={monacoTheme}
               />
             </div>
             <div className="flex items-center justify-between">
