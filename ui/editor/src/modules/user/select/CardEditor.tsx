@@ -49,7 +49,7 @@ export function UserSelectModuleCard({
       </dl>
 
       <button
-        className="mt-3 rounded border bg-background px-2 py-1 text-xs"
+        className="ui-control-compact mt-3"
         onClick={onTogglePreview}
         type="button"
       >

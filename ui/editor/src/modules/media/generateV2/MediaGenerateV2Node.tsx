@@ -298,7 +298,7 @@ function ExpandedView({
         <div className="space-y-3">
           <div className="rounded-md border p-2 space-y-1">
             <Label className="text-xs">Action Type</Label>
-            <div className="flex rounded border bg-background p-0.5 text-xs">
+            <div className="ui-segmented-track">
               {(Object.keys(ACTION_TYPE_LABELS) as ActionType[]).map((type) => (
                 <button
                   key={type}

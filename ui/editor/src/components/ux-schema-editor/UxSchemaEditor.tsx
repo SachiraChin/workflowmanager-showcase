@@ -590,7 +590,7 @@ export function UxSchemaEditor({
             <div className="flex items-center justify-between gap-2">
               <CardTitle className="text-sm">Schema Outline</CardTitle>
               <select
-                className="h-8 rounded border bg-background px-2 text-xs"
+                className="ui-control-compact h-8"
                 value={levelColorMode}
                 onChange={(e) => setLevelColorMode(e.target.value as LevelColorMode)}
               >
@@ -612,6 +612,7 @@ export function UxSchemaEditor({
                   className={[
                     "w-full rounded px-2 py-1.5 text-left text-xs border",
                     "flex items-center gap-2",
+                    "ui-focus-ring",
                     selectedRow ? "" : "bg-card border-transparent hover:bg-muted/40",
                   ].join(" ")}
                   style={{
@@ -681,7 +682,7 @@ export function UxSchemaEditor({
               <label className="space-y-1">
                 <span>Display</span>
                 <select
-                  className="w-full rounded border bg-background px-2 py-1"
+                  className="ui-control-compact w-full"
                   value={selectedNode.ux.display === undefined ? "" : String(selectedNode.ux.display)}
                   onChange={(e) =>
                     updateSelectedUx({
@@ -699,7 +700,7 @@ export function UxSchemaEditor({
               <label className="space-y-1">
                 <span>render_as</span>
                 <select
-                  className="w-full rounded border bg-background px-2 py-1"
+                  className="ui-control-compact w-full"
                   value={selectedNode.ux.render_as || ""}
                   onChange={(e) => updateSelectedUx({ render_as: e.target.value || undefined })}
                 >
@@ -715,7 +716,7 @@ export function UxSchemaEditor({
               <label className="space-y-1">
                 <span>display_label</span>
                 <input
-                  className="w-full rounded border bg-background px-2 py-1"
+                  className="ui-control-compact w-full"
                   value={selectedNode.ux.display_label || ""}
                   onChange={(e) => updateSelectedUx({ display_label: e.target.value || undefined })}
                 />
@@ -724,7 +725,7 @@ export function UxSchemaEditor({
                 <span>display_order</span>
                 <input
                   type="number"
-                  className="w-full rounded border bg-background px-2 py-1"
+                  className="ui-control-compact w-full"
                   value={selectedNode.ux.display_order ?? ""}
                   onChange={(e) => {
                     const v = e.target.value;
@@ -737,7 +738,7 @@ export function UxSchemaEditor({
             <label className="space-y-1 block">
               <span>display_format</span>
               <input
-                className="w-full rounded border bg-background px-2 py-1"
+                className="ui-control-compact w-full"
                 value={selectedNode.ux.display_format || ""}
                 onChange={(e) => updateSelectedUx({ display_format: e.target.value || undefined })}
               />
@@ -754,6 +755,7 @@ export function UxSchemaEditor({
                       type="button"
                       className={[
                         "rounded border px-2 py-0.5 text-[11px]",
+                        "ui-focus-ring",
                         active ? "bg-primary/15 border-primary" : "bg-card",
                       ].join(" ")}
                       onClick={() => toggleNudge(nudge)}
@@ -830,7 +832,7 @@ export function UxSchemaEditor({
                 wordWrap: "on",
                 automaticLayout: true,
               }}
-                theme={monacoTheme}
+              theme={monacoTheme}
             />
           </CardContent>
         </Card>

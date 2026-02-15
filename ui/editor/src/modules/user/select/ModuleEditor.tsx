@@ -76,7 +76,7 @@ export function UserSelectModuleEditor({
         <label className="block space-y-1 text-xs">
           <span className="text-muted-foreground">name</span>
           <input
-            className="w-full rounded border bg-background px-2 py-1.5"
+            className="ui-control-cozy w-full"
             value={value.name}
             onChange={(e) => onChange({ ...value, name: e.target.value })}
           />
@@ -84,7 +84,7 @@ export function UserSelectModuleEditor({
         <label className="block space-y-1 text-xs">
           <span className="text-muted-foreground">prompt</span>
           <textarea
-            className="min-h-20 w-full rounded border bg-background px-2 py-1.5"
+            className="ui-control-cozy min-h-20 w-full"
             value={value.inputs.prompt}
             onChange={(e) =>
               onChange({
@@ -98,7 +98,7 @@ export function UserSelectModuleEditor({
           <label className="block space-y-1 text-xs">
             <span className="text-muted-foreground">mode</span>
             <select
-              className="w-full rounded border bg-background px-2 py-1.5"
+              className="ui-control-cozy w-full"
               value={value.inputs.mode}
               onChange={(e) =>
                 onChange({
@@ -110,7 +110,7 @@ export function UserSelectModuleEditor({
               <option value="select">select</option>
             </select>
           </label>
-          <label className="flex items-end gap-2 rounded border bg-background px-2 py-1.5 text-xs">
+          <label className="ui-control-cozy flex items-end gap-2 text-xs">
             <input
               checked={value.inputs.multi_select}
               type="checkbox"
@@ -129,7 +129,7 @@ export function UserSelectModuleEditor({
       <section className="space-y-3 rounded-lg border bg-card p-4">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold">Data Source</h3>
-          <div className="flex rounded border bg-background p-0.5 text-xs">
+          <div className="ui-segmented-track">
             <button
               className={[
                 "rounded px-2 py-1",
@@ -159,7 +159,7 @@ export function UserSelectModuleEditor({
               <div className="space-y-1 rounded border p-2" key={`${option.id}-${index}`}>
                 <div className="grid grid-cols-2 gap-2">
                   <input
-                    className="rounded border bg-background px-2 py-1 text-xs"
+                    className="ui-control-compact"
                     placeholder="id"
                     value={option.id}
                     onChange={(e) =>
@@ -167,7 +167,7 @@ export function UserSelectModuleEditor({
                     }
                   />
                   <input
-                    className="rounded border bg-background px-2 py-1 text-xs"
+                    className="ui-control-compact"
                     placeholder="label"
                     value={option.label}
                     onChange={(e) =>
@@ -178,7 +178,7 @@ export function UserSelectModuleEditor({
                   />
                 </div>
                 <textarea
-                  className="min-h-14 w-full rounded border bg-background px-2 py-1 text-xs"
+                  className="ui-control-compact min-h-14 w-full"
                   placeholder="description"
                   value={option.description}
                   onChange={(e) =>
@@ -209,7 +209,7 @@ export function UserSelectModuleEditor({
               </div>
             ))}
             <button
-              className="rounded border bg-background px-2 py-1 text-xs"
+              className="ui-control-compact"
               onClick={() => {
                 if (!Array.isArray(value.inputs.data)) return;
                 const nextData = [
@@ -237,7 +237,7 @@ export function UserSelectModuleEditor({
           <label className="block space-y-1 text-xs">
             <span className="text-muted-foreground">data.$ref</span>
             <input
-              className="w-full rounded border bg-background px-2 py-1.5"
+              className="ui-control-cozy w-full"
               value={value.inputs.data.$ref}
               onChange={(e) =>
                 onChange({
@@ -261,7 +261,7 @@ export function UserSelectModuleEditor({
         <label className="block space-y-1 text-xs">
           <span className="text-muted-foreground">schema.$ref</span>
           <input
-            className="w-full rounded border bg-background px-2 py-1.5"
+            className="ui-control-cozy w-full"
             disabled={!isJsonRefObject(value.inputs.schema)}
             value={schemaRef}
             onChange={(e) =>
@@ -284,7 +284,7 @@ export function UserSelectModuleEditor({
           <label className="block space-y-1 text-xs">
             <span className="text-muted-foreground">selected_indices key</span>
             <input
-              className="w-full rounded border bg-background px-2 py-1.5"
+              className="ui-control-cozy w-full"
               value={value.outputs_to_state.selected_indices}
               onChange={(e) =>
                 onChange({
@@ -300,7 +300,7 @@ export function UserSelectModuleEditor({
           <label className="block space-y-1 text-xs">
             <span className="text-muted-foreground">selected_data key</span>
             <input
-              className="w-full rounded border bg-background px-2 py-1.5"
+              className="ui-control-cozy w-full"
               value={value.outputs_to_state.selected_data}
               onChange={(e) =>
                 onChange({

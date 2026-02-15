@@ -419,7 +419,7 @@ function ProviderSchemaEditorDialog({
                       <label className="flex items-center gap-2 text-xs text-muted-foreground">
                         Zoom
                         <select
-                          className="h-8 rounded border bg-background px-2 text-xs"
+                          className="ui-control-compact h-8"
                           value={String(previewScale)}
                           onChange={(e) => setPreviewScale(Number(e.target.value))}
                         >
@@ -711,7 +711,7 @@ function ExpandedView({
           {/* Action Type */}
           <div className="rounded-md border p-2 space-y-1">
             <Label className="text-xs">Action Type</Label>
-            <div className="flex rounded border bg-background p-0.5 text-xs">
+            <div className="ui-segmented-track">
               {(["txt2img", "img2vid", "txt2audio"] as ActionType[]).map(
                 (type) => (
                   <button

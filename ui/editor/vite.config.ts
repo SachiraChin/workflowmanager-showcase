@@ -21,5 +21,24 @@ export default defineConfig(({ mode }) => {
     server: {
       host: "0.0.0.0",
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            "vendor-react": ["react", "react-dom", "react-router-dom"],
+            "vendor-shared": ["@wfm/shared"],
+            "vendor-monaco": ["monaco-editor", "@monaco-editor/react"],
+            "vendor-flow": ["@xyflow/react"],
+            "vendor-dnd": [
+              "@dnd-kit/core",
+              "@dnd-kit/sortable",
+              "@dnd-kit/utilities",
+              "@atlaskit/pragmatic-drag-and-drop",
+            ],
+            "vendor-grid": ["tabulator-tables", "react-data-grid"],
+          },
+        },
+      },
+    },
   };
 });

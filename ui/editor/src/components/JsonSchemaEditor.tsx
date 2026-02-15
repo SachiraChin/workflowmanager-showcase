@@ -299,27 +299,29 @@ function FieldTreeRow({
         <div className="grid grid-cols-[28px_1fr_120px_95px] items-center gap-2">
           <button
             className={[
-              "h-7 w-7 rounded-md border text-xs font-semibold transition-colors",
+              "ui-icon-control",
               canNest
-                ? "border-border bg-card text-foreground hover:bg-muted"
-                : "border-border bg-card text-muted-foreground opacity-60",
+                ? "hover:bg-muted"
+                : "text-muted-foreground opacity-60",
             ].join(" ")}
             disabled={!canNest}
             onClick={() => onToggle(field.id)}
             type="button"
+            aria-label={expanded ? "Collapse node" : "Expand node"}
           >
             {canNest ? (expanded ? "-" : "+") : "-"}
           </button>
 
           <input
-            className="h-8 rounded-md border border-border bg-card px-2 text-sm text-foreground"
+            className="ui-control-card-sm"
             onChange={(event) => onUpdate(field.id, { key: event.target.value })}
             placeholder="field_name"
             value={field.key}
+            aria-label="Schema field name"
           />
 
           <select
-            className="h-8 rounded-md border border-border bg-card px-2 text-sm text-foreground"
+            className="ui-control-card-sm"
             onChange={(event) => {
               const nextType = event.target.value as JsonSchemaType;
               onUpdate(field.id, {
@@ -335,6 +337,7 @@ function FieldTreeRow({
               });
             }}
             value={field.type}
+            aria-label="Schema field type"
           >
             {FIELD_TYPES.map((type) => (
               <option key={type} value={type}>
@@ -349,16 +352,18 @@ function FieldTreeRow({
               checked={field.required}
               onChange={(event) => onUpdate(field.id, { required: event.target.checked })}
               type="checkbox"
+              aria-label="Required field"
             />
           </label>
         </div>
 
         <div className="mt-2 flex items-center justify-between gap-2">
           <input
-            className="h-8 w-full rounded-md border border-border bg-card px-2 text-xs text-foreground"
+            className="ui-control-card-xs w-full"
             onChange={(event) => onUpdate(field.id, { description: event.target.value })}
             placeholder="description (optional)"
             value={field.description}
+            aria-label="Schema field description"
           />
           <div className="flex items-center gap-1">
             <Button

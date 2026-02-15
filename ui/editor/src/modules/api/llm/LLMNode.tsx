@@ -247,7 +247,7 @@ function ExpandedView({
               <div className="space-y-1">
                 <span className="text-[10px] text-muted-foreground">Provider</span>
                 <select
-                  className="w-full rounded border bg-background px-2 py-1 text-xs"
+                  className="ui-control-compact w-full"
                   value={provider}
                   onChange={(e) => updateInputs({ provider: e.target.value })}
                 >
@@ -259,7 +259,7 @@ function ExpandedView({
               <div className="space-y-1">
                 <span className="text-[10px] text-muted-foreground">Model</span>
                 <input
-                  className="w-full rounded border bg-background px-2 py-1 text-xs"
+                  className="ui-control-compact w-full"
                   value={model ?? ""}
                   onChange={(e) => updateInputs({ model: e.target.value || undefined })}
                   placeholder="default"
@@ -310,7 +310,7 @@ function ExpandedView({
             <div className="space-y-1">
               <span className="text-[10px] text-muted-foreground">response</span>
               <input
-                className="w-full rounded border bg-background px-2 py-1 text-xs"
+                className="ui-control-compact w-full"
                 value={module.outputs_to_state.response}
                 onChange={(e) =>
                   onChange({

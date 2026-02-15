@@ -476,7 +476,7 @@ function ExpandedView({
             <Label className="text-xs">Selection Mode</Label>
             <div className="flex items-center gap-3">
               {/* Mode toggle buttons */}
-              <div className="flex rounded border bg-background p-0.5 text-xs">
+              <div className="ui-segmented-track">
                 <button
                   type="button"
                   className={[
@@ -556,7 +556,7 @@ function ExpandedView({
               <div className="space-y-1">
                 <span className="text-[10px] text-muted-foreground">selected_indices</span>
                 <input
-                  className="w-full rounded border bg-background px-2 py-1 text-xs"
+                  className="ui-control-compact w-full"
                   value={module.outputs_to_state.selected_indices}
                   onChange={(e) =>
                     onChange({
@@ -572,7 +572,7 @@ function ExpandedView({
               <div className="space-y-1">
                 <span className="text-[10px] text-muted-foreground">selected_data</span>
                 <input
-                  className="w-full rounded border bg-background px-2 py-1 text-xs"
+                  className="ui-control-compact w-full"
                   value={module.outputs_to_state.selected_data}
                   onChange={(e) =>
                     onChange({
@@ -650,7 +650,7 @@ function ExpandedView({
                     <label className="flex items-center gap-2 text-xs text-muted-foreground">
                       Zoom
                       <select
-                        className="h-8 rounded border bg-background px-2 text-xs"
+                        className="ui-control-compact h-8"
                         value={String(previewScale)}
                         onChange={(e) => setPreviewScale(Number(e.target.value))}
                       >

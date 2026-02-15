@@ -8,22 +8,74 @@ import {
   useLocation,
   useNavigate,
 } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { Suspense, lazy, useState, useEffect, type ReactNode } from "react";
 import { Moon, Sun, LogOut } from "lucide-react";
 import { EDITOR_URL, api } from "@wfm/shared";
-import { WorkflowStartPage } from "@/features/start/WorkflowStartPage";
-import { WorkflowEditorPage } from "@/features/editor/WorkflowEditorPage";
-import { ReactFlowStressPocPage } from "@/poc/reactflow/StressPocPage";
-import { SchemaBuilderMonacoPocPage } from "@/poc/monaco/SchemaBuilderMonacoPocPage";
-import { DndKitPocPage } from "@/poc/ux-schema-editor/DndKitPocPage";
-import { PragmaticDndPocPage } from "@/poc/ux-schema-editor/PragmaticDndPocPage";
-import { UxPalettePocPage } from "@/poc/ux-schema-editor/UxPalettePocPage";
-import { TreeModesPocPage } from "@/poc/ux-schema-editor/TreeModesPocPage";
-import { CustomTreeSchemaPocPage } from "@/poc/json-schema-editor/CustomTreeSchemaPocPage";
-import { TemplateFlowSchemaPocPage } from "@/poc/json-schema-editor/TemplateFlowSchemaPocPage";
-import { GridSchemaPocPage } from "@/poc/json-schema-editor/GridSchemaPocPage";
-
 import { useTheme } from "@/components/theme-provider";
+
+const WorkflowStartPage = lazy(() =>
+  import("@/features/start/WorkflowStartPage").then((module) => ({
+    default: module.WorkflowStartPage,
+  }))
+);
+const WorkflowEditorPage = lazy(() =>
+  import("@/features/editor/WorkflowEditorPage").then((module) => ({
+    default: module.WorkflowEditorPage,
+  }))
+);
+const ReactFlowStressPocPage = lazy(() =>
+  import("@/poc/reactflow/StressPocPage").then((module) => ({
+    default: module.ReactFlowStressPocPage,
+  }))
+);
+const SchemaBuilderMonacoPocPage = lazy(() =>
+  import("@/poc/monaco/SchemaBuilderMonacoPocPage").then((module) => ({
+    default: module.SchemaBuilderMonacoPocPage,
+  }))
+);
+const DndKitPocPage = lazy(() =>
+  import("@/poc/ux-schema-editor/DndKitPocPage").then((module) => ({
+    default: module.DndKitPocPage,
+  }))
+);
+const PragmaticDndPocPage = lazy(() =>
+  import("@/poc/ux-schema-editor/PragmaticDndPocPage").then((module) => ({
+    default: module.PragmaticDndPocPage,
+  }))
+);
+const UxPalettePocPage = lazy(() =>
+  import("@/poc/ux-schema-editor/UxPalettePocPage").then((module) => ({
+    default: module.UxPalettePocPage,
+  }))
+);
+const TreeModesPocPage = lazy(() =>
+  import("@/poc/ux-schema-editor/TreeModesPocPage").then((module) => ({
+    default: module.TreeModesPocPage,
+  }))
+);
+const CustomTreeSchemaPocPage = lazy(() =>
+  import("@/poc/json-schema-editor/CustomTreeSchemaPocPage").then((module) => ({
+    default: module.CustomTreeSchemaPocPage,
+  }))
+);
+const TemplateFlowSchemaPocPage = lazy(() =>
+  import("@/poc/json-schema-editor/TemplateFlowSchemaPocPage").then((module) => ({
+    default: module.TemplateFlowSchemaPocPage,
+  }))
+);
+const GridSchemaPocPage = lazy(() =>
+  import("@/poc/json-schema-editor/GridSchemaPocPage").then((module) => ({
+    default: module.GridSchemaPocPage,
+  }))
+);
+
+function LazyRoute({ children }: { children: ReactNode }) {
+  return (
+    <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">Loading...</div>}>
+      {children}
+    </Suspense>
+  );
+}
 
 function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
@@ -270,49 +322,49 @@ export default function App() {
     <BrowserRouter basename={basename}>
       <Routes>
         <Route element={<AppShell />}>
-          <Route path="/" element={<WorkflowStartPage />} />
-          <Route path="/workflow/new" element={<WorkflowEditorPage />} />
+          <Route path="/" element={<LazyRoute><WorkflowStartPage /></LazyRoute>} />
+          <Route path="/workflow/new" element={<LazyRoute><WorkflowEditorPage /></LazyRoute>} />
           <Route
             path="/workflow/:workflowTemplateId"
-            element={<WorkflowEditorPage />}
+            element={<LazyRoute><WorkflowEditorPage /></LazyRoute>}
           />
           <Route
             path="/workflow/:workflowTemplateId/:workflowVersionId"
-            element={<WorkflowEditorPage />}
+            element={<LazyRoute><WorkflowEditorPage /></LazyRoute>}
           />
           <Route
             path="/poc/reactflow/stress"
-            element={<ReactFlowStressPocPage />}
+            element={<LazyRoute><ReactFlowStressPocPage /></LazyRoute>}
           />
 
           <Route
             path="/poc/monaco/schema-builder"
-            element={<SchemaBuilderMonacoPocPage />}
+            element={<LazyRoute><SchemaBuilderMonacoPocPage /></LazyRoute>}
           />
           <Route
             path="/poc/json-schema/custom-tree"
-            element={<CustomTreeSchemaPocPage />}
+            element={<LazyRoute><CustomTreeSchemaPocPage /></LazyRoute>}
           />
           <Route
             path="/poc/json-schema/template-flow"
-            element={<TemplateFlowSchemaPocPage />}
+            element={<LazyRoute><TemplateFlowSchemaPocPage /></LazyRoute>}
           />
-          <Route path="/poc/json-schema/grid" element={<GridSchemaPocPage />} />
+          <Route path="/poc/json-schema/grid" element={<LazyRoute><GridSchemaPocPage /></LazyRoute>} />
           <Route
             path="/poc/ux-schema/dnd-kit"
-            element={<DndKitPocPage />}
+            element={<LazyRoute><DndKitPocPage /></LazyRoute>}
           />
           <Route
             path="/poc/ux-schema/pragmatic"
-            element={<PragmaticDndPocPage />}
+            element={<LazyRoute><PragmaticDndPocPage /></LazyRoute>}
           />
           <Route
             path="/poc/ux-schema/palette"
-            element={<UxPalettePocPage />}
+            element={<LazyRoute><UxPalettePocPage /></LazyRoute>}
           />
           <Route
             path="/poc/ux-schema/tree-modes"
-            element={<TreeModesPocPage />}
+            element={<LazyRoute><TreeModesPocPage /></LazyRoute>}
           />
 
           <Route path="*" element={<Navigate to="/" replace />} />

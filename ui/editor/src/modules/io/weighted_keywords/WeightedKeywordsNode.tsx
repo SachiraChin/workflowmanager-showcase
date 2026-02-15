@@ -236,7 +236,7 @@ function ExpandedLoadView({
           {/* Mode indicator */}
           <div className="rounded-md border p-2 space-y-1">
             <Label className="text-xs">Mode</Label>
-            <div className="flex rounded border bg-background p-0.5 text-xs">
+            <div className="ui-segmented-track">
               <button
                 type="button"
                 className="rounded px-3 py-1 bg-primary text-primary-foreground"
@@ -284,7 +284,7 @@ function ExpandedLoadView({
                   weighted_keywords
                 </span>
                 <input
-                  className="w-full rounded border bg-background px-2 py-1 text-xs"
+                  className="ui-control-compact w-full"
                   value={outputs.weighted_keywords}
                   onChange={(e) =>
                     updateOutputs({ weighted_keywords: e.target.value })
@@ -294,7 +294,7 @@ function ExpandedLoadView({
               <div className="space-y-1">
                 <span className="text-[10px] text-muted-foreground">count</span>
                 <input
-                  className="w-full rounded border bg-background px-2 py-1 text-xs"
+                  className="ui-control-compact w-full"
                   value={outputs.count}
                   onChange={(e) => updateOutputs({ count: e.target.value })}
                 />
@@ -420,7 +420,7 @@ function ExpandedSaveView({
         {/* Mode indicator */}
         <div className="rounded-md border p-2 space-y-1">
           <Label className="text-xs">Mode</Label>
-          <div className="flex rounded border bg-background p-0.5 text-xs">
+          <div className="ui-segmented-track">
             <button
               type="button"
               className="rounded px-3 py-1 hover:bg-muted opacity-50"
@@ -445,7 +445,7 @@ function ExpandedSaveView({
         <div className="rounded-md border p-2 space-y-1">
           <Label className="text-xs">Keywords Source</Label>
           <input
-            className="w-full rounded border bg-background px-2 py-1 text-xs
+            className="ui-control-compact w-full
                        font-mono"
             value={sourceValue}
             onChange={(e) =>
@@ -482,7 +482,7 @@ function ExpandedSaveView({
               saved_count
             </span>
             <input
-              className="w-full rounded border bg-background px-2 py-1 text-xs"
+              className="ui-control-compact w-full"
               value={outputs.saved_count}
               onChange={(e) => updateOutputs({ saved_count: e.target.value })}
             />

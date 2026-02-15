@@ -129,6 +129,51 @@
     @apply bg-background text-foreground;
     font-family: "Instrument Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
   }
+
+  :where(button, input, select, textarea, a[href], [tabindex]):focus-visible {
+    outline: 2px solid color-mix(in oklch, var(--ring) 85%, transparent);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .ui-focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  }
+
+  .ui-control-compact {
+    @apply rounded border border-border bg-background px-2 py-1 text-xs text-foreground;
+    @apply placeholder:text-muted-foreground/70;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  }
+
+  .ui-control-cozy {
+    @apply rounded border border-border bg-background px-2 py-1.5 text-sm text-foreground;
+    @apply placeholder:text-muted-foreground/70;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  }
+
+  .ui-segmented-track {
+    @apply flex rounded border border-border bg-background p-0.5 text-xs;
+  }
+
+  .ui-control-card-sm {
+    @apply h-8 rounded-md border border-border bg-card px-2 text-sm text-foreground;
+    @apply placeholder:text-muted-foreground/70;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  }
+
+  .ui-control-card-xs {
+    @apply h-8 rounded-md border border-border bg-card px-2 text-xs text-foreground;
+    @apply placeholder:text-muted-foreground/70;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  }
+
+  .ui-icon-control {
+    @apply h-7 w-7 rounded-md border border-border bg-card text-xs font-semibold;
+    @apply text-foreground transition-colors;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  }
 }
 
 *::-webkit-scrollbar {

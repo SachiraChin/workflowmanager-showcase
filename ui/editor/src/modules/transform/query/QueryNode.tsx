@@ -271,7 +271,7 @@ function ExpandedView({
             <div className="space-y-1">
               <span className="text-[10px] text-muted-foreground">result</span>
               <input
-                className="w-full rounded border bg-background px-2 py-1 text-xs"
+                className="ui-control-compact w-full"
                 value={module.outputs_to_state.result}
                 onChange={(e) => updateOutputs(e.target.value)}
                 placeholder="state_key_for_result"
