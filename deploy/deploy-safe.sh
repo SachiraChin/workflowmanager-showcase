@@ -41,6 +41,46 @@ log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 log_step() { echo -e "${CYAN}[STEP]${NC} $1"; }
 
+# Check whether a docker-compose service container is running.
+# Uses docker inspect to avoid fragile string matching on `docker-compose ps`.
+is_service_running() {
+    local service=$1
+    local container_id
+    local status
+
+    container_id=$(docker-compose ps -q "$service" 2>/dev/null)
+    if [ -z "$container_id" ]; then
+        return 1
+    fi
+
+    status=$(docker inspect -f '{{.State.Status}}' "$container_id" 2>/dev/null || true)
+    [ "$status" = "running" ]
+}
+
+# Return normalized container status/health for a service.
+# Output format: "<state> (<health>)" when healthcheck exists.
+get_service_status() {
+    local service=$1
+    local container_id
+    local state
+    local health
+
+    container_id=$(docker-compose ps -q "$service" 2>/dev/null)
+    if [ -z "$container_id" ]; then
+        echo "not created"
+        return
+    fi
+
+    state=$(docker inspect -f '{{.State.Status}}' "$container_id" 2>/dev/null || echo "unknown")
+    health=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{end}}' "$container_id" 2>/dev/null || true)
+
+    if [ -n "$health" ]; then
+        echo "$state ($health)"
+    else
+        echo "$state"
+    fi
+}
+
 # Backup directory for image IDs
 BACKUP_DIR="$SCRIPT_DIR/.deploy-backup"
 mkdir -p "$BACKUP_DIR"
@@ -166,7 +206,7 @@ health_check() {
                     fi
                     ;;
                 worker)
-                    if docker-compose ps "$service" 2>/dev/null | grep -q "running\|Up"; then
+                    if is_service_running "$service"; then
                         healthy=true
                         break
                     fi
@@ -249,6 +289,14 @@ show_status() {
     log_info "Current container status:"
     echo "----------------------------------------"
     docker-compose ps
+    echo ""
+    log_info "Normalized Service Status:"
+    echo "  mongo:          $(get_service_status mongo)"
+    echo "  mongo-virtual:  $(get_service_status mongo-virtual)"
+    echo "  server:         $(get_service_status server)"
+    echo "  virtual-server: $(get_service_status virtual-server)"
+    echo "  worker:         $(get_service_status worker)"
+    echo "  webui:          $(get_service_status webui)"
     echo ""
 }
 
